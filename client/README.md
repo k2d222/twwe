@@ -1,9 +1,3 @@
-tw-webgl
-========
+# ddnet-map-ed
 
-Teeworlds graphics engine in webgl/html5
-
-Demo:
-
-http://www.eastbit.net/public/tw-webgl/
-
+Teeworlds / DDraceNetwork map editor. Online and collaborative, just like the game.
