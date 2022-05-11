@@ -14,8 +14,8 @@ export class RenderTileLayer extends RenderLayer {
 	vertexFloatArray: Float32Array
 	texCoordFloatArray: Float32Array
 	
-	vertexBuf: WebGLBuffer | null
-	texCoordBuf: WebGLBuffer | null
+	vertexBuf: WebGLBuffer
+	texCoordBuf: WebGLBuffer
 
   tileSize: number
   tileCount: number
@@ -31,21 +31,22 @@ export class RenderTileLayer extends RenderLayer {
 		else
 			this.texture = null
 		
+		this.tileSize = 32
+    this.tileCount = RenderTileLayer.renderTileNum(this.layer.tiles)
+		
+		// TODO: this is unused ?
 		this.colorFloatArray = new Float32Array([
 			layer.color.r / 255,
 			layer.color.g / 255,
 			layer.color.b / 255,
 			layer.color.a / 255
 		])
-
-		this.tileSize = 32
-    this.tileCount = RenderTileLayer.renderTileNum(this.layer.tiles)
-
 		this.vertexFloatArray = new Float32Array(this.tileCount * 12)
 		this.texCoordFloatArray = new Float32Array(this.tileCount * 12)
-		this.vertexBuf = null
-		this.texCoordBuf = null
 		// this.needInit = true
+
+		this.vertexBuf = gl.createBuffer()
+		this.texCoordBuf = gl.createBuffer()
 		this.initBuffers()
   }
 
@@ -88,8 +89,8 @@ export class RenderTileLayer extends RenderLayer {
   	// mat4.copy(tw.mvMat, tw.tmpMat);
 
   	// keep textures disabled by default
-  	gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord);
-  	gl.uniform1i(shader.locs.unifs.uTexCoord, 1);
+  	gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
+  	gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
   }
 
 	private initBuffers() {
@@ -113,18 +114,11 @@ export class RenderTileLayer extends RenderLayer {
 			}
 		}
 
-		// Init gl buffers
-		if (this.vertexBuf === null) {
-			this.vertexBuf = gl.createBuffer()
-			this.texCoordBuf = gl.createBuffer()
-		}
-
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf)
 		gl.bufferData(gl.ARRAY_BUFFER, this.vertexFloatArray, gl.STATIC_DRAW)
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf)
 		gl.bufferData(gl.ARRAY_BUFFER, this.texCoordFloatArray, gl.STATIC_DRAW)
-		
 	}
 	
 	private static renderTileNum(tiles: LayerTile[]) {

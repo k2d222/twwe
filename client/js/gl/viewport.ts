@@ -10,7 +10,7 @@ export class Viewport {
   private mouseInc: { x: number, y: number }     // mouse offset since last update in pixel space
   private mousePressed: boolean
   
-  private zoom: number // zoom = 1 means world pixel = screen pixel
+  private zoom: number // zoom = 1 means 1 pixel = 1 tile
 
   constructor(gl: WebGL2RenderingContext, canvas: HTMLCanvasElement) {
     this.gl = gl
