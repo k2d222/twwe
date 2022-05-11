@@ -7,31 +7,38 @@ export class Image {
   name: string
   width: number
   height: number
-  image: HTMLImageElement
+  data: ImageData | null
+	
+	constructor() {
+		this.name = "unnamed image"
+		this.width = 0
+		this.height = 0
+		this.data = null
+	}
   
   load(df: DataFile, info: MapImage) {
-		this.name = parseString(df.getData(info.imageName))
+		this.name = parseString(df.getData(info.name))
     this.width = info.width
     this.height = info.height
     
-    let url: string
-
 		if (info.external) {
-			url = this.name + ".png"
+			// let url = this.name + ".png"
+			console.warn('external images are not supported yet.')
 		}
     else {
-			let buf = new Uint8ClampedArray(df.getData(info.imageData))
-      let img = new ImageData(buf, this.width, this.height)
+			let buf = new Uint8ClampedArray(df.getData(info.data))
+      this.data = new ImageData(buf, this.width, this.height)
+			
+   //    this is debug			
+      // let canvas = document.createElement('canvas');
+      // let ctx = canvas.getContext('2d');
+      // canvas.width = this.data.width;
+      // canvas.height = this.data.height;
+      // ctx.putImageData(this.data, 0, 0);
+      // let image = document.createElement('img');
+      // image.src = canvas.toDataURL();
+      // document.body.append(image)
 
-      let canvas = document.createElement("canvas")
-      canvas.width = 100
-      canvas.height = 100
-      let ctx = canvas.getContext("2d")
-      ctx.putImageData(img, 0, 0)
-      url = canvas.toDataURL("image/png")
     }
-
-    this.image = document.createElement('img')
-    this.image.src = url
   }
 }

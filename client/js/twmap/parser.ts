@@ -96,8 +96,8 @@ export function parseMapImage(layerData: ArrayBuffer): MapImage {
   	width: d.int32(),
   	height: d.int32(),
   	external: d.uint32(),
-  	imageName: d.int32(),
-  	imageData: d.int32(),
+  	name: d.int32(),
+  	data: d.int32(),
   }
 }
 

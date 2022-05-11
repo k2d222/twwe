@@ -3,7 +3,7 @@ import { Layer } from './layer'
 import { TileLayer } from './tileLayer'
 import { QuadLayer } from './quadLayer'
 import { MapGroupObj, MapItemType, LayerType } from './types'
-import { parseMapLayer, parseMapLayerTiles, parseMapLayerQuads, parseLayerTiles } from './parser'
+import { parseMapLayer, parseMapLayerTiles, parseMapLayerQuads } from './parser'
 import { DataFile } from "./datafile"
 
 export class Group {
@@ -32,16 +32,6 @@ export class Group {
     this.loadLayers(df, info.startLayer, info.numLayers)
   }
   
-  // addQuadLayer(texture: Texture, quads: Quad[]) {
-  //   this.layers.push(new QuadLayer(texture, quads))
-  // }
-  
-  // addTileLayer(width: number, height: number, tiles: any, color: ObjColor, texture: Texture) {
-  // 	let layer = new TileLayer(width, height, tiles, color, this)
-  // 	layer.texture = texture
-  // 	this.layers.push(layer)
-  // }
-
   private loadLayers(df: DataFile, startLayer: number, numLayers: number) {
   	let layersInfo = df.getType(MapItemType.LAYER)
 

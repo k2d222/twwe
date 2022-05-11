@@ -88,8 +88,8 @@ export type MapImage = MapObj & {
   width: number,
   height: number,
   external: number,
-  imageName: number,
-  imageData: number,
+  name: number,
+  data: number,
 }
 
 export type LayerQuad = {

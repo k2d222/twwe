@@ -1,46 +1,12 @@
-<html>
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
 	<head>
-		<title>Teeworlds webgl test</title>
-		<style>
-			body {
-				margin: 0px;
-				overflow: hidden;
-			}
-		</style>
+		<meta charset="utf-8">
+		<title>DDNet Map Editor</title>
+		<script type="module" defer src="../js/main.ts"></script>
+		<link rel="stylesheet" href="./style.scss">
 	</head>
 	<body>
-		<script src='../js/jquery-1.10.2.min.js'></script>
-		<script src='../js/jquery.mousewheel.js'></script>
-		<script src='../js/gl-matrix.js'></script>
-		<script src='../js/crc32.min.js'></script>
-		<script src='../js/zlib.min.js'></script>
-		<script src='../js/dataviewext.js'></script>
-		<script src='../js/twdatafile.js'></script>
-		<script src='../js/twwebgl.js'></script>
-		<input type='file' id='fileSelect'></input><br>
-		<canvas id='cnvs'></canvas>
-
-		<script>
-			$(document).ready(function() {
-
-					console.log(tw.getParams().map)
-					var params = tw.getParams();
-					if (params.map) {
-						tw.init({ mapUrl: params.map })
-					} else {
-						$("#fileSelect").on('change', function(evt) {
-							var file = evt.target.files[0];
-
-							var reader = new FileReader();
-							reader.readAsArrayBuffer(file);
-
-							reader.onloadend = function(file) {
-								tw.init({ mapData: file.target.result})
-							}
-						})
-					}
-				}
-			);
-		</script>
+		<canvas width=500 height=500></canvas>
 	</body>
 </html>

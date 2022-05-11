@@ -8,9 +8,8 @@ export class QuadLayer extends Layer {
   name: string
   quads: LayerQuad[]
   
-  constructor(quads: LayerQuad[]) {
+  constructor() {
     super(LayerType.QUADS)
-    this.quads = quads // TODO: why clone in original fork?
   }
   
   load(df: DataFile, info: MapLayerQuads) {

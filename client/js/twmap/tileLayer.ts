@@ -1,7 +1,8 @@
-import { Color, LayerTile, LayerType, MapLayerTiles } from './types'
+import { Color, LayerTile, LayerType, MapLayerTiles, MapItemType } from './types'
 import { Layer } from './layer'
-import { parseLayerTiles } from './parser'
+import { parseLayerTiles, parseMapImage } from './parser'
 import { DataFile } from './datafile'
+import { Image } from './image'
 
 export class TileLayer extends Layer {
 	name: string
@@ -9,6 +10,7 @@ export class TileLayer extends Layer {
 	height: number
 	tiles: LayerTile[]
 	color: Color
+	image: Image | null
 		
 	constructor() {
 		super(LayerType.TILES)
@@ -17,6 +19,7 @@ export class TileLayer extends Layer {
 		this.height = 0
 		this.tiles = []
 		this.color = { r: 0, g: 0, b: 0, a: 0 }
+		this.image = null
 	}
 	
 	load(df: DataFile, info: MapLayerTiles) {
@@ -24,6 +27,17 @@ export class TileLayer extends Layer {
 		this.width = info.width
 		this.height = info.height
 		this.color = info.color
+
+		if(info.image !== -1) {
+	    let imagesInfo = df.getType(MapItemType.IMAGE)
+			let imageItem = df.getItem(imagesInfo.start + info.image)
+	    let imageInfo = parseMapImage(imageItem.data)
+	    this.image = new Image()
+	    this.image.load(df, imageInfo)
+		}
+		else {
+			this.image = null
+		}
 
 		let tileData = df.getData(info.data)
 		this.tiles = parseLayerTiles(tileData, info.width * info.height)

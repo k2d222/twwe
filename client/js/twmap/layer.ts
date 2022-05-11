@@ -1,3 +1,4 @@
+import { LayerType } from "./types"
 
 export abstract class Layer {
   type: LayerType
