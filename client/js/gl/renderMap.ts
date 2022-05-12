@@ -33,9 +33,13 @@ export class RenderMap {
   }
   
   applyChange(change: ChangeData) {
-    let group  = this.groups[change.group]
-    let layer  = group.layers[change.layer] as RenderTileLayer
-    let tile   = layer.layer.getTile(change.x, change.y)
+    let group = this.groups[change.group]
+    let layer = group.layers[change.layer] as RenderTileLayer
+    let tile = layer.layer.getTile(change.x, change.y)
+
+    if (tile.index == change.id)
+      return
+
     tile.index = change.id
     layer.recompute()
 
