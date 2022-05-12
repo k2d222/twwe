@@ -83,18 +83,25 @@ export class Viewport {
     //   y = e.clientY
     // })
   }
-  private pixelToCanvas(x: number, y: number) {
+
+  // this is probably a noop, because canvas is sized to window size
+  pixelToCanvas(x: number, y: number) {
     return [
       x / this.canvas.clientWidth * this.canvas.width,
       y / this.canvas.clientHeight * this.canvas.height,
     ]
   }
 
-  private canvasToWorld(x: number, y: number) {
+  canvasToWorld(x: number, y: number) {
     return [
       this.pos.x + x / this.scale,
       this.pos.y + y / this.scale,
     ]
+  }
+
+  pixelToWorld(x: number, y: number) {
+    let [ x2, y2 ] = this.pixelToCanvas(x, y)
+    return this.canvasToWorld(x2, y2)
   }
 
   // private canvasToGrid(x: number, y: number) {

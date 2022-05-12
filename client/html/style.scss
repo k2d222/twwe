@@ -62,6 +62,7 @@ nav {
     display: flex;
     flex-direction: column;
     gap: .5rem;
+    overflow: auto;
   }    
 
   #map-name {
@@ -71,6 +72,11 @@ nav {
   
   .group, .layer {
     margin-left: .5rem;
+  }
+  
+  .group {
+    display: flex;
+    flex-direction: column;
   }
     
   .layer {

@@ -15,7 +15,19 @@ export class Image {
 		this.height = 0
 		this.data = null
 	}
-  
+	
+	loadExternal(url: string) {
+		let img = document.createElement('img')
+		img.onerror = () => console.warn('failed to load image:', url)
+		img.onload = () => {
+			console.log('loaded:', url)
+			this.data = img
+			this.width = img.width
+			this.height = img.height
+		}
+		img.src = url
+	}
+	
   load(df: DataFile, info: MapImage) {
 		this.name = parseString(df.getData(info.name))
     this.width = info.width
@@ -23,14 +35,7 @@ export class Image {
     
 		if (info.external) {
 			let url = 'mapres/' + this.name + '.png'
-			console.log(url)
-			let img = document.createElement('img')
-			img.onerror = () => console.warn('failed to load image:', url)
-			img.onload = () => {
-				console.log('loaded:', url)
-				this.data = img
-			}
-			img.src = url
+			this.loadExternal(url)
 		}
     else {
 			let buf = new Uint8ClampedArray(df.getData(info.data))

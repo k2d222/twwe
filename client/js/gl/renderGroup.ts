@@ -27,7 +27,7 @@ export class RenderGroup {
   }
   
   render() {
-    // TODO? initMapScreen
+    // TODO: offset
     let mv = mat4.create()
     let { offX, offY, paraX, paraY } = this.group
     let { x1, x2, y1, y2 } = viewport.screen()

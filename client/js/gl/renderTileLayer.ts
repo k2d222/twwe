@@ -1,9 +1,8 @@
 import { TileLayer } from "../twmap/tileLayer"
 import { RenderLayer } from "./renderLayer"
-import { gl, shader, viewport } from "./global"
+import { gl, shader } from "./global"
 import { LayerTile } from "../twmap/types"
 import { Texture } from "./texture"
-import { mat4, vec4 } from "gl-matrix"
 import { TileFlag } from "../twmap/types"
 
 export class RenderTileLayer extends RenderLayer {
@@ -20,14 +19,13 @@ export class RenderTileLayer extends RenderLayer {
   tileSize: number
   tileCount: number
   
-  // needInit: boolean
-
   constructor(layer: TileLayer) {
     super()
     this.layer = layer
+		
+		if (layer.image !== null)
+			this.texture = new Texture(layer.image)
 
-		if (this.layer.image !== null)
-			this.texture = new Texture(this.layer.image)
 		else
 			this.texture = null
 		
@@ -51,8 +49,13 @@ export class RenderTileLayer extends RenderLayer {
   }
 
 	render() {
-		if (!this.texture || !this.texture.loaded)
+    if(!this.texture) {
 			return
+    }
+    else if (!this.texture.loaded) {
+			this.texture.load()
+			return
+    }
 		
   	// Enable texture
   	gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord);

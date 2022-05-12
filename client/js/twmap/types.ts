@@ -41,8 +41,8 @@ export type MapObj = {
 export type MapGroupObj = MapObj & {
   offX: number,
   offY: number,
-  parallaxX: number,
-  parallaxY: number,
+  paraX: number,
+  paraY: number,
   startLayer: number,
   numLayers: number,
   useClipping: number,

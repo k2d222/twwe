@@ -9,8 +9,8 @@ export function parseMapGroup(groupData: ArrayBuffer): MapGroupObj {
   	version: d.uint32(),
   	offX: d.int32(),
   	offY: d.int32(),
-  	parallaxX: d.int32(),
-  	parallaxY: d.int32(),
+  	paraX: d.int32(),
+  	paraY: d.int32(),
   	startLayer: d.uint32(),
   	numLayers: d.uint32(),
   	useClipping: d.uint32(),
@@ -83,8 +83,6 @@ export function parseMapLayerTiles(layerData: ArrayBuffer): MapLayerTiles {
 
 		name: d.int32Str(3),
   }
-
-	//TODO: name
 }
 
 export function parseMapImage(layerData: ArrayBuffer): MapImage {

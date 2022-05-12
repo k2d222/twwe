@@ -27,8 +27,8 @@ export class Group {
     this.name = info.name
     this.offX = info.offX
     this.offY = info.offY
-    this.paraX = info.parallaxX
-    this.paraY = info.parallaxY
+    this.paraX = info.paraX
+    this.paraY = info.paraY
     this.loadLayers(df, info.startLayer, info.numLayers)
   }
   
@@ -51,6 +51,9 @@ export class Group {
         layer.load(df, quadLayerInfo)
         this.layers.push(layer)
   		}
+      else {
+        console.warn('unsupported layer type:', layerInfo.type, layerInfo)
+      }
   	}     
   }
 }

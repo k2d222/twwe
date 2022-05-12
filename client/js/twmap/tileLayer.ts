@@ -21,10 +21,12 @@ export class TileLayer extends Layer {
 	}
 	
 	load(df: DataFile, info: MapLayerTiles) {
+		this.type = info.flags // game, tiles, tele…
+		this.name = info.name
 		this.width = info.width
 		this.height = info.height
 		this.color = info.color
-
+		
 		if(info.image !== -1) {
 	    let imagesInfo = df.getType(MapItemType.IMAGE)
 			let imageItem = df.getItem(imagesInfo.start + info.image)

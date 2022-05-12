@@ -1,23 +1,30 @@
 import { Server } from './server/server'
 import { Map } from './twmap/map'
 import { RenderMap } from './gl/renderMap'
-import { init as glInit, renderer } from './gl/global'
+import { init as glInit, renderer, viewport } from './gl/global'
 import { TreeView } from './ui/treeView'
 
 const MAP_URL = '/maps/sunny.map'
 
+
+// all html elements are prefixed with $, but no JQuery :)
+let $canvas: HTMLCanvasElement = document.querySelector('canvas')
+let $nav: HTMLElement = document.querySelector('nav')
+let $tree: HTMLElement = $nav.querySelector('#tree')
+let $mapName: HTMLElement = $nav.querySelector('#map-name')
+let $dialog: HTMLElement = document.querySelector('#dialog')
+let $dialogContent: HTMLElement = $dialog.querySelector('.content')
+let $users: HTMLElement = document.querySelector('#users span')
+
+
 function showDialog(msg: string) {
-  let dialog: HTMLElement = document.querySelector('#dialog')
-  let content: HTMLElement = dialog.querySelector('.content')
-  content.innerText = msg
-  dialog.classList.remove('hidden')
+  $dialogContent.innerText = msg
+  $dialog.classList.remove('hidden')
 }
 
 function hideDialog() {
-  let dialog: HTMLElement = document.querySelector('#dialog')
-  let content: HTMLElement = dialog.querySelector('.content')
-  content.innerText = ''
-  dialog.classList.add('hidden')
+  $dialogContent.innerText = ''
+  $dialog.classList.add('hidden')
 }
 
 async function loadMapData(mapURL: string) {
@@ -38,14 +45,13 @@ async function setupServer() {
   })
 
   server.on('users', (e) => {
-  
+    $users.innerText = e.count + ''
   })
 }
 
 function setupGL(map: Map) {
 
-  let canvas = document.querySelector('canvas')
-  glInit(canvas)
+  glInit($canvas)
   let rmap = new RenderMap(map)
 
   function loop() {
@@ -55,10 +61,17 @@ function setupGL(map: Map) {
   requestAnimationFrame(loop)
 }
 
-function setupNavBar(map: Map) {
-  let nav: HTMLElement = document.querySelector('nav')
-  let tree: HTMLElement = nav.querySelector('#tree')
-  new TreeView(tree, map)
+function setupUI(map: Map) {
+  new TreeView($tree, map)
+  $mapName.innerText = map.name
+
+  $canvas.addEventListener('click', (e) => {
+    let [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
+    let tileX = Math.floor(x)
+    let tileY = Math.floor(y)
+    // map.groups.
+    console.log(tileX, tileY)
+  })
 }
 
 async function main() {
@@ -67,7 +80,7 @@ async function main() {
   let mapData = await loadMapData(MAP_URL)
   let map = new Map("Sunny Side Up", mapData)
   setupGL(map)
-  setupNavBar(map)
+  setupUI(map)
   hideDialog()
   console.log('up and running!')
 }
