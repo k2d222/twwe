@@ -5,7 +5,6 @@ import { DataFile } from './datafile'
 import { Image } from './image'
 
 export class TileLayer extends Layer {
-	name: string
 	width: number
 	height: number
 	tiles: LayerTile[]
@@ -14,7 +13,6 @@ export class TileLayer extends Layer {
 		
 	constructor() {
 		super(LayerType.TILES)
-		this.name = "unnamed layer"
 		this.width = 0
 		this.height = 0
 		this.tiles = []
@@ -23,7 +21,6 @@ export class TileLayer extends Layer {
 	}
 	
 	load(df: DataFile, info: MapLayerTiles) {
-		this.name = info.name
 		this.width = info.width
 		this.height = info.height
 		this.color = info.color

@@ -6,7 +6,6 @@ import { Image } from './image'
 
 
 export class QuadLayer extends Layer {
-  name: string
   quads: LayerQuad[]
   image: Image | null
   
