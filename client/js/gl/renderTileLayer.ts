@@ -64,12 +64,10 @@ export class RenderTileLayer extends RenderLayer {
   	gl.uniform1i(shader.locs.unifs.uVertexColor, 0);
 
   	// MapTile resize
+		// TODO needed ?
   	// mat4.copy(tw.tmpMat, tw.mvMat);
   	// mat4.scale(tw.mvMat, tw.mvMat, [32, 32, 0.0]);
   	// tw.setMatUniforms();
-		let mv = mat4.create()
-		gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv);
-		// gl.uniformMatrix4fv(shader.locs.unifs.uPMatrix, false, mv); // TODO this is temporary
 
   	// Set color mask
 		let { r, g, b, a } = this.layer.color
@@ -146,7 +144,8 @@ function makeTexCoords(tile: LayerTile) {
 	// mipmap border correction
 	let tilePixelSize = 1024 / 32
 	// TODO
-	let finalTileSize = 32 / viewport.screen().w * viewport.width()
+	// let finalTileSize = 32 / viewport.screen().w * viewport.width()
+	let finalTileSize = 32
 	let finalTilesetScale = finalTileSize / tilePixelSize 
 
 	let texSize = 1024.0

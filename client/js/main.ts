@@ -12,7 +12,6 @@ async function loadMapData(mapURL: string) {
 let rmap: RenderMap
 
 function loop() {
-  viewport.update()
   renderer.render(rmap)
   // requestAnimationFrame(loop)
 }

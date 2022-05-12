@@ -6,7 +6,7 @@ import { TileLayer } from '../twmap/tileLayer'
 import { QuadLayer } from '../twmap/quadLayer'
 import { RenderTileLayer } from '../gl/renderTileLayer'
 import { RenderQuadLayer } from '../gl/renderQuadLayer'
-import { gl, shader } from './global'
+import { gl, shader, viewport } from './global'
 
 function createRenderLayer(layer: Layer) {
   if (layer instanceof TileLayer)
@@ -28,9 +28,9 @@ export class RenderGroup {
   
   render() {
     // TODO? initMapScreen
-    // let mv = mat4.create()
-    
-    // gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
+    let mv = mat4.create()
+    mat4.translate(mv, mv, [this.group.offX, this.group.offY, 0])
+    gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
 
     for(let layer of this.layers)
       layer.render()

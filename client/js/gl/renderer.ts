@@ -30,15 +30,15 @@ export class Renderer {
 		this.gl.activeTexture(this.gl.TEXTURE0)
 		this.gl.uniform1i(this.shader.locs.unifs.uSampler, 0)
 		
-  	this.gl.viewport(0, 0, this.viewport.width(), this.viewport.height())
+  	this.gl.viewport(0, 0, this.viewport.canvas.width, this.viewport.canvas.height)
 		this.updateProjMat()
 
 		map.render()
 	}
 
   private updateProjMat() {
-    let { x, y, w, h } = this.viewport.screen()
-    mat4.ortho(this.proj, x, x + w, y + h, y, 1, -1)
+    let { x1, y1, x2, y2 } = this.viewport.screen()
+    mat4.ortho(this.proj, x1, x2, y2, y1, 1, -1)
     this.gl.uniformMatrix4fv(this.shader.locs.unifs.uPMatrix, false, this.proj);
   }
   
