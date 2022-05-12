@@ -20,6 +20,10 @@ export class TileLayer extends Layer {
 		this.image = null
 	}
 	
+	getTile(x: number, y: number) {
+		return this.tiles[y * this.width + x]
+	}
+	
 	load(df: DataFile, info: MapLayerTiles) {
 		this.type = info.flags // game, tiles, tele…
 		this.name = info.name

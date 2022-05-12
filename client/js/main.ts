@@ -1,4 +1,5 @@
 import { Server } from './server/server'
+import { ChangeData } from './server/protocol'
 import { Map } from './twmap/map'
 import { RenderMap } from './gl/renderMap'
 import { init as glInit, renderer, viewport } from './gl/global'
@@ -15,6 +16,11 @@ let $mapName: HTMLElement = $nav.querySelector('#map-name')
 let $dialog: HTMLElement = document.querySelector('#dialog')
 let $dialogContent: HTMLElement = $dialog.querySelector('.content')
 let $users: HTMLElement = document.querySelector('#users span')
+
+let map: Map
+let rmap: RenderMap
+let server: Server
+let treeView: TreeView
 
 
 function showDialog(msg: string) {
@@ -34,7 +40,7 @@ async function loadMapData(mapURL: string) {
 
 async function setupServer() {
   // setup server  
-  let server = await Server.create('pi.thissma.fr', 16900)
+  server = await Server.create('pi.thissma.fr', 16900)
   .catch((e) => {
     showDialog('Failed to connect to the server.')
     throw e
@@ -49,10 +55,10 @@ async function setupServer() {
   })
 }
 
-function setupGL(map: Map) {
+function setupGL() {
 
   glInit($canvas)
-  let rmap = new RenderMap(map)
+  rmap = new RenderMap(map)
 
   function loop() {
     renderer.render(rmap)
@@ -61,16 +67,35 @@ function setupGL(map: Map) {
   requestAnimationFrame(loop)
 }
 
-function setupUI(map: Map) {
-  new TreeView($tree, map)
+function placeTile() {
+    let { x, y } = viewport.mousePos
+    x = Math.floor(x)
+    y = Math.floor(y)
+
+    let [ group, layer ] = treeView.getSelected()
+    
+    let change: ChangeData = {
+      map_name: map.name,
+      group, 
+      layer,
+      x,
+      y,
+      id: 1,
+    }
+
+    rmap.applyChange(change)
+}
+
+function setupUI() {
+  treeView = new TreeView($tree, map)
   $mapName.innerText = map.name
 
-  $canvas.addEventListener('click', (e) => {
-    let [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
-    let tileX = Math.floor(x)
-    let tileY = Math.floor(y)
-    // map.groups.
-    console.log(tileX, tileY)
+  viewport.onclick = () => placeTile()
+  
+  window.addEventListener('keydown', (e) => {
+    e.preventDefault()
+    if (e.key === ' ')
+      placeTile()
   })
 }
 
@@ -78,9 +103,9 @@ async function main() {
   showDialog('Connecting to server…')
   await setupServer()
   let mapData = await loadMapData(MAP_URL)
-  let map = new Map("Sunny Side Up", mapData)
-  setupGL(map)
-  setupUI(map)
+  map = new Map("Sunny Side Up", mapData)
+  setupGL()
+  setupUI()
   hideDialog()
   console.log('up and running!')
 }

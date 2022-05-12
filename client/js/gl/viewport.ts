@@ -16,10 +16,14 @@ export class Viewport {
   //  - the tile space world space but with integers.
 
   // following variables are in world space.
-  pos: Vec2
-  posDragStart: Vec2
-  posDragLast: Vec2
-  mouseHover: boolean
+  pos: Vec2          // pos of the view top-left corner
+  posDragStart: Vec2 // top-left corner when drag started
+  posDragLast: Vec2  // top-left corner last frame
+  mousePos: Vec2     // mouse world position when hover the canvas
+  mousePressed: boolean
+  
+  clickTimeout: number // millis between press and release to be considered click
+  onclick: () => any
 
   dragTimestamp: number
   touchDistance: number
@@ -36,7 +40,13 @@ export class Viewport {
     this.pos = { x: 0, y: 0 }
     this.posDragStart = { x: 0, y: 0 }
     this.posDragLast = { x: 0, y: 0 }
-    this.mouseHover = false
+    this.mousePos = { x: 0, y: 0 }
+    
+    this.clickTimeout = 100
+    this.onclick = () => {}
+    
+    this.dragTimestamp = 0
+    this.touchDistance = 0
 
     this.scale = 16
     this.minScale = 1
@@ -54,34 +64,16 @@ export class Viewport {
   }
   
   private createListeners() {
-    this.canvas.addEventListener('click', (e) => this.onclick(e))
-    
-    let mousemove = (e: MouseEvent) => this.onmousemove(e)
-    
-    let mousedown = (e: MouseEvent) => {
-      this.onmousedown(e)
-      this.canvas.addEventListener('mousemove', mousemove)
-    }
-    
-    let mouseup = () => {
-      this.canvas.removeEventListener('mousemove', mousemove)
-    }
-    
-    let wheel = (e: WheelEvent) => this.onwheel(e)
-
     this.canvas.addEventListener('touchstart', this.ontouchstart.bind(this))
     this.canvas.addEventListener('touchmove', this.ontouchmove.bind(this))
-    this.canvas.addEventListener('mousedown', mousedown)
-    this.canvas.addEventListener('mouseup', mouseup)
-    this.canvas.addEventListener('wheel', wheel)
+    this.canvas.addEventListener('mousedown', this.onmousedown.bind(this))
+    this.canvas.addEventListener('mousemove', this.onmousemove.bind(this))
+    this.canvas.addEventListener('mouseup', this.onmouseup.bind(this))
+    this.canvas.addEventListener('wheel', this.onwheel.bind(this))
 
     // TODO
     // this.canvas.addEventListener('mouseenter', () => this.mouseHover = true)
     // this.canvas.addEventListener('mouseleave', () => hover = false)
-    // this.canvas.addEventListener('mousemove', (e) => {
-    //   x = e.clientX
-    //   y = e.clientY
-    // })
   }
 
   // this is probably a noop, because canvas is sized to window size
@@ -104,27 +96,6 @@ export class Viewport {
     return this.canvasToWorld(x2, y2)
   }
 
-  // private canvasToGrid(x: number, y: number) {
-  //   return [
-  //     Math.floor((this.pos.x + x / this.scale) / this.grid.tileSize),
-  //     Math.floor((this.pos.y + y / this.scale) / this.grid.tileSize),
-  //   ]
-  // }
-
-  // ------------ window events --------------------------------
-  // private onkeydown(e: KeyboardEvent) {
-  //     if( !hover ) return
-  //     if(e.key === ' ') {
-  //       this.onSpacebar(x, y)
-  //     }
-  //     else if(e.key === '+') {
-  //       this.onZoom(.5, x, y)
-  //     }
-  //     else if(e.key === '-') {
-  //       this.onZoom(-.5, x, y)
-  //     }
-  // }
-
   private onresize() {
     this.canvas.width = window.innerWidth
     this.canvas.height = window.innerHeight
@@ -134,28 +105,28 @@ export class Viewport {
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
     let [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
+    this.mousePressed = true
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
     let [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
-    this.onDrag(canvasX, canvasY)
+    let [ worldX, worldY ] = this.canvasToWorld(canvasX, canvasY)
+    this.mousePos.x = worldX
+    this.mousePos.y = worldY
+    if (this.mousePressed)
+      this.onDrag(canvasX, canvasY)
+  }
+  
+  private onmouseup() {
+    if(Date.now() - this.dragTimestamp < this.clickTimeout)
+      this.onclick()
+    this.mousePressed = false
   }
 
   private onwheel(e: WheelEvent) {
     let direction = e.deltaY < 0 ? -1 : 1
     this.onZoom(0.1 * direction, e.clientX, e.clientY)
-  }
-
-  private onclick(e: MouseEvent) {
-    let [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
-    if(Math.abs(this.posDragStart.x - canvasX) > 5 || Math.abs(this.posDragStart.y - canvasY) > 5) return
-    // let [ gridX, gridY ] = this.canvasToGrid(canvasX, canvasY)
-  }
-
-  private onSpacebar(x: number, y: number) {
-    // let [ canvasX, canvasY ] = this.pixelToCanvas(x, y)
-    // let [ gridX, gridY ] = this.canvasToGrid(canvasX, canvasY)
   }
 
 
@@ -220,7 +191,8 @@ export class Viewport {
   }
 
   private onDrag(x: number, y: number) {
-    if(Date.now() - this.dragTimestamp < 100) return
+    if(Date.now() - this.dragTimestamp < this.clickTimeout)
+      return
 
     let deltaX = x - this.posDragLast.x
     let deltaY = y - this.posDragLast.y

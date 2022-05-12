@@ -5,6 +5,7 @@ import { gl } from './global'
 import { LayerType } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
+import { ChangeData } from '../server/protocol'
 
 function createGameTexture() {
 	let image = new Image()
@@ -29,6 +30,17 @@ export class RenderMap {
     let gameLayer = gameGroup.layers[gameLayerIndex] as RenderTileLayer
     this.gameLayer = new RenderTileLayer(gameLayer.layer)
     this.gameLayer.texture = createGameTexture()
+  }
+  
+  applyChange(change: ChangeData) {
+    let group  = this.groups[change.group]
+    let layer  = group.layers[change.layer] as RenderTileLayer
+    let tile   = layer.layer.getTile(change.x, change.y)
+    tile.index = change.id
+    layer.recompute()
+
+    // we could test if change is on game layer, but the laziest is just to recompute
+    this.gameLayer.recompute()
   }
   
   render() {

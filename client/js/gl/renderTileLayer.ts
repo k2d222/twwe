@@ -25,28 +25,29 @@ export class RenderTileLayer extends RenderLayer {
 		
 		if (layer.image !== null)
 			this.texture = new Texture(layer.image)
-
 		else
 			this.texture = null
 		
 		this.tileSize = 32
     this.tileCount = RenderTileLayer.renderTileNum(this.layer.tiles)
-		
-		// TODO: this is unused ?
-		this.colorFloatArray = new Float32Array([
-			layer.color.r / 255,
-			layer.color.g / 255,
-			layer.color.b / 255,
-			layer.color.a / 255
-		])
-		this.vertexFloatArray = new Float32Array(this.tileCount * 12)
-		this.texCoordFloatArray = new Float32Array(this.tileCount * 12)
-		// this.needInit = true
 
 		this.vertexBuf = gl.createBuffer()
 		this.texCoordBuf = gl.createBuffer()
+
+		this.createArrays()
 		this.initBuffers()
   }
+	
+	recompute() {
+    let newTileCount = RenderTileLayer.renderTileNum(this.layer.tiles)
+
+		if (newTileCount !== this.tileCount) {
+			this.tileCount = newTileCount
+			this.createArrays()
+		}
+
+		this.initBuffers()
+	}
 
 	render() {
     if(!this.texture) {
@@ -66,12 +67,6 @@ export class RenderTileLayer extends RenderLayer {
   	gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor);
   	gl.uniform1i(shader.locs.unifs.uVertexColor, 0);
 
-  	// MapTile resize
-		// TODO needed ?
-  	// mat4.copy(tw.tmpMat, tw.mvMat);
-  	// mat4.scale(tw.mvMat, tw.mvMat, [32, 32, 0.0]);
-  	// tw.setMatUniforms();
-
   	// Set color mask
 		let { r, g, b, a } = this.layer.color
 		let col = [r, g, b, a].map(x => x / 255)
@@ -86,13 +81,22 @@ export class RenderTileLayer extends RenderLayer {
   	gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0);
   	gl.drawArrays(gl.TRIANGLES, 0, this.tileCount * 6);
 
-  	// Get old mvMat
-  	// mat4.copy(tw.mvMat, tw.tmpMat);
-
   	// keep textures disabled by default
   	gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
   	gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
   }
+	
+	private createArrays() {
+		// TODO: this is unused ?
+		this.colorFloatArray = new Float32Array([
+			this.layer.color.r / 255,
+			this.layer.color.g / 255,
+			this.layer.color.b / 255,
+			this.layer.color.a / 255
+		])
+		this.vertexFloatArray = new Float32Array(this.tileCount * 12)
+		this.texCoordFloatArray = new Float32Array(this.tileCount * 12)
+	}
 
 	private initBuffers() {
 		let t = 0
@@ -100,7 +104,7 @@ export class RenderTileLayer extends RenderLayer {
 		for (let y = 0; y < this.layer.height; y++) {
 			for (let x = 0; x < this.layer.width; x++) {
 
-				let tile = this.layer.tiles[y * this.layer.width + x]
+				let tile = this.layer.getTile(x, y)
 				
 				if (tile.index === 0) // skip tiles with index 0
 					continue
@@ -144,32 +148,17 @@ function makeVertices(x: number, y: number) {
 }
 
 function makeTexCoords(tile: LayerTile) {
-	// mipmap border correction
-	let tilePixelSize = 1024 / 32
-	// TODO
-	// let finalTileSize = 32 / viewport.screen().w * viewport.width()
-	let finalTileSize = 32
-	let finalTilesetScale = finalTileSize / tilePixelSize 
+	let tileCount = 16
+	let tx = tile.index % tileCount
+	let ty = Math.floor(tile.index / tileCount)
 
-	let texSize = 1024.0
-	let frac = (1.25 / texSize) * (1 / finalTilesetScale)
-	let nudge = (0.5 / texSize) * (1 / finalTilesetScale)
-
-	let tx = tile.index % 16
-	let ty = Math.floor(tile.index / 16)
-
-	let px0 = tx * (1024 / 16)
-	let py0 = ty * (1024 / 16)
-	let px1 = px0 + (1024 / 16) - 1
-	let py1 = py0 + (1024 / 16) - 1
-
-	let x0 = nudge + px0 / 1024 + frac
-	let x1 = nudge + px1 / 1024 - frac
+	let x0 = tx / tileCount
+	let x1 = (tx + 1) / tileCount
 	let x2 = x1
 	let x3 = x0
 
-	let y0 = nudge + py0 / 1024 + frac
-	let y1 = nudge + py1 / 1024 - frac
+	let y0 = ty / tileCount
+	let y1 = (ty + 1) / tileCount
 	let y2 = y1
 	let y3 = y0
 
