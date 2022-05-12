@@ -46,7 +46,7 @@ export class RenderQuadLayer extends RenderLayer {
     	gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
     }
     else if (!this.texture.loaded) {
-			return
+			this.texture.load()
     }
     else {
     	gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord);

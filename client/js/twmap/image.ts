@@ -7,7 +7,7 @@ export class Image {
   name: string
   width: number
   height: number
-  data: ImageData | null
+  data: TexImageSource | null
 	
 	constructor() {
 		this.name = "unnamed image"
@@ -22,23 +22,19 @@ export class Image {
     this.height = info.height
     
 		if (info.external) {
-			// let url = this.name + ".png"
-			console.warn('external images are not supported yet.')
+			let url = 'mapres/' + this.name + '.png'
+			console.log(url)
+			let img = document.createElement('img')
+			img.onerror = () => console.warn('failed to load image:', url)
+			img.onload = () => {
+				console.log('loaded:', url)
+				this.data = img
+			}
+			img.src = url
 		}
     else {
 			let buf = new Uint8ClampedArray(df.getData(info.data))
       this.data = new ImageData(buf, this.width, this.height)
-			
-   //    this is debug			
-      // let canvas = document.createElement('canvas');
-      // let ctx = canvas.getContext('2d');
-      // canvas.width = this.data.width;
-      // canvas.height = this.data.height;
-      // ctx.putImageData(this.data, 0, 0);
-      // let image = document.createElement('img');
-      // image.src = canvas.toDataURL();
-      // document.body.append(image)
-
     }
   }
 }

@@ -18,11 +18,16 @@ export class Texture {
 		this.loaded = false
     if(image.data !== null)
       this.initTexture(image.data)
-		else
-			console.log('TODO: texture for external images')
   }
+	
+	load() {
+		if (!this.loaded && this.image.data) {
+			this.initTexture(this.image.data)
+			this.loaded = true
+		}
+	}
   
-  private initTexture(img: ImageData) {
+  private initTexture(img: TexImageSource) {
 
 		gl.bindTexture(gl.TEXTURE_2D, this.tex)
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
