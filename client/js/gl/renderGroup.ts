@@ -34,13 +34,13 @@ export class RenderGroup {
     let w = x2 - x1
     let h = y2 - y1
     
-    let cx = x1 * (1 - paraX / 100)
-    let cy = y1 * (1 - paraY / 100)
+    let cx = (x1 + w / 2) * (1 - paraX / 100)
+    let cy = (y1 + h / 2) * (1 - paraY / 100)
     
     // console.log(this.group.name, offX, offY, paraX, paraY)
     
-    // mat4.translate(mv, mv, [offX + cx - w/2, offY + cy - h/2, 0])
-    mat4.translate(mv, mv, [offX, offY, 0])
+    mat4.translate(mv, mv, [cx, cy, 0])
+    // mat4.translate(mv, mv, [offX, offY, 0])
     gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
 
     for(let layer of this.layers)
