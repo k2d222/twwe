@@ -30,6 +30,5 @@ export class QuadLayer extends Layer {
 		else {
 			this.image = null
 		}
-
   }
 }

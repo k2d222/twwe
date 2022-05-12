@@ -88,10 +88,11 @@ export class RenderQuadLayer extends RenderLayer {
       let texCoords = makeTexCoords(quad)
       let indices = makeIndices(t)
 
-			this.vertexArr.set(vertices, t * 8)
-			this.colorArr.set(colors, t * 16)
-			this.texCoordArr.set(texCoords, t * 8)
-			this.indexArr.set(indices, t * 8)
+			this.vertexArr.set(vertices, t * 4 * 2)
+			this.colorArr.set(colors, t * 4 * 4)
+			this.texCoordArr.set(texCoords, t * 4 * 2)
+			this.indexArr.set(indices, t * 6)
+      t++
   	}
 
   	gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf);
@@ -110,10 +111,10 @@ export class RenderQuadLayer extends RenderLayer {
 
 function makeVertices(q: LayerQuad) {
 	return [
-		q.points[0].x / 1024, q.points[0].y / 1024,
-		q.points[2].x / 1024, q.points[2].y / 1024,
-		q.points[3].x / 1024, q.points[3].y / 1024,
-		q.points[1].x / 1024, q.points[1].y / 1024
+		q.points[0].x / 512 / 64, q.points[0].y / 512 / 64,
+		q.points[2].x / 512 / 64, q.points[2].y / 512 / 64,
+		q.points[3].x / 512 / 64, q.points[3].y / 512 / 64,
+		q.points[1].x / 512 / 64, q.points[1].y / 512 / 64,
 	];
 }
 
@@ -137,5 +138,5 @@ function makeTexCoords(q: LayerQuad) {
 }
 
 function makeIndices(t: number) {
-  return [ 0, 1, 2, 0, 2, 3 ].map(x => x + t)
+  return [ 0, 1, 2, 0, 2, 3 ].map(x => x + t * 4)
 }

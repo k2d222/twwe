@@ -29,7 +29,18 @@ export class RenderGroup {
   render() {
     // TODO? initMapScreen
     let mv = mat4.create()
-    mat4.translate(mv, mv, [this.group.offX, this.group.offY, 0])
+    let { offX, offY, paraX, paraY } = this.group
+    let { x1, x2, y1, y2 } = viewport.screen()
+    let w = x2 - x1
+    let h = y2 - y1
+    
+    let cx = x1 * (1 - paraX / 100)
+    let cy = y1 * (1 - paraY / 100)
+    
+    // console.log(this.group.name, offX, offY, paraX, paraY)
+    
+    // mat4.translate(mv, mv, [offX + cx - w/2, offY + cy - h/2, 0])
+    mat4.translate(mv, mv, [offX, offY, 0])
     gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
 
     for(let layer of this.layers)

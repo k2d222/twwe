@@ -2,7 +2,7 @@ import { Map } from './twmap/map'
 import { RenderMap } from './gl/renderMap'
 import { init as glInit, viewport, renderer } from './gl/global'
 
-const MAP_URL = '/maps/Sunny Side Up.map'
+const MAP_URL = '/maps/sunny.map'
 
 async function loadMapData(mapURL: string) {
   let res = await fetch(mapURL)

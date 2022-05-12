@@ -46,7 +46,6 @@ export class Group {
         this.layers.push(layer)
   		}
       else if(layerInfo.type === LayerType.QUADS) {
-        console.log("TODO")
   			let quadLayerInfo = parseMapLayerQuads(layerItem.data)
         let layer = new QuadLayer()
         layer.load(df, quadLayerInfo)

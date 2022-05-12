@@ -207,13 +207,5 @@ function makeTexCoords(tile: LayerTile) {
 		x1, y2,
 		x2, y3,
 	]
-	// return [
-	// 	0, 0,
-	// 	0, 1,
-	// 	1, 1,
-	// 	0, 0,
-	// 	1, 1,
-	// 	1, 0
-	// ]
 }
 
