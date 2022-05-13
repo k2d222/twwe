@@ -17,6 +17,21 @@ export class Map {
     this.groups = this.loadGroups(df)
   }
   
+  // return [ groupID, layerID ]
+  gameLayerID() {
+    for (let i = 0; i < this.groups.length; i++) {
+      let g = this.groups[i]
+      for (let j = 0; j < g.layers.length; j++) {
+        let l = g.layers[j]
+        if (l.type === LayerType.GAME) {
+          return [ i, j ]
+        }
+      }
+    }
+    
+    return [ -1, -1 ]
+  }
+  
   private loadImages(df: DataFile) {
     let imagesInfo = df.getType(MapItemType.IMAGE)
     let images = []

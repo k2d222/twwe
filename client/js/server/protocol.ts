@@ -16,11 +16,13 @@ export type UsersData = {
 
 export interface ServerEventMap {
   'change': ChangeData
+  'map': string
   'users': UsersData
 }
 
 export interface ClientEventMap {
   'change': ChangeData
+  'map': string
   'save': string // string is map_name
 }
 

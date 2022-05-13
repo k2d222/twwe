@@ -4,26 +4,39 @@ import { Layer } from '../twmap/layer'
 
 export class TreeView {
   cont: HTMLElement
+  onselect: (groupID: number, layerID: number) => any
+
+  private groupID: number
+  private layerID: number
 
   constructor(cont: HTMLElement, map: Map) {
     this.cont = cont
+    this.onselect = () => {}
+    this.groupID = -1
+    this.layerID = -1
     cont.innerHTML = ''
     
     let groups = map.groups.map((g, i) => this.groupTree(g, i))
     cont.append(...groups)
   }
   
-  // returns [ groupID, layerID ]
   getSelected() {
+    return [ this.groupID, this.layerID ]
+  }
+  
+  select(groupID: number, layerID: number) {
     let radios: NodeListOf<HTMLInputElement> = this.cont.querySelectorAll('input[type=radio]')
     for(let r of radios) {
-      if (r.checked) {
-        let layerID  = parseInt(r.dataset.layerID)
-        let groupID  = parseInt(r.dataset.groupID)
-        return [ groupID, layerID ]
+      let thisLayerID = parseInt(r.dataset.layerID)
+      let thisGroupID = parseInt(r.dataset.groupID)
+      if (thisLayerID === layerID && thisGroupID === groupID) {
+        r.checked = true
+        this.groupID = groupID
+        this.layerID = layerID
+        this.onselect (groupID, layerID)
+        return
       }
     }
-    return [ -1, -1 ]
   }
   
   private groupTree(group: Group, g: number) {
@@ -42,6 +55,12 @@ export class TreeView {
     input.value = layer.name || '<empty name>'
     input.dataset.groupID = '' + g
     input.dataset.layerID = '' + l
+
+    input.onchange = () => {
+      this.groupID = g
+      this.layerID = l
+      this.onselect(g, l)
+    }
 
     let label = document.createElement('label')
     label.classList.add('layer')

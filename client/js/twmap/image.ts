@@ -8,24 +8,26 @@ export class Image {
   width: number
   height: number
   data: TexImageSource | null
+	img: HTMLImageElement | null
 	
 	constructor() {
 		this.name = "unnamed image"
 		this.width = 0
 		this.height = 0
 		this.data = null
+		this.img = null
 	}
 	
 	loadExternal(url: string) {
-		let img = document.createElement('img')
-		img.onerror = () => console.warn('failed to load image:', url)
-		img.onload = () => {
+		this.img = document.createElement('img')
+		this.img.onerror = () => console.warn('failed to load image:', url)
+		this.img.onload = () => {
 			console.log('loaded:', url)
-			this.data = img
-			this.width = img.width
-			this.height = img.height
+			this.data = this.img
+			this.width = this.img.width
+			this.height = this.img.height
 		}
-		img.src = url
+		this.img.src = url
 	}
 	
   load(df: DataFile, info: MapImage) {

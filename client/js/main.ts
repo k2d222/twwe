@@ -4,6 +4,8 @@ import { Map } from './twmap/map'
 import { RenderMap } from './gl/renderMap'
 import { init as glInit, renderer, viewport } from './gl/global'
 import { TreeView } from './ui/treeView'
+import { TileSelector } from './ui/tileSelector'
+import { LayerType } from './twmap/types'
 
 const MAP_URL = '/maps/sunny.map'
 
@@ -12,6 +14,7 @@ const MAP_URL = '/maps/sunny.map'
 let $canvas: HTMLCanvasElement = document.querySelector('canvas')
 let $nav: HTMLElement = document.querySelector('nav')
 let $tree: HTMLElement = $nav.querySelector('#tree')
+let $selector: HTMLElement = document.querySelector('#tile-selector')
 let $mapName: HTMLElement = $nav.querySelector('#map-name')
 let $dialog: HTMLElement = document.querySelector('#dialog')
 let $dialogContent: HTMLElement = $dialog.querySelector('.content')
@@ -20,7 +23,9 @@ let $users: HTMLElement = document.querySelector('#users span')
 let map: Map
 let rmap: RenderMap
 let server: Server
+
 let treeView: TreeView
+let tileSelector: TileSelector
 
 
 function showDialog(msg: string) {
@@ -73,6 +78,7 @@ function placeTile() {
     y = Math.floor(y)
 
     let [ group, layer ] = treeView.getSelected()
+    let id = tileSelector.getSelected()
     
     let change: ChangeData = {
       map_name: map.name,
@@ -80,14 +86,29 @@ function placeTile() {
       layer,
       x,
       y,
-      id: 1,
+      id,
     }
-
+  
+    console.log('change:', change)
     rmap.applyChange(change)
 }
 
 function setupUI() {
   treeView = new TreeView($tree, map)
+  tileSelector = new TileSelector($selector)
+
+  let [ groupID, layerID ] = map.gameLayerID()
+  
+  treeView.onselect = (groupID, layerID) => {
+    let layer = map.groups[groupID].layers[layerID]
+    let image = layer.image
+    if (layer.type === LayerType.GAME)
+      image = rmap.gameLayer.texture.image
+    tileSelector.setImage(image)
+  }
+
+  treeView.select(groupID, layerID)
+
   $mapName.innerText = map.name
 
   viewport.onclick = () => placeTile()
