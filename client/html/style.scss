@@ -1,0 +1,86 @@
+* {
+  box-sizing: border-box;
+}
+
+canvas {
+  position: fixed;
+  top: 0;
+  left:0;
+  background: black;
+}
+
+#menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: rgba(255, 255, 255, .5);
+  gap: .5rem;
+}
+
+#dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, .5);
+  padding: 5rem;
+  
+  .content {
+    padding: 3rem 5rem;
+    border-radius: 15px;
+    background: white;
+    border: 1px solid black;
+  }
+  
+  &.hidden {
+    display: none;
+  }
+}
+
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 15rem;
+  background: white;
+  border-right: 1px solid black;
+  display: flex;
+  flex-direction: column;
+  padding: .5rem;
+  gap: 1rem;
+  
+      
+  #tree {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    overflow: auto;
+  }    
+
+  #map-name {
+    font-size: 1.3rem;
+    text-align: center;
+  }
+  
+  .group, .layer {
+    margin-left: .5rem;
+  }
+  
+  .group {
+    display: flex;
+    flex-direction: column;
+  }
+    
+  .layer {
+    border-left: 1px solid black;
+    padding-left: .5rem;
+  }  
+}
