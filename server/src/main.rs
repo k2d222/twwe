@@ -13,11 +13,10 @@ use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures_util::{future, pin_mut, stream::TryStreamExt, StreamExt};
 
 use tokio::net::{TcpListener, TcpStream};
-use tungstenite::{error::ProtocolError, protocol::Message};
+use tungstenite::protocol::Message;
 
 use serde::{Deserialize, Serialize};
 
-use ndarray::Array2;
 use twmap::{Layer, TwMap};
 
 type Tx = UnboundedSender<Message>;
@@ -41,17 +40,24 @@ type Res<T> = Result<T, Box<dyn Error>>;
 type SharedState = Arc<Mutex<State>>;
 
 #[derive(Debug, Serialize, Deserialize)]
-struct TileChange {
+struct Change {
     map_name: String,
+    group: u32,
+    layer: u32,
     x: u32,
     y: u32,
     id: u8,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct Users {
+    count: u32,
+}
+
 #[derive(Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 enum Request {
-    Tile(TileChange),
+    Change(Change),
     Map(String),
     Save(String),
 }
@@ -59,9 +65,9 @@ enum Request {
 #[derive(Serialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 enum Response {
-    Tile(TileChange),
-    Map { map_name: String, grid: Array2<u8> },
-    Users(u32),
+    Change(Change),
+    Map(),
+    Users(Users),
 }
 
 fn send(resp: &Response, peer: &UnboundedSender<Message>) -> Res<()> {
@@ -85,7 +91,7 @@ fn send_map(state: SharedState, addr: SocketAddr, map_name: String) -> Res<()> {
         .ok_or("no game layer")?;
     let tiles = layer.tiles.unwrap_ref(); // map must be loaded
     let grid = tiles.map(|t| t.id);
-    let resp = Response::Map { map_name, grid };
+    let resp = Response::Map(/* TODO */);
 
     let peer = state.peers.get(&addr).ok_or("failed to get peer")?;
     send(&resp, &peer)?;
@@ -103,7 +109,7 @@ fn save_map(state: SharedState, map_name: &str) -> Res<()> {
     Ok(())
 }
 
-fn set_tile(state: SharedState, change: TileChange) -> Res<()> {
+fn set_tile(state: SharedState, change: Change) -> Res<()> {
     let mut state = state.lock().map_err(|_| "could not acquire lock")?;
     let map = state
         .maps
@@ -127,7 +133,7 @@ fn set_tile(state: SharedState, change: TileChange) -> Res<()> {
     log::debug!("changed pixel {:?}", change);
 
     // broadcast message
-    let str = serde_json::to_string(&Response::Tile(change)).unwrap();
+    let str = serde_json::to_string(&Response::Change(change)).unwrap();
     let msg = Message::Text(str);
     for (_addr, peer) in state.peers.iter() {
         peer.unbounded_send(msg.clone()).unwrap();
@@ -139,7 +145,8 @@ fn set_tile(state: SharedState, change: TileChange) -> Res<()> {
 fn broadcast_users(state: SharedState) {
     let state = state.lock().unwrap();
     let n = state.peers.len();
-    let str = serde_json::to_string(&Response::Users(n as u32)).unwrap();
+    let resp = Users { count: n as u32 };
+    let str = serde_json::to_string(&Response::Users(resp)).unwrap();
     let msg = Message::Text(str);
     for (_addr, peer) in state.peers.iter() {
         peer.unbounded_send(msg.clone()).unwrap();
@@ -148,7 +155,7 @@ fn broadcast_users(state: SharedState) {
 
 fn handle_request(state: SharedState, addr: SocketAddr, req: Request) -> Res<()> {
     match req {
-        Request::Tile(tile) => set_tile(state, tile),
+        Request::Change(change) => set_tile(state, change),
         Request::Map(map_name) => send_map(state, addr, map_name),
         Request::Save(ref map_name) => save_map(state, map_name),
     }
@@ -212,7 +219,7 @@ async fn main() -> Result<(), IoError> {
         .unwrap_or_else(|| "127.0.0.1:16800".to_string());
 
     let mut state = State::new();
-    add_map(&mut state, "Custom Side Up");
+    add_map(&mut state, "Sunny Side Up");
     let state = SharedState::new(Mutex::new(state));
 
     // Create the event loop and TCP listener we'll accept connections on.
