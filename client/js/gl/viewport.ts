@@ -70,6 +70,7 @@ export class Viewport {
     this.canvas.addEventListener('mousemove', this.onmousemove.bind(this))
     this.canvas.addEventListener('mouseup', this.onmouseup.bind(this))
     this.canvas.addEventListener('wheel', this.onwheel.bind(this))
+    window.addEventListener('resize', this.onresize.bind(this))
 
     // TODO
     // this.canvas.addEventListener('mouseenter', () => this.mouseHover = true)

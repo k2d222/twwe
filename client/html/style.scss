@@ -49,7 +49,7 @@ nav {
   top: 0;
   left: 0;
   bottom: 0;
-  width: 15rem;
+  max-width: 15rem;
   background: white;
   border-right: 1px solid black;
   display: flex;
@@ -114,11 +114,14 @@ nav {
     left: 50%;
     transform: translateX(-50%);
     background: black;
-    padding: 3px;
     display: grid;
     grid-template-rows: repeat(16, $tile-size);
     grid-template-columns: repeat(16, $tile-size);
     grid-gap: 1px;
+    max-width: calc(100% - 2rem);
+    max-height: calc(100% - 5rem - 1rem);
+    overflow: auto;
+    border: 3px solid black;
     
     &.hidden {
       display: none;
