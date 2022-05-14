@@ -8,6 +8,16 @@ A server is (or will be) hosted at [tw.thissma.fr](https://tw.thissma.fr). Pleas
 
 Currently in a early Proof-of-Concept stage. Quick development.
 
+## Usage
+
+Many features are missing. Currently you can only edit tiles in tiles layers. Use mouse wheel to zoom in/out, hold and drag any mouse button to move around and click or press spacebar to place a tile under the cursor.
+
+Select the active tile by clicking the square at the bottom.
+
+Select the active layer by clicking one of the radio buttons on the left bar.
+
+The Save button saves the map on the disk on the server side. If a teeworlds server using this map is running, enter `reload` in the server console to update it.
+
 ## Building and Running
 
 ### Server
