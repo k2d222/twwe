@@ -16,7 +16,7 @@ export type UsersData = {
 
 export interface ServerEventMap {
   'change': ChangeData
-  'map': string
+  'map': ArrayBuffer
   'users': UsersData
 }
 

@@ -56,7 +56,7 @@ struct Users {
 
 #[derive(Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
-enum Request {
+enum JsonRequest {
     Change(Change),
     Map(String),
     Save(String),
@@ -64,26 +64,22 @@ enum Request {
 
 #[derive(Serialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
-enum Response {
+enum JsonResponse {
     Change(Change),
     // Map(TwMap), // TODO: we need to find a way to send the map to new clients without desync
     Users(Users),
 }
 
-fn send(resp: &Response, peer: &UnboundedSender<Message>) -> Res<()> {
-    let msg = serde_json::to_string(resp)?;
-    peer.unbounded_send(Message::Text(msg))?;
-    Ok(())
-}
-
 fn send_map(state: SharedState, addr: SocketAddr, map_name: String) -> Res<()> {
-    // TODO
-    // let state = state.lock().map_err(|_| "could not acquire lock")?;
-    // let map = state.maps.get(&map_name).ok_or("map not found")?;
-    // let resp = Response::Map(map.clone());
+    // TODO: this is blocking for the server
+    let mut state = state.lock().map_err(|_| "could not acquire lock")?;
+    let map = state.maps.get_mut(&map_name).ok_or("map not found")?;
 
-    // let peer = state.peers.get(&addr).ok_or("failed to get peer")?;
-    // send(&resp, &peer)?;
+    let mut buf = Vec::new();
+    map.save(&mut buf)?;
+
+    let peer = state.peers.get(&addr).ok_or("failed to get peer")?;
+    peer.unbounded_send(Message::Binary(buf))?;
 
     Ok(())
 }
@@ -126,7 +122,7 @@ fn set_tile(state: SharedState, change: Change) -> Res<()> {
     log::debug!("changed pixel {:?}", change);
 
     // broadcast message
-    let str = serde_json::to_string(&Response::Change(change)).unwrap();
+    let str = serde_json::to_string(&JsonResponse::Change(change)).unwrap();
     let msg = Message::Text(str);
     for (_addr, peer) in state.peers.iter() {
         peer.unbounded_send(msg.clone()).unwrap();
@@ -139,18 +135,18 @@ fn broadcast_users(state: SharedState) {
     let state = state.lock().unwrap();
     let n = state.peers.len();
     let resp = Users { count: n as u32 };
-    let str = serde_json::to_string(&Response::Users(resp)).unwrap();
+    let str = serde_json::to_string(&JsonResponse::Users(resp)).unwrap();
     let msg = Message::Text(str);
     for (_addr, peer) in state.peers.iter() {
         peer.unbounded_send(msg.clone()).unwrap();
     }
 }
 
-fn handle_request(state: SharedState, addr: SocketAddr, req: Request) -> Res<()> {
+fn handle_request(state: SharedState, addr: SocketAddr, req: JsonRequest) -> Res<()> {
     match req {
-        Request::Change(change) => set_tile(state, change),
-        Request::Map(map_name) => send_map(state, addr, map_name),
-        Request::Save(ref map_name) => save_map(state, map_name),
+        JsonRequest::Change(change) => set_tile(state, change),
+        JsonRequest::Map(map_name) => send_map(state, addr, map_name),
+        JsonRequest::Save(ref map_name) => save_map(state, map_name),
     }
 }
 

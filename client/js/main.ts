@@ -7,7 +7,7 @@ import { TreeView } from './ui/treeView'
 import { TileSelector } from './ui/tileSelector'
 import { LayerType } from './twmap/types'
 
-const MAP_URL = '/maps/Sunny Side Up.map'
+const MAP_NAME = 'Sunny Side Up'
 
 
 // all html elements are prefixed with $, but no JQuery :)
@@ -39,11 +39,6 @@ function hideDialog() {
   $dialog.classList.add('hidden')
 }
 
-async function loadMapData(mapURL: string) {
-  let res = await fetch(mapURL)
-  return await res.arrayBuffer()
-}
-
 async function setupServer() {
   // setup server  
   server = await Server.create('pi.thissma.fr', 16900)
@@ -51,7 +46,7 @@ async function setupServer() {
     showDialog('Failed to connect to the server.')
     throw e
   })
-
+  
   server.on('change', (e) => {
     rmap.applyChange(e)
   })
@@ -133,12 +128,15 @@ function setupUI() {
 async function main() {
   showDialog('Connecting to server…')
   await setupServer()
-  let mapData = await loadMapData(MAP_URL)
-  map = new Map("Sunny Side Up", mapData)
-  setupGL()
-  setupUI()
-  hideDialog()
-  console.log('up and running!')
+  server.send('map', MAP_NAME)
+  server.on('map', (buf) => {
+    // TODO: server send map name just to be sure.
+    map = new Map(MAP_NAME, buf)
+    setupGL()
+    setupUI()
+    hideDialog()
+    console.log('up and running!')
+  })
 }
 
 

@@ -8,9 +8,11 @@ export class Server {
     
   private constructor(address: string, port: number) {
     this.socket = new WebSocket(`ws://${address}:${port}/`)
+    this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = (e) => this.onMessage(e)
     this.listeners = {
       'change': [],
+      'map': [],
       'users': [],
     }
   }
@@ -38,9 +40,23 @@ export class Server {
   }
 
   private onMessage(e: MessageEvent) {
-    let data = JSON.parse(e.data)
-    let type = data.type
-    let content = data.content
+    let type: keyof ServerEventMap
+    let content: any
+    
+    console.log(e.data)
+    
+    // binary messages from server are always maps.
+    if (e.data instanceof ArrayBuffer) {
+      type = 'map'
+      content = e.data
+    }
+    
+    // text messages from server are JSON and contains a content field.
+    else {
+      let data = JSON.parse(e.data)
+      type = data.type
+      content = data.content
+    }
     
     for (let fn of this.listeners[type]) {
       fn(content)
