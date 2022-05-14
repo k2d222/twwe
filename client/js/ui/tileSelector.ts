@@ -37,6 +37,7 @@ export class TileSelector {
     for(let i = 0; i < this.tileCount; i++) {
       for(let j = 0; j < this.tileCount; j++) {
         let $btn = this.makeButton(i, j)
+        $btn.addEventListener('click', () => this.select(i * this.tileCount + j))
         this.tilesCont.append($btn)
       }
     }
@@ -82,7 +83,6 @@ export class TileSelector {
     $btn.style.backgroundImage = `url('${this.url}')`
     $btn.style.backgroundPositionX = '-' + col + '00%' 
     $btn.style.backgroundPositionY = '-' + row + '00%' 
-    $btn.addEventListener('click', () => this.select(row * this.tileCount + col))
     return $btn
   }
 }

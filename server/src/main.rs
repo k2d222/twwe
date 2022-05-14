@@ -39,7 +39,7 @@ type Res<T> = Result<T, Box<dyn Error>>;
 
 type SharedState = Arc<Mutex<State>>;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct Change {
     map_name: String,
     group: u32,
@@ -66,7 +66,7 @@ enum Request {
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 enum Response {
     Change(Change),
-    Map(),
+    // Map(TwMap), // TODO: we need to find a way to send the map to new clients without desync
     Users(Users),
 }
 
@@ -77,31 +77,24 @@ fn send(resp: &Response, peer: &UnboundedSender<Message>) -> Res<()> {
 }
 
 fn send_map(state: SharedState, addr: SocketAddr, map_name: String) -> Res<()> {
-    let state = state.lock().map_err(|_| "could not acquire lock")?;
-    let map = state.maps.get(&map_name).ok_or("map not found")?;
-    let layer = map
-        .groups
-        .iter()
-        .find_map(|g| {
-            g.layers.iter().find_map(|l| match l {
-                Layer::Game(gl) => Some(gl),
-                _ => None,
-            })
-        })
-        .ok_or("no game layer")?;
-    let tiles = layer.tiles.unwrap_ref(); // map must be loaded
-    let grid = tiles.map(|t| t.id);
-    let resp = Response::Map(/* TODO */);
+    // TODO
+    // let state = state.lock().map_err(|_| "could not acquire lock")?;
+    // let map = state.maps.get(&map_name).ok_or("map not found")?;
+    // let resp = Response::Map(map.clone());
 
-    let peer = state.peers.get(&addr).ok_or("failed to get peer")?;
-    send(&resp, &peer)?;
+    // let peer = state.peers.get(&addr).ok_or("failed to get peer")?;
+    // send(&resp, &peer)?;
 
     Ok(())
 }
 
 fn save_map(state: SharedState, map_name: &str) -> Res<()> {
-    let mut state = state.lock().map_err(|_| "could not acquire lock")?;
-    let map = state.maps.get_mut(map_name).ok_or("map not found")?;
+    // clone the map to release the lock as soon as possible
+    let mut map = {
+        let mut state = state.lock().map_err(|_| "could not acquire lock")?;
+        let map = state.maps.get_mut(map_name).ok_or("map not found")?;
+        map.clone()
+    };
     let path = format!("maps/{}.map", map_name);
     map.save_file(path)?;
     map.load()?;
@@ -205,7 +198,14 @@ async fn handle_connection(state: SharedState, raw_stream: TcpStream, addr: Sock
 
 fn add_map(state: &mut State, name: &str) {
     let path = format!("maps/{}.map", name);
-    let mut map = TwMap::parse_file(path).expect("failed to parse map");
+    let mut map = TwMap::parse_file(&path).expect("failed to parse map");
+
+    // use std::time::Instant;
+    // let now = Instant::now();
+    // map.save_file(&format!("{}.map", path));
+    // let elapsed = now.elapsed();
+    // println!("Elapsed: {:.2?}", elapsed);
+
     map.load().expect("failed to load map");
     state.maps.insert(name.to_string(), map);
     log::info!("loaded map {}", name);

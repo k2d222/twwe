@@ -7,7 +7,7 @@ import { TreeView } from './ui/treeView'
 import { TileSelector } from './ui/tileSelector'
 import { LayerType } from './twmap/types'
 
-const MAP_URL = '/maps/sunny.map'
+const MAP_URL = '/maps/Sunny Side Up.map'
 
 
 // all html elements are prefixed with $, but no JQuery :)
@@ -19,6 +19,7 @@ let $mapName: HTMLElement = $nav.querySelector('#map-name')
 let $dialog: HTMLElement = document.querySelector('#dialog')
 let $dialogContent: HTMLElement = $dialog.querySelector('.content')
 let $users: HTMLElement = document.querySelector('#users span')
+let $btnSave: HTMLElement = document.querySelector('#save')
 
 let map: Map
 let rmap: RenderMap
@@ -52,11 +53,15 @@ async function setupServer() {
   })
 
   server.on('change', (e) => {
-    console.log('change:', e)
+    rmap.applyChange(e)
   })
 
   server.on('users', (e) => {
     $users.innerText = e.count + ''
+  })
+  
+  $btnSave.addEventListener('click', () => {
+    server.send('save', map.name)
   })
 }
 
@@ -89,8 +94,13 @@ function placeTile() {
       id,
     }
   
-    console.log('change:', change)
-    rmap.applyChange(change)
+    let res = rmap.applyChange(change)
+
+    // only apply change if succeeded e.g. not redundant 
+    if(res) {
+      console.log('change:', change)
+      server.send('change', change)
+    }
 }
 
 function setupUI() {

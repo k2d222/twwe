@@ -40,7 +40,7 @@ export class RenderMap {
     let tile = layer.layer.getTile(change.x, change.y)
 
     if (tile.index == change.id)
-      return
+      return false
 
     tile.index = change.id
 
@@ -48,6 +48,8 @@ export class RenderMap {
       this.gameLayer.recompute()
     else
       layer.recompute()
+    
+    return true
   }
   
   render() {
