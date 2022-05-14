@@ -2,7 +2,8 @@
 
 Teeworlds / DDraceNetwork map editor. Online and collaborative, just like the game.
 
-A server is (or will be) hosted at [tw.thissma.fr](https://tw.thissma.fr). Please don't DDos me.
+A server is (or will be) hosted at [tw.thissma.fr](http://tw.thissma.fr). Please don't DDos me. Note: try http if https is not working.
+
 
 ## Status
 
