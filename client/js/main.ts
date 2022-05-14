@@ -20,6 +20,7 @@ let $dialog: HTMLElement = document.querySelector('#dialog')
 let $dialogContent: HTMLElement = $dialog.querySelector('.content')
 let $users: HTMLElement = document.querySelector('#users span')
 let $btnSave: HTMLElement = document.querySelector('#save')
+let $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
 
 let map: Map
 let rmap: RenderMap
@@ -122,6 +123,10 @@ function setupUI() {
     e.preventDefault()
     if (e.key === ' ')
       placeTile()
+  })
+  
+  $btnToggleNav.addEventListener('click', () => {
+    $nav.classList.toggle('hidden')
   })
 }
 
