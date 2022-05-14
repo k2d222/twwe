@@ -43,8 +43,6 @@ export class Server {
     let type: keyof ServerEventMap
     let content: any
     
-    console.log(e.data)
-    
     // binary messages from server are always maps.
     if (e.data instanceof ArrayBuffer) {
       type = 'map'

@@ -50,7 +50,7 @@ export class Viewport {
 
     this.scale = 16
     this.minScale = 1
-    this.maxScale = 100
+    this.maxScale = 400
     
     this.createListeners()
     this.onresize()

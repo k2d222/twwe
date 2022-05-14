@@ -45,9 +45,9 @@ export class RenderMap {
     tile.index = change.id
 
     if (layer.layer.type === LayerType.GAME)
-      this.gameLayer.recompute()
+      this.gameLayer.recompute(change.x, change.y)
     else
-      layer.recompute()
+      layer.recompute(change.x, change.y)
     
     return true
   }

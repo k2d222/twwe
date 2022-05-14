@@ -2,7 +2,7 @@
 
 Teeworlds / DDraceNetwork map editor. Online and collaborative, just like the game.
 
-A server is (or will be) hosted at [tw.thissma.fr](tw.thissma.fr). Please don't DDos me.
+A server is (or will be) hosted at [tw.thissma.fr](https://tw.thissma.fr). Please don't DDos me.
 
 ## Status
 
@@ -25,7 +25,6 @@ Use `npm run tsc` to run Typescript checks on the project.
 
 Future short-term goals are as follows:
 
-* Improve performance for the meshing: currently takes ~50ms to edit every tile! (not sure how for now, maybe chunking, greedy meshing or a separate smaller buffer for edits)
 * Improve **concurrency** on the server. Currently, the whole server state is protected by a single mutex which means there cannot be any simultaneous requests.
 * Allow editing multiple maps on a single server. The server will advertise which maps are available and add restrictions on which users can connect to (maybe a password per map?)
 * Allow users to create, upload and download maps and setup access permissions.

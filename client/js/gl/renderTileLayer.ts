@@ -5,19 +5,19 @@ import { LayerTile } from "../twmap/types"
 import { Texture } from "./texture"
 import { TileFlag } from "../twmap/types"
 
+
 export class RenderTileLayer extends RenderLayer {
   layer: TileLayer
   texture: Texture | null
-
-	colorFloatArray: Float32Array
-	vertexFloatArray: Float32Array
-	texCoordFloatArray: Float32Array
 	
-	vertexBuf: WebGLBuffer
-	texCoordBuf: WebGLBuffer
+	buffers:{
+		tileCount: number,
+		vertex: WebGLBuffer,
+		texCoord: WebGLBuffer,
+	}[][]
 
   tileSize: number
-  tileCount: number
+	chunkSize: number
   
   constructor(layer: TileLayer) {
     super()
@@ -29,24 +29,18 @@ export class RenderTileLayer extends RenderLayer {
 			this.texture = null
 		
 		this.tileSize = 32
-    this.tileCount = RenderTileLayer.renderTileNum(this.layer.tiles)
+		this.chunkSize = 64
 
-		this.vertexBuf = gl.createBuffer()
-		this.texCoordBuf = gl.createBuffer()
+		this.buffers = []
 
-		this.createArrays()
+		this.createBuffers()
 		this.initBuffers()
   }
 	
-	recompute() {
-    let newTileCount = RenderTileLayer.renderTileNum(this.layer.tiles)
-
-		if (newTileCount !== this.tileCount) {
-			this.tileCount = newTileCount
-			this.createArrays()
-		}
-
-		this.initBuffers()
+	recompute(x: number, y: number) {
+		let chunkX = Math.floor(x / this.chunkSize)
+		let chunkY = Math.floor(y / this.chunkSize)
+		this.initChunkBuffer(chunkX, chunkY)
 	}
 
 	render() {
@@ -71,38 +65,76 @@ export class RenderTileLayer extends RenderLayer {
 		let { r, g, b, a } = this.layer.color
 		let col = [r, g, b, a].map(x => x / 255)
 		gl.uniform4fv(shader.locs.unifs.uColorMask, col);
+		
+		for(let chunkRow of this.buffers) {
+			for(let chunk of chunkRow) {
+				let { tileCount, vertex, texCoord } = chunk
+				// Vertex attribute
+				gl.bindBuffer(gl.ARRAY_BUFFER, vertex);
+				gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0);
 
-  	// Vertex attribute
-  	gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf);
-  	gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0);
+				// Texture coord attribute
+				gl.bindBuffer(gl.ARRAY_BUFFER, texCoord);
+				gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0);
+				gl.drawArrays(gl.TRIANGLES, 0, tileCount * 6);
+			}
+		}
 
-  	// Texture coord attribute
-  	gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf);
-  	gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0);
-  	gl.drawArrays(gl.TRIANGLES, 0, this.tileCount * 6);
-
-  	// keep textures disabled by default
-  	gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
-  	gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
+		// keep textures disabled by default
+		gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
+		gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
   }
 	
-	private createArrays() {
-		// TODO: this is unused ?
-		this.colorFloatArray = new Float32Array([
-			this.layer.color.r / 255,
-			this.layer.color.g / 255,
-			this.layer.color.b / 255,
-			this.layer.color.a / 255
-		])
-		this.vertexFloatArray = new Float32Array(this.tileCount * 12)
-		this.texCoordFloatArray = new Float32Array(this.tileCount * 12)
+	private createBuffers() {
+		let countX = Math.ceil(this.layer.width / this.chunkSize)
+		let countY = Math.ceil(this.layer.height / this.chunkSize)
+
+		for (let y = 0; y < countY; y++) {
+			this.buffers[y] = []
+			for (let x = 0; x < countX; x++) {
+				this.buffers[y][x] = {
+					tileCount: -1,
+					vertex: gl.createBuffer(),
+					texCoord: gl.createBuffer(),
+				}
+			}
+		}
 	}
+	
+	private chunkTileCount(chunkX: number, chunkY: number) {
+		let startX = chunkX * this.chunkSize
+		let startY = chunkY * this.chunkSize
+		let endX = Math.min(this.layer.width, (chunkX + 1) * this.chunkSize)
+		let endY = Math.min(this.layer.height, (chunkY + 1) * this.chunkSize)
 
-	private initBuffers() {
+		let tileCount = 0
+		for (let x = startX; x < endX; x++) {
+			for (let y = startY; y < endY; y++) {
+				let tile = this.layer.getTile(x, y)
+				if (tile.index !== 0)
+					tileCount++
+			}
+		}
+		
+		return tileCount
+	}
+	
+	private initChunkBuffer(chunkX: number, chunkY: number) {
+		let startX = chunkX * this.chunkSize
+		let startY = chunkY * this.chunkSize
+		let endX = Math.min(this.layer.width, (chunkX + 1) * this.chunkSize)
+		let endY = Math.min(this.layer.height, (chunkY + 1) * this.chunkSize)
+		
+		let buffer = this.buffers[chunkY][chunkX]
+
+		buffer.tileCount = this.chunkTileCount(chunkX, chunkY)
+
+		let vertexArr = new Float32Array(buffer.tileCount * 12)
+		let texCoordArr = new Float32Array(buffer.tileCount * 12)
 		let t = 0
-
-		for (let y = 0; y < this.layer.height; y++) {
-			for (let x = 0; x < this.layer.width; x++) {
+		
+		for (let y = startY; y < endY; y++) {
+			for (let x = startX; x < endX; x++) {
 
 				let tile = this.layer.getTile(x, y)
 				
@@ -110,29 +142,26 @@ export class RenderTileLayer extends RenderLayer {
 					continue
 
 				let vertices = makeVertices(x, y)
-				this.vertexFloatArray.set(vertices, t * 12)
+				vertexArr.set(vertices, t * 12)
 
 				let texCoords = makeTexCoords(tile)
-				this.texCoordFloatArray.set(texCoords, t * 12)
+				texCoordArr.set(texCoords, t * 12)
 
 				t++
 			}
 		}
+		
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer.vertex)
+		gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf)
-		gl.bufferData(gl.ARRAY_BUFFER, this.vertexFloatArray, gl.STATIC_DRAW)
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf)
-		gl.bufferData(gl.ARRAY_BUFFER, this.texCoordFloatArray, gl.STATIC_DRAW)
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer.texCoord)
+		gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
 	}
-	
-	private static renderTileNum(tiles: LayerTile[]) {
-		let num = 0
 
-		for (let tile of tiles)
-			if (tile.index !== 0)
-				num++
-		return num
+	private initBuffers() {
+		for(let y = 0; y < this.buffers.length; y++)
+			for(let x = 0; x < this.buffers[0].length; x++)
+				this.initChunkBuffer(x, y)
 	}
 }
 
