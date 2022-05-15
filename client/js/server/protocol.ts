@@ -2,7 +2,6 @@
 
 // TODO: for now, can only edit tile id of tile layers.
 export type ChangeData = {
-  map_name: string,
   group: number,
   layer: number,
   x: number,
@@ -22,7 +21,7 @@ export interface ServerEventMap {
 
 export interface ClientEventMap {
   'change': ChangeData
-  'map': string
+  'join': string // string is map_name
   'save': string // string is map_name
 }
 

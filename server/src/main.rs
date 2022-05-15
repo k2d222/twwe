@@ -1,222 +1,156 @@
-extern crate pretty_env_logger;
-
 use std::{
     collections::HashMap,
     env,
     error::Error,
-    io::Error as IoError,
+    io,
     net::SocketAddr,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard},
 };
 
-use futures::channel::mpsc::{unbounded, UnboundedSender};
-use futures_util::{future, pin_mut, stream::TryStreamExt, StreamExt};
-
+use futures::{
+    channel::mpsc::{unbounded, UnboundedSender},
+    future, StreamExt, TryStreamExt,
+};
 use tokio::net::{TcpListener, TcpStream};
-use tungstenite::protocol::Message;
 
-use serde::{Deserialize, Serialize};
+mod room;
+use room::Room;
 
-use twmap::{Layer, TwMap};
+mod protocol;
+use protocol::*;
+
+use tungstenite::Message;
 
 type Tx = UnboundedSender<Message>;
+type Res<T> = Result<T, Box<dyn Error>>;
 
-struct State {
-    peers: HashMap<SocketAddr, Tx>,
-    maps: HashMap<String, TwMap>,
+#[derive(Debug)]
+pub struct Peer {
+    // name: String, // TODO add more information about users
+    addr: SocketAddr,
+    tx: Tx,
+    room: Option<Arc<Room>>, // stream: WebSocketStream<TcpStream>,
 }
 
-impl State {
-    fn new() -> State {
-        State {
-            peers: HashMap::new(),
-            maps: HashMap::new(),
+impl Peer {
+    fn new(addr: SocketAddr, tx: Tx) -> Self {
+        Peer {
+            // name: "Unnamed user".to_owned(),
+            addr,
+            tx,
+            room: None,
         }
     }
 }
 
-type Res<T> = Result<T, Box<dyn Error>>;
-
-type SharedState = Arc<Mutex<State>>;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct Change {
-    map_name: String,
-    group: u32,
-    layer: u32,
-    x: u32,
-    y: u32,
-    id: u8,
+struct Server {
+    rooms: Mutex<HashMap<String, Arc<Room>>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Users {
-    count: u32,
-}
-
-#[derive(Deserialize)]
-#[serde(tag = "type", content = "content", rename_all = "lowercase")]
-enum JsonRequest {
-    Change(Change),
-    Map(String),
-    Save(String),
-}
-
-#[derive(Serialize)]
-#[serde(tag = "type", content = "content", rename_all = "lowercase")]
-enum JsonResponse {
-    Change(Change),
-    // Map(TwMap), // TODO: we need to find a way to send the map to new clients without desync
-    Users(Users),
-}
-
-fn send_map(state: SharedState, addr: SocketAddr, map_name: String) -> Res<()> {
-    // TODO: this is blocking for the server
-    let mut state = state.lock().map_err(|_| "could not acquire lock")?;
-    let map = state.maps.get_mut(&map_name).ok_or("map not found")?;
-
-    let mut buf = Vec::new();
-    map.save(&mut buf)?;
-
-    let peer = state.peers.get(&addr).ok_or("failed to get peer")?;
-    peer.unbounded_send(Message::Binary(buf))?;
-
-    Ok(())
-}
-
-fn save_map(state: SharedState, map_name: &str) -> Res<()> {
-    // clone the map to release the lock as soon as possible
-    let mut map = {
-        let mut state = state.lock().map_err(|_| "could not acquire lock")?;
-        let map = state.maps.get_mut(map_name).ok_or("map not found")?;
-        map.clone()
-    };
-    let path = format!("maps/{}.map", map_name);
-    map.save_file(path)?;
-    map.load()?;
-    log::info!("saved {}", map_name);
-    Ok(())
-}
-
-fn set_tile(state: SharedState, change: Change) -> Res<()> {
-    let mut state = state.lock().map_err(|_| "could not acquire lock")?;
-    let map = state
-        .maps
-        .get_mut(&change.map_name)
-        .ok_or("map not found")?;
-    let layer = map
-        .groups
-        .iter_mut()
-        .find_map(|g| {
-            g.layers.iter_mut().find_map(|l| match l {
-                Layer::Game(gl) => Some(gl),
-                _ => None,
-            })
-        })
-        .ok_or("no game layer")?;
-    let tiles = layer.tiles.unwrap_mut(); // map must be loaded
-    let mut tile = tiles
-        .get_mut((change.y as usize, change.x as usize))
-        .ok_or("tile change outside layer")?;
-    tile.id = change.id;
-    log::debug!("changed pixel {:?}", change);
-
-    // broadcast message
-    let str = serde_json::to_string(&JsonResponse::Change(change)).unwrap();
-    let msg = Message::Text(str);
-    for (_addr, peer) in state.peers.iter() {
-        peer.unbounded_send(msg.clone()).unwrap();
+impl Server {
+    fn new() -> Self {
+        Server {
+            rooms: Mutex::new(HashMap::new()),
+            // peers: Mutex::new(HashMap::new()),
+        }
     }
 
-    Ok(())
-}
-
-fn broadcast_users(state: SharedState) {
-    let state = state.lock().unwrap();
-    let n = state.peers.len();
-    let resp = Users { count: n as u32 };
-    let str = serde_json::to_string(&JsonResponse::Users(resp)).unwrap();
-    let msg = Message::Text(str);
-    for (_addr, peer) in state.peers.iter() {
-        peer.unbounded_send(msg.clone()).unwrap();
+    fn rooms(&self) -> MutexGuard<HashMap<String, Arc<Room>>> {
+        self.rooms.lock().expect("failed to lock rooms")
     }
-}
 
-fn handle_request(state: SharedState, addr: SocketAddr, req: JsonRequest) -> Res<()> {
-    match req {
-        JsonRequest::Change(change) => set_tile(state, change),
-        JsonRequest::Map(map_name) => send_map(state, addr, map_name),
-        JsonRequest::Save(ref map_name) => save_map(state, map_name),
+    fn room(&self, name: &str) -> Option<Arc<Room>> {
+        self.rooms().get(name).map(Arc::to_owned)
     }
-}
 
-async fn handle_connection(state: SharedState, raw_stream: TcpStream, addr: SocketAddr) {
-    println!("Incoming TCP connection from: {}", addr);
+    // fn peers(&self) -> MutexGuard<HashMap<SocketAddr, Peer>> {
+    //     self.peers.lock().expect("failed to lock peers")
+    // }
 
-    // accept
-    let ws_stream = tokio_tungstenite::accept_async(raw_stream)
-        .await
-        .expect("Error during the websocket handshake occurred");
-    log::info!("WebSocket connection established: {}", addr);
+    fn handle_join_room(&self, peer: &mut Peer, room_name: String) -> Res<()> {
+        let room = self
+            .room(&room_name)
+            .ok_or("peer wants to join non-existing room")?;
+        room.add_peer(peer);
+        peer.room = Some(room);
+        Ok(())
+    }
 
-    // insert peer in peers
-    let (tx, rx) = unbounded();
-    state.lock().unwrap().peers.insert(addr, tx);
-
-    let (outgoing, incoming) = ws_stream.split();
-
-    let broadcast_incoming = incoming.try_for_each(|msg| {
-        let text = msg.to_text().unwrap();
-        log::debug!("message received: {}", text);
-        let req = serde_json::from_str(text);
+    fn handle_request(&self, peer: &mut Peer, req: Request) -> Res<()> {
         match req {
-            Ok(req) => handle_request(state.clone(), addr, req).unwrap_or_else(|e| {
-                log::error!("error occured while handling request: {}", e);
-            }),
-            Err(e) => {
-                log::error!("failed to parse message: {}", e);
+            Request::Global(req) => match req {
+                GlobalRequest::Join(room) => self.handle_join_room(peer, room),
+            },
+            Request::Room(req) => {
+                let room = { peer.room.clone().ok_or("peer is not in a room")? };
+                room.handle_request(peer, req)
             }
-        };
-        future::ok(())
-    });
-
-    broadcast_users(state.clone()); // login
-    {
-        let receive_from_others = rx.map(Ok).forward(outgoing);
-        pin_mut!(broadcast_incoming, receive_from_others);
-        future::select(broadcast_incoming, receive_from_others).await;
-
-        println!("{} disconnected", &addr);
-        state.lock().unwrap().peers.remove(&addr);
+        }
     }
-    broadcast_users(state.clone()); // logout
+
+    async fn handle_connection(&self, raw_stream: TcpStream, addr: SocketAddr) {
+        println!("Incoming TCP connection from: {}", addr);
+
+        // accept
+        let ws_stream = tokio_tungstenite::accept_async(raw_stream)
+            .await
+            .expect("Error during the websocket handshake occurred");
+        log::info!("WebSocket connection established: {}", addr);
+
+        // insert peer in peers
+        let (tx, ws_recv) = ws_stream.split();
+        let (ws_send, rx) = unbounded();
+        let fut_send = rx.map(Ok).forward(tx);
+
+        let mut peer = Peer::new(addr, ws_send);
+
+        let fut_recv = ws_recv.try_for_each(|msg| {
+            let text = msg.to_text().unwrap();
+            log::debug!("message received from {}: {}", addr, text);
+
+            match serde_json::from_str(text) {
+                Ok(req) => {
+                    self.handle_request(&mut peer, req).unwrap_or_else(|e| {
+                        log::error!("error occured while handling request: {}", e);
+                    });
+                }
+                Err(e) => {
+                    log::error!("failed to parse message: {}", e);
+                }
+            };
+
+            future::ok(())
+        });
+
+        future::select(fut_send, fut_recv).await;
+
+        if let Some(room) = &peer.room {
+            room.remove_peer(&peer);
+        }
+        println!("{} disconnected", &addr);
+    }
 }
 
-fn add_map(state: &mut State, name: &str) {
-    let path = format!("maps/{}.map", name);
-    let mut map = TwMap::parse_file(&path).expect("failed to parse map");
-
-    // use std::time::Instant;
-    // let now = Instant::now();
-    // map.save_file(&format!("{}.map", path));
-    // let elapsed = now.elapsed();
-    // println!("Elapsed: {:.2?}", elapsed);
-
-    map.load().expect("failed to load map");
-    state.maps.insert(name.to_string(), map);
-    log::info!("loaded map {}", name);
+fn create_server() -> Server {
+    let mut server = Server::new();
+    let room_name = "Sunny Side Up";
+    let room = Room::create(room_name.to_owned());
+    server
+        .rooms
+        .get_mut()
+        .unwrap()
+        .insert(room_name.to_owned(), Arc::new(room));
+    server
 }
 
 #[tokio::main]
-async fn main() -> Result<(), IoError> {
+async fn main() -> Result<(), io::Error> {
     pretty_env_logger::init();
     let addr = env::args()
         .nth(1)
         .unwrap_or_else(|| "127.0.0.1:16800".to_string());
 
-    let mut state = State::new();
-    add_map(&mut state, "Sunny Side Up");
-    let state = SharedState::new(Mutex::new(state));
+    let state = Arc::new(create_server());
 
     // Create the event loop and TCP listener we'll accept connections on.
     let try_socket = TcpListener::bind(&addr).await;
@@ -225,7 +159,8 @@ async fn main() -> Result<(), IoError> {
 
     // Let's spawn the handling of each connection in a separate task.
     while let Ok((stream, addr)) = listener.accept().await {
-        tokio::spawn(handle_connection(state.clone(), stream, addr));
+        let state = state.clone();
+        tokio::spawn(async move { state.handle_connection(stream, addr).await });
     }
 
     Ok(())

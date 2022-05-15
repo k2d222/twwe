@@ -42,7 +42,7 @@ function hideDialog() {
 
 async function setupServer() {
   // setup server  
-  server = await Server.create('pi.thissma.fr', 16900)
+  server = await Server.create('127.0.0.1', 16900)
   .catch((e) => {
     showDialog('Failed to connect to the server.')
     throw e
@@ -82,7 +82,6 @@ function placeTile() {
     let id = tileSelector.getSelected()
     
     let change: ChangeData = {
-      map_name: map.name,
       group, 
       layer,
       x,
@@ -133,7 +132,7 @@ function setupUI() {
 async function main() {
   showDialog('Connecting to server…')
   await setupServer()
-  server.send('map', MAP_NAME)
+  server.send('join', MAP_NAME)
   server.on('map', (buf) => {
     // TODO: server send map name just to be sure.
     map = new Map(MAP_NAME, buf)
