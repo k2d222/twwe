@@ -22,7 +22,16 @@ The Save button saves the map on the disk on the server side. If a teeworlds ser
 ## Building and Running
 
 ### Server
-Have rust and cargo installed and run `RUST_LOG=debug cargo run` in the server directory. Use the first command-line argument to change port e.g. `cargo run localhost:3333` to run locally on port 3333.
+
+Have rust and cargo installed. And create a maps/ directory with Sunny Side Up in it.
+
+    cd server
+    mkdir -p maps
+    wget -O maps/"Sunny Side Up.map" https://github.com/ddnet/ddnet/raw/master/data/maps/Sunny%20Side%20Up.map
+    RUST_LOG=debug cargo run
+
+Use the first command-line argument to change port e.g. `cargo run localhost:3333` to run locally on port 3333.
+
 
 ### Client
 
