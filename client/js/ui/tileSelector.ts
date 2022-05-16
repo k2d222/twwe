@@ -49,9 +49,9 @@ export class TileSelector {
     this.selected = id
     this.curTile.innerHTML = ''
     this.tilesCont.classList.add('hidden')
-    let row = Math.floor(id / this.tileCount)
-    let col = id % this.tileCount
-    let $curBtn = this.makeButton(row, col)
+    const row = Math.floor(id / this.tileCount)
+    const col = id % this.tileCount
+    const $curBtn = this.makeButton(row, col)
     $curBtn.onclick = () => this.tilesCont.classList.toggle('hidden')
     this.curTile.append($curBtn)
   }
@@ -66,10 +66,10 @@ export class TileSelector {
       return image.img.src
     }
     else if (image.data instanceof ImageData) {
-      let canvas = document.createElement('canvas')
+      const canvas = document.createElement('canvas')
       canvas.width = image.data.width
       canvas.height = image.data.height
-      let ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d')
       ctx.putImageData(image.data, 0, 0)
       return canvas.toDataURL()
     }
@@ -79,7 +79,7 @@ export class TileSelector {
   }
   
   private makeButton(row: number, col: number) {
-    let $btn = document.createElement('button')
+    const $btn = document.createElement('button')
     $btn.style.backgroundImage = `url('${this.url}')`
     $btn.style.backgroundPositionX = '-' + col + '00%' 
     $btn.style.backgroundPositionY = '-' + row + '00%' 

@@ -2,7 +2,7 @@ import { DataReader } from './dataReader'
 import { MapGroupObj, MapLayer, MapLayerQuads, MapLayerTiles, LayerQuad, LayerTile, MapImage, Color, Coord } from './types'
 
 export function parseMapGroup(groupData: ArrayBuffer): MapGroupObj {
-	let d = new DataReader(groupData)
+	const d = new DataReader(groupData)
 	d.reset()
 
   return {
@@ -27,7 +27,7 @@ export function parseMapGroup(groupData: ArrayBuffer): MapGroupObj {
 }
 
 export function parseMapLayer(layerData: ArrayBuffer): MapLayer {
-	let d = new DataReader(layerData)
+	const d = new DataReader(layerData)
 	d.reset()
 
   return {
@@ -38,7 +38,7 @@ export function parseMapLayer(layerData: ArrayBuffer): MapLayer {
 }
 
 export function parseMapLayerQuads(layerData: ArrayBuffer): MapLayerQuads {
-	let d = new DataReader(layerData)
+	const d = new DataReader(layerData)
 	d.reset()
 
 	/*obj.version =*/ d.uint32()
@@ -55,7 +55,7 @@ export function parseMapLayerQuads(layerData: ArrayBuffer): MapLayerQuads {
 }
 
 export function parseMapLayerTiles(layerData: ArrayBuffer): MapLayerTiles {
-	let d = new DataReader(layerData)
+	const d = new DataReader(layerData)
 	d.reset()
 
 	/*obj.version =*/ d.uint32()
@@ -86,7 +86,7 @@ export function parseMapLayerTiles(layerData: ArrayBuffer): MapLayerTiles {
 }
 
 export function parseMapImage(layerData: ArrayBuffer): MapImage {
-	let d = new DataReader(layerData)
+	const d = new DataReader(layerData)
 	d.reset()
   
   return {
@@ -100,14 +100,14 @@ export function parseMapImage(layerData: ArrayBuffer): MapImage {
 }
 
 export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[] {
-	let quads: LayerQuad[] = []
+	const quads: LayerQuad[] = []
 
-	let d = new DataReader(layerData)
+	const d = new DataReader(layerData)
 	d.reset()
 
 	for (let q = 0; q < num; q++) {
 
-		let points = []
+		const points = []
 		for (let i = 0; i < 5; i++) {
 			points.push({
         x: d.int32(),
@@ -115,7 +115,7 @@ export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[
       })
 		}
 
-		let colors: Color[] = []
+		const colors: Color[] = []
 		for (let i = 0; i < 4; i++) {
 			colors.push({
 				r: d.uint32()&0xff,
@@ -125,12 +125,12 @@ export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[
 			})
 		}
 
-		let texCoords: Coord[] = []
+		const texCoords: Coord[] = []
 		for (let i = 0; i < 4; i++) {
 			texCoords.push({x: d.int32(), y: d.int32()})
 		}
     
-    let quad = {
+    const quad = {
       points,
       colors,
       texCoords,
@@ -147,8 +147,8 @@ export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[
 }
 
 export function parseLayerTiles(tileData: ArrayBuffer, num: number): LayerTile[] {
-	let tiles: LayerTile[] = []
-	let d = new DataReader(tileData)
+	const tiles: LayerTile[] = []
+	const d = new DataReader(tileData)
 	d.reset()
 
 	for (let i = 0; i < num; i++) {
@@ -166,7 +166,7 @@ export function parseLayerTiles(tileData: ArrayBuffer, num: number): LayerTile[]
 }
 
 export function parseString(data: ArrayBuffer) {
-  let buf = new Uint8Array(data)
+  const buf = new Uint8Array(data)
   
   let len = 0
   

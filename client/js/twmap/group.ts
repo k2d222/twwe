@@ -33,21 +33,21 @@ export class Group {
   }
   
   private loadLayers(df: DataFile, startLayer: number, numLayers: number) {
-  	let layersInfo = df.getType(MapItemType.LAYER)
+  	const layersInfo = df.getType(MapItemType.LAYER)
 
   	for (let l = 0; l < numLayers; l++) {
-  		let layerItem = df.getItem(layersInfo.start + startLayer + l)
-  		let layerInfo = parseMapLayer(layerItem.data)
+  		const layerItem = df.getItem(layersInfo.start + startLayer + l)
+  		const layerInfo = parseMapLayer(layerItem.data)
 
   		if (layerInfo.type === LayerType.TILES) {
-  			let tileLayerInfo = parseMapLayerTiles(layerItem.data)
-        let layer = new TileLayer()
+  			const tileLayerInfo = parseMapLayerTiles(layerItem.data)
+        const layer = new TileLayer()
         layer.load(df, tileLayerInfo)
         this.layers.push(layer)
   		}
       else if(layerInfo.type === LayerType.QUADS) {
-  			let quadLayerInfo = parseMapLayerQuads(layerItem.data)
-        let layer = new QuadLayer()
+  			const quadLayerInfo = parseMapLayerQuads(layerItem.data)
+        const layer = new QuadLayer()
         layer.load(df, quadLayerInfo)
         this.layers.push(layer)
   		}

@@ -32,11 +32,11 @@ export class DataReader extends DataView {
 	
 	// see: https://github.com/heinrich5991/libtw2/blob/master/doc/map.md
 	int32Str(len: number) {
-		let slices: Uint8Array[] = []
+		const slices: Uint8Array[] = []
 		for (let i = 0; i < len; i++) {
-			let start = this.off + 4 * i
-			let end = this.off + 4 * (i + 1)
-			let arr = new Uint8Array(this.buffer.slice(start, end))
+			const start = this.off + 4 * i
+			const end = this.off + 4 * (i + 1)
+			const arr = new Uint8Array(this.buffer.slice(start, end))
 				.map((x) => x - 128)
 			slices.push(arr)
 		}

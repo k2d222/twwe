@@ -38,8 +38,8 @@ export class RenderTileLayer extends RenderLayer {
   }
 	
 	recompute(x: number, y: number) {
-		let chunkX = Math.floor(x / this.chunkSize)
-		let chunkY = Math.floor(y / this.chunkSize)
+		const chunkX = Math.floor(x / this.chunkSize)
+		const chunkY = Math.floor(y / this.chunkSize)
 		this.initChunkBuffer(chunkX, chunkY)
 	}
 
@@ -62,13 +62,13 @@ export class RenderTileLayer extends RenderLayer {
   	gl.uniform1i(shader.locs.unifs.uVertexColor, 0);
 
   	// Set color mask
-		let { r, g, b, a } = this.layer.color
-		let col = [r, g, b, a].map(x => x / 255)
+		const { r, g, b, a } = this.layer.color
+		const col = [r, g, b, a].map(x => x / 255)
 		gl.uniform4fv(shader.locs.unifs.uColorMask, col);
 		
-		for(let chunkRow of this.buffers) {
-			for(let chunk of chunkRow) {
-				let { tileCount, vertex, texCoord } = chunk
+		for(const chunkRow of this.buffers) {
+			for(const chunk of chunkRow) {
+				const { tileCount, vertex, texCoord } = chunk
 				// Vertex attribute
 				gl.bindBuffer(gl.ARRAY_BUFFER, vertex);
 				gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0);
@@ -86,8 +86,8 @@ export class RenderTileLayer extends RenderLayer {
   }
 	
 	private createBuffers() {
-		let countX = Math.ceil(this.layer.width / this.chunkSize)
-		let countY = Math.ceil(this.layer.height / this.chunkSize)
+		const countX = Math.ceil(this.layer.width / this.chunkSize)
+		const countY = Math.ceil(this.layer.height / this.chunkSize)
 
 		for (let y = 0; y < countY; y++) {
 			this.buffers[y] = []
@@ -102,15 +102,15 @@ export class RenderTileLayer extends RenderLayer {
 	}
 	
 	private chunkTileCount(chunkX: number, chunkY: number) {
-		let startX = chunkX * this.chunkSize
-		let startY = chunkY * this.chunkSize
-		let endX = Math.min(this.layer.width, (chunkX + 1) * this.chunkSize)
-		let endY = Math.min(this.layer.height, (chunkY + 1) * this.chunkSize)
+		const startX = chunkX * this.chunkSize
+		const startY = chunkY * this.chunkSize
+		const endX = Math.min(this.layer.width, (chunkX + 1) * this.chunkSize)
+		const endY = Math.min(this.layer.height, (chunkY + 1) * this.chunkSize)
 
 		let tileCount = 0
 		for (let x = startX; x < endX; x++) {
 			for (let y = startY; y < endY; y++) {
-				let tile = this.layer.getTile(x, y)
+				const tile = this.layer.getTile(x, y)
 				if (tile.index !== 0)
 					tileCount++
 			}
@@ -120,31 +120,31 @@ export class RenderTileLayer extends RenderLayer {
 	}
 	
 	private initChunkBuffer(chunkX: number, chunkY: number) {
-		let startX = chunkX * this.chunkSize
-		let startY = chunkY * this.chunkSize
-		let endX = Math.min(this.layer.width, (chunkX + 1) * this.chunkSize)
-		let endY = Math.min(this.layer.height, (chunkY + 1) * this.chunkSize)
+		const startX = chunkX * this.chunkSize
+		const startY = chunkY * this.chunkSize
+		const endX = Math.min(this.layer.width, (chunkX + 1) * this.chunkSize)
+		const endY = Math.min(this.layer.height, (chunkY + 1) * this.chunkSize)
 		
-		let buffer = this.buffers[chunkY][chunkX]
+		const buffer = this.buffers[chunkY][chunkX]
 
 		buffer.tileCount = this.chunkTileCount(chunkX, chunkY)
 
-		let vertexArr = new Float32Array(buffer.tileCount * 12)
-		let texCoordArr = new Float32Array(buffer.tileCount * 12)
+		const vertexArr = new Float32Array(buffer.tileCount * 12)
+		const texCoordArr = new Float32Array(buffer.tileCount * 12)
 		let t = 0
 		
 		for (let y = startY; y < endY; y++) {
 			for (let x = startX; x < endX; x++) {
 
-				let tile = this.layer.getTile(x, y)
+				const tile = this.layer.getTile(x, y)
 				
 				if (tile.index === 0) // skip tiles with index 0
 					continue
 
-				let vertices = makeVertices(x, y)
+				const vertices = makeVertices(x, y)
 				vertexArr.set(vertices, t * 12)
 
-				let texCoords = makeTexCoords(tile)
+				const texCoords = makeTexCoords(tile)
 				texCoordArr.set(texCoords, t * 12)
 
 				t++
@@ -177,9 +177,9 @@ function makeVertices(x: number, y: number) {
 }
 
 function makeTexCoords(tile: LayerTile) {
-	let tileCount = 16
-	let tx = tile.index % tileCount
-	let ty = Math.floor(tile.index / tileCount)
+	const tileCount = 16
+	const tx = tile.index % tileCount
+	const ty = Math.floor(tile.index / tileCount)
 
 	let x0 = tx / tileCount
 	let x1 = (tx + 1) / tileCount

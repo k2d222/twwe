@@ -36,11 +36,11 @@ export class Image {
     this.height = info.height
     
 		if (info.external) {
-			let url = 'mapres/' + this.name + '.png'
+			const url = 'mapres/' + this.name + '.png'
 			this.loadExternal(url)
 		}
     else {
-			let buf = new Uint8ClampedArray(df.getData(info.data))
+			const buf = new Uint8ClampedArray(df.getData(info.data))
       this.data = new ImageData(buf, this.width, this.height)
     }
   }

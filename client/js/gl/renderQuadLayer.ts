@@ -27,7 +27,7 @@ export class RenderQuadLayer extends RenderLayer {
 		else
 			this.texture = null
     
-    let quadCount = this.layer.quads.length
+    const quadCount = this.layer.quads.length
 		this.colorArr = new Float32Array(quadCount * 4 * 4)
 		this.vertexArr = new Float32Array(quadCount * 4 * 2)
 		this.texCoordArr = new Float32Array(quadCount * 4 * 2)
@@ -82,11 +82,11 @@ export class RenderQuadLayer extends RenderLayer {
   private initBuffers() {
     let t = 0
     
-  	for (let quad of this.layer.quads) {
-      let vertices = makeVertices(quad)
-      let colors = makeColors(quad)
-      let texCoords = makeTexCoords(quad)
-      let indices = makeIndices(t)
+  	for (const quad of this.layer.quads) {
+      const vertices = makeVertices(quad)
+      const colors = makeColors(quad)
+      const texCoords = makeTexCoords(quad)
+      const indices = makeIndices(t)
 
 			this.vertexArr.set(vertices, t * 4 * 2)
 			this.colorArr.set(colors, t * 4 * 4)
@@ -119,7 +119,7 @@ function makeVertices(q: LayerQuad) {
 }
 
 function makeColors(q: LayerQuad) {
-  let comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
+  const comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
 	return [
     ...comp(q.colors[0]),
     ...comp(q.colors[2]),

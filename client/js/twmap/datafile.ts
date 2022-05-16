@@ -134,11 +134,11 @@ export class DataFile {
 		// decompress data
 		this.decData = []
 		for (let i = 0; i < this.numRawData; i++) {
-			let startOff = this.dataInfos[i].offset + this.dataStart
-			let endOff = startOff + this.dataInfos[i].compSize
-			let cData = new Uint8Array(this.data.slice(startOff, endOff))
-			let infl = inflate(cData)
-			let arrayBuf = infl.buffer.slice(0, infl.length)
+			const startOff = this.dataInfos[i].offset + this.dataStart
+			const endOff = startOff + this.dataInfos[i].compSize
+			const cData = new Uint8Array(this.data.slice(startOff, endOff))
+			const infl = inflate(cData)
+			const arrayBuf = infl.buffer.slice(0, infl.length)
 			this.decData.push(arrayBuf)
 		}
 
@@ -156,10 +156,10 @@ export class DataFile {
 	}
 	
 	getItem(index: number) {
-		let offset = this.itemStart + this.itemOffsets[index]
-		let typeAndId = this.reader.getUint32(offset, true)
+		const offset = this.itemStart + this.itemOffsets[index]
+		const typeAndId = this.reader.getUint32(offset, true)
 
-		let item = {
+		const item = {
 			type: (typeAndId >> 16) & 0xffff,
 			id: typeAndId & 0xffff,
 			size: this.reader.getUint32(offset+4, true),
@@ -181,7 +181,7 @@ export class DataFile {
 		var t = this.getType(type)
 
 		for (let i = 0; i < t.num; i++) {
-			let item = this.getItem(t.start)
+			const item = this.getItem(t.start)
 			if (item.id === id)
 				return item
 		}

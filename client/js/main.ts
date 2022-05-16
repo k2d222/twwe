@@ -11,16 +11,16 @@ const MAP_NAME = 'Sunny Side Up'
 
 
 // all html elements are prefixed with $, but no JQuery :)
-let $canvas: HTMLCanvasElement = document.querySelector('canvas')
-let $nav: HTMLElement = document.querySelector('nav')
-let $tree: HTMLElement = $nav.querySelector('#tree')
-let $selector: HTMLElement = document.querySelector('#tile-selector')
-let $mapName: HTMLElement = $nav.querySelector('#map-name')
-let $dialog: HTMLElement = document.querySelector('#dialog')
-let $dialogContent: HTMLElement = $dialog.querySelector('.content')
-let $users: HTMLElement = document.querySelector('#users span')
-let $btnSave: HTMLElement = document.querySelector('#save')
-let $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
+const $canvas: HTMLCanvasElement = document.querySelector('canvas')
+const $nav: HTMLElement = document.querySelector('nav')
+const $tree: HTMLElement = $nav.querySelector('#tree')
+const $selector: HTMLElement = document.querySelector('#tile-selector')
+const $mapName: HTMLElement = $nav.querySelector('#map-name')
+const $dialog: HTMLElement = document.querySelector('#dialog')
+const $dialogContent: HTMLElement = $dialog.querySelector('.content')
+const $users: HTMLElement = document.querySelector('#users span')
+const $btnSave: HTMLElement = document.querySelector('#save')
+const $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
 
 let map: Map
 let rmap: RenderMap
@@ -90,7 +90,7 @@ function placeTile() {
       id,
     }
   
-    let res = rmap.applyChange(change)
+    const res = rmap.applyChange(change)
 
     // only apply change if succeeded e.g. not redundant 
     if(res) {
@@ -103,10 +103,10 @@ function setupUI() {
   treeView = new TreeView($tree, map)
   tileSelector = new TileSelector($selector)
 
-  let [ groupID, layerID ] = map.gameLayerID()
+  const [ groupID, layerID ] = map.gameLayerID()
   
   treeView.onselect = (groupID, layerID) => {
-    let layer = map.groups[groupID].layers[layerID]
+    const layer = map.groups[groupID].layers[layerID]
     let image = layer.image
     if (layer.type === LayerType.GAME)
       image = rmap.gameLayer.texture.image
