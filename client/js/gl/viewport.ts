@@ -126,7 +126,7 @@ export class Viewport {
   }
 
   private onwheel(e: WheelEvent) {
-    let direction = e.deltaY < 0 ? -1 : 1
+    let direction = e.deltaY < 0 ? 1 : -1
     this.onZoom(0.1 * direction, e.clientX, e.clientY)
   }
 
