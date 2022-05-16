@@ -1,6 +1,6 @@
-import { DataFile } from "./datafile";
-import { MapImage } from "./types";
-import { parseString } from "./parser";
+import { DataFile } from './datafile';
+import { MapImage } from './types';
+import { parseString } from './parser';
 
 
 export class Image {
@@ -11,7 +11,7 @@ export class Image {
 	img: HTMLImageElement | null
 	
 	constructor() {
-		this.name = "unnamed image"
+		this.name = 'unnamed image'
 		this.width = 0
 		this.height = 0
 		this.data = null

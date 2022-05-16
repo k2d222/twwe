@@ -52,7 +52,7 @@ export class DataFile {
 	}
 	
 	private parse() {
-		console.log("begin parsing")
+		console.log('begin parsing')
 
 		// parse header
 		const { reader } = this
@@ -60,7 +60,7 @@ export class DataFile {
 
 		// signature 'DATA' or 'ATAD'
 		if (signature == 0x41544144 || signature == 0x44415441)
-			console.log("valid signature")
+			console.log('valid signature')
 		else
 			return false
 
@@ -68,11 +68,11 @@ export class DataFile {
 
 		// calculate checksum
 		this.crc = crc32(new Uint8Array(this.data))
-		console.log("crc", this.crc.toString(16))
+		console.log('crc', this.crc.toString(16))
 
 		// we only support datafile version 4
 		if (this.version != 4) {
-			console.log("invalid version", this.version)
+			console.log('invalid version', this.version)
 			return false
 		}
 

@@ -1,9 +1,9 @@
-import { TileLayer } from "../twmap/tileLayer"
-import { RenderLayer } from "./renderLayer"
-import { gl, shader } from "./global"
-import { LayerTile } from "../twmap/types"
-import { Texture } from "./texture"
-import { TileFlag } from "../twmap/types"
+import { TileLayer } from '../twmap/tileLayer'
+import { RenderLayer } from './renderLayer'
+import { gl, shader } from './global'
+import { LayerTile } from '../twmap/types'
+import { Texture } from './texture'
+import { TileFlag } from '../twmap/types'
 
 
 export class RenderTileLayer extends RenderLayer {

@@ -1,16 +1,16 @@
 export const AttributeLocations = [
-	"aPosition",
-	"aVertexColor",
-	"aTexCoord",
+	'aPosition',
+	'aVertexColor',
+	'aTexCoord'
 ] as const
 
 export const UniformLocations = [
-	"uPMatrix",
-	"uMVMatrix",
-	"uSampler",
-	"uColorMask",
-	"uTexCoord",
-	"uVertexColor",
+	'uPMatrix',
+	'uMVMatrix',
+	'uSampler',
+	'uColorMask',
+	'uTexCoord',
+	'uVertexColor'
 ] as const
 
 type ProgLocations = {
@@ -41,17 +41,17 @@ export class Shader {
 	private initLocations(gl: WebGL2RenderingContext) {
 		const locs: ProgLocations = {
 			attrs: {
-				aPosition: gl.getAttribLocation(this.prog, "aPosition"),
-				aVertexColor: gl.getAttribLocation(this.prog, "aVertexColor"),
-				aTexCoord: gl.getAttribLocation(this.prog, "aTexCoord"),
+				aPosition: gl.getAttribLocation(this.prog, 'aPosition'),
+				aVertexColor: gl.getAttribLocation(this.prog, 'aVertexColor'),
+				aTexCoord: gl.getAttribLocation(this.prog, 'aTexCoord'),
 			},
 			unifs: {
-				uPMatrix: gl.getUniformLocation(this.prog, "uPMatrix"),
-				uMVMatrix: gl.getUniformLocation(this.prog, "uMVMatrix"),
-				uSampler: gl.getUniformLocation(this.prog, "uSampler"),
-				uColorMask: gl.getUniformLocation(this.prog, "uColorMask"),
-				uTexCoord: gl.getUniformLocation(this.prog, "uTexCoord"),
-				uVertexColor: gl.getUniformLocation(this.prog, "uVertexColor"),
+				uPMatrix: gl.getUniformLocation(this.prog, 'uPMatrix'),
+				uMVMatrix: gl.getUniformLocation(this.prog, 'uMVMatrix'),
+				uSampler: gl.getUniformLocation(this.prog, 'uSampler'),
+				uColorMask: gl.getUniformLocation(this.prog, 'uColorMask'),
+				uTexCoord: gl.getUniformLocation(this.prog, 'uTexCoord'),
+				uVertexColor: gl.getUniformLocation(this.prog, 'uVertexColor'),
 			}
 		}
 		return locs

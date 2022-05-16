@@ -4,7 +4,7 @@ import { TileLayer } from './tileLayer'
 import { QuadLayer } from './quadLayer'
 import { MapGroupObj, MapItemType, LayerType } from './types'
 import { parseMapLayer, parseMapLayerTiles, parseMapLayerQuads } from './parser'
-import { DataFile } from "./datafile"
+import { DataFile } from './datafile'
 
 export class Group {
   name: string
@@ -15,7 +15,7 @@ export class Group {
   layers: Layer[]
    
   constructor() {
-    this.name = "unnamed group"
+    this.name = 'unnamed group'
     this.offX = 0
     this.offY = 0
     this.paraX = 0

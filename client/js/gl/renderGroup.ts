@@ -14,7 +14,7 @@ function createRenderLayer(layer: Layer) {
   else if (layer instanceof QuadLayer)
     return new RenderQuadLayer(layer)
   else
-    throw new Error("not a layer type we can render at the moment")
+    throw new Error('not a layer type we can render at the moment')
 }
   
 export class RenderGroup {

@@ -1,5 +1,5 @@
-import { LayerType } from "./types"
-import { Image } from "./image"
+import { LayerType } from './types'
+import { Image } from './image'
 
 export abstract class Layer {
   type: LayerType

@@ -1,8 +1,8 @@
-import { RenderLayer } from "./renderLayer"
-import { QuadLayer } from "../twmap/quadLayer"
-import { LayerQuad } from "../twmap/types"
-import { Texture } from "./texture"
-import { gl, shader } from "./global"
+import { RenderLayer } from './renderLayer'
+import { QuadLayer } from '../twmap/quadLayer'
+import { LayerQuad } from '../twmap/types'
+import { Texture } from './texture'
+import { gl, shader } from './global'
 
 export class RenderQuadLayer extends RenderLayer {
   layer: QuadLayer
