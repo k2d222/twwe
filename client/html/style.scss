@@ -155,12 +155,35 @@ nav {
     display: none;
   }
   
+  button {
+    float: right;
+    margin-top: 1rem;
+  }
+  
   .content {
     background: white;
-    overflow: auto;
     border: 1px solid black;
-    display: grid;
-    grid-column-gap: 1rem;
-    grid-template-columns: auto auto auto;
+    padding: 1rem;
+    
+    .list {
+      display: grid;
+      grid-gap: 5px;
+      grid-template-columns: auto auto auto;
+      overflow: auto;
+
+      // header elements
+      > span:nth-child(-n + 3) {
+        border-bottom: 1px dotted black;
+      }
+
+      // third column
+      > span:nth-child(3n) {
+        text-align: right;
+      }
+
+      > * {
+        padding: .5rem .3rem;
+      }
+    }
   }
 }

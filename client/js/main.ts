@@ -20,7 +20,8 @@ let $users: HTMLElement = document.querySelector('#users span')
 let $btnSave: HTMLElement = document.querySelector('#save')
 let $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
 let $lobby: HTMLElement = document.querySelector('#lobby')
-let $lobbyContent: HTMLElement = $lobby.querySelector('.content')
+let $btnJoin: HTMLElement = $lobby.querySelector('button')
+let $lobbyList: HTMLElement = $lobby.querySelector('.list')
 
 let map: Map
 let rmap: RenderMap
@@ -131,16 +132,23 @@ function setupUI() {
 
 function chooseMap(mapInfos: MapInfo[]): Promise<string> {
   return new Promise(resolve => {
-    $lobbyContent.innerHTML = ''
+    $lobbyList.innerHTML = ''
+    
+    const t1 = document.createElement('span')
+    const t2 = document.createElement('span')
+    const t3 = document.createElement('span')
+    t2.innerText = 'Maps'
+    t3.innerText = 'Online'
+    $lobbyList.append(t1, t2, t3)
+
+    let i = 0
+    let selected = ''
 
     for (const info of mapInfos) {
-      const $btn = document.createElement('button')
-      $btn.innerText = 'Join'
-      $btn.onclick = () => {
-        $lobby.classList.add('hidden')
-        $lobbyContent.innerHTML = ''
-        resolve(info.name)
-      }
+      const $btn = document.createElement('input')
+      $btn.type = 'radio'
+      $btn.name = 'map'
+      $btn.onchange = () => selected = info.name
 
       const $name = document.createElement('span')
       $name.classList.add('name')
@@ -150,9 +158,18 @@ function chooseMap(mapInfos: MapInfo[]): Promise<string> {
       $users.classList.add('users')
       $users.innerText = '' + info.users
 
-      $lobbyContent.append($name, $users, $btn)
+      $lobbyList.append($btn, $name, $users)
+      i++
     }
+    
+    // check the first one
+    $lobby.querySelector('input').checked = true
+    selected = mapInfos[0].name
 
+    $btnJoin.onclick = () => {
+      $lobby.classList.add('hidden')
+      resolve(selected)
+    }
     $lobby.classList.remove('hidden')
   })
 }
