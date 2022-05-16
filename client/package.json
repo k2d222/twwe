@@ -1,7 +1,7 @@
 {
   "name": "ddnet-map-ed",
   "version": "1.0.0",
-  "description": "portfolio",
+  "description": "Teeworlds collaborative map editor online",
   "source": "/html/index.html",
   "scripts": {
     "run": "parcel",
