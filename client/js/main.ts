@@ -123,6 +123,8 @@ function setupUI() {
     e.preventDefault()
     if (e.key === ' ')
       placeTile()
+    else if (e.key === 'Tab')
+      $nav.classList.toggle('hidden')
   })
   
   $btnToggleNav.addEventListener('click', () => {
