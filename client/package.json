@@ -1,11 +1,11 @@
 {
   "name": "ddnet-map-ed",
   "version": "1.0.0",
-  "description": "portfolio",
+  "description": "Teeworlds collaborative map editor online",
   "source": "/html/index.html",
   "scripts": {
     "run": "parcel",
-    "build": "rm -rf dist && parcel build",
+    "build": "rm -rf dist/* && parcel build",
     "serve": "parcel watch",
     "tsc": "tsc --noEmit"
   },
@@ -29,6 +29,7 @@
     "vue": "^3.2.20"
   },
   "dependencies": {
+    "@types/node": "^17.0.33",
     "crc": "^4.1.1",
     "gl-matrix": "^3.4.3",
     "pako": "^2.0.4"

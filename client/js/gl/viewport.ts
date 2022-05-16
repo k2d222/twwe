@@ -1,4 +1,4 @@
-import { mat4 } from "gl-matrix"
+import { mat4 } from 'gl-matrix'
 
 type Vec2 = { x: number, y: number  }
 
@@ -58,8 +58,8 @@ export class Viewport {
   
   // return the screen dimensions in the world space. 
   screen() {
-    let [ x1, y1 ] = this.canvasToWorld(0, 0)
-    let [ x2, y2 ] = this.canvasToWorld(this.canvas.width, this.canvas.height)
+    const [ x1, y1 ] = this.canvasToWorld(0, 0)
+    const [ x2, y2 ] = this.canvasToWorld(this.canvas.width, this.canvas.height)
     return { x1, y1, x2, y2 }
   }
   
@@ -93,7 +93,7 @@ export class Viewport {
   }
 
   pixelToWorld(x: number, y: number) {
-    let [ x2, y2 ] = this.pixelToCanvas(x, y)
+    const [ x2, y2 ] = this.pixelToCanvas(x, y)
     return this.canvasToWorld(x2, y2)
   }
 
@@ -105,14 +105,14 @@ export class Viewport {
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
-    let [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
+    const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     this.mousePressed = true
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
-    let [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
-    let [ worldX, worldY ] = this.canvasToWorld(canvasX, canvasY)
+    const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
+    const [ worldX, worldY ] = this.canvasToWorld(canvasX, canvasY)
     this.mousePos.x = worldX
     this.mousePos.y = worldY
     if (this.mousePressed)
@@ -126,7 +126,7 @@ export class Viewport {
   }
 
   private onwheel(e: WheelEvent) {
-    let direction = e.deltaY < 0 ? -1 : 1
+    const direction = e.deltaY < 0 ? 1 : -1
     this.onZoom(0.1 * direction, e.clientX, e.clientY)
   }
 
@@ -134,12 +134,12 @@ export class Viewport {
   // ------------ mobile events --------------------------------
   private ontouchstart(e: TouchEvent) {
     if(e.touches.length === 1) {
-      let [ canvasX, canvasY ] = this.pixelToCanvas(e.touches[0].clientX, e.touches[0].clientY)
+      const [ canvasX, canvasY ] = this.pixelToCanvas(e.touches[0].clientX, e.touches[0].clientY)
       this.onDragStart(canvasX, canvasY)
     }
     else if(e.touches.length === 2) {
-      let distX = e.touches[0].clientX - e.touches[1].clientX
-      let distY = e.touches[0].clientY - e.touches[1].clientY
+      const distX = e.touches[0].clientX - e.touches[1].clientX
+      const distY = e.touches[0].clientY - e.touches[1].clientY
       this.touchDistance = Math.sqrt(distX*distX + distY*distY)
     }
   }
@@ -147,16 +147,16 @@ export class Viewport {
   private ontouchmove(e: TouchEvent) {
     e.preventDefault()
     if(e.touches.length === 1) {
-      let [ canvasX, canvasY ] = this.pixelToCanvas(e.touches[0].clientX, e.touches[0].clientY)
+      const [ canvasX, canvasY ] = this.pixelToCanvas(e.touches[0].clientX, e.touches[0].clientY)
       this.onDrag(canvasX, canvasY)
     }
     else if(e.touches.length === 2) {
-      let posX = (e.touches[0].clientX + e.touches[1].clientX) / 2
-      let posY = (e.touches[0].clientY + e.touches[1].clientY) / 2
-      let distX = e.touches[0].clientX - e.touches[1].clientX
-      let distY = e.touches[0].clientY - e.touches[1].clientY
-      let distance = Math.sqrt(distX*distX + distY*distY)
-      let delta = (distance / this.touchDistance) - 1
+      const posX = (e.touches[0].clientX + e.touches[1].clientX) / 2
+      const posY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+      const distX = e.touches[0].clientX - e.touches[1].clientX
+      const distY = e.touches[0].clientY - e.touches[1].clientY
+      const distance = Math.sqrt(distX*distX + distY*distY)
+      const delta = (distance / this.touchDistance) - 1
       if(delta === 0) return
       this.onZoom(delta, posX, posY)
       this.touchDistance = distance
@@ -171,9 +171,9 @@ export class Viewport {
     if(this.scale + delta > this.maxScale) delta = this.maxScale - this.scale
     if(this.scale + delta < this.minScale) delta = this.minScale - this.scale
 
-    let [ canvasX, canvasY ] = this.pixelToCanvas(clientX, clientY)
+    const [ canvasX, canvasY ] = this.pixelToCanvas(clientX, clientY)
 
-    let zoom = (this.scale + delta) / this.scale
+    const zoom = (this.scale + delta) / this.scale
 
     this.onMove(
       canvasX / this.scale - canvasX / (this.scale*zoom),
@@ -195,8 +195,8 @@ export class Viewport {
     if(Date.now() - this.dragTimestamp < this.clickTimeout)
       return
 
-    let deltaX = x - this.posDragLast.x
-    let deltaY = y - this.posDragLast.y
+    const deltaX = x - this.posDragLast.x
+    const deltaY = y - this.posDragLast.y
 
     this.posDragLast.x = x
     this.posDragLast.y = y
