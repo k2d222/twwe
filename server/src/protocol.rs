@@ -15,11 +15,24 @@ pub struct Users {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InfoRequest {
+    // Room(String), // info on a specific room // TODO
+    Maps, // list of all available maps
+}
+
+#[derive(Serialize)]
+pub struct MapInfo {
+    pub name: String,
+    pub users: u32,
+}
+
+#[derive(Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RoomRequest {
     Change(Change),
     Map,
-    Save(String),
+    Save,
 }
 
 #[derive(Serialize)]
@@ -34,12 +47,14 @@ pub enum RoomResponse {
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum GlobalRequest {
     Join(String), // join a room
+    Maps,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum GlobalResponse {
-    // Join(String), // join a room
+    Maps(Vec<MapInfo>),
+    Join(bool),
 }
 
 #[derive(Deserialize)]

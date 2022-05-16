@@ -62,7 +62,6 @@ impl Room {
 
     pub fn add_peer(&self, peer: &Peer) {
         self.peers().insert(peer.addr, peer.tx.clone());
-        self.send_map(peer).unwrap();
         self.broadcast_users();
     }
 
@@ -71,11 +70,11 @@ impl Room {
         self.broadcast_users();
     }
 
-    fn map(&self) -> MutexGuard<TwMap> {
+    pub fn map(&self) -> MutexGuard<TwMap> {
         self.map.lock().expect("failed to lock map")
     }
 
-    fn peers(&self) -> MutexGuard<HashMap<SocketAddr, Tx>> {
+    pub fn peers(&self) -> MutexGuard<HashMap<SocketAddr, Tx>> {
         self.peers.lock().expect("failed to lock peers")
     }
 
@@ -90,11 +89,7 @@ impl Room {
         Ok(())
     }
 
-    fn save_map(&self, name: String) -> Res<()> {
-        if name != self.name {
-            return Err("map name mismatch".into());
-        }
-
+    fn save_map(&self) -> Res<()> {
         // Avoid concurrent saves
         let _lck = self.saving.lock().unwrap();
 
@@ -106,35 +101,34 @@ impl Room {
     }
 
     fn set_tile(&self, change: Change) -> Res<()> {
-        {
-            let mut map = self.map();
-            let layer = map
-                .groups
-                .iter_mut()
-                .find_map(|g| {
-                    g.layers.iter_mut().find_map(|l| match l {
-                        Layer::Game(gl) => Some(gl),
-                        _ => None,
-                    })
+        let mut map = self.map();
+        let layer = map
+            .groups
+            .iter_mut()
+            .find_map(|g| {
+                g.layers.iter_mut().find_map(|l| match l {
+                    Layer::Game(gl) => Some(gl),
+                    _ => None,
                 })
-                .ok_or("no game layer")?;
-            let tiles = layer.tiles.unwrap_mut(); // map must be loaded
-            let mut tile = tiles
-                .get_mut((change.y as usize, change.x as usize))
-                .ok_or("tile change outside layer")?;
-            tile.id = change.id;
-            log::debug!("changed pixel {:?}", change);
-        }
+            })
+            .ok_or("no game layer")?;
+        let tiles = layer.tiles.unwrap_mut(); // map must be loaded
+        let mut tile = tiles
+            .get_mut((change.y as usize, change.x as usize))
+            .ok_or("tile change outside layer")?;
+        tile.id = change.id;
 
-        // broadcast message
-        {
-            let str = serde_json::to_string(&RoomResponse::Change(change)).unwrap();
-            let msg = Message::Text(str);
-            for (_addr, tx) in self.peers().iter() {
-                tx.unbounded_send(msg.clone()).unwrap();
-            }
-        }
+        log::debug!("changed pixel {:?}", change);
+        self.broadcast_change(change)?;
+        Ok(())
+    }
 
+    fn broadcast_change(&self, change: Change) -> Res<()> {
+        let str = serde_json::to_string(&RoomResponse::Change(change))?;
+        let msg = Message::Text(str);
+        for (_addr, tx) in self.peers().iter() {
+            tx.unbounded_send(msg.clone())?;
+        }
         Ok(())
     }
 
@@ -152,7 +146,7 @@ impl Room {
         match req {
             RoomRequest::Change(change) => self.set_tile(change),
             RoomRequest::Map => self.send_map(peer),
-            RoomRequest::Save(map_name) => self.save_map(map_name),
+            RoomRequest::Save => self.save_map(),
         }
     }
 }

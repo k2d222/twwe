@@ -1,13 +1,11 @@
 import { Server } from './server/server'
-import { ChangeData } from './server/protocol'
+import { ChangeData, MapInfo } from './server/protocol'
 import { Map } from './twmap/map'
 import { RenderMap } from './gl/renderMap'
 import { init as glInit, renderer, viewport } from './gl/global'
 import { TreeView } from './ui/treeView'
 import { TileSelector } from './ui/tileSelector'
 import { LayerType } from './twmap/types'
-
-const MAP_NAME = 'Sunny Side Up'
 
 
 // all html elements are prefixed with $, but no JQuery :)
@@ -21,6 +19,8 @@ let $dialogContent: HTMLElement = $dialog.querySelector('.content')
 let $users: HTMLElement = document.querySelector('#users span')
 let $btnSave: HTMLElement = document.querySelector('#save')
 let $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
+let $lobby: HTMLElement = document.querySelector('#lobby')
+let $lobbyContent: HTMLElement = $lobby.querySelector('.content')
 
 let map: Map
 let rmap: RenderMap
@@ -57,7 +57,7 @@ async function setupServer() {
   })
   
   $btnSave.addEventListener('click', () => {
-    server.send('save', map.name)
+    server.send('save')
   })
 }
 
@@ -129,18 +129,58 @@ function setupUI() {
   })
 }
 
-async function main() {
-  showDialog('Connecting to server…')
-  await setupServer()
-  server.send('join', MAP_NAME)
-  server.on('map', (buf) => {
-    // TODO: server send map name just to be sure.
-    map = new Map(MAP_NAME, buf)
-    setupGL()
-    setupUI()
-    hideDialog()
-    console.log('up and running!')
+function chooseMap(mapInfos: MapInfo[]): Promise<string> {
+  return new Promise(resolve => {
+    $lobbyContent.innerHTML = ''
+
+    for (const info of mapInfos) {
+      const $btn = document.createElement('button')
+      $btn.innerText = 'Join'
+      $btn.onclick = () => {
+        $lobby.classList.add('hidden')
+        $lobbyContent.innerHTML = ''
+        resolve(info.name)
+      }
+
+      const $name = document.createElement('span')
+      $name.classList.add('name')
+      $name.innerText = info.name
+
+      const $users = document.createElement('span')
+      $users.classList.add('users')
+      $users.innerText = '' + info.users
+
+      $lobbyContent.append($name, $users, $btn)
+    }
+
+    $lobby.classList.remove('hidden')
   })
+}
+
+async function main() {
+  
+  try {
+    showDialog('Connecting to server…')
+    await setupServer()
+    let mapInfos = await server.query('maps')
+    hideDialog()
+    let mapName = await chooseMap(mapInfos)
+    showDialog('Joining room…')
+    let joined = await server.query('join', mapName)
+    if (!joined) throw 'failed to join the room'
+    let buf = await server.query('map')
+    map = new Map(mapName, buf)
+  }
+  catch (e) {
+    console.error(e)
+    showDialog(e)
+    return
+  }
+  
+  setupGL()
+  setupUI()
+  hideDialog()
+  console.log('up and running!')
 }
 
 

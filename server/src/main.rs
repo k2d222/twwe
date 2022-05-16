@@ -63,16 +63,33 @@ impl Server {
         self.rooms().get(name).map(Arc::to_owned)
     }
 
-    // fn peers(&self) -> MutexGuard<HashMap<SocketAddr, Peer>> {
-    //     self.peers.lock().expect("failed to lock peers")
-    // }
-
     fn handle_join_room(&self, peer: &mut Peer, room_name: String) -> Res<()> {
+        if let Some(room) = &peer.room {
+            room.remove_peer(peer);
+        }
         let room = self
             .room(&room_name)
             .ok_or("peer wants to join non-existing room")?;
         room.add_peer(peer);
         peer.room = Some(room);
+
+        // send acknowledgement
+        let str = serde_json::to_string(&GlobalResponse::Join(true))?;
+        peer.tx.unbounded_send(Message::Text(str))?;
+        Ok(())
+    }
+
+    fn handle_query_maps(&self, peer: &Peer) -> Res<()> {
+        let res = self
+            .rooms()
+            .iter()
+            .map(|(name, map)| MapInfo {
+                name: name.to_owned(),
+                users: map.peers().len() as u32,
+            })
+            .collect();
+        let str = serde_json::to_string(&GlobalResponse::Maps(res))?;
+        peer.tx.unbounded_send(Message::Text(str))?;
         Ok(())
     }
 
@@ -80,6 +97,7 @@ impl Server {
         match req {
             Request::Global(req) => match req {
                 GlobalRequest::Join(room) => self.handle_join_room(peer, room),
+                GlobalRequest::Maps => self.handle_query_maps(peer),
             },
             Request::Room(req) => {
                 let room = { peer.room.clone().ok_or("peer is not in a room")? };
