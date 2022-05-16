@@ -5,7 +5,7 @@
   "source": "/html/index.html",
   "scripts": {
     "run": "parcel",
-    "build": "rm -rf dist && parcel build",
+    "build": "rm -rf dist/* && parcel build",
     "serve": "parcel watch",
     "tsc": "tsc --noEmit"
   },
