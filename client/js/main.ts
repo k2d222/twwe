@@ -7,7 +7,7 @@ import { TreeView } from './ui/treeView'
 import { TileSelector } from './ui/tileSelector'
 import { LayerType } from './twmap/types'
 
-const MAP_NAME = 'Sunny Side Up'
+const MAP_NAME = process.env.MAP_NAME || 'Sunny Side Up'
 
 
 // all html elements are prefixed with $, but no JQuery :)
@@ -42,9 +42,9 @@ function hideDialog() {
 
 async function setupServer() {
   // setup server  
-  server = await Server.create('pi.thissma.fr', 16900)
+  server = await Server.create(process.env.BACKEND_HOST, parseInt(process.env.BACKEND_PORT, 10))
   .catch((e) => {
-    showDialog('Failed to connect to the server.')
+    showDialog(`Failed to connect to the server ${process.env.BACKEND_HOST}:${process.env.BACKEND_PORT}.`)
     throw e
   })
   
@@ -123,6 +123,8 @@ function setupUI() {
     e.preventDefault()
     if (e.key === ' ')
       placeTile()
+    else if (e.key === 'Tab')
+      $nav.classList.toggle('hidden')
   })
   
   $btnToggleNav.addEventListener('click', () => {
