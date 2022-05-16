@@ -8,7 +8,7 @@ import { Texture } from './texture'
 import { ChangeData } from '../server/protocol'
 
 function createGameTexture() {
-	let image = new Image()
+	const image = new Image()
 	image.name = 'Game'
 	image.loadExternal('entities/DDNet.png')
 	return new Texture(image)
@@ -25,19 +25,19 @@ export class RenderMap {
 
     // COMBAK: this is hacky but I don't see other ways to handle the
     // game layer edge-case for now.
-    let gameGroup = this.groups.find(g => g.group.name === 'Game')
-    let gameLayerIndex = gameGroup.group.layers.findIndex(l => l.type === LayerType.GAME)
-    let gameLayer = gameGroup.layers[gameLayerIndex] as RenderTileLayer
+    const gameGroup = this.groups.find(g => g.group.name === 'Game')
+    const gameLayerIndex = gameGroup.group.layers.findIndex(l => l.type === LayerType.GAME)
+    const gameLayer = gameGroup.layers[gameLayerIndex] as RenderTileLayer
     this.gameLayer = new RenderTileLayer(gameLayer.layer)
     this.gameLayer.texture = createGameTexture()
   }
   
   applyChange(change: ChangeData) {
-    let group = this.groups[change.group]
-    let layer = group.layers[change.layer] as RenderTileLayer
+    const group = this.groups[change.group]
+    const layer = group.layers[change.layer] as RenderTileLayer
     
     
-    let tile = layer.layer.getTile(change.x, change.y)
+    const tile = layer.layer.getTile(change.x, change.y)
 
     if (tile.index == change.id)
       return false
@@ -53,7 +53,7 @@ export class RenderMap {
   }
   
   render() {
-    for(let group of this.groups)
+    for(const group of this.groups)
       group.render()
     
     // render the game layer on top of the rest.

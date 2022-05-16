@@ -19,14 +19,14 @@ export class Server {
   
   static create(address: string, port: number): Promise<Server> {
     return new Promise((resolve, reject) => {
-      let server = new Server(address, port)
+      const server = new Server(address, port)
       
-      let onopen = () => {
+      const onopen = () => {
         server.socket.removeEventListener('error', onerror)
         resolve(server)
       }
 
-      let onerror = (e: Event) => {
+      const onerror = (e: Event) => {
         reject(e)
       }
 
@@ -51,18 +51,18 @@ export class Server {
     
     // text messages from server are JSON and contains a content field.
     else {
-      let data = JSON.parse(e.data)
+      const data = JSON.parse(e.data)
       type = data.type
       content = data.content
     }
     
-    for (let fn of this.listeners[type]) {
+    for (const fn of this.listeners[type]) {
       fn(content)
     }
   }
   
   send<K extends keyof ClientEventMap>(type: K, content: ClientEventMap[K]) {
-    let message = JSON.stringify({
+    const message = JSON.stringify({
       type, content
     })
     this.socket.send(message)
