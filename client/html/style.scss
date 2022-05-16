@@ -1,5 +1,7 @@
 * {
   box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(197, 241, 219);
 }
 
 canvas {
@@ -9,6 +11,16 @@ canvas {
   background: black;
 }
 
+#save {
+  background: rgba(80, 24, 43, 0.932);
+  border: 1px solid rgba(204, 125, 152, 0.5);
+  border-radius: 5px;
+
+  &:hover {
+    background: rgba(148, 57, 87, 0.932);
+  }
+}
+
 #menu {
   position: fixed;
   top: 0;
@@ -16,8 +28,10 @@ canvas {
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  background: rgba(255, 255, 255, .5);
+  background: rgba(133, 69, 90, 0.5);
   gap: .5rem;
+  border-radius: 0px 0px 0px 5px;
+  box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.5);
 }
 
 #dialog {
@@ -29,14 +43,15 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, .5);
+  background: rgba(133, 69, 90, 0.5);
   padding: 5rem;
   
   .content {
     padding: 3rem 5rem;
-    border-radius: 15px;
-    background: white;
-    border: 1px solid black;
+    border-radius: 3px;
+    background: rgba(68, 40, 60, 0.8);
+    box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgb(63, 24, 50);
   }
   
   &.hidden {
@@ -57,6 +72,7 @@ nav {
   padding: 1rem;
   gap: 1rem;
   transition: transform .3s;
+  background-color: rgb(80, 64, 72);
   
   &.hidden {
     transform: translateX(-100%);
@@ -67,8 +83,9 @@ nav {
     left: 100%;
     top: calc(50% - 2rem);
     height: 4rem;
-    background: white;
-    border: 1px solid black;
+    background-color: rgb(80, 64, 72);
+    border: 1px solid rgb(107, 74, 91);
+    border-radius: 0px 2px 2px 0px;
   }  
       
   #tree {
@@ -114,6 +131,8 @@ nav {
     left: 50%;
     transform: translateX(-50%);
     outline: 3px solid black;
+    border-radius: 1px;
+    box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.5);
     width: $tile-size;
     height: $tile-size;
   }
