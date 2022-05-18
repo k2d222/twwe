@@ -50,16 +50,17 @@ impl LazyMap {
         log::debug!("unloaded map {}", self.path.display());
     }
 
-    fn get(&self) -> MappedMutexGuard<TwMap> {
+    fn get(&self) -> Res<MappedMutexGuard<TwMap>> {
         // lazy-load map if not loaded
-        {
-            let mut map = self.map.lock();
-            if *map == None {
-                *map = Some(load_map(&self.path));
-                log::debug!("loaded map {}", self.path.display());
-            }
+        let mut map = self.map.lock();
+        if *map == None {
+            *map = load_map(&self.path).ok();
+            log::debug!("loaded map {}", self.path.display());
         }
-        MutexGuard::map(self.map.lock(), |m| m.as_mut().unwrap())
+        match *map {
+            Some(_) => Ok(MutexGuard::map(map, |m| m.as_mut().unwrap())),
+            None => Err(format!("failed to load map {}", self.path.display()).into()),
+        }
     }
 }
 
@@ -98,7 +99,7 @@ impl Room {
     fn send_map(&self, peer: &Peer) -> Res<()> {
         let buf = {
             let mut buf = Vec::new();
-            self.map.get().save(&mut buf)?; // TODO: this is blocking for the server
+            self.map.get()?.save(&mut buf)?; // TODO: this is blocking for the server
             buf
         };
         peer.tx.unbounded_send(Message::Binary(buf))?;
@@ -111,13 +112,13 @@ impl Room {
         let _lck = self.saving.lock();
 
         // clone the map to release the lock as soon as possible
-        self.map.get().clone().save_file(&self.map.path)?;
+        self.map.get()?.clone().save_file(&self.map.path)?;
         log::info!("saved {}", self.map.path.display());
         Ok(())
     }
 
     fn set_tile(&self, change: Change) -> Res<()> {
-        let mut map = self.map.get();
+        let mut map = self.map.get()?;
         let layer = map
             .groups
             .iter_mut()
