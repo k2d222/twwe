@@ -1,4 +1,4 @@
-import { ClientEventMap, ServerEventMap } from './protocol'
+import { ClientEventMap, ServerEventMap, Query, ServerQueryMap } from './protocol'
 
 type Listener<K extends keyof ServerEventMap> = (data: ServerEventMap[K]) => void
 
@@ -14,6 +14,8 @@ export class Server {
       'change': [],
       'map': [],
       'users': [],
+      'maps': [],
+      'join': [],
     }
   }
   
@@ -34,34 +36,77 @@ export class Server {
       server.socket.addEventListener('error', onerror, { once: true })
     })
   }
+  
+  // to help typescript a little
+  private getListeners<K extends keyof ServerEventMap>(type: K) {
+    return this.listeners[type] as Listener<K>[]
+  }
 
   on<K extends keyof ServerEventMap>(type: K, fn: Listener<K>) {
-    this.listeners[type].push(fn)
+    this.getListeners(type).push(fn)
+  }
+
+  once<K extends keyof ServerEventMap>(type: K, fn: Listener<K>, timeout?: number) {
+    let timeoutID = -1
+    const onceListener = (x: ServerEventMap[K]) => {
+      window.clearTimeout(timeoutID)
+      const index = this.getListeners(type).indexOf(onceListener)
+      this.getListeners(type).splice(index)
+      fn(x)
+    }
+    this.getListeners(type).push(onceListener)
+    
+    if (timeout) {
+      timeoutID = window.setTimeout(() => {
+        const index = this.getListeners(type).indexOf(onceListener)
+        this.getListeners(type).splice(index)
+      }, timeout)
+    }
+  }
+
+  query<K extends Query>(type: K, content?: ClientEventMap[K], timeout = 10000): Promise<ServerQueryMap[K]> {
+    return new Promise((resolve, reject) => {
+      let timeoutID = -1
+
+      const onceListener = (x: ServerEventMap[K]) => {
+        window.clearTimeout(timeoutID)
+        const index = this.getListeners(type).indexOf(onceListener)
+        this.getListeners(type).splice(index)
+        resolve(x)
+      }
+
+      this.getListeners(type).push(onceListener)
+    
+      if (timeout) {
+        timeoutID = window.setTimeout(() => {
+          const index = this.getListeners(type).indexOf(onceListener)
+          this.getListeners(type).splice(index)
+          reject("timeout reached")
+        }, timeout)
+      }
+
+      this.send(type, content)
+    })
   }
 
   private onMessage(e: MessageEvent) {
-    let type: keyof ServerEventMap
-    let content: any
-    
     // binary messages from server are always maps.
     if (e.data instanceof ArrayBuffer) {
-      type = 'map'
-      content = e.data
+      for (const fn of this.listeners['map']) {
+        fn(e.data)
+      }
     }
     
     // text messages from server are JSON and contains a content field.
     else {
       const data = JSON.parse(e.data)
-      type = data.type
-      content = data.content
-    }
-    
-    for (const fn of this.listeners[type]) {
-      fn(content)
+      for (const fn of this.listeners[data.type]) {
+        fn(data.content)
+      }
     }
   }
   
-  send<K extends keyof ClientEventMap>(type: K, content: ClientEventMap[K]) {
+  send<K extends keyof ClientEventMap>(type: K, content?: ClientEventMap[K]) {
     const message = JSON.stringify({
       type, content
     })

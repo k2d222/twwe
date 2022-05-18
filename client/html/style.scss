@@ -138,3 +138,52 @@ nav {
     }
   }
 }
+
+#lobby {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, .5);
+  padding: 4rem;
+  
+  &.hidden {
+    display: none;
+  }
+  
+  button {
+    float: right;
+    margin-top: 1rem;
+  }
+  
+  .content {
+    background: white;
+    border: 1px solid black;
+    padding: 1rem;
+    
+    .list {
+      display: grid;
+      grid-gap: 5px;
+      grid-template-columns: auto auto auto;
+      overflow: auto;
+
+      // header elements
+      > span:nth-child(-n + 3) {
+        border-bottom: 1px dotted black;
+      }
+
+      // third column
+      > span:nth-child(3n) {
+        text-align: right;
+      }
+
+      > * {
+        padding: .5rem .3rem;
+      }
+    }
+  }
+}
