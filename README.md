@@ -45,9 +45,9 @@ Use `npm run tsc` to run Typescript checks on the project.
 
 Future short-term goals are as follows:
 
-* Improve **concurrency** on the server. Currently, the whole server state is protected by a single mutex which means there cannot be any simultaneous requests.
-* Allow editing multiple maps on a single server. The server will advertise which maps are available and add restrictions on which users can connect to (maybe a password per map?)
-* Allow users to create, upload and download maps and setup access permissions.
-* Plugin to update a real Teeworlds or DDNet server (a simple /reload command sent should be enough)
-* Stabilise and securise the server for a production(-ish) use.
-* Add more editor tools for quads, envelopes, sounds etc.
+ - [x] Improve **concurrency** on the server. Currently, the whole server state is protected by a single mutex which means there cannot be any simultaneous requests.
+ - [x] Allow editing multiple maps on a single server. The server will advertise which maps are available and add restrictions on which users can connect to (maybe a password per map?)
+ - [ ] Allow users to create, upload and download maps and setup access permissions.
+ - [ ] Plugin to update a real Teeworlds or DDNet server (a simple /reload command sent should be enough)
+ - [ ] Stabilise and securise the server for a production(-ish) use.
+ - [ ] Add more editor tools for quads, envelopes, sounds etc.
