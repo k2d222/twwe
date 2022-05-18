@@ -7,6 +7,8 @@ use std::{
     sync::{Arc, Mutex, MutexGuard},
 };
 
+use glob::glob;
+
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     future, StreamExt, TryStreamExt,
@@ -24,7 +26,6 @@ use tungstenite::Message;
 type Tx = UnboundedSender<Message>;
 type Res<T> = Result<T, Box<dyn Error>>;
 
-#[derive(Debug)]
 pub struct Peer {
     // name: String, // TODO add more information about users
     addr: SocketAddr,
@@ -51,7 +52,6 @@ impl Server {
     fn new() -> Self {
         Server {
             rooms: Mutex::new(HashMap::new()),
-            // peers: Mutex::new(HashMap::new()),
         }
     }
 
@@ -67,9 +67,11 @@ impl Server {
         if let Some(room) = &peer.room {
             room.remove_peer(peer);
         }
+
         let room = self
             .room(&room_name)
             .ok_or("peer wants to join non-existing room")?;
+
         room.add_peer(peer);
         peer.room = Some(room);
 
@@ -80,7 +82,7 @@ impl Server {
     }
 
     fn handle_query_maps(&self, peer: &Peer) -> Res<()> {
-        let res = self
+        let maps: Vec<MapInfo> = self
             .rooms()
             .iter()
             .map(|(name, map)| MapInfo {
@@ -88,7 +90,7 @@ impl Server {
                 users: map.peers().len() as u32,
             })
             .collect();
-        let str = serde_json::to_string(&GlobalResponse::Maps(res))?;
+        let str = serde_json::to_string(&GlobalResponse::Maps(maps))?;
         peer.tx.unbounded_send(Message::Text(str))?;
         Ok(())
     }
@@ -107,7 +109,7 @@ impl Server {
     }
 
     async fn handle_connection(&self, raw_stream: TcpStream, addr: SocketAddr) {
-        println!("Incoming TCP connection from: {}", addr);
+        log::debug!("Incoming TCP connection from: {}", addr);
 
         // accept
         let ws_stream = tokio_tungstenite::accept_async(raw_stream)
@@ -150,14 +152,26 @@ impl Server {
 }
 
 fn create_server() -> Server {
-    let mut server = Server::new();
-    let room_name = "Sunny Side Up";
-    let room = Room::create(room_name.to_owned());
-    server
-        .rooms
-        .get_mut()
-        .unwrap()
-        .insert(room_name.to_owned(), Arc::new(room));
+    let server = Server::new();
+    {
+        let mut server_rooms = server.rooms();
+        let rooms = glob("maps/*.map")
+            .expect("no map found in maps directory")
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .map(|e| Arc::new(Room::new(e)));
+        for r in rooms {
+            let name = r
+                .map
+                .path
+                .file_stem()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned();
+            server_rooms.insert(name, r);
+        }
+    }
+    log::info!("found {} maps.", server.rooms().len());
     server
 }
 
@@ -173,7 +187,7 @@ async fn main() -> Result<(), io::Error> {
     // Create the event loop and TCP listener we'll accept connections on.
     let try_socket = TcpListener::bind(&addr).await;
     let listener = try_socket.expect("Failed to bind");
-    println!("Listening on: {}", addr);
+    log::info!("Listening on: {}", addr);
 
     // Let's spawn the handling of each connection in a separate task.
     while let Ok((stream, addr)) = listener.accept().await {

@@ -4,8 +4,11 @@ use std::{
     collections::HashMap,
     error::Error,
     net::SocketAddr,
-    sync::{Mutex, MutexGuard},
+    path::{Path, PathBuf},
+    sync::Arc,
 };
+
+use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
@@ -21,43 +24,58 @@ use crate::{
 type Tx = UnboundedSender<Message>;
 type Res<T> = Result<T, Box<dyn Error>>;
 
-fn load_map(name: &str) -> TwMap {
-    let path = format!("maps/{}.map", name);
-    let mut map = TwMap::parse_file(&path).expect("failed to parse map");
-
-    // use std::time::Instant;
-    // let now = Instant::now();
-    // map.save_file(&format!("{}.map", path));
-    // let elapsed = now.elapsed();
-    // println!("Elapsed: {:.2?}", elapsed);
-
-    map.load().expect("failed to load map");
-    // state.maps.insert(name.to_string(), map);
-    log::info!("loaded map {}", name);
-    map
+fn load_map(path: &Path) -> Res<TwMap> {
+    let mut map = TwMap::parse_file(&path)?;
+    map.load()?;
+    Ok(map)
 }
 
-#[derive(Debug)]
+// We want the room to have the map loaded when at least 1 peer is connected, but unloaded
+// when the last peer disconnects. The LazyMap provides these capabilities.
+pub struct LazyMap {
+    pub path: PathBuf,
+    map: Arc<Mutex<Option<TwMap>>>,
+}
+
+impl LazyMap {
+    fn new(path: PathBuf) -> Self {
+        LazyMap {
+            path,
+            map: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    fn unload(&self) {
+        *self.map.lock() = None;
+        log::debug!("unloaded map {}", self.path.display());
+    }
+
+    fn get(&self) -> MappedMutexGuard<TwMap> {
+        // lazy-load map if not loaded
+        {
+            let mut map = self.map.lock();
+            if *map == None {
+                *map = Some(load_map(&self.path));
+                log::debug!("loaded map {}", self.path.display());
+            }
+        }
+        MutexGuard::map(self.map.lock(), |m| m.as_mut().unwrap())
+    }
+}
+
 pub struct Room {
-    name: String,
     peers: Mutex<HashMap<SocketAddr, Tx>>,
-    map: Mutex<TwMap>,
+    pub map: LazyMap,
     saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
 }
 
 impl Room {
-    fn new(name: String, map: TwMap) -> Self {
+    pub fn new(path: PathBuf) -> Self {
         Room {
             peers: Mutex::new(HashMap::new()),
-            map: Mutex::new(map),
-            name,
+            map: LazyMap::new(path),
             saving: Mutex::new(()),
         }
-    }
-
-    pub fn create(name: String) -> Self {
-        let map = load_map(&name);
-        Room::new(name, map)
     }
 
     pub fn add_peer(&self, peer: &Peer) {
@@ -67,21 +85,20 @@ impl Room {
 
     pub fn remove_peer(&self, peer: &Peer) {
         self.peers().remove(&peer.addr);
+        if self.peers().is_empty() {
+            self.map.unload()
+        }
         self.broadcast_users();
     }
 
-    pub fn map(&self) -> MutexGuard<TwMap> {
-        self.map.lock().expect("failed to lock map")
-    }
-
     pub fn peers(&self) -> MutexGuard<HashMap<SocketAddr, Tx>> {
-        self.peers.lock().expect("failed to lock peers")
+        self.peers.lock()
     }
 
     fn send_map(&self, peer: &Peer) -> Res<()> {
         let buf = {
             let mut buf = Vec::new();
-            self.map().save(&mut buf)?; // TODO: this is blocking for the server
+            self.map.get().save(&mut buf)?; // TODO: this is blocking for the server
             buf
         };
         peer.tx.unbounded_send(Message::Binary(buf))?;
@@ -91,17 +108,16 @@ impl Room {
 
     fn save_map(&self) -> Res<()> {
         // Avoid concurrent saves
-        let _lck = self.saving.lock().unwrap();
+        let _lck = self.saving.lock();
 
         // clone the map to release the lock as soon as possible
-        let path = format!("maps/{}.map", self.name);
-        self.map().clone().save_file(path)?;
-        log::info!("saved {}", self.name);
+        self.map.get().clone().save_file(&self.map.path)?;
+        log::info!("saved {}", self.map.path.display());
         Ok(())
     }
 
     fn set_tile(&self, change: Change) -> Res<()> {
-        let mut map = self.map();
+        let mut map = self.map.get();
         let layer = map
             .groups
             .iter_mut()
