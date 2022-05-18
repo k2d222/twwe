@@ -132,6 +132,16 @@ function setupUI() {
 }
 
 function chooseMap(mapInfos: MapInfo[]): Promise<string> {
+  // sort by [users desc, name asc]
+  mapInfos = mapInfos.sort((a, b) => {
+    if (a.users === b.users) {
+      return a.name.localeCompare(b.name)
+    }
+    else {
+      return b.users - a.users
+    }
+  })
+
   return new Promise(resolve => {
     $lobbyList.innerHTML = ''
 
