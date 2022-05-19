@@ -49,11 +49,17 @@ export class TreeView {
     title.innerHTML = `<b>#${g} ${group.group.name}</b>`
     cont.append(title)
 
-    let check = document.createElement('input')
-    check.type = 'checkbox'
-    check.checked = true
-    check.onchange = () => group.visible = check.checked
-    title.prepend(check)
+    let fold = document.createElement('input')
+    fold.type = 'checkbox'
+    fold.checked = true
+    fold.onchange = () => cont.classList.toggle('folded')
+    title.prepend(fold)
+
+    let display = document.createElement('input')
+    display.type = 'checkbox'
+    display.checked = true
+    display.onchange = () => group.visible = display.checked
+    title.prepend(display)
 
     let layers = group.layers.map((l, i) => this.layerTree(l, g, i))
     cont.append(...layers)

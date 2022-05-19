@@ -86,6 +86,10 @@ nav {
   .group {
     display: flex;
     flex-direction: column;
+    
+    &.folded .layer {
+      display: none;
+    }
   }
     
   .layer {
