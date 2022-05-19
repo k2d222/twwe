@@ -17,6 +17,7 @@ const $dialog: HTMLElement = document.querySelector('#dialog')
 const $dialogContent: HTMLElement = $dialog.querySelector('.content')
 const $users: HTMLElement = document.querySelector('#users span')
 const $btnSave: HTMLElement = document.querySelector('#save')
+const $btnDownload: HTMLElement = document.querySelector('#download')
 const $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
 const $lobby: HTMLElement = document.querySelector('#lobby')
 const $btnJoin: HTMLElement = $lobby.querySelector('button')
@@ -54,10 +55,6 @@ async function setupServer() {
 
   server.on('users', (e) => {
     $users.innerText = e.count + ''
-  })
-
-  $btnSave.addEventListener('click', () => {
-    server.send('save')
   })
 }
 
@@ -128,6 +125,24 @@ function setupUI() {
 
   $btnToggleNav.addEventListener('click', () => {
     $nav.classList.toggle('hidden')
+  })
+
+  $btnSave.addEventListener('click', () => {
+    server.send('save')
+  })
+
+  $btnDownload.addEventListener('click', async () => {
+    const buf = await server.query('map')
+    const blob = new Blob([buf], { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = map.name + '.map';
+
+    document.body.append(link);
+    link.click();
+    link.remove();
   })
 }
 
