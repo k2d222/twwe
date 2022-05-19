@@ -18,7 +18,7 @@ export class TreeView {
     this.layerID = -1
     cont.innerHTML = ''
     
-    let groups = map.groups.map((g, i) => this.groupTree(g, i))
+    const groups = map.groups.map((g, i) => this.groupTree(g, i))
     cont.append(...groups)
   }
   
@@ -27,10 +27,10 @@ export class TreeView {
   }
   
   select(groupID: number, layerID: number) {
-    let radios: NodeListOf<HTMLInputElement> = this.cont.querySelectorAll('input[type=radio]')
-    for(let r of radios) {
-      let thisLayerID = parseInt(r.dataset.layerID)
-      let thisGroupID = parseInt(r.dataset.groupID)
+    const radios: NodeListOf<HTMLInputElement> = this.cont.querySelectorAll('input[type=radio]')
+    for(const r of radios) {
+      const thisLayerID = parseInt(r.dataset.layerID)
+      const thisGroupID = parseInt(r.dataset.groupID)
       if (thisLayerID === layerID && thisGroupID === groupID) {
         r.checked = true
         this.groupID = groupID
@@ -42,37 +42,42 @@ export class TreeView {
   }
   
   private groupTree(group: RenderGroup, g: number) {
-    let cont = document.createElement('div')
-    cont.classList.add('group')
+    const cont = document.createElement('div')
+    cont.classList.add('group', 'visible')
     
-    let title = document.createElement('div')
+    const title = document.createElement('div')
+    title.classList.add('title')
     title.innerHTML = `<b>#${g} ${group.group.name}</b>`
     cont.append(title)
 
-    let fold = document.createElement('input')
-    fold.type = 'checkbox'
-    fold.checked = true
-    fold.onchange = () => cont.classList.toggle('folded')
+    const fold = document.createElement('span')
+    fold.classList.add('fold')
+    fold.onclick = () => cont.classList.toggle('folded')
     title.prepend(fold)
+    
+    const eye = document.createElement('span')
+    eye.classList.add('eye')
+    eye.onclick = () => {
+      group.visible = !group.visible
+      cont.classList.toggle('visible')
+    }
+    title.append(eye)
 
-    let display = document.createElement('input')
-    display.type = 'checkbox'
-    display.checked = true
-    display.onchange = () => group.visible = display.checked
-    title.prepend(display)
-
-    let layers = group.layers.map((l, i) => this.layerTree(l, g, i))
+    const layers = group.layers.map((l, i) => this.layerTree(l, g, i))
     cont.append(...layers)
     return cont
   }
   
   private layerTree(layer: RenderLayer, g: number, l: number) {
-    let label = document.createElement('label')
-    label.classList.add('layer')
+    const cont = document.createElement('div')
+    cont.classList.add('layer', 'visible')
+    
+    const label = document.createElement('label')
     label.innerText = layer.layer.name || '<empty name>'
+    cont.append(label)
 
     if (layer instanceof RenderTileLayer) {
-      let input = document.createElement('input')
+      const input = document.createElement('input')
       input.name = 'layer'
       input.type = 'radio'
       input.value = layer.layer.name || '<empty name>'
@@ -88,12 +93,14 @@ export class TreeView {
       label.prepend(input)
     }
 
-    let check = document.createElement('input')
-    check.type = 'checkbox'
-    check.checked = true
-    check.onchange = () => layer.visible = check.checked
-    label.prepend(check)
+    const eye = document.createElement('span')
+    eye.classList.add('eye')
+    eye.onclick = () => {
+      layer.visible = !layer.visible
+      cont.classList.toggle('visible')
+    }
+    cont.append(eye)
 
-    return label
+    return cont
   }
 }
