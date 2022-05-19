@@ -1,18 +1,19 @@
 import { Server } from './server/server'
 import { ChangeData, MapInfo } from './server/protocol'
 import { Map } from './twmap/map'
+import { LayerType } from './twmap/types'
 import { RenderMap } from './gl/renderMap'
 import { init as glInit, renderer, viewport } from './gl/global'
 import { TreeView } from './ui/treeView'
 import { TileSelector } from './ui/tileSelector'
-import { LayerType } from './twmap/types'
+import { Lobby } from './ui/lobby'
 
 // all html elements are prefixed with $, but no JQuery :)
 const $canvas: HTMLCanvasElement = document.querySelector('canvas')
 const $nav: HTMLElement = document.querySelector('nav')
 const $tree: HTMLElement = $nav.querySelector('#tree')
 const $selector: HTMLElement = document.querySelector('#tile-selector')
-const $mapName: HTMLElement = $nav.querySelector('#map-name')
+const $mapName: HTMLElement = document.querySelector('#map-name')
 const $dialog: HTMLElement = document.querySelector('#dialog')
 const $dialogContent: HTMLElement = $dialog.querySelector('.content')
 const $users: HTMLElement = document.querySelector('#users span')
@@ -20,15 +21,15 @@ const $btnSave: HTMLElement = document.querySelector('#save')
 const $btnDownload: HTMLElement = document.querySelector('#download')
 const $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
 const $lobby: HTMLElement = document.querySelector('#lobby')
-const $btnJoin: HTMLElement = $lobby.querySelector('button')
-const $lobbyList: HTMLElement = $lobby.querySelector('.list')
 
 let map: Map
 let rmap: RenderMap
 let server: Server
 
+// UI components
 let treeView: TreeView
-let tileSelector: TileSelector
+let tileSelector = new TileSelector($selector)
+let lobby = new Lobby($lobby)
 
 
 function showDialog(msg: string) {
@@ -97,7 +98,6 @@ function placeTile() {
 
 function setupUI() {
   treeView = new TreeView($tree, rmap)
-  tileSelector = new TileSelector($selector)
 
   const [ groupID, layerID ] = map.gameLayerID()
 
@@ -146,60 +146,6 @@ function setupUI() {
   })
 }
 
-function chooseMap(mapInfos: MapInfo[]): Promise<string> {
-  // sort by [users desc, name asc]
-  mapInfos = mapInfos.sort((a, b) => {
-    if (a.users === b.users) {
-      return a.name.localeCompare(b.name)
-    }
-    else {
-      return b.users - a.users
-    }
-  })
-
-  return new Promise(resolve => {
-    $lobbyList.innerHTML = ''
-
-    const t1 = document.createElement('span')
-    const t2 = document.createElement('span')
-    const t3 = document.createElement('span')
-    t2.innerText = 'Maps'
-    t3.innerText = 'Online'
-    $lobbyList.append(t1, t2, t3)
-
-    let i = 0
-    let selected = ''
-
-    for (const info of mapInfos) {
-      const $btn = document.createElement('input')
-      $btn.type = 'radio'
-      $btn.name = 'map'
-      $btn.onchange = () => selected = info.name
-
-      const $name = document.createElement('span')
-      $name.classList.add('name')
-      $name.innerText = info.name
-
-      const $users = document.createElement('span')
-      $users.classList.add('users')
-      $users.innerText = '' + info.users
-
-      $lobbyList.append($btn, $name, $users)
-      i++
-    }
-
-    // check the first one
-    $lobby.querySelector('input').checked = true
-    selected = mapInfos[0].name
-
-    $btnJoin.onclick = () => {
-      $lobby.classList.add('hidden')
-      resolve(selected)
-    }
-    $lobby.classList.remove('hidden')
-  })
-}
-
 async function main() {
 
   showDialog('Connecting to server…')
@@ -207,7 +153,7 @@ async function main() {
   try {
     let mapInfos = await server.query('maps')
     hideDialog()
-    let mapName = await chooseMap(mapInfos)
+    let mapName = await lobby.chooseMap(mapInfos)
     showDialog('Joining room…')
     let joined = await server.query('join', mapName)
     if (!joined) throw 'failed to join the room'
