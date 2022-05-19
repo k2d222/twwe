@@ -17,7 +17,6 @@ export class RenderTileLayer extends RenderLayer {
     texCoord: WebGLBuffer,
   }[][]
 
-  tileSize: number
   chunkSize: number
 
   constructor(layer: TileLayer) {
@@ -30,13 +29,14 @@ export class RenderTileLayer extends RenderLayer {
     else
       this.texture = null
 
-    this.tileSize = 32
     this.chunkSize = 64
 
     this.buffers = []
 
     this.createBuffers()
-    this.initBuffers()
+    
+    if (this.texture && this.texture.loaded)
+      this.initBuffers()
   }
 
   recompute(x: number, y: number) {
@@ -54,6 +54,7 @@ export class RenderTileLayer extends RenderLayer {
     }
     else if (!this.texture.loaded) {
       this.texture.load()
+      this.initBuffers()
       return
     }
 
@@ -149,7 +150,7 @@ export class RenderTileLayer extends RenderLayer {
         const vertices = makeVertices(x, y)
         vertexArr.set(vertices, t * 12)
 
-        const texCoords = makeTexCoords(tile)
+        const texCoords = makeTexCoords(tile, this.texture.image.width)
         texCoordArr.set(texCoords, t * 12)
 
         t++
@@ -181,18 +182,21 @@ function makeVertices(x: number, y: number) {
   ]
 }
 
-function makeTexCoords(tile: LayerTile) {
+function makeTexCoords(tile: LayerTile, atlasSize: number) {
   const tileCount = 16
   const tx = tile.index % tileCount
   const ty = Math.floor(tile.index / tileCount)
+  
+  const half_pix = 0.5 / atlasSize
+  // const half_pix = 0
 
-  let x0 = tx / tileCount
-  let x1 = (tx + 1) / tileCount
+  let x0 = tx / tileCount + half_pix
+  let x1 = (tx + 1) / tileCount - half_pix
   let x2 = x1
   let x3 = x0
 
-  let y0 = ty / tileCount
-  let y1 = (ty + 1) / tileCount
+  let y0 = ty / tileCount + half_pix
+  let y1 = (ty + 1) / tileCount - half_pix
   let y2 = y1
   let y3 = y0
 
