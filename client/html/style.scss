@@ -6,6 +6,9 @@ body, html {
   font-family: sans-serif;
 }
 
+
+$menu_h: 3rem;
+
 canvas {
   position: fixed;
   top: 0;
@@ -16,12 +19,30 @@ canvas {
 #menu {
   position: fixed;
   top: 0;
+  left: 0;
   right: 0;
+  height: $menu_h;
+  justify-content: space-between;
   display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  background: rgba(255, 255, 255, .5);
-  gap: .5rem;
+  flex-direction: row;
+  background: white;
+  padding: .4rem 1rem;
+  border-bottom: 1px solid lightgrey;
+  box-shadow: 0 0 10px -5px black;
+
+  > .left, > .right {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: 1rem;
+  }
+  
+  button {
+    height: 100%;
+    display:flex;
+    align-items: center;
+    gap: .2rem;
+  }
 }
 
 #dialog {
@@ -50,17 +71,18 @@ canvas {
 
 nav {
   position: fixed;
-  top: 0;
+  top: $menu_h;
   left: 0;
   bottom: 0;
   max-width: 15rem;
   background: white;
-  border-right: 1px solid black;
   display: flex;
   flex-direction: column;
   padding: 1rem;
   gap: 1rem;
   transition: transform .3s;
+  border-right: 1px solid lightgrey;
+  box-shadow: 0 10px 10px -5px black;
   
   &.hidden {
     transform: translateX(-100%);
@@ -72,7 +94,9 @@ nav {
     top: calc(50% - 2rem);
     height: 4rem;
     background: white;
-    border: 1px solid black;
+    border: 1px solid lightgrey;
+    border-left: 0;
+    box-shadow: 0 0 10px -5px black;
   }  
       
   #tree {

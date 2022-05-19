@@ -12,16 +12,20 @@
 		<canvas width=500 height=500></canvas>
 
 		<div id="menu">
-			<div id="users">Users online: <span>0</span></div>
-			<button id="save">Save</button>
-			<button id="download">Download</button>
+			<div class="left">
+				<button id="nav-toggle"><img src="tree.svg" alt="" title="Show layers"></button>
+				<button id="map-name"></button>
+				<button id="save"><img src="save.svg" alt="" title="Save the map on the server">Save</button>
+				<button id="download"><img src="download.svg" alt="" title="Download this map to your computer">Download</button>
+			</div>
+			<div class="right">
+				<div id="users">Users online: <span>0</span></div>
+			</div>
 		</div>
 		
 		<nav>
-			<div id="map-name"></div>
 			<div id="tree">
 			</div>
-			<button id="nav-toggle">&gt;</button>
 		</nav>
 
 		<div id="tile-selector"></div>
