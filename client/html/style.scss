@@ -2,6 +2,10 @@
   box-sizing: border-box;
 }
 
+body, html {
+  font-family: sans-serif;
+}
+
 canvas {
   position: fixed;
   top: 0;
@@ -90,7 +94,6 @@ nav {
     &.folded .layer {
       display: none;
     }
-    
   }
     
   .eye {
@@ -132,7 +135,7 @@ nav {
     padding-left: .5rem;
   }
   
-  .group > b, .layer > label {
+  .group > .title > b, .layer > label {
     margin-right: 1rem;
   }
 }
