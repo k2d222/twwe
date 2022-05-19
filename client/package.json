@@ -4,7 +4,7 @@
   "description": "Teeworlds collaborative map editor online",
   "source": "/html/index.html",
   "scripts": {
-    "run": "parcel",
+    "run": "rm -rf dist/* && parcel",
     "build": "rm -rf dist/* && parcel build",
     "serve": "parcel watch",
     "tsc": "tsc --noEmit"
