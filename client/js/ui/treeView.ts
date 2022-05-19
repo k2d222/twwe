@@ -1,6 +1,8 @@
-import { Map } from '../twmap/map'
-import { Group } from '../twmap/group'
-import { Layer } from '../twmap/layer'
+import { RenderMap } from '../gl/renderMap'
+import { RenderGroup } from '../gl/renderGroup'
+import { RenderLayer } from '../gl/renderLayer'
+import { RenderTileLayer } from '../gl/renderTileLayer'
+import { RenderQuadLayer } from '../gl/renderQuadLayer'
 
 export class TreeView {
   cont: HTMLElement
@@ -9,7 +11,7 @@ export class TreeView {
   private groupID: number
   private layerID: number
 
-  constructor(cont: HTMLElement, map: Map) {
+  constructor(cont: HTMLElement, map: RenderMap) {
     this.cont = cont
     this.onselect = () => {}
     this.groupID = -1
@@ -39,33 +41,52 @@ export class TreeView {
     }
   }
   
-  private groupTree(group: Group, g: number) {
+  private groupTree(group: RenderGroup, g: number) {
     let cont = document.createElement('div')
     cont.classList.add('group')
-    cont.innerHTML = `<b>#${g} ${group.name}</b>`
+    
+    let title = document.createElement('div')
+    title.innerHTML = `<b>#${g} ${group.group.name}</b>`
+    cont.append(title)
+
+    let check = document.createElement('input')
+    check.type = 'checkbox'
+    check.checked = true
+    check.onchange = () => group.visible = check.checked
+    title.prepend(check)
+
     let layers = group.layers.map((l, i) => this.layerTree(l, g, i))
     cont.append(...layers)
     return cont
   }
   
-  private layerTree(layer: Layer, g: number, l: number) {
-    let input = document.createElement('input')
-    input.name = 'layer'
-    input.type = 'radio'
-    input.value = layer.name || '<empty name>'
-    input.dataset.groupID = '' + g
-    input.dataset.layerID = '' + l
-
-    input.onchange = () => {
-      this.groupID = g
-      this.layerID = l
-      this.onselect(g, l)
-    }
-
+  private layerTree(layer: RenderLayer, g: number, l: number) {
     let label = document.createElement('label')
     label.classList.add('layer')
-    label.innerText = layer.name || '<empty name>'
-    label.prepend(input)
+    label.innerText = layer.layer.name || '<empty name>'
+
+    if (layer instanceof RenderTileLayer) {
+      let input = document.createElement('input')
+      input.name = 'layer'
+      input.type = 'radio'
+      input.value = layer.layer.name || '<empty name>'
+      input.dataset.groupID = '' + g
+      input.dataset.layerID = '' + l
+
+      input.onchange = () => {
+        this.groupID = g
+        this.layerID = l
+        this.onselect(g, l)
+      }
+
+      label.prepend(input)
+    }
+
+    let check = document.createElement('input')
+    check.type = 'checkbox'
+    check.checked = true
+    check.onchange = () => layer.visible = check.checked
+    label.prepend(check)
 
     return label
   }

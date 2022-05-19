@@ -20,13 +20,18 @@ function createRenderLayer(layer: Layer) {
 export class RenderGroup {
   group: Group
   layers: RenderLayer[]
+  visible: boolean
   
   constructor(group: Group) {
     this.group = group
     this.layers = group.layers.map(l => createRenderLayer(l))
+    this.visible = true
   }
   
   render() {
+    if (!this.visible)
+      return    
+    
     // TODO: offset
     const mv = mat4.create()
     const { offX, offY, paraX, paraY } = this.group

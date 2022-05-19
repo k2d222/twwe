@@ -6,6 +6,7 @@ import { gl, shader } from './global'
 
 export class RenderQuadLayer extends RenderLayer {
   layer: QuadLayer
+  visible: boolean
   texture: Texture
 
   colorArr: Float32Array
@@ -21,6 +22,7 @@ export class RenderQuadLayer extends RenderLayer {
   constructor(layer: QuadLayer) {
     super()
     this.layer = layer
+    this.visible = true
 
     if (this.layer.image !== null)
       this.texture = new Texture(this.layer.image)
@@ -41,6 +43,9 @@ export class RenderQuadLayer extends RenderLayer {
   }
 
   render() {
+    if (!this.visible)
+      return
+
     if (!this.texture) { // textureless quad
       gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
       gl.uniform1i(shader.locs.unifs.uTexCoord, 0);

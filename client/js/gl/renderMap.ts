@@ -18,6 +18,7 @@ export class RenderMap {
   map: Map
   groups: RenderGroup[]
   gameLayer: RenderTileLayer
+  gameGroup: RenderGroup
   
   constructor(map: Map) {
     this.map = map
@@ -25,11 +26,12 @@ export class RenderMap {
 
     // COMBAK: this is hacky but I don't see other ways to handle the
     // game layer edge-case for now.
-    const gameGroup = this.groups.find(g => g.group.name === 'Game')
-    const gameLayerIndex = gameGroup.group.layers.findIndex(l => l.type === LayerType.GAME)
-    const gameLayer = gameGroup.layers[gameLayerIndex] as RenderTileLayer
+    this.gameGroup = this.groups.find(g => g.group.name === 'Game')
+    const gameLayerIndex = this.gameGroup.group.layers.findIndex(l => l.type === LayerType.GAME)
+    const gameLayer = this.gameGroup.layers[gameLayerIndex] as RenderTileLayer
     this.gameLayer = new RenderTileLayer(gameLayer.layer)
     this.gameLayer.texture = createGameTexture()
+    this.gameGroup.layers[gameLayerIndex] = this.gameLayer
   }
   
   applyChange(change: ChangeData) {
@@ -53,11 +55,12 @@ export class RenderMap {
   }
   
   render() {
-    for(const group of this.groups)
+    for (const group of this.groups)
       group.render()
     
     // render the game layer on top of the rest.
-    this.gameLayer.render()
+    if (this.gameGroup.visible && this.gameLayer.visible)
+      this.gameLayer.render()
     
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
