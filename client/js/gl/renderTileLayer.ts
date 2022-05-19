@@ -1,6 +1,6 @@
 import { TileLayer } from '../twmap/tileLayer'
 import { RenderLayer } from './renderLayer'
-import { gl, shader } from './global'
+import { gl, shader, viewport } from './global'
 import { LayerTile } from '../twmap/types'
 import { Texture } from './texture'
 import { TileFlag } from '../twmap/types'
@@ -72,9 +72,15 @@ export class RenderTileLayer extends RenderLayer {
     const col = [r, g, b, a].map(x => x / 255)
     gl.uniform4fv(shader.locs.unifs.uColorMask, col);
 
-    for (const chunkRow of this.buffers) {
-      for (const chunk of chunkRow) {
-        const { tileCount, vertex, texCoord } = chunk
+    const { x1, x2, y1, y2 } = viewport.screen()
+    const minX = Math.max(0, Math.floor(x1 / this.chunkSize))
+    const minY = Math.max(0, Math.floor(y1 / this.chunkSize))
+    const maxX = Math.min(this.buffers[0].length, Math.ceil(x2 / this.chunkSize))
+    const maxY = Math.min(this.buffers.length, Math.ceil(y2 / this.chunkSize))
+    
+    for (let y = minY; y < maxY; y++) {
+      for (let x = minX; x < maxX; x++) {
+        const { tileCount, vertex, texCoord } = this.buffers[y][x]
         // Vertex attribute
         gl.bindBuffer(gl.ARRAY_BUFFER, vertex);
         gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0);
