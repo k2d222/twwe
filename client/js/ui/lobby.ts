@@ -4,11 +4,13 @@ export class Lobby {
   cont: HTMLElement
   mapList: HTMLElement
   btnJoin: HTMLButtonElement
+  btnRefresh: HTMLButtonElement
 
   constructor(cont: HTMLElement) {
     this.cont = cont
     this.mapList = cont.querySelector('.list')
-    this.btnJoin = cont.querySelector('button')
+    this.btnJoin = cont.querySelector('button.join')
+    this.btnRefresh = cont.querySelector('button.refresh')
   }
 
   chooseMap(mapInfos: MapInfo[]): Promise<string> {
@@ -25,16 +27,13 @@ export class Lobby {
     return new Promise(resolve => {
       this.mapList.innerHTML = ''
 
-      const t1 = document.createElement('span')
-      const t2 = document.createElement('span')
-      const t3 = document.createElement('span')
-      t2.innerText = 'Maps'
-      t3.innerText = 'Online'
-      this.mapList.append(t1, t2, t3)
-
       let selected = ''
 
       for (const info of mapInfos) {
+        const $row = document.createElement('div')
+        $row.classList.add('row')
+        this.mapList.append($row)
+
         const $btn = document.createElement('input')
         $btn.type = 'radio'
         $btn.name = 'map'
@@ -48,7 +47,7 @@ export class Lobby {
         $users.classList.add('users')
         $users.innerText = '' + info.users
 
-        this.mapList.append($btn, $name, $users)
+        $row.append($btn, $name, $users)
       }
 
       // check the first one

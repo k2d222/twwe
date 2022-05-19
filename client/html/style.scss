@@ -26,15 +26,29 @@ canvas {
   display: flex;
   flex-direction: row;
   background: white;
-  padding: .4rem 1rem;
+  padding: .5rem 1rem;
   border-bottom: 1px solid lightgrey;
   box-shadow: 0 0 10px -5px black;
 
-  > .left, > .right {
+  > .left, > .right, > .middle {
     display: flex;
     align-items: center;
     flex-direction: row;
     gap: 1rem;
+    flex-basis: 0;
+    flex-grow: 1;
+  }
+  
+  .middle {
+    justify-content: center;
+  }
+  
+  .right {
+    justify-content: flex-end;
+  }
+
+  #map-name {
+    font-size: 1.3rem;
   }
   
   button {
@@ -106,11 +120,6 @@ nav {
     overflow: auto;
   }    
 
-  #map-name {
-    font-size: 1.3rem;
-    text-align: center;
-  }
-  
   .group {
     display: flex;
     flex-direction: column;
@@ -210,49 +219,79 @@ nav {
 
 #lobby {
   position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
+  inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, .5);
+  background: white;
   padding: 4rem;
   
   &.hidden {
     display: none;
   }
   
+  .buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+
   button {
-    float: right;
     margin-top: 1rem;
+    font-size: 1.5rem;
+    border: none;
+    outline: none;
+    border-radius: 3px;
+    padding: .4rem 1rem;
+    color: white;
+    
+    &.refresh {
+    background: lightgrey;
+      img {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    &.join {
+      background: teal;
+    }
   }
   
   .content {
     background: white;
-    border: 1px solid black;
-    padding: 1rem;
-    
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
     .list {
-      display: grid;
-      grid-gap: 5px;
-      grid-template-columns: auto auto auto;
       overflow: auto;
+      min-width: 30rem;
+      max-width: 100%;
+    }
 
-      // header elements
-      > span:nth-child(-n + 3) {
-        border-bottom: 1px dotted black;
+    .row {
+      display: flex;
+      align-items: center;
+      padding: .5rem 0;
+      border-bottom: 1px solid lightgrey;
+      gap: 1rem;
+    
+      > *:nth-child(1) {
+        width: 3rem;
+        margin: 0;
       }
-
-      // third column
-      > span:nth-child(3n) {
-        text-align: right;
+      > *:nth-child(2) {
+        flex-grow: 1;
       }
-
-      > * {
-        padding: .5rem .3rem;
+      > *:nth-child(3) {
+        margin-right: 1rem;
       }
+    }
+    
+    .header {
+      font-weight: bold;
+      border: 1px solid grey;
     }
   }
 }

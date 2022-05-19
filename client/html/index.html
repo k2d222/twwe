@@ -14,9 +14,11 @@
 		<div id="menu">
 			<div class="left">
 				<button id="nav-toggle"><img src="tree.svg" alt="" title="Show layers"></button>
-				<button id="map-name"></button>
 				<button id="save"><img src="save.svg" alt="" title="Save the map on the server">Save</button>
 				<button id="download"><img src="download.svg" alt="" title="Download this map to your computer">Download</button>
+			</div>
+			<div class="middle">
+				<span id="map-name"></span>
 			</div>
 			<div class="right">
 				<div id="users">Users online: <span>0</span></div>
@@ -33,8 +35,16 @@
 		<div id="lobby" class="hidden">
 			<div class="content">
 				<h2>Available maps</h2>
+				<div class="header row">
+					<span></span>
+					<span>Map Name</span>
+					<span>Users</span>
+				</div>
 				<div class="list"></div>
-				<button>Join</button>
+				<div class="buttons">
+					<button class="refresh"><img src="refresh.svg" alt="refresh"/></button>
+					<button class="join">Join</button>
+				</div>
 			</div>
 		</div>
 
@@ -43,4 +53,5 @@
 		</div>
 		
 	</body>
+					<span></span>
 </html>
