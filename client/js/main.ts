@@ -99,7 +99,7 @@ function placeTile() {
 }
 
 function setupUI() {
-  treeView = new TreeView($tree, map)
+  treeView = new TreeView($tree, rmap)
   tileSelector = new TileSelector($selector)
 
   const [ groupID, layerID ] = map.gameLayerID()

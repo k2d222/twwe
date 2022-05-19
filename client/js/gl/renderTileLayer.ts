@@ -8,6 +8,7 @@ import { TileFlag } from '../twmap/types'
 
 export class RenderTileLayer extends RenderLayer {
   layer: TileLayer
+  visible: boolean
   texture: Texture | null
 
   buffers: {
@@ -22,6 +23,7 @@ export class RenderTileLayer extends RenderLayer {
   constructor(layer: TileLayer) {
     super()
     this.layer = layer
+    this.visible = true
 
     if (layer.image !== null)
       this.texture = new Texture(layer.image)
@@ -44,6 +46,9 @@ export class RenderTileLayer extends RenderLayer {
   }
 
   render() {
+    if (!this.visible)
+      return
+
     if (!this.texture) {
       return
     }

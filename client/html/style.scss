@@ -2,6 +2,10 @@
   box-sizing: border-box;
 }
 
+body, html {
+  font-family: sans-serif;
+}
+
 canvas {
   position: fixed;
   top: 0;
@@ -86,13 +90,54 @@ nav {
   .group {
     display: flex;
     flex-direction: column;
+    
+    &.folded .layer {
+      display: none;
+    }
   }
     
+  .eye {
+    float: right;
+    width: 1rem;
+    height: 1rem;
+    background-image: url('hidden.svg');
+    background-position: center;
+    background-size: cover;
+    margin-top: .1rem; // compensate for line height…
+    margin-right: 1rem; // fix scrollbar on top for Firefox
+  }
+  
+  .fold {
+    float: left;
+    width: 1rem;
+    height: 1rem;
+    background-image: url('fold.svg');
+    background-position: center;
+    background-size: cover;
+    margin-top: .1rem; // compensate for line height…
+  }
+  
+  .group.folded .title > .fold {
+    background-image: url('unfold.svg');
+  }
+    
+  .group.visible .title > .eye, .layer.visible > .eye {
+    background-image: url('shown.svg');
+  }
+
+  .group:not(.visible) .layer {
+    opacity: .5;
+  }
+
   .layer {
     margin-left: .5rem;
     border-left: 1px solid black;
     padding-left: .5rem;
-  }  
+  }
+  
+  .group > .title > b, .layer > label {
+    margin-right: 1rem;
+  }
 }
 
 #tile-selector {

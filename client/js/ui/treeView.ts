@@ -1,6 +1,8 @@
-import { Map } from '../twmap/map'
-import { Group } from '../twmap/group'
-import { Layer } from '../twmap/layer'
+import { RenderMap } from '../gl/renderMap'
+import { RenderGroup } from '../gl/renderGroup'
+import { RenderLayer } from '../gl/renderLayer'
+import { RenderTileLayer } from '../gl/renderTileLayer'
+import { RenderQuadLayer } from '../gl/renderQuadLayer'
 
 export class TreeView {
   cont: HTMLElement
@@ -9,14 +11,14 @@ export class TreeView {
   private groupID: number
   private layerID: number
 
-  constructor(cont: HTMLElement, map: Map) {
+  constructor(cont: HTMLElement, map: RenderMap) {
     this.cont = cont
     this.onselect = () => {}
     this.groupID = -1
     this.layerID = -1
     cont.innerHTML = ''
     
-    let groups = map.groups.map((g, i) => this.groupTree(g, i))
+    const groups = map.groups.map((g, i) => this.groupTree(g, i))
     cont.append(...groups)
   }
   
@@ -25,10 +27,10 @@ export class TreeView {
   }
   
   select(groupID: number, layerID: number) {
-    let radios: NodeListOf<HTMLInputElement> = this.cont.querySelectorAll('input[type=radio]')
-    for(let r of radios) {
-      let thisLayerID = parseInt(r.dataset.layerID)
-      let thisGroupID = parseInt(r.dataset.groupID)
+    const radios: NodeListOf<HTMLInputElement> = this.cont.querySelectorAll('input[type=radio]')
+    for(const r of radios) {
+      const thisLayerID = parseInt(r.dataset.layerID)
+      const thisGroupID = parseInt(r.dataset.groupID)
       if (thisLayerID === layerID && thisGroupID === groupID) {
         r.checked = true
         this.groupID = groupID
@@ -39,34 +41,66 @@ export class TreeView {
     }
   }
   
-  private groupTree(group: Group, g: number) {
-    let cont = document.createElement('div')
-    cont.classList.add('group')
-    cont.innerHTML = `<b>#${g} ${group.name}</b>`
-    let layers = group.layers.map((l, i) => this.layerTree(l, g, i))
+  private groupTree(group: RenderGroup, g: number) {
+    const cont = document.createElement('div')
+    cont.classList.add('group', 'visible')
+    
+    const title = document.createElement('div')
+    title.classList.add('title')
+    title.innerHTML = `<b>#${g} ${group.group.name}</b>`
+    cont.append(title)
+
+    const fold = document.createElement('span')
+    fold.classList.add('fold')
+    fold.onclick = () => cont.classList.toggle('folded')
+    title.prepend(fold)
+    
+    const eye = document.createElement('span')
+    eye.classList.add('eye')
+    eye.onclick = () => {
+      group.visible = !group.visible
+      cont.classList.toggle('visible')
+    }
+    title.append(eye)
+
+    const layers = group.layers.map((l, i) => this.layerTree(l, g, i))
     cont.append(...layers)
     return cont
   }
   
-  private layerTree(layer: Layer, g: number, l: number) {
-    let input = document.createElement('input')
-    input.name = 'layer'
-    input.type = 'radio'
-    input.value = layer.name || '<empty name>'
-    input.dataset.groupID = '' + g
-    input.dataset.layerID = '' + l
+  private layerTree(layer: RenderLayer, g: number, l: number) {
+    const cont = document.createElement('div')
+    cont.classList.add('layer', 'visible')
+    
+    const label = document.createElement('label')
+    label.innerText = layer.layer.name || '<empty name>'
+    cont.append(label)
 
-    input.onchange = () => {
-      this.groupID = g
-      this.layerID = l
-      this.onselect(g, l)
+    if (layer instanceof RenderTileLayer) {
+      const input = document.createElement('input')
+      input.name = 'layer'
+      input.type = 'radio'
+      input.value = layer.layer.name || '<empty name>'
+      input.dataset.groupID = '' + g
+      input.dataset.layerID = '' + l
+
+      input.onchange = () => {
+        this.groupID = g
+        this.layerID = l
+        this.onselect(g, l)
+      }
+
+      label.prepend(input)
     }
 
-    let label = document.createElement('label')
-    label.classList.add('layer')
-    label.innerText = layer.name || '<empty name>'
-    label.prepend(input)
+    const eye = document.createElement('span')
+    eye.classList.add('eye')
+    eye.onclick = () => {
+      layer.visible = !layer.visible
+      cont.classList.toggle('visible')
+    }
+    cont.append(eye)
 
-    return label
+    return cont
   }
 }
