@@ -90,10 +90,6 @@ nav {
   bottom: 0;
   max-width: 15rem;
   background: white;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  gap: 1rem;
   transition: transform .3s;
   border-right: 1px solid lightgrey;
   box-shadow: 0 10px 10px -5px black;
@@ -114,6 +110,8 @@ nav {
   }  
       
   #tree {
+    padding: 1rem;
+    height: 100%;
     display: flex;
     flex-direction: column;
     gap: .5rem;
@@ -128,16 +126,22 @@ nav {
       display: none;
     }
   }
-    
-  .eye {
+  
+  .eye, .options {
     float: right;
     width: 1rem;
     height: 1rem;
-    background-image: url('hidden.svg');
     background-position: center;
     background-size: cover;
     margin-top: .1rem; // compensate for line height…
-    margin-right: 1rem; // fix scrollbar on top for Firefox
+  }
+  
+  .eye {
+    background-image: url('hidden.svg');
+  }
+  
+  .options {
+    background-image: url('dots-vertical.svg');
   }
   
   .fold {

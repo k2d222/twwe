@@ -1,5 +1,5 @@
 import { Server } from './server/server'
-import { ChangeData, MapInfo } from './server/protocol'
+import { TileChange, MapInfo } from './server/protocol'
 import { Map } from './twmap/map'
 import { LayerType } from './twmap/types'
 import { RenderMap } from './gl/renderMap'
@@ -51,7 +51,7 @@ async function setupServer() {
   })
 
   server.on('change', (e) => {
-    rmap.applyChange(e)
+    rmap.applyTileChange(e)
   })
 
   server.on('users', (e) => {
@@ -79,7 +79,7 @@ function placeTile() {
     let [ group, layer ] = treeView.getSelected()
     let id = tileSelector.getSelected()
 
-    let change: ChangeData = {
+    let change: TileChange = {
       group,
       layer,
       x,
@@ -87,7 +87,7 @@ function placeTile() {
       id,
     }
 
-    const res = rmap.applyChange(change)
+    const res = rmap.applyTileChange(change)
 
     // only apply change if succeeded e.g. not redundant
     if(res) {
@@ -97,11 +97,29 @@ function placeTile() {
 }
 
 function setupUI() {
-  treeView = new TreeView($tree, rmap)
+  treeView = new TreeView($tree, map)
 
   const [ groupID, layerID ] = map.gameLayerID()
-
-  treeView.onselect = (groupID, layerID) => {
+    
+  treeView.onToggleGroup = (groupID) => {
+    rmap.groups[groupID].visible = !rmap.groups[groupID].visible
+  }
+  
+  treeView.onToggleGroup = (groupID) => {
+    const group = rmap.groups[groupID]
+    group.visible = !group.visible
+  }
+  treeView.onToggleLayer = (groupID, layerID) => {
+    const group = rmap.groups[groupID]
+    const layer = group.layers[layerID]
+    layer.visible = !layer.visible
+  }
+  
+  treeView.onNewGroup = () => {
+    rmap.createGroup()
+  }
+  
+  treeView.onSelectLayer = (groupID, layerID) => {
     const layer = map.groups[groupID].layers[layerID]
     let image = layer.image
     if (layer.type === LayerType.GAME)

@@ -1,11 +1,13 @@
 import { Map } from '../twmap/map'
+import { Group } from '../twmap/group'
+import { Layer } from '../twmap/layer'
 import { RenderGroup } from './renderGroup'
 import { RenderTileLayer } from './renderTileLayer'
 import { gl } from './global'
 import { LayerType } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
-import { ChangeData } from '../server/protocol'
+import { TileChange, LayerChange, GroupChange } from '../server/protocol'
 
 function createGameTexture() {
 	const image = new Image()
@@ -34,10 +36,9 @@ export class RenderMap {
     this.gameGroup.layers[gameLayerIndex] = this.gameLayer
   }
   
-  applyChange(change: ChangeData) {
+  applyTileChange(change: TileChange) {
     const group = this.groups[change.group]
     const layer = group.layers[change.layer] as RenderTileLayer
-    
     
     const tile = layer.layer.getTile(change.x, change.y)
 
@@ -52,6 +53,35 @@ export class RenderMap {
       layer.recompute(change.x, change.y)
     
     return true
+  }
+  
+  applyGroupChange(change: GroupChange) {
+    const group = this.groups[change.group]
+    
+    // change.name is ignored. Underlying TwMap is unchanged.
+    if (change.order) {
+      this.groups.splice(change.group)
+      this.groups.splice(change.order, 0, group)
+    }
+    if (change.offX) group.group.offX = change.offX
+    if (change.offY) group.group.offY = change.offY
+    if (change.paraX) group.group.paraX = change.paraX
+    if (change.paraY) group.group.paraY = change.paraY
+  }
+  
+  applyLayerChange(change: LayerChange) {
+    const group = this.groups[change.group]
+    const layer = group.layers[change.layer] as RenderTileLayer
+
+    // change.name is ignored. Underlying TwMap is unchanged.
+    if (change.color) layer.layer.color = change.color
+  }
+  
+  createGroup() {
+    const group = new Group()
+    const rgroup = new RenderGroup(group)
+    this.groups.push(rgroup)
+    return rgroup
   }
   
   render() {

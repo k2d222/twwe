@@ -1,25 +1,41 @@
-import { RenderMap } from '../gl/renderMap'
-import { RenderGroup } from '../gl/renderGroup'
-import { RenderLayer } from '../gl/renderLayer'
-import { RenderTileLayer } from '../gl/renderTileLayer'
-import { RenderQuadLayer } from '../gl/renderQuadLayer'
+import { Map } from '../twmap/map'
+import { Group } from '../twmap/group'
+import { Layer } from '../twmap/layer'
+import { TileLayer } from '../twmap/tileLayer'
+import { QuadLayer } from '../twmap/quadLayer'
 
 export class TreeView {
   cont: HTMLElement
-  onselect: (groupID: number, layerID: number) => any
+  optionsCont: HTMLElement
+
+  onSelectLayer: (groupID: number, layerID: number) => any
+  onNewGroup: () => any
+  onNewLayer: (groupID: number) => any
+  onToggleGroup: (groupID: number) => any
+  onToggleLayer: (groupID: number, layerID: number) => any
 
   private groupID: number
   private layerID: number
 
-  constructor(cont: HTMLElement, map: RenderMap) {
+  constructor(cont: HTMLElement, map: Map) {
     this.cont = cont
-    this.onselect = () => {}
+    this.optionsCont = cont.querySelector('.contextual-menu')
+    this.onSelectLayer = () => {}
+    this.onNewGroup = () => {}
+    this.onNewLayer = () => {}
+    this.onToggleGroup = () => {}
+    this.onToggleLayer = () => {}
     this.groupID = -1
     this.layerID = -1
     cont.innerHTML = ''
     
     const groups = map.groups.map((g, i) => this.groupTree(g, i))
     cont.append(...groups)
+    
+    const btnNewGroup = document.createElement('button')
+    btnNewGroup.innerText = 'Add group'
+    btnNewGroup.onclick = () => this.onNewGroup()
+    cont.append(btnNewGroup)
   }
   
   getSelected() {
@@ -35,19 +51,19 @@ export class TreeView {
         r.checked = true
         this.groupID = groupID
         this.layerID = layerID
-        this.onselect (groupID, layerID)
+        this.onSelectLayer (groupID, layerID)
         return
       }
     }
   }
   
-  private groupTree(group: RenderGroup, g: number) {
+  private groupTree(group: Group, g: number) {
     const cont = document.createElement('div')
     cont.classList.add('group', 'visible')
     
     const title = document.createElement('div')
     title.classList.add('title')
-    title.innerHTML = `<b>#${g} ${group.group.name}</b>`
+    title.innerHTML = `<b>#${g} ${group.name}</b>`
     cont.append(title)
 
     const fold = document.createElement('span')
@@ -55,11 +71,17 @@ export class TreeView {
     fold.onclick = () => cont.classList.toggle('folded')
     title.prepend(fold)
     
+    const options = document.createElement('span')
+    options.classList.add('options')
+    options.onclick = () => {
+    }
+    title.append(options)
+
     const eye = document.createElement('span')
     eye.classList.add('eye')
     eye.onclick = () => {
-      group.visible = !group.visible
       cont.classList.toggle('visible')
+      this.onToggleGroup(g)
     }
     title.append(eye)
 
@@ -68,39 +90,52 @@ export class TreeView {
     return cont
   }
   
-  private layerTree(layer: RenderLayer, g: number, l: number) {
+  private layerTree(layer: Layer, g: number, l: number) {
     const cont = document.createElement('div')
     cont.classList.add('layer', 'visible')
     
     const label = document.createElement('label')
-    label.innerText = layer.layer.name || '<empty name>'
+    label.innerText = layer.name || '<empty name>'
     cont.append(label)
 
-    if (layer instanceof RenderTileLayer) {
+    if (layer instanceof TileLayer) {
       const input = document.createElement('input')
       input.name = 'layer'
       input.type = 'radio'
-      input.value = layer.layer.name || '<empty name>'
+      input.value = layer.name || '<empty name>'
       input.dataset.groupID = '' + g
       input.dataset.layerID = '' + l
 
       input.onchange = () => {
         this.groupID = g
         this.layerID = l
-        this.onselect(g, l)
+        this.onSelectLayer(g, l)
       }
 
       label.prepend(input)
     }
 
+    const options = document.createElement('span')
+    options.classList.add('options')
+    options.onclick = () => this.showLayerOptions(layer, g, l)
+    cont.append(options)
+
     const eye = document.createElement('span')
     eye.classList.add('eye')
     eye.onclick = () => {
-      layer.visible = !layer.visible
+      this.onToggleLayer(g, l)
       cont.classList.toggle('visible')
     }
     cont.append(eye)
 
     return cont
+  }
+  
+  private showLayerOptions(layer: Layer, g: number, l: number) {
+    this.optionsCont.innerHTML = ''
+    
+    const width =
+    this.options
+    
   }
 }
