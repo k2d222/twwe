@@ -1,4 +1,7 @@
 {
   "extends": "@parcel/config-default",
-  "reporters": ["...", "parcel-reporter-static-files-copy"]
+  "reporters": ["...", "parcel-reporter-static-files-copy"],
+  "transformers": {
+    "*.svelte":  ["parcel-transformer-svelte"]
+  }
 }

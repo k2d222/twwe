@@ -12,7 +12,7 @@ import { TileChange, LayerChange, GroupChange } from '../server/protocol'
 function createGameTexture() {
 	const image = new Image()
 	image.name = 'Game'
-	image.loadExternal('entities/DDNet.png')
+	image.loadExternal('/entities/DDNet.png')
 	return new Texture(image)
 }
 
@@ -87,6 +87,7 @@ export class RenderMap {
   render() {
     for (const group of this.groups)
       group.render()
+    
     
     // render the game layer on top of the rest.
     if (this.gameGroup.visible && this.gameLayer.visible)

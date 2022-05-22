@@ -7,11 +7,18 @@ import { init as glInit, renderer, viewport } from './gl/global'
 import { TreeView } from './ui/treeView'
 import { TileSelector } from './ui/tileSelector'
 import { Lobby } from './ui/lobby'
+import Svelte from './ui/index.svelte'
+import STreeView from './ui/treeView.svelte'
+import SLobby from './ui/lobby.svelte'
+
+// new Svelte({
+//   target: document.body
+// })
 
 // all html elements are prefixed with $, but no JQuery :)
 const $canvas: HTMLCanvasElement = document.querySelector('canvas')
-const $nav: HTMLElement = document.querySelector('nav')
-const $tree: HTMLElement = $nav.querySelector('#tree')
+// const $nav: HTMLElement = document.querySelector('nav')
+// const $tree: HTMLElement = $nav.querySelector('#tree')
 const $selector: HTMLElement = document.querySelector('#tile-selector')
 const $mapName: HTMLElement = document.querySelector('#map-name')
 const $dialog: HTMLElement = document.querySelector('#dialog')
@@ -20,7 +27,7 @@ const $users: HTMLElement = document.querySelector('#users span')
 const $btnSave: HTMLElement = document.querySelector('#save')
 const $btnDownload: HTMLElement = document.querySelector('#download')
 const $btnToggleNav: HTMLElement = document.querySelector('#nav-toggle')
-const $lobby: HTMLElement = document.querySelector('#lobby')
+// const $lobby: HTMLElement = document.querySelector('#lobby')
 
 let map: Map
 let rmap: RenderMap
@@ -29,7 +36,7 @@ let server: Server
 // UI components
 let treeView: TreeView
 let tileSelector = new TileSelector($selector)
-let lobby = new Lobby($lobby)
+// let lobby = new Lobby($lobby)
 
 
 function showDialog(msg: string) {
@@ -97,7 +104,7 @@ function placeTile() {
 }
 
 function setupUI() {
-  treeView = new TreeView($tree, map)
+  // treeView = new TreeView($tree, map)
 
   const [ groupID, layerID ] = map.gameLayerID()
     
@@ -137,12 +144,12 @@ function setupUI() {
     e.preventDefault()
     if (e.key === ' ')
       placeTile()
-    else if (e.key === 'Tab')
-      $nav.classList.toggle('hidden')
+    // else if (e.key === 'Tab')
+    //   $nav.classList.toggle('hidden')
   })
 
   $btnToggleNav.addEventListener('click', () => {
-    $nav.classList.toggle('hidden')
+    // $nav.classList.toggle('hidden')
   })
 
   $btnSave.addEventListener('click', () => {
@@ -171,6 +178,12 @@ async function main() {
   try {
     let mapInfos = await server.query('maps')
     hideDialog()
+    new SLobby({
+      target: document.body,
+      props: {
+        mapInfos
+      }
+    })
     let mapName = await lobby.chooseMap(mapInfos)
     showDialog('Joining room…')
     let joined = await server.query('join', mapName)
@@ -185,10 +198,19 @@ async function main() {
   }
 
   setupGL()
-  setupUI()
+  console.log(map)  
+  
+  new STreeView({
+    target: document.body,
+    props: {
+      rmap
+    }
+  })
+  
+  
+  // setupUI()
   hideDialog()
   console.log('up and running!')
 }
-
 
 main()
