@@ -8,10 +8,13 @@
   export let url = ""
 
   let server
+  
+  const { VITE_BACKEND_HOST, VITE_BACKEND_PORT } = import.meta.env
+  console.log(import.meta.env)
 
 </script>
 
-{#await Server.create(process.env.BACKEND_HOST, parseInt(process.env.BACKEND_PORT, 10))}
+{#await Server.create(VITE_BACKEND_HOST, parseInt(VITE_BACKEND_PORT, 10))}
   <Dialog>Connecting to server…</Dialog>
 {:then server}
   <Router url="{url}">
@@ -21,5 +24,5 @@
     </div>
   </Router>
 {:catch e}
-  <Dialog>Failed to connect to the server {process.env.BACKEND_HOST}:{process.env.BACKEND_PORT}.</Dialog>
+  <Dialog>Failed to connect to the server {VITE_BACKEND_HOST}:{VITE_BACKEND_PORT}.</Dialog>
 {/await}

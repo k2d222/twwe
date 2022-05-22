@@ -11,7 +11,7 @@
   let canvas
   let map
   let rmap
-  let treeViewVisible
+  let treeViewVisible = true
 
   function createRenderMap(canvas, map) {
     glInit(canvas)
@@ -24,7 +24,7 @@
     requestAnimationFrame(loop)
     return rmap
   }
-  
+
   async function loadMap() {
     const joined = server.query('join', mapName)
     if (!joined)
@@ -50,9 +50,9 @@
     {#if rmap}
   		<div id="menu">
   			<div class="left">
-  				<button id="nav-toggle" on:click={toggleTreeView}><img src="/tree.svg" alt="" title="Show layers"></button>
-  				<button id="save"><img src="/save.svg" alt="" title="Save the map on the server">Save</button>
-  				<button id="download"><img src="/download.svg" alt="" title="Download this map to your computer">Download</button>
+  				<button id="nav-toggle" on:click={toggleTreeView}><img src="../../assets/tree.svg" alt="" title="Show layers"></button>
+  				<button id="save"><img src="../../assets/save.svg" alt="" title="Save the map on the server">Save</button>
+  				<button id="download"><img src="../../assets/download.svg" alt="" title="Download this map to your computer">Download</button>
   			</div>
   			<div class="middle">
   				<span id="map-name"></span>
