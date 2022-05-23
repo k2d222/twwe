@@ -3,6 +3,7 @@
 
 	export let rmap
 	export let visible = true
+	export let selected = [-1, -1] 
 
 	let folded = new Array(rmap.groups.length).fill(false)
 </script>
@@ -24,8 +25,7 @@
 				{#each group.layers as layer, l}
 					<div class="layer" class:visible={layer.visible}>
 						<label>
-							<input name="layer" type="radio"
-								value={layer.layer.name || '<no name>'} />
+							<input name="layer" type="radio" bind:group={visible} value={[g, l]} />
 							{layer.layer.name || '<no name>'}
 						</label>
 						<span class="eye"

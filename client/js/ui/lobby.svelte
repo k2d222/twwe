@@ -1,11 +1,9 @@
 <script>
 	import Dialog from './dialog.svelte'
 	import { navigate } from "svelte-routing"
-
-  export let server
+	import { pServer } from './stores'
 
 	let selected
-	let pMapInfos
 	
 	function sortMapInfos(mapInfos) {
 		mapInfos.sort((a, b) => {
@@ -16,17 +14,15 @@
     })
 	}
 		
-	function refresh() {
-		pMapInfos = server.query('maps')
-		.then(mapInfos => {
-			sortMapInfos(mapInfos)
-			selected = mapInfos[0].name
-			console.log(mapInfos, selected)
-			return mapInfos
-		})
+	async function refresh() {
+		const server = await pServer
+		let mapInfos = await server.query('maps')
+		sortMapInfos(mapInfos)
+		selected = mapInfos[0].name
+		return mapInfos
 	}
 
-	refresh()
+	let pMapInfos = refresh()
 </script>
 
 {#await pMapInfos}
@@ -58,5 +54,6 @@
 		</div>
 	</div>
 {:catch e}
+	{console.error(e)}
 	<Dialog>Failed to query maps.</Dialog>
 {/await}
