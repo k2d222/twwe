@@ -1,0 +1,21 @@
+<script lang="ts">
+  import { Map } from '../../twmap/map'
+  import { loadMap } from '../lib/editor'
+  import Dialog from '../lib/dialog.svelte'
+	import { server } from '../global'
+  import Editor from '../lib/editor.svelte'
+
+  export let mapName: string
+  
+  const pLoadMap = loadMap(mapName)
+</script>
+
+{#await pLoadMap}
+  <Dialog>Loading "{mapName}"…</Dialog>
+{:then map}
+  <Editor {map} />
+{:catch e}
+  {console.error(e)}
+  <Dialog>Failed to join the map "{mapName}".</Dialog>
+{/await}
+
