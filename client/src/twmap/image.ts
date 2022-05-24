@@ -1,5 +1,5 @@
-import { DataFile } from './datafile';
-import { MapImage } from './types';
+import type { DataFile } from './datafile';
+import type { MapImage } from './types';
 import { parseString } from './parser';
 
 

@@ -18,7 +18,7 @@ export class Map {
   }
   
   // return [ groupID, layerID ]
-  gameLayerID() {
+  gameLayerID(): [number, number] {
     for (let i = 0; i < this.groups.length; i++) {
       let g = this.groups[i]
       for (let j = 0; j < g.layers.length; j++) {

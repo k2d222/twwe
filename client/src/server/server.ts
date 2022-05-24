@@ -1,4 +1,4 @@
-import { ClientEventMap, ServerEventMap, Query, ServerQueryMap } from './protocol'
+import type { ClientEventMap, ServerEventMap, Query, ServerQueryMap } from './protocol'
 
 type Listener<K extends keyof ServerEventMap> = (data: ServerEventMap[K]) => void
 

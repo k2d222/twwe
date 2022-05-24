@@ -1,11 +1,23 @@
 <script lang="ts">
-	import { Map } from '../../twmap/map'
+	import type { RenderMap } from '../../gl/renderMap'
 
-	export let rmap
+	export let rmap: RenderMap
 	export let visible = true
-	export let selected = [-1, -1] 
+	export let selected = [-1, -1]
 
 	let folded = new Array(rmap.groups.length).fill(false)
+
+	function toStr(groupID: string, layerID: string) {
+		return `${groupID},${layerID}`
+	}
+
+	function fromStr(str: string): [number, number] {
+		return str.split(',').map(x => parseInt(x))
+	}
+
+	let strSelected = toStr(...selected)
+	$: selected = fromStr(strSelected)
+	
 </script>
 
 <nav class:hidden={!visible}>
@@ -25,7 +37,7 @@
 				{#each group.layers as layer, l}
 					<div class="layer" class:visible={layer.visible}>
 						<label>
-							<input name="layer" type="radio" bind:group={selected} value={[g, l]} />
+							<input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} />
 							{layer.layer.name || '<no name>'}
 						</label>
 						<span class="eye"

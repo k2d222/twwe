@@ -1,7 +1,7 @@
-import { TileLayer } from '../twmap/tileLayer'
+import type { TileLayer } from '../twmap/tileLayer'
+import type { LayerTile } from '../twmap/types'
 import { RenderLayer } from './renderLayer'
 import { gl, shader, viewport } from './global'
-import { LayerTile } from '../twmap/types'
 import { Texture } from './texture'
 import { TileFlag } from '../twmap/types'
 

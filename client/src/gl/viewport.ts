@@ -1,5 +1,3 @@
-import { mat4 } from 'gl-matrix'
-
 type Vec2 = { x: number, y: number  }
 
 export class Viewport {

@@ -13,10 +13,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { server } from '../global'
-  import { Map } from '../../twmap/map'
-  import { renderer, init as glInit } from '../../gl/global'
-  import { RenderMap } from '../../gl/renderMap'
-  import Dialog from './dialog.svelte'
+  import type { Map } from '../../twmap/map'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import * as Editor from './editor'
@@ -48,7 +45,7 @@
     Editor.downloadMap(map.name)
   }
 
-  function onKeyDown(e: KeyEvent) {
+  function onKeyDown(e: KeyboardEvent) {
     e.preventDefault()
     if (e.key === ' ')
       Editor.placeTile(rmap, ...selectedLayer, selectedID)

@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { Map } from '../../twmap/map'
   import { loadMap } from '../lib/editor'
   import Dialog from '../lib/dialog.svelte'
-	import { server } from '../global'
   import Editor from '../lib/editor.svelte'
 
   export let mapName: string

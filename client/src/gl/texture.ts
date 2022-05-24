@@ -1,5 +1,5 @@
+import type { Image } from '../twmap/image'
 import { gl } from './global'
-import { Image } from '../twmap/image'
 
 function isPow2(x: number) {
   while (((x & 1) == 0) && x > 1)

@@ -1,4 +1,4 @@
-import { Layer } from '../twmap/layer'
+import type { Layer } from '../twmap/layer'
 
 export abstract class RenderLayer {
   abstract layer: Layer

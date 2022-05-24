@@ -1,7 +1,7 @@
+import type { DataFile } from './datafile'
 import { Layer } from './layer'
 import { LayerType, LayerQuad, MapLayerQuads, MapItemType } from './types'
 import { parseLayerQuads, parseMapImage } from './parser'
-import { DataFile } from './datafile'
 import { Image } from './image'
 
 

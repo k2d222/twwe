@@ -1,13 +1,12 @@
-import { Map } from '../twmap/map'
+import type { Map } from '../twmap/map'
+import type { TileChange, LayerChange, GroupChange } from '../server/protocol'
 import { Group } from '../twmap/group'
-import { Layer } from '../twmap/layer'
 import { RenderGroup } from './renderGroup'
 import { RenderTileLayer } from './renderTileLayer'
 import { gl } from './global'
 import { LayerType } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
-import { TileChange, LayerChange, GroupChange } from '../server/protocol'
 
 function createGameTexture() {
 	const image = new Image()

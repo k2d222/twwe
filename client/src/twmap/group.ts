@@ -1,10 +1,9 @@
-// import { Texture } from './texture'
-import { Layer } from './layer'
+import type { Layer } from './layer'
+import type { DataFile } from './datafile'
 import { TileLayer } from './tileLayer'
 import { QuadLayer } from './quadLayer'
 import { MapGroupObj, MapItemType, LayerType } from './types'
 import { parseMapLayer, parseMapLayerTiles, parseMapLayerQuads } from './parser'
-import { DataFile } from './datafile'
 
 export class Group {
   name: string

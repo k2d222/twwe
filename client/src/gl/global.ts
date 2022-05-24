@@ -1,4 +1,4 @@
-import { Shader } from './shader'
+import type { Shader } from './shader'
 import { Viewport } from './viewport'
 import { Renderer } from './renderer'
 

@@ -1,6 +1,6 @@
+import type { Viewport } from './viewport'
+import type { RenderMap } from './renderMap'
 import { Shader } from './shader'
-import { Viewport } from './viewport'
-import { RenderMap } from './renderMap'
 import { TW_VERT, TW_FRAG } from './shaders'
 import { mat4 } from 'gl-matrix'
 

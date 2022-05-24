@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Image } from '../../twmap/image'
+import type { Image } from '../../twmap/image'
 
 export let image: Image | null
 export let selected = 0
@@ -7,8 +7,7 @@ export let selected = 0
 let visible = false
 const tileCount = 16
 
-let url
-
+let url: string
 $: if(image) url = getImgURL(image)
 
 function getImgURL(image: Image) {

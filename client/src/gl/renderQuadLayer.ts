@@ -1,6 +1,6 @@
+import type { QuadLayer } from '../twmap/quadLayer'
+import type { LayerQuad } from '../twmap/types'
 import { RenderLayer } from './renderLayer'
-import { QuadLayer } from '../twmap/quadLayer'
-import { LayerQuad } from '../twmap/types'
 import { Texture } from './texture'
 import { gl, shader } from './global'
 

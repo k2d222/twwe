@@ -1,4 +1,4 @@
-import { Color } from '../twmap/types'
+import type { Color } from '../twmap/types'
 
 // this file contains the type of messages sent and received via websocket.
 

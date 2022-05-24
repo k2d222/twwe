@@ -1,7 +1,7 @@
+import type { DataFile } from './datafile'
 import { Color, LayerTile, LayerType, MapLayerTiles, MapItemType } from './types'
 import { Layer } from './layer'
 import { parseLayerTiles, parseMapImage } from './parser'
-import { DataFile } from './datafile'
 import { Image } from './image'
 
 export class TileLayer extends Layer {

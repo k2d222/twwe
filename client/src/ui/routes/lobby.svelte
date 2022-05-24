@@ -38,7 +38,7 @@
 			</div>
 
 			<div class="list">
-	      {#each mapInfos as info, i}
+	      {#each mapInfos as info}
 	        <div class="row">
 	          <input type="radio" name="map" bind:group={selected} value={info.name} />
 	          <span class="name">{info.name}</span>

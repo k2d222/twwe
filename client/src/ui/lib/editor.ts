@@ -1,8 +1,8 @@
+import type { TileChange } from '../../server/protocol'
 import { server } from '../global'
 import { Map } from '../../twmap/map'
 import { viewport, renderer, init as glInit } from '../../gl/global'
 import { RenderMap } from '../../gl/renderMap'
-import { TileChange } from '../../server/protocol'
 import { LayerType } from '../../twmap/types'
 
 

@@ -1,5 +1,5 @@
+import type { MapGroupObj, MapLayer, MapLayerQuads, MapLayerTiles, LayerQuad, LayerTile, MapImage, Color, Coord } from './types'
 import { DataReader } from './dataReader'
-import { MapGroupObj, MapLayer, MapLayerQuads, MapLayerTiles, LayerQuad, LayerTile, MapImage, Color, Coord } from './types'
 
 export function parseMapGroup(groupData: ArrayBuffer): MapGroupObj {
   const d = new DataReader(groupData)
