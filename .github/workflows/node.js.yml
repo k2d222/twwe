@@ -27,4 +27,4 @@ jobs:
         cd client || exit 1
         npm ci
         npm run build
-        npm run tsc
+        npm run check

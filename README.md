@@ -36,10 +36,10 @@ Use the first command-line argument to change port e.g. `cargo run localhost:333
 ### Client
 
 Copy the `env.example` file to `.env.production` and configure the values.
-Have npm installed and run `npm install` in the client directory to install dependencies, `npm run run` to run a dev server and `npm run build` to produce a release in the dist directory.
+Have npm installed and run `npm install` in the client directory to install dependencies, `npm run dev` to run a dev server and `npm run build` to produce a release in the `dist` directory.
 
-Note: the client is written in non-strict Typescript. Typescript is only used for IDE hints and documentation, but ignored by the [Parcel](https://parceljs.org/languages/typescript/) bundler.
-Use `npm run tsc` to run Typescript checks on the project.
+Note: the client is written in non-strict Typescript. Typescript is only used for IDE hints and documentation, but ignored by the [Vite](https://vitejs.dev/guide/features.html#typescript) bundler.
+Use `npm run check` to run Typescript checks on the project.
 
 ## Roadmap
 
