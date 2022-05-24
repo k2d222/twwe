@@ -3,16 +3,16 @@
 
 	export let rmap: RenderMap
 	export let visible = true
-	export let selected = [-1, -1]
+	export let selected: [number, number] = [-1, -1]
 
 	let folded = new Array(rmap.groups.length).fill(false)
 
-	function toStr(groupID: string, layerID: string) {
+	function toStr(groupID: number, layerID: number) {
 		return `${groupID},${layerID}`
 	}
 
-	function fromStr(str: string): [number, number] {
-		return str.split(',').map(x => parseInt(x))
+	function fromStr(str: string) {
+		return str.split(',').map(x => parseInt(x)) as [number, number]
 	}
 
 	let strSelected = toStr(...selected)
