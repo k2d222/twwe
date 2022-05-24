@@ -1,12 +1,15 @@
 <script context="module" lang="ts">
 	import { pServer } from '../global'
-  import { writable } from 'svelte/store';
+  import { writable } from 'svelte/store'
+  import type { RenderMap } from '../../gl/renderMap'
 
   let peerCount = writable(0)
+  let rmap: RenderMap
 
   pServer
   .then((server) => {
     server.on('users', (e) => { peerCount.set(e.count) })
+    server.on('change', (e) => { rmap.applyTileChange(e) })
   })
 </script>
 
@@ -22,7 +25,7 @@
 
   let cont: HTMLElement
   let canvas = document.createElement('canvas')
-  let rmap = Editor.createRenderMap(canvas, map)
+  rmap = Editor.createRenderMap(canvas, map)
   let treeViewVisible = true
   let selectedLayer = map.gameLayerID()
   let selectedID = 0

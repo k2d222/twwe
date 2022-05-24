@@ -63,7 +63,6 @@ export function placeTile(rmap: RenderMap, group: number, layer: number, id: num
   }
 
   const res = rmap.applyTileChange(change)
-  console.log(res)
 
   // only send change if succeeded e.g. not redundant
   if(res)
