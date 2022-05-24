@@ -48,7 +48,7 @@
 	    </div>
 
 			<div class="buttons">
-				<button class="refresh" on:click={refresh}><img src="refresh.svg" alt="refresh"/></button>
+				<button class="refresh" on:click={refresh}><img src="/assets/refresh.svg" alt="refresh"/></button>
 				<button class="join" on:click={() => navigate('/edit/' + selected)}>Join</button>
 			</div>
 		</div>

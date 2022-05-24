@@ -61,9 +61,9 @@
   <div bind:this={cont}></div>
 	<div id="menu">
 		<div class="left">
-			<button id="nav-toggle" on:click={onToggleTreeView}><img src="../../assets/tree.svg" alt="" title="Show layers"></button>
-			<button id="save" on:click={onSaveMap}><img src="../../assets/save.svg" alt="" title="Save the map on the server">Save</button>
-			<button id="download" on:click={onDownloadMap}><img src="../../assets/download.svg" alt="" title="Download this map to your computer">Download</button>
+			<button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
+			<button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
+			<button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
 		</div>
 		<div class="middle">
 			<span id="map-name">{map.name}</span>
