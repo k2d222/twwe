@@ -313,6 +313,8 @@ nav {
     display: flex; 
     flex-direction: column;
     gap: .5rem;
+    box-shadow: 5px 5px 20px -15px black;
+    border-radius: 5px;
     
     label {
       display: flex;

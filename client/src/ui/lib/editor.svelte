@@ -49,11 +49,21 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    e.preventDefault()
+    if (['Tab', 'Escape'].includes(e.key))
+      e.preventDefault()
     if (e.key === ' ')
       Editor.placeTile(rmap, ...selectedLayer, selectedID)
     else if (e.key === 'Tab')
       onToggleTreeView()
+  }
+
+  function onLayerChange(e: Event & { detail: LayerChange }) {
+    rmap.applyLayerChange(e.detail)
+
+  }
+
+  function onGroupChange(e: Event & { detail: GroupChange }) {
+    rmap.applyGroupChange(e.detail)
   }
 
 </script>
@@ -75,6 +85,6 @@
 			<div id="users">Users online: <span>{$peerCount}</span></div>
 		</div>
 	</div>
-  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
+  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} on:layerchange={onLayerChange} on:groupchange={onGroupChange} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
 </div>

@@ -25,11 +25,15 @@ export type GroupChange = {
   // clipH?: number,
   name?: string,
 }
- 
-export type LayerChange = {
+
+export type CommonLayerChange = {
   group: number,
   layer: number,
-  order?: { group: number, layer: number },
+  order?: { group: number } | { layer: number },
+  name?: string
+}
+ 
+export type TileLayerChange = CommonLayerChange & {
   // width?: number,
   // height?: number,
   // flags?: number,
@@ -37,9 +41,14 @@ export type LayerChange = {
   // colorEnv?: number, // TODO
   // colorEnvOffset?: number, // TODO
   // image: number, // TODO
-  name?: string
 }
- 
+
+export type QuadLayerChange = CommonLayerChange & {
+  // TODO
+}
+
+export type LayerChange = TileLayerChange | QuadLayerChange
+
 export type UsersData = {
   count: number
 }

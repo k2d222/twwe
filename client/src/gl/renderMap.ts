@@ -59,7 +59,7 @@ export class RenderMap {
     
     // change.name is ignored. Underlying TwMap is unchanged.
     if (change.order) {
-      this.groups.splice(change.group)
+      this.groups.splice(change.group, 1)
       this.groups.splice(change.order, 0, group)
     }
     if (change.offX) group.group.offX = change.offX
@@ -73,6 +73,14 @@ export class RenderMap {
     const layer = group.layers[change.layer] as RenderTileLayer
 
     // change.name is ignored. Underlying TwMap is unchanged.
+    if (change.order && 'layer' in change.order) {
+      group.layers.splice(change.layer, 1)
+      group.layers.splice(change.order.layer, 0, layer)
+    }
+    if (change.order && 'group' in change.order) {
+      group.layers.splice(change.layer, 1)
+      this.groups[change.order.group].layers.push(layer)
+    }
     if (change.color) layer.layer.color = change.color
   }
   
