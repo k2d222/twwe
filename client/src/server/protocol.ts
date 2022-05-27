@@ -29,6 +29,7 @@ export type GroupChange = {
 export type LayerChange = {
   group: number,
   layer: number,
+  order?: { group: number, layer: number },
   // width?: number,
   // height?: number,
   // flags?: number,

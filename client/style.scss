@@ -299,3 +299,34 @@ nav {
     }
   }
 }
+
+.context {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+
+  .content {
+    position: absolute;
+    padding: .5rem;
+    background: white;
+    border: 1px solid lightgrey;
+    display: flex; 
+    flex-direction: column;
+    gap: .5rem;
+    
+    label {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      gap: 1rem;
+    }
+    
+    input[type=number] {
+      width: 4rem;
+    }
+  }
+}
+
+nav.hidden .context {
+  display: none;
+}
