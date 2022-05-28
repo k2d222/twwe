@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { onMount, createEventDispatcher } from 'svelte'
   export let visible=false
   export let x = 0
   export let y = 0
@@ -16,12 +16,26 @@
       onClose()
   }
 
+  let self
+
+  function getStyle(x: number, y: number) {
+    let top = Math.min(y, window.innerHeight - self.offsetHeight)
+    let left = Math.min(x, window.innerWidth - self.offsetWidth)
+    return `top: ${top}px; left: ${left}px`
+  }
+  
+  let style
+  
+  onMount(() => {
+    style = getStyle(x, y)
+  })
+
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
 
 <div class="context" on:click|self={onClose}>
-  <div class="content" style="top: {y}px; left: {x}px">    
+  <div class="content" bind:this={self} {style}>    
     <slot></slot>
   </div>
 </div>

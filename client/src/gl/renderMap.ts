@@ -1,5 +1,6 @@
 import type { Map } from '../twmap/map'
 import type { TileChange, LayerChange, GroupChange } from '../server/protocol'
+import type { TileLayer } from '../twmap/tileLayer'
 import { Group } from '../twmap/group'
 import { RenderGroup } from './renderGroup'
 import { RenderTileLayer } from './renderTileLayer'
@@ -57,31 +58,35 @@ export class RenderMap {
   applyGroupChange(change: GroupChange) {
     const group = this.groups[change.group]
     
-    // change.name is ignored. Underlying TwMap is unchanged.
-    if (change.order) {
-      this.groups.splice(change.group, 1)
-      this.groups.splice(change.order, 0, group)
-    }
+    // FIXME: this is disabled for now.
+    // because issue with server, see details there.
+    // if (change.order) {
+    //   this.groups.splice(change.group, 1)
+    //   this.groups.splice(change.order, 0, group)
+    // }
     if (change.offX) group.group.offX = change.offX
     if (change.offY) group.group.offY = change.offY
     if (change.paraX) group.group.paraX = change.paraX
     if (change.paraY) group.group.paraY = change.paraY
+    if (change.name) group.group.name = change.name
   }
   
   applyLayerChange(change: LayerChange) {
     const group = this.groups[change.group]
-    const layer = group.layers[change.layer] as RenderTileLayer
+    const layer = group.layers[change.layer]
 
-    // change.name is ignored. Underlying TwMap is unchanged.
-    if (change.order && 'layer' in change.order) {
-      group.layers.splice(change.layer, 1)
-      group.layers.splice(change.order.layer, 0, layer)
-    }
-    if (change.order && 'group' in change.order) {
-      group.layers.splice(change.layer, 1)
-      this.groups[change.order.group].layers.push(layer)
-    }
-    if (change.color) layer.layer.color = change.color
+    // FIXME: this is disabled for now.
+    // because issue with server, see details there.
+    // if (change.order && 'layer' in change.order) {
+    //   group.layers.splice(change.layer, 1)
+    //   group.layers.splice(change.order.layer, 0, layer)
+    // }
+    // if (change.order && 'group' in change.order) {
+    //   group.layers.splice(change.layer, 1)
+    //   this.groups[change.order.group].layers.push(layer)
+    // }
+    if (change.name) layer.layer.name = change.name
+    if ('color' in change) (layer.layer as TileLayer).color = change.color
   }
   
   createGroup() {

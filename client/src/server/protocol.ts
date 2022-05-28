@@ -76,14 +76,18 @@ export type Query = keyof ServerQueryMap & keyof ClientQueryMap
 
 // events (name and content type) that can be received from the server
 export interface ServerEventMap extends ServerQueryMap {
-  'change': TileChange
+  'groupchange': GroupChange
+  'layerchange': LayerChange
+  'tilechange': TileChange
   'users': UsersData
   'maps': MapInfo[]
 }
 
 // events (name and content type) that can be sent by the client
 export interface ClientEventMap extends ClientQueryMap {
-  'change': TileChange
+  'groupchange': GroupChange
+  'layerchange': LayerChange
+  'tilechange': TileChange
   'join': string // string is map_name
   'save': null
 }

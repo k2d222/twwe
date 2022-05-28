@@ -66,7 +66,7 @@ export function placeTile(rmap: RenderMap, group: number, layer: number, id: num
 
   // only send change if succeeded e.g. not redundant
   if(res)
-    server.send('change', change)
+    server.send('tilechange', change)
 }
 
 // export function setupCanvasEvents(canvas: HTMLCanvasElement) {

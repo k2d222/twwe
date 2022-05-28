@@ -11,7 +11,9 @@ export class Server {
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = (e) => this.onMessage(e)
     this.listeners = {
-      'change': [],
+      'groupchange': [],
+      'layerchange': [],
+      'tilechange': [],
       'map': [],
       'users': [],
       'maps': [],

@@ -9,7 +9,9 @@
   pServer
   .then((server) => {
     server.on('users', (e) => { peerCount.set(e.count) })
-    server.on('change', (e) => { rmap.applyTileChange(e) })
+    server.on('tilechange', (e) => { rmap.applyTileChange(e) })
+    server.on('layerchange', (e) => { rmap.applyLayerChange(e) })
+    server.on('groupchange', (e) => { rmap.applyGroupChange(e) })
   })
 </script>
 
@@ -59,11 +61,12 @@
 
   function onLayerChange(e: Event & { detail: LayerChange }) {
     rmap.applyLayerChange(e.detail)
-
+    server.send('layerchange', e.detail)
   }
 
   function onGroupChange(e: Event & { detail: GroupChange }) {
     rmap.applyGroupChange(e.detail)
+    server.send('groupchange', e.detail)
   }
 
 </script>

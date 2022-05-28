@@ -44,17 +44,16 @@
 
 	function onGroupChange(change: GroupChange) {
 		dispatch('groupchange', change)
+		rmap = rmap // this is a hack to recompute everything
 		if(change.order) {
-			rmap = rmap
 			hideCM()
 		}
 	}
 
 	function onLayerChange(change: LayerChange) {
-console.log(change)
 		dispatch('layerchange', change)
+		rmap = rmap // this is a hack to recompute everything
 		if(change.order) {
-			rmap = rmap
 			hideCM()
 		}
 	}
@@ -134,7 +133,7 @@ console.log(change)
 									<label>Opacity <input type="range" min={0} max={255} value={layer.layer.color.a}
 										on:change={(e) => onLayerChange({ group: g, layer: l, color: { ...layer.layer.color, a: parseInt(e.target.value) } })}></label>
 								{/if}
-								<label>Name <input type="text" value={group.group.name}
+								<label>Name <input type="text" value={layer.layer.name}
 									on:change={(e) => onLayerChange({ group: g, layer: l, name: e.target.value })}></label>
 								<button>Delete layer</button>
 							</ContextMenu>

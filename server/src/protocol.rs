@@ -1,7 +1,49 @@
 use serde::{Deserialize, Serialize};
+use twmap::Color;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Change {
+#[serde(rename_all = "camelCase")]
+pub enum OneGroupChange {
+    Order(u32),
+    OffX(i32),
+    OffY(i32),
+    ParaX(i32),
+    ParaY(i32),
+    Name(String),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GroupChange {
+    pub group: u32,
+    pub order: Option<u32>,
+    #[serde(flatten)]
+    pub change: OneGroupChange,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum LayerOrderChange {
+    Group(u32),
+    Layer(u32),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OneLayerChange {
+    Order(LayerOrderChange),
+    Name(String),
+    Color(Color),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LayerChange {
+    pub group: u32,
+    pub layer: u32,
+    #[serde(flatten)]
+    pub change: OneLayerChange,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TileChange {
     pub group: u32,
     pub layer: u32,
     pub x: u32,
@@ -30,7 +72,9 @@ pub struct MapInfo {
 #[derive(Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RoomRequest {
-    Change(Change),
+    GroupChange(GroupChange),
+    LayerChange(LayerChange),
+    TileChange(TileChange),
     Map,
     Save,
 }
@@ -38,7 +82,9 @@ pub enum RoomRequest {
 #[derive(Serialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RoomResponse {
-    Change(Change),
+    GroupChange(GroupChange),
+    LayerChange(LayerChange),
+    TileChange(TileChange),
     Users(Users),
     // ... Plus Map, which is not json but binary
 }

@@ -17,7 +17,10 @@ use tungstenite::protocol::Message;
 use twmap::{Layer, TwMap};
 
 use crate::{
-    protocol::{Change, RoomRequest, RoomResponse, Users},
+    protocol::{
+        GroupChange, LayerChange, OneGroupChange, OneLayerChange, RoomRequest, RoomResponse,
+        TileChange, Users,
+    },
     Peer,
 };
 
@@ -117,7 +120,7 @@ impl Room {
         Ok(())
     }
 
-    fn set_tile(&self, change: Change) -> Res<()> {
+    fn set_tile(&self, change: TileChange) -> Res<()> {
         let mut map = self.map.get()?;
         let layer = map
             .groups
@@ -136,12 +139,12 @@ impl Room {
         tile.id = change.id;
 
         log::debug!("changed pixel {:?}", change);
-        self.broadcast_change(change)?;
+        self.broadcast(&RoomResponse::TileChange(change))?;
         Ok(())
     }
 
-    fn broadcast_change(&self, change: Change) -> Res<()> {
-        let str = serde_json::to_string(&RoomResponse::Change(change))?;
+    fn broadcast(&self, resp: &RoomResponse) -> Res<()> {
+        let str = serde_json::to_string(resp)?;
         let msg = Message::Text(str);
         for (_addr, tx) in self.peers().iter() {
             tx.unbounded_send(msg.clone())?;
@@ -159,9 +162,68 @@ impl Room {
         }
     }
 
+    fn handle_group_change(&self, change: GroupChange) -> Res<()> {
+        {
+            let mut map = self.map.get()?;
+            let mut group = map
+                .groups
+                .get_mut(change.group as usize)
+                .ok_or("invalid group index")?;
+
+            use OneGroupChange::*;
+            match change.change.clone() {
+                // FIXME: we don't accept reordering atm because it can
+                // lead to desync between clients when they perform edits
+                // at the same time and layer / group ids don't refer to the
+                // same. We would need to uniquely identify groups / layers
+                // to avoid this.
+                // Order(order) => {
+                //     let group = map.groups.remove(change.group as usize);
+                //     map.groups.insert(order as usize, group);
+                // }
+                Order(_) => return Err("TODO: Reordering not supported yet.".into()),
+                OffX(off_x) => group.offset_x = off_x,
+                OffY(off_y) => group.offset_y = off_y,
+                ParaX(para_x) => group.parallax_x = para_x,
+                ParaY(para_y) => group.parallax_y = para_y,
+                Name(name) => group.name = name,
+            }
+        }
+
+        self.broadcast(&RoomResponse::GroupChange(change))?;
+        Ok(())
+    }
+
+    fn handle_layer_change(&self, change: LayerChange) -> Res<()> {
+        let mut map = self.map.get()?;
+        let layer = map
+            .groups
+            .get_mut(change.group as usize)
+            .ok_or("invalid group index")?
+            .layers
+            .get_mut(change.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        use OneLayerChange::*;
+        match change.change.clone() {
+            // FIXME: see fixme for handle_group_change.
+            Order(_) => return Err("TODO: Reordering not supported yet.".into()),
+            Name(name) => *layer.name_mut().ok_or("cannot change layer name")? = name,
+            Color(color) => match layer {
+                Layer::Tiles(layer) => layer.color = color,
+                _ => return Err("cannot change layer color".into()),
+            },
+        }
+
+        self.broadcast(&RoomResponse::LayerChange(change))?;
+        Ok(())
+    }
+
     pub fn handle_request(&self, peer: &mut Peer, req: RoomRequest) -> Res<()> {
         match req {
-            RoomRequest::Change(change) => self.set_tile(change),
+            RoomRequest::GroupChange(change) => self.handle_group_change(change),
+            RoomRequest::LayerChange(change) => self.handle_layer_change(change),
+            RoomRequest::TileChange(change) => self.set_tile(change),
             RoomRequest::Map => self.send_map(peer),
             RoomRequest::Save => self.save_map(),
         }
