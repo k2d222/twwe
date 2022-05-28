@@ -4,7 +4,7 @@ import type { Image } from '../../twmap/image'
 export let image: Image | null
 export let selected = 0
 
-let visible = false
+export let visible = false
 const tileCount = 16
 
 let url: string

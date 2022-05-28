@@ -26,10 +26,12 @@
   let cont: HTMLElement
   let canvas = document.createElement('canvas')
   rmap = Editor.createRenderMap(canvas, map)
+
   let treeViewVisible = true
   let selectedLayer = map.gameLayerID()
   let selectedID = 0
   
+  let tileSelectorVisible = false
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
 
   onMount(() => {
@@ -51,9 +53,17 @@
   function onKeyDown(e: KeyboardEvent) {
     e.preventDefault()
     if (e.key === ' ')
-      Editor.placeTile(rmap, ...selectedLayer, selectedID)
-    else if (e.key === 'Tab')
+      tileSelectorVisible = !tileSelectorVisible
+    if (e.key === 'Tab')
       onToggleTreeView()
+  }
+
+
+  function onClick(e: MouseEvent) {
+    // left button pressed
+    if (e.buttons === 1) {
+      Editor.placeTile(rmap, ...selectedLayer, selectedID)
+    }
   }
 
 </script>
@@ -61,7 +71,7 @@
 <svelte:window on:keydown={onKeyDown} />
 
 <div id="editor">
-  <div bind:this={cont}></div>
+  <div bind:this={cont} on:mousemove={onClick}></div>
 	<div id="menu">
 		<div class="left">
 			<button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
@@ -76,5 +86,5 @@
 		</div>
 	</div>
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
+  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
 </div>

@@ -18,10 +18,8 @@ export class Viewport {
   posDragStart: Vec2 // top-left corner when drag started
   posDragLast: Vec2  // top-left corner last frame
   mousePos: Vec2     // mouse world position when hover the canvas
-  mousePressed: boolean
   
   clickTimeout: number // millis between press and release to be considered click
-  onclick: () => any
 
   dragTimestamp: number
   touchDistance: number
@@ -41,7 +39,6 @@ export class Viewport {
     this.mousePos = { x: 0, y: 0 }
     
     this.clickTimeout = 100
-    this.onclick = () => {}
     
     this.dragTimestamp = 0
     this.touchDistance = 0
@@ -103,24 +100,25 @@ export class Viewport {
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
+    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
-    this.mousePressed = true
+    
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
+    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     const [ worldX, worldY ] = this.canvasToWorld(canvasX, canvasY)
     this.mousePos.x = worldX
     this.mousePos.y = worldY
-    if (this.mousePressed)
+
+    if (e.buttons === 4) // wheel button pressed
       this.onDrag(canvasX, canvasY)
   }
   
-  private onmouseup() {
-    if(Date.now() - this.dragTimestamp < this.clickTimeout)
-      this.onclick()
-    this.mousePressed = false
+  private onmouseup(e: MouseEvent) {
+    e.preventDefault()
   }
 
   private onwheel(e: WheelEvent) {
