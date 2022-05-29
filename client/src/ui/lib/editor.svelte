@@ -54,14 +54,14 @@
     e.preventDefault()
     if (e.key === ' ')
       tileSelectorVisible = !tileSelectorVisible
-    if (e.key === 'Tab')
+    else if (e.key === 'Tab')
       onToggleTreeView()
   }
 
 
   function onClick(e: MouseEvent) {
     // left button pressed
-    if (e.buttons === 1) {
+    if (e.buttons === 1 && !e.ctrlKey) {
       Editor.placeTile(rmap, ...selectedLayer, selectedID)
     }
   }
