@@ -19,6 +19,7 @@
   import type { Map } from '../../twmap/map'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
+  import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
 
   export let map: Map
@@ -75,6 +76,7 @@
 			<div id="users">Users online: <span>{$peerCount}</span></div>
 		</div>
 	</div>
+  <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
 </div>
