@@ -25,16 +25,23 @@
   export let map: Map
 
   let cont: HTMLElement
+
   let canvas = document.createElement('canvas')
+  canvas.tabIndex = 1 // make canvas focusable to catch keyboard events 
+  canvas.addEventListener('keydown', onKeyDown)
+
   rmap = Editor.createRenderMap(canvas, map)
+
   let treeViewVisible = true
   let selectedLayer = map.gameLayerID()
   let selectedID = 0
   
+  let tileSelectorVisible = false
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
 
   onMount(() => {
     cont.append(canvas)
+    canvas.focus()
   })
 
   function onToggleTreeView() {
@@ -50,19 +57,28 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    e.preventDefault()
-    if (e.key === ' ')
+    if ([' ', 'Tab'].includes(e.key)) {
+      e.preventDefault()
+
+      if (e.key === ' ')
+        tileSelectorVisible = !tileSelectorVisible
+      else if (e.key === 'Tab')
+        onToggleTreeView()
+    }
+  }
+
+
+  function onClick(e: MouseEvent) {
+    // left button pressed
+    if (e.buttons === 1 && !e.ctrlKey) {
       Editor.placeTile(rmap, ...selectedLayer, selectedID)
-    else if (e.key === 'Tab')
-      onToggleTreeView()
+    }
   }
 
 </script>
 
-<svelte:window on:keydown={onKeyDown} />
-
 <div id="editor">
-  <div bind:this={cont}></div>
+  <div bind:this={cont} on:mousemove={onClick}></div>
 	<div id="menu">
 		<div class="left">
 			<button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
@@ -78,5 +94,5 @@
 	</div>
   <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
+  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
 </div>

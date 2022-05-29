@@ -18,10 +18,8 @@ export class Viewport {
   posDragStart: Vec2 // top-left corner when drag started
   posDragLast: Vec2  // top-left corner last frame
   mousePos: Vec2     // mouse world position when hover the canvas
-  mousePressed: boolean
   
   clickTimeout: number // millis between press and release to be considered click
-  onclick: () => any
 
   dragTimestamp: number
   touchDistance: number
@@ -41,7 +39,6 @@ export class Viewport {
     this.mousePos = { x: 0, y: 0 }
     
     this.clickTimeout = 100
-    this.onclick = () => {}
     
     this.dragTimestamp = 0
     this.touchDistance = 0
@@ -69,6 +66,7 @@ export class Viewport {
     this.canvas.addEventListener('mouseup', this.onmouseup.bind(this))
     this.canvas.addEventListener('wheel', this.onwheel.bind(this))
     window.addEventListener('resize', this.onresize.bind(this))
+    this.canvas.addEventListener('keydown', this.onkeydown.bind(this))
 
     // TODO
     // this.canvas.addEventListener('mouseenter', () => this.mouseHover = true)
@@ -103,29 +101,42 @@ export class Viewport {
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
+    this.canvas.focus()
+    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
-    this.mousePressed = true
+    
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
+    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     const [ worldX, worldY ] = this.canvasToWorld(canvasX, canvasY)
     this.mousePos.x = worldX
     this.mousePos.y = worldY
-    if (this.mousePressed)
+
+    if (e.buttons === 4 || e.ctrlKey && e.buttons == 1) // wheel button or ctrl + left click
       this.onDrag(canvasX, canvasY)
   }
   
-  private onmouseup() {
-    if(Date.now() - this.dragTimestamp < this.clickTimeout)
-      this.onclick()
-    this.mousePressed = false
+  private onmouseup(e: MouseEvent) {
+    e.preventDefault()
   }
 
   private onwheel(e: WheelEvent) {
     const direction = e.deltaY < 0 ? 1 : -1
     this.onZoom(0.1 * direction, e.clientX, e.clientY)
+  }
+
+  private onkeydown(e: KeyboardEvent) {
+    if (e.key === "ArrowLeft")
+      this.pos.x -= 1
+    else if (e.key === "ArrowRight")
+      this.pos.x += 1
+    else if (e.key === "ArrowUp")
+      this.pos.y -= 1
+    else if (e.key === "ArrowDown")
+      this.pos.y += 1
   }
 
 
