@@ -4,6 +4,8 @@
 
 body, html {
   font-family: sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
 
@@ -177,6 +179,22 @@ nav {
   }
 }
 
+#statusbar {
+  border-top: 1px solid black;
+  height: 2.5em;
+  width: 100vw;
+  position: fixed;
+  bottom: 0;
+  background-color: white;
+
+  #tooltip {
+    margin-left: 15em;
+    height: 2.5em;
+    display: flex;
+    align-items: center;
+  }
+}
+
 #tile-selector {
   $tile-size: 3rem;
   
@@ -192,7 +210,7 @@ nav {
 
   .tile.selected {
     position: fixed;
-    bottom: 1rem;
+    bottom: 3rem;
     left: 50%;
     transform: translateX(-50%);
     outline: 3px solid black;
