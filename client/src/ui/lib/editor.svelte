@@ -24,7 +24,11 @@
   export let map: Map
 
   let cont: HTMLElement
+
   let canvas = document.createElement('canvas')
+  canvas.tabIndex = 1 // make canvas focusable to catch keyboard events 
+  canvas.addEventListener('keydown', onKeyDown)
+
   rmap = Editor.createRenderMap(canvas, map)
 
   let treeViewVisible = true
@@ -36,6 +40,7 @@
 
   onMount(() => {
     cont.append(canvas)
+    canvas.focus()
   })
 
   function onToggleTreeView() {
@@ -51,11 +56,14 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    e.preventDefault()
-    if (e.key === ' ')
-      tileSelectorVisible = !tileSelectorVisible
-    else if (e.key === 'Tab')
-      onToggleTreeView()
+    if ([' ', 'Tab'].includes(e.key)) {
+      e.preventDefault()
+
+      if (e.key === ' ')
+        tileSelectorVisible = !tileSelectorVisible
+      else if (e.key === 'Tab')
+        onToggleTreeView()
+    }
   }
 
 
@@ -67,8 +75,6 @@
   }
 
 </script>
-
-<svelte:window on:keydown={onKeyDown} />
 
 <div id="editor">
   <div bind:this={cont} on:mousemove={onClick}></div>

@@ -66,6 +66,7 @@ export class Viewport {
     this.canvas.addEventListener('mouseup', this.onmouseup.bind(this))
     this.canvas.addEventListener('wheel', this.onwheel.bind(this))
     window.addEventListener('resize', this.onresize.bind(this))
+    this.canvas.addEventListener('keydown', this.onkeydown.bind(this))
 
     // TODO
     // this.canvas.addEventListener('mouseenter', () => this.mouseHover = true)
@@ -100,6 +101,7 @@ export class Viewport {
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
+    this.canvas.focus()
     e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     
@@ -124,6 +126,17 @@ export class Viewport {
   private onwheel(e: WheelEvent) {
     const direction = e.deltaY < 0 ? 1 : -1
     this.onZoom(0.1 * direction, e.clientX, e.clientY)
+  }
+
+  private onkeydown(e: KeyboardEvent) {
+    if (e.key === "ArrowLeft")
+      this.pos.x -= 1
+    else if (e.key === "ArrowRight")
+      this.pos.x += 1
+    else if (e.key === "ArrowUp")
+      this.pos.y -= 1
+    else if (e.key === "ArrowDown")
+      this.pos.y += 1
   }
 
 
