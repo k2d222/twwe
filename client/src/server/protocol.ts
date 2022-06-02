@@ -11,7 +11,7 @@ export type TileChange = {
   y: number,
   id: number,
 }
- 
+
 export type GroupChange = {
   group: number,
   order?: number,
@@ -25,6 +25,7 @@ export type GroupChange = {
   // clipW?: number,
   // clipH?: number,
   name?: string,
+  delete?: boolean,
 }
 
 export type CommonLayerChange = {
@@ -32,6 +33,7 @@ export type CommonLayerChange = {
   layer: number,
   order?: { group: number } | { layer: number },
   name?: string
+  delete?: boolean,
 }
  
 export type TileLayerChange = CommonLayerChange & {

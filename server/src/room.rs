@@ -198,6 +198,11 @@ impl Room {
                 ParaX(para_x) => group.parallax_x = para_x,
                 ParaY(para_y) => group.parallax_y = para_y,
                 Name(name) => group.name = name,
+                Delete(d) => {
+                    if d {
+                        map.groups.remove(change.group as usize);
+                    }
+                }
             }
         }
 
@@ -240,6 +245,11 @@ impl Room {
                 Layer::Tiles(layer) => layer.color = color,
                 _ => return Err("cannot change layer color".into()),
             },
+            Delete(d) => {
+                if d {
+                    group.layers.remove(change.layer as usize);
+                }
+            }
         }
 
         self.broadcast(&RoomResponse::LayerChange(change));

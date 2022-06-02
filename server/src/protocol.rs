@@ -31,6 +31,7 @@ pub enum OneGroupChange {
     ParaX(i32),
     ParaY(i32),
     Name(String),
+    Delete(bool),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -53,6 +54,7 @@ pub enum OneLayerChange {
     Order(LayerOrderChange),
     Name(String),
     Color(Color),
+    Delete(bool),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

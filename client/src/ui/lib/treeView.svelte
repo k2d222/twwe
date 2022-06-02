@@ -105,7 +105,10 @@
 							<label>Name <input type="text" value={group.group.name}
 								on:change={(e) => onGroupChange({ group: g, name: e.target.value })}></label>
 							<button>Add tile layer</button>
-							<button>Delete group</button>
+							<button
+								on:click={(e) => onGroupChange({ group: g, delete: true })}>
+								Delete group
+							</button>
 						</ContextMenu>
 					{/if}
 
@@ -136,7 +139,10 @@
 								{/if}
 								<label>Name <input type="text" value={layer.layer.name}
 									on:change={(e) => onLayerChange({ group: g, layer: l, name: e.target.value })}></label>
-								<button>Delete layer</button>
+								<button
+									on:click={(e) => onLayerChange({ group: g, layer: l, delete: true })}>
+									Delete layer
+								</button>
 							</ContextMenu>
 						{/if}
 

@@ -67,6 +67,7 @@ export class RenderMap {
     if (change.paraX) group.group.paraX = change.paraX
     if (change.paraY) group.group.paraY = change.paraY
     if (change.name) group.group.name = change.name
+    if (change.delete) this.groups.splice(change.group, 1)
   }
   
   applyLayerChange(change: LayerChange) {
@@ -83,6 +84,7 @@ export class RenderMap {
     }
     if (change.name) layer.layer.name = change.name
     if ('color' in change) (layer.layer as TileLayer).color = change.color
+    if (change.delete) group.layers.splice(change.layer, 1)
   }
   
   createGroup() {
