@@ -44,6 +44,7 @@
 
 	function onGroupChange(change: GroupChange) {
 		dispatch('groupchange', change)
+		console.log('after groupchange')
 		rmap = rmap // this is a hack to recompute everything
 		if(change.order) {
 			hideCM()

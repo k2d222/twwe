@@ -58,12 +58,10 @@ export class RenderMap {
   applyGroupChange(change: GroupChange) {
     const group = this.groups[change.group]
     
-    // FIXME: this is disabled for now.
-    // because issue with server, see details there.
-    // if (change.order) {
-    //   this.groups.splice(change.group, 1)
-    //   this.groups.splice(change.order, 0, group)
-    // }
+    if (change.order) {
+      this.groups.splice(change.group, 1)
+      this.groups.splice(change.order, 0, group)
+    }
     if (change.offX) group.group.offX = change.offX
     if (change.offY) group.group.offY = change.offY
     if (change.paraX) group.group.paraX = change.paraX
@@ -75,16 +73,14 @@ export class RenderMap {
     const group = this.groups[change.group]
     const layer = group.layers[change.layer]
 
-    // FIXME: this is disabled for now.
-    // because issue with server, see details there.
-    // if (change.order && 'layer' in change.order) {
-    //   group.layers.splice(change.layer, 1)
-    //   group.layers.splice(change.order.layer, 0, layer)
-    // }
-    // if (change.order && 'group' in change.order) {
-    //   group.layers.splice(change.layer, 1)
-    //   this.groups[change.order.group].layers.push(layer)
-    // }
+    if (change.order && 'layer' in change.order) {
+      group.layers.splice(change.layer, 1)
+      group.layers.splice(change.order.layer, 0, layer)
+    }
+    if (change.order && 'group' in change.order) {
+      group.layers.splice(change.layer, 1)
+      this.groups[change.order.group].layers.push(layer)
+    }
     if (change.name) layer.layer.name = change.name
     if ('color' in change) (layer.layer as TileLayer).color = change.color
   }

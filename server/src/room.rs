@@ -18,8 +18,8 @@ use twmap::{Layer, TwMap};
 
 use crate::{
     protocol::{
-        GroupChange, LayerChange, OneGroupChange, OneLayerChange, RoomRequest, RoomResponse,
-        TileChange, Users,
+        GlobalResponse, GroupChange, LayerChange, LayerOrderChange, OneGroupChange, OneLayerChange,
+        RoomRequest, RoomResponse, TileChange, Users,
     },
     Peer,
 };
@@ -53,7 +53,7 @@ impl LazyMap {
         log::debug!("unloaded map {}", self.path.display());
     }
 
-    fn get(&self) -> Res<MappedMutexGuard<TwMap>> {
+    fn get(&self) -> MappedMutexGuard<TwMap> {
         // lazy-load map if not loaded
         let mut map = self.map.lock();
         if *map == None {
@@ -61,8 +61,8 @@ impl LazyMap {
             log::debug!("loaded map {}", self.path.display());
         }
         match *map {
-            Some(_) => Ok(MutexGuard::map(map, |m| m.as_mut().unwrap())),
-            None => Err(format!("failed to load map {}", self.path.display()).into()),
+            Some(_) => MutexGuard::map(map, |m| m.as_mut().unwrap()),
+            None => panic!("failed to load map {}", self.path.display()),
         }
     }
 }
@@ -102,7 +102,7 @@ impl Room {
     fn send_map(&self, peer: &Peer) -> Res<()> {
         let buf = {
             let mut buf = Vec::new();
-            self.map.get()?.save(&mut buf)?; // TODO: this is blocking for the server
+            self.map.get().save(&mut buf)?; // TODO: this is blocking for the server
             buf
         };
         peer.tx.unbounded_send(Message::Binary(buf))?;
@@ -115,13 +115,13 @@ impl Room {
         let _lck = self.saving.lock();
 
         // clone the map to release the lock as soon as possible
-        self.map.get()?.clone().save_file(&self.map.path)?;
+        self.map.get().clone().save_file(&self.map.path)?;
         log::info!("saved {}", self.map.path.display());
         Ok(())
     }
 
     fn set_tile(&self, change: TileChange) -> Res<()> {
-        let mut map = self.map.get()?;
+        let mut map = self.map.get();
         let layer = map
             .groups
             .iter_mut()
@@ -139,17 +139,23 @@ impl Room {
         tile.id = change.id;
 
         log::debug!("changed pixel {:?}", change);
-        self.broadcast(&RoomResponse::TileChange(change))?;
+        self.broadcast(&RoomResponse::TileChange(change));
         Ok(())
     }
 
-    fn broadcast(&self, resp: &RoomResponse) -> Res<()> {
-        let str = serde_json::to_string(resp)?;
+    // we consider a broadcast fail to be a server error
+    fn broadcast(&self, resp: &RoomResponse) {
+        let str = serde_json::to_string(resp).unwrap();
         let msg = Message::Text(str);
         for (_addr, tx) in self.peers().iter() {
-            tx.unbounded_send(msg.clone())?;
+            tx.unbounded_send(msg.clone()).unwrap();
         }
-        Ok(())
+    }
+
+    fn send_refused(&self, peer: &Peer, reason: String) {
+        let str = serde_json::to_string(&GlobalResponse::Refused(reason)).unwrap();
+        let msg = Message::Text(str);
+        peer.tx.unbounded_send(msg).unwrap();
     }
 
     fn broadcast_users(&self) {
@@ -162,9 +168,9 @@ impl Room {
         }
     }
 
-    fn handle_group_change(&self, change: GroupChange) -> Res<()> {
+    fn handle_group_change(&self, change: GroupChange) -> Result<(), &'static str> {
         {
-            let mut map = self.map.get()?;
+            let mut map = self.map.get();
             let mut group = map
                 .groups
                 .get_mut(change.group as usize)
@@ -172,16 +178,13 @@ impl Room {
 
             use OneGroupChange::*;
             match change.change.clone() {
-                // FIXME: we don't accept reordering atm because it can
-                // lead to desync between clients when they perform edits
-                // at the same time and layer / group ids don't refer to the
-                // same. We would need to uniquely identify groups / layers
-                // to avoid this.
-                // Order(order) => {
-                //     let group = map.groups.remove(change.group as usize);
-                //     map.groups.insert(order as usize, group);
-                // }
-                Order(_) => return Err("TODO: Reordering not supported yet.".into()),
+                Order(order) => {
+                    let group = map.groups.remove(change.group as usize);
+                    if order as usize > map.groups.len() {
+                        return Err("invalid new group index");
+                    }
+                    map.groups.insert(order as usize, group);
+                }
                 OffX(off_x) => group.offset_x = off_x,
                 OffY(off_y) => group.offset_y = off_y,
                 ParaX(para_x) => group.parallax_x = para_x,
@@ -190,24 +193,40 @@ impl Room {
             }
         }
 
-        self.broadcast(&RoomResponse::GroupChange(change))?;
+        self.broadcast(&RoomResponse::GroupChange(change));
         Ok(())
     }
 
-    fn handle_layer_change(&self, change: LayerChange) -> Res<()> {
-        let mut map = self.map.get()?;
-        let layer = map
+    fn handle_layer_change(&self, change: LayerChange) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let group = map
             .groups
             .get_mut(change.group as usize)
-            .ok_or("invalid group index")?
+            .ok_or("invalid group index")?;
+        let layer = group
             .layers
             .get_mut(change.layer as usize)
             .ok_or("invalid layer index")?;
 
         use OneLayerChange::*;
         match change.change.clone() {
-            // FIXME: see fixme for handle_group_change.
-            Order(_) => return Err("TODO: Reordering not supported yet.".into()),
+            Order(order) => match order {
+                LayerOrderChange::Group(order) => {
+                    let layer = group.layers.remove(change.layer as usize);
+                    let new_group = map
+                        .groups
+                        .get_mut(order as usize)
+                        .ok_or("invalid new group index")?;
+                    new_group.layers.push(layer);
+                }
+                LayerOrderChange::Layer(order) => {
+                    let layer = group.layers.remove(change.layer as usize);
+                    if order as usize > group.layers.len() {
+                        return Err("invalid new layer index".into());
+                    }
+                    group.layers.insert(order as usize, layer);
+                }
+            },
             Name(name) => *layer.name_mut().ok_or("cannot change layer name")? = name,
             Color(color) => match layer {
                 Layer::Tiles(layer) => layer.color = color,
@@ -215,14 +234,20 @@ impl Room {
             },
         }
 
-        self.broadcast(&RoomResponse::LayerChange(change))?;
+        self.broadcast(&RoomResponse::LayerChange(change));
         Ok(())
     }
 
     pub fn handle_request(&self, peer: &mut Peer, req: RoomRequest) -> Res<()> {
         match req {
-            RoomRequest::GroupChange(change) => self.handle_group_change(change),
-            RoomRequest::LayerChange(change) => self.handle_layer_change(change),
+            RoomRequest::GroupChange(change) => self.handle_group_change(change).map_err(|e| {
+                self.send_refused(peer, e.to_owned());
+                e.into()
+            }),
+            RoomRequest::LayerChange(change) => self.handle_layer_change(change).map_err(|e| {
+                self.send_refused(peer, e.to_owned());
+                e.into()
+            }),
             RoomRequest::TileChange(change) => self.set_tile(change),
             RoomRequest::Map => self.send_map(peer),
             RoomRequest::Save => self.save_map(),

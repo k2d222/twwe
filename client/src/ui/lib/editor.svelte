@@ -1,22 +1,5 @@
-<script context="module" lang="ts">
-	import { pServer } from '../global'
-  import { writable } from 'svelte/store'
-  import type { RenderMap } from '../../gl/renderMap'
-
-  let peerCount = writable(0)
-  let rmap: RenderMap
-
-  pServer
-  .then((server) => {
-    server.on('users', (e) => { peerCount.set(e.count) })
-    server.on('tilechange', (e) => { rmap.applyTileChange(e) })
-    server.on('layerchange', (e) => { rmap.applyLayerChange(e) })
-    server.on('groupchange', (e) => { rmap.applyGroupChange(e) })
-  })
-</script>
-
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import type { Map } from '../../twmap/map'
   import TreeView from './treeView.svelte'
@@ -27,15 +10,45 @@
 
   let cont: HTMLElement
   let canvas = document.createElement('canvas')
-  rmap = Editor.createRenderMap(canvas, map)
+  let rmap = Editor.createRenderMap(canvas, map)
   let treeViewVisible = true
   let selectedLayer = map.gameLayerID()
   let selectedID = 0
+  let peerCount = 0
   
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
+  
+  function serverOnUsers(e) {
+    peerCount = e.count
+  }
+
+  function serverOnTileChange(e) {
+    rmap.applyTileChange(e)
+  }
+
+  function serverOnLayerChange(e) {
+    rmap.applyLayerChange(e)
+    rmap = rmap // hack to redraw treeview
+  }
+
+  function serverOnGroupChange(e) {
+    rmap.applyGroupChange(e)
+    rmap = rmap // hack to redraw treeview 
+  }
 
   onMount(() => {
     cont.append(canvas)
+    server.on('users', serverOnUsers)
+    server.on('tilechange', serverOnTileChange)
+    server.on('layerchange', serverOnLayerChange)
+    server.on('groupchange', serverOnGroupChange)
+  })
+  
+  onDestroy(() => {
+    server.off('users', onServerUsers)
+    server.off('tilechange', onServerTileChange)
+    server.off('layerchange', onServerLayerChange)
+    server.off('groupchange', onServerGroupChange)
   })
 
   function onToggleTreeView() {
@@ -60,12 +73,10 @@
   }
 
   function onLayerChange(e: Event & { detail: LayerChange }) {
-    rmap.applyLayerChange(e.detail)
     server.send('layerchange', e.detail)
   }
 
   function onGroupChange(e: Event & { detail: GroupChange }) {
-    rmap.applyGroupChange(e.detail)
     server.send('groupchange', e.detail)
   }
 
@@ -85,7 +96,7 @@
 			<span id="map-name">{map.name}</span>
 		</div>
 		<div class="right">
-			<div id="users">Users online: <span>{$peerCount}</span></div>
+			<div id="users">Users online: <span>{peerCount}</span></div>
 		</div>
 	</div>
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} on:layerchange={onLayerChange} on:groupchange={onGroupChange} />

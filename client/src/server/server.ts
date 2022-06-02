@@ -48,6 +48,11 @@ export class Server {
     this.getListeners(type).push(fn)
   }
 
+  off<K extends keyof ServerEventMap>(type: K, fn: Listener<K>) {
+    const index = this.getListeners(type).indexOf(fn)
+    this.getListeners(type).splice(index, 1)
+  }
+
   once<K extends keyof ServerEventMap>(type: K, fn: Listener<K>, timeout?: number) {
     let timeoutID = -1
     const onceListener = (x: ServerEventMap[K]) => {
