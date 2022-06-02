@@ -14,7 +14,7 @@ use futures::channel::mpsc::UnboundedSender;
 
 use tungstenite::protocol::Message;
 
-use twmap::{Layer, TwMap};
+use twmap::{Layer, LayerKind, TwMap};
 
 use crate::{
     protocol::{
@@ -198,9 +198,11 @@ impl Room {
                 ParaX(para_x) => group.parallax_x = para_x,
                 ParaY(para_y) => group.parallax_y = para_y,
                 Name(name) => group.name = name,
-                Delete(d) => {
-                    if d {
+                Delete(_) => {
+                    if !group.is_physics_group() {
                         map.groups.remove(change.group as usize);
+                    } else {
+                        return Err("cannot delete the physics group");
                     }
                 }
             }
@@ -235,7 +237,7 @@ impl Room {
                 LayerOrderChange::Layer(order) => {
                     let layer = group.layers.remove(change.layer as usize);
                     if order as usize > group.layers.len() {
-                        return Err("invalid new layer index".into());
+                        return Err("invalid new layer index");
                     }
                     group.layers.insert(order as usize, layer);
                 }
@@ -243,11 +245,13 @@ impl Room {
             Name(name) => *layer.name_mut().ok_or("cannot change layer name")? = name,
             Color(color) => match layer {
                 Layer::Tiles(layer) => layer.color = color,
-                _ => return Err("cannot change layer color".into()),
+                _ => return Err("cannot change layer color"),
             },
-            Delete(d) => {
-                if d {
+            Delete(_) => {
+                if layer.kind() != LayerKind::Game {
                     group.layers.remove(change.layer as usize);
+                } else {
+                    return Err("cannot delete the game layer");
                 }
             }
         }
