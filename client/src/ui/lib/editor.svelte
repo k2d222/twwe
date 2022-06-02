@@ -42,6 +42,7 @@
     server.on('tilechange', serverOnTileChange)
     server.on('layerchange', serverOnLayerChange)
     server.on('groupchange', serverOnGroupChange)
+    server.send('users')
   })
   
   onDestroy(() => {

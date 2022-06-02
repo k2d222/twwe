@@ -158,6 +158,14 @@ impl Room {
         peer.tx.unbounded_send(msg).unwrap();
     }
 
+    fn send_users(&self, peer: &Peer) {
+        let n = self.peers().len();
+        let resp = Users { count: n as u32 };
+        let str = serde_json::to_string(&RoomResponse::Users(resp)).unwrap();
+        let msg = Message::Text(str);
+        peer.tx.unbounded_send(msg).unwrap();
+    }
+
     fn broadcast_users(&self) {
         let n = self.peers().len();
         let resp = Users { count: n as u32 };
@@ -249,6 +257,7 @@ impl Room {
                 e.into()
             }),
             RoomRequest::TileChange(change) => self.set_tile(change),
+            RoomRequest::Users => Ok(self.send_users(peer)),
             RoomRequest::Map => self.send_map(peer),
             RoomRequest::Save => self.save_map(),
         }

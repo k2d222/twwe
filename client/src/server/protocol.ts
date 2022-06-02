@@ -1,6 +1,7 @@
 import type { Color } from '../twmap/types'
 
-// this file contains the type of messages sent and received via websocket.
+// This file contains the type of messages sent and received via websocket.
+// It must correspond with file protocol.rs in server.
 
 // TODO: for now, can only edit tile id of tile layers.
 export type TileChange = {
@@ -63,6 +64,7 @@ export interface ServerQueryMap {
   'maps': MapInfo[]
   'join': boolean
   'map': ArrayBuffer
+  'users': UsersData
 }
 
 // queries (name and content type) that can be sent by the client
@@ -70,6 +72,7 @@ export interface ClientQueryMap {
   'maps': null
   'join': string
   'map': null
+  'users': null
 }
 
 export type Query = keyof ServerQueryMap & keyof ClientQueryMap 
@@ -79,7 +82,6 @@ export interface ServerEventMap extends ServerQueryMap {
   'groupchange': GroupChange
   'layerchange': LayerChange
   'tilechange': TileChange
-  'users': UsersData
   'maps': MapInfo[]
 }
 

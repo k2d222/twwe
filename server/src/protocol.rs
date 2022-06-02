@@ -96,6 +96,7 @@ pub enum RoomRequest {
     GroupChange(GroupChange),
     LayerChange(LayerChange),
     TileChange(TileChange),
+    Users,
     Map,
     Save,
 }
