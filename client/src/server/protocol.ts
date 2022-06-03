@@ -85,6 +85,7 @@ export interface ServerEventMap extends ServerQueryMap {
   'layerchange': LayerChange
   'tilechange': TileChange
   'maps': MapInfo[]
+  'refused': string
 }
 
 // events (name and content type) that can be sent by the client

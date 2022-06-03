@@ -66,22 +66,32 @@ canvas {
   bottom: 0;
   right: 0;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   background: rgba(0, 0, 0, .5);
   padding: 5rem;
-  
-  > img {
-    position: relative;
-    left: 3.5rem;
-    width: 2rem;
-  }
-  
+
   > .content {
+    position: relative;
     padding: 3rem 5rem;
     border-radius: 15px;
     background: white;
     border: 1px solid black;
+  
+    > img {
+      position: absolute;
+      top: calc(50% - 1rem);
+      left: 1.5rem;
+      width: 2rem;
+    }
+  }
+  
+  > button {
+    position: relative;
+    bottom: 2.5rem;
+    height: 2rem;
+    padding: 0 1rem;
   }
   
   &.hidden {

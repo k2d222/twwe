@@ -4,6 +4,7 @@
   import type { Map } from '../../twmap/map'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
+  import { showInfo, showError, clearDialog } from './dialog'
   import * as Editor from './editor'
 
   export let map: Map
@@ -74,10 +75,42 @@
   }
 
   function onLayerChange(e: Event & { detail: LayerChange }) {
+    const onRefused = (e) => {
+      showError('Server refused that operation: ' + e)
+      server.off('refused', onRefused)
+      server.off('layerchange', onLayerChange)
+    }
+    
+    // BUG: desync if the received layerchange comes from another client
+    const onLayerChange = () => {
+      clearDialog()
+      server.off('refused', onRefused)
+      server.off('layerchange', onLayerChange)
+    }
+
+    showInfo('Asking permission to server…', false)
+    server.on('refused', onRefused)
+    server.on('layerchange', onLayerChange)
     server.send('layerchange', e.detail)
   }
 
   function onGroupChange(e: Event & { detail: GroupChange }) {
+    const onRefused = (e) => {
+      showError('Server refused that operation: ' + e)
+      server.off('refused', onRefused)
+      server.off('groupchange', onGroupChange)
+    }
+
+    // BUG: desync if the received groupchange comes from another client
+    const onGroupChange = () => {
+      clearDialog()
+      server.off('refused', onRefused)
+      server.off('groupchange', onGroupChange)
+    }
+
+    showInfo('Asking permission to server…', false)
+    server.on('refused', onRefused)
+    server.on('groupchange', onGroupChange)
     server.send('groupchange', e.detail)
   }
 

@@ -18,6 +18,7 @@ export class Server {
       'users': [],
       'maps': [],
       'join': [],
+      'refused': [],
     }
   }
   
