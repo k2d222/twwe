@@ -14,6 +14,6 @@
   <Editor {map} />
 {:catch e}
   {console.error(e)}
-  <Dialog>Failed to join the map "{mapName}".</Dialog>
+  <Dialog type="error">Failed to join the map "{mapName}".</Dialog>
 {/await}
 

@@ -71,7 +71,13 @@ canvas {
   background: rgba(0, 0, 0, .5);
   padding: 5rem;
   
-  .content {
+  > img {
+    position: relative;
+    left: 3.5rem;
+    width: 2rem;
+  }
+  
+  > .content {
     padding: 3rem 5rem;
     border-radius: 15px;
     background: white;
