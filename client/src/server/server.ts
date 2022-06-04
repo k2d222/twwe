@@ -19,6 +19,8 @@ export class Server {
       'maps': [],
       'join': [],
       'refused': [],
+      'creategroup': [],
+      'createlayer': [],
     }
   }
   

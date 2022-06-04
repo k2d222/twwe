@@ -1,7 +1,8 @@
 <script lang="ts">
+  import type { Map } from '../../twmap/map'
+  import type { GroupChange, LayerChange, CreateLayer } from '../../server/protocol'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
-  import type { Map } from '../../twmap/map'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError, clearDialog } from './dialog'
@@ -37,20 +38,34 @@
     rmap = rmap // hack to redraw treeview 
   }
 
+  function serverOnCreateGroup() {
+    rmap.createGroup()
+    rmap = rmap // hack to redraw treeview
+  }
+
+  function serverOnCreateLayer(e) {
+    rmap.createLayer(e)
+    rmap = rmap // hack to redraw treeview 
+  }
+
   onMount(() => {
     cont.append(canvas)
     server.on('users', serverOnUsers)
     server.on('tilechange', serverOnTileChange)
     server.on('layerchange', serverOnLayerChange)
     server.on('groupchange', serverOnGroupChange)
+    server.on('creategroup', serverOnCreateGroup)
+    server.on('createlayer', serverOnCreateLayer)
     server.send('users')
   })
   
   onDestroy(() => {
-    server.off('users', onServerUsers)
-    server.off('tilechange', onServerTileChange)
-    server.off('layerchange', onServerLayerChange)
-    server.off('groupchange', onServerGroupChange)
+    server.off('users', serverOnUsers)
+    server.off('tilechange', serverOnTileChange)
+    server.off('layerchange', serverOnLayerChange)
+    server.off('groupchange', serverOnGroupChange)
+    server.off('creategroup', serverOnCreateGroup)
+    server.off('createlayer', serverOnCreateLayer)
   })
 
   function onToggleTreeView() {
@@ -113,6 +128,14 @@
     server.on('groupchange', onGroupChange)
     server.send('groupchange', e.detail)
   }
+  
+  function onCreateGroup() {
+    server.send('creategroup')
+  }
+  
+  function onCreateLayer(e: Event & { detail: CreateLayer }) {
+    server.send('createlayer', e.detail)
+  }
 
 </script>
 
@@ -133,6 +156,7 @@
 			<div id="users">Users online: <span>{peerCount}</span></div>
 		</div>
 	</div>
-  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} on:layerchange={onLayerChange} on:groupchange={onGroupChange} />
+  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
+    on:layerchange={onLayerChange} on:groupchange={onGroupChange} on:createlayer={onCreateLayer} on:creategroup={onCreateGroup} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
 </div>

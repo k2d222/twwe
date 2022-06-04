@@ -61,6 +61,11 @@ export type MapInfo = {
   users: number,
 }
 
+export type CreateLayer = {
+  kind: 'tiles' | 'quads',
+  group: number,
+}
+
 // queries (name and content type) that can be received from the server
 export interface ServerQueryMap {
   'maps': MapInfo[]
@@ -85,6 +90,8 @@ export interface ServerEventMap extends ServerQueryMap {
   'layerchange': LayerChange
   'tilechange': TileChange
   'maps': MapInfo[]
+  'creategroup': null
+  'createlayer': CreateLayer
   'refused': string
 }
 
@@ -93,6 +100,8 @@ export interface ClientEventMap extends ClientQueryMap {
   'groupchange': GroupChange
   'layerchange': LayerChange
   'tilechange': TileChange
+  'creategroup': null
+  'createlayer': CreateLayer
   'join': string // string is map_name
   'save': null
 }

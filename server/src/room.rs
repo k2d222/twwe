@@ -14,12 +14,12 @@ use futures::channel::mpsc::UnboundedSender;
 
 use tungstenite::protocol::Message;
 
-use twmap::{Layer, LayerKind, TwMap};
+use twmap::{GameLayer, Group, Layer, LayerKind, QuadsLayer, TilesLayer, TwMap};
 
 use crate::{
     protocol::{
-        GlobalResponse, GroupChange, LayerChange, LayerOrderChange, OneGroupChange, OneLayerChange,
-        RoomRequest, RoomResponse, TileChange, Users,
+        CreateLayer, GlobalResponse, GroupChange, LayerChange, LayerOrderChange, OneGroupChange,
+        OneLayerChange, RoomRequest, RoomResponse, TileChange, Users,
     },
     Peer,
 };
@@ -260,6 +260,38 @@ impl Room {
         Ok(())
     }
 
+    fn create_group(&self) {
+        let mut map = self.map.get();
+        map.groups.push(Group::default());
+        self.broadcast(&RoomResponse::CreateGroup);
+    }
+
+    fn create_layer(&self, create: CreateLayer) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let default_layer_size = map.find_physics_layer::<GameLayer>().unwrap().tiles.shape();
+        let group = map
+            .groups
+            .get_mut(create.group as usize)
+            .ok_or("invalid group index")?;
+        match create.kind {
+            // LayerKind::Game => todo!(),
+            LayerKind::Tiles => group
+                .layers
+                .push(Layer::Tiles(TilesLayer::new(default_layer_size))),
+            LayerKind::Quads => group.layers.push(Layer::Quads(QuadsLayer::default())),
+            // LayerKind::Front => todo!(),
+            // LayerKind::Tele => todo!(),
+            // LayerKind::Speedup => todo!(),
+            // LayerKind::Switch => todo!(),
+            // LayerKind::Tune => todo!(),
+            // LayerKind::Sounds => todo!(),
+            _ => return Err("invalid new layer kind"),
+        }
+
+        self.broadcast(&RoomResponse::CreateLayer(create));
+        Ok(())
+    }
+
     pub fn handle_request(&self, peer: &mut Peer, req: RoomRequest) -> Res<()> {
         match req {
             RoomRequest::GroupChange(change) => self.handle_group_change(change).map_err(|e| {
@@ -274,6 +306,11 @@ impl Room {
             RoomRequest::Users => Ok(self.send_users(peer)),
             RoomRequest::Map => self.send_map(peer),
             RoomRequest::Save => self.save_map(),
+            RoomRequest::CreateGroup => Ok(self.create_group()),
+            RoomRequest::CreateLayer(c) => self.create_layer(c).map_err(|e| {
+                self.send_refused(peer, e.to_owned());
+                e.into()
+            }),
         }
     }
 }

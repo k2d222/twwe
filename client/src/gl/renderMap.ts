@@ -1,9 +1,12 @@
 import type { Map } from '../twmap/map'
-import type { TileChange, LayerChange, GroupChange } from '../server/protocol'
-import type { TileLayer } from '../twmap/tileLayer'
+import type { TileChange, LayerChange, GroupChange, CreateLayer } from '../server/protocol'
+import type { RenderLayer } from './renderLayer'
+import { TileLayer } from '../twmap/tileLayer'
+import { QuadLayer } from '../twmap/quadLayer'
 import { Group } from '../twmap/group'
 import { RenderGroup } from './renderGroup'
 import { RenderTileLayer } from './renderTileLayer'
+import { RenderQuadLayer } from './renderQuadLayer'
 import { gl } from './global'
 import { LayerType } from '../twmap/types'
 import { Image } from '../twmap/image'
@@ -93,11 +96,28 @@ export class RenderMap {
     this.groups.push(rgroup)
     return rgroup
   }
+
+  createLayer(create: CreateLayer) {
+    const group = this.groups[create.group]
+    
+    let rlayer: RenderLayer
+
+    if (create.kind === 'tiles') {
+      const layer = new TileLayer()
+      rlayer = new RenderTileLayer(layer)
+    } 
+    else if (create.kind === 'quads') {
+      const layer = new QuadLayer()
+      rlayer = new RenderQuadLayer(layer)
+    } 
+
+    group.layers.push(rlayer)
+    return rlayer
+  }
   
   render() {
     for (const group of this.groups)
       group.render()
-    
     
     // render the game layer on top of the rest.
     if (this.gameGroup.visible && this.gameLayer.visible)

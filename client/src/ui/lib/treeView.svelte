@@ -28,9 +28,6 @@
 	let cm = { g: null, l: null }
 	let cmX = 0
 	let cmY = 0
-	function showLayerOptions(g, l) {
-		
-	}
 
 	function showCM(e, g, l = null) {
 		cmX = e.clientX
@@ -57,6 +54,14 @@
 		if(change.order) {
 			hideCM()
 		}
+	}
+	
+	function onCreateGroup() {
+		dispatch('creategroup')
+	}
+
+	function onCreateLayer(create: CreateLayer) {
+		dispatch('createlayer', create)
 	}
 
 	function colorToStr(c: Color) {
@@ -104,7 +109,14 @@
 								on:change={(e) => onGroupChange({ group: g, paraY: parseInt(e.target.value) })}></label>
 							<label>Name <input type="text" value={group.group.name}
 								on:change={(e) => onGroupChange({ group: g, name: e.target.value })}></label>
-							<button>Add tile layer</button>
+							<button
+								on:click={(e) => onCreateLayer({ kind: 'tiles', group: g })}>
+								Add tile layer
+							</button>
+							<button
+								on:click={(e) => onCreateLayer({ kind: 'quads', group: g })}>
+								Add quad layer
+							</button>
 							<button
 								on:click={(e) => onGroupChange({ group: g, delete: true })}>
 								Delete group
@@ -152,7 +164,7 @@
 			</div>
 		{/each}
 
-		<button>Add group</button>
+		<button	on:click={onCreateGroup}>Add group</button>
 
 	</div>
 </nav>

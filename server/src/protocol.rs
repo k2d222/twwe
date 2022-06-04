@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use twmap::Color;
+use twmap::{Color, InvalidLayerKind, LayerKind};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -74,9 +74,41 @@ pub struct TileChange {
     pub id: u8,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Users {
     pub count: u32,
+}
+
+// see https://serde.rs/remote-derive.html
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "InvalidLayerKind", rename_all = "lowercase")]
+enum SerdeInvalidLayerKind {
+    Unknown(i32),        // unknown value of 'LAYERTYPE' identifier
+    UnknownTileMap(i32), // 'LAYERTYPE' identified a tile layer, unknown value of 'TILESLAYERFLAG' identifier
+    NoType,              // layer item too short to get 'LAYERTYPE' identifier
+    NoTypeTileMap, // 'LAYERTYPE' identified a tile layer, layer item too short to get 'TILESLAYERFLAG' identifier
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "LayerKind", rename_all = "lowercase")]
+enum SerdeLayerKind {
+    Game,
+    Tiles,
+    Quads,
+    Front,
+    Tele,
+    Speedup,
+    Switch,
+    Tune,
+    Sounds,
+    Invalid(#[serde(with = "SerdeInvalidLayerKind")] InvalidLayerKind),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateLayer {
+    #[serde(with = "SerdeLayerKind")]
+    pub kind: LayerKind,
+    pub group: u32,
 }
 
 #[derive(Deserialize)]
@@ -98,6 +130,8 @@ pub enum RoomRequest {
     GroupChange(GroupChange),
     LayerChange(LayerChange),
     TileChange(TileChange),
+    CreateGroup,
+    CreateLayer(CreateLayer), // u32 is group id
     Users,
     Map,
     Save,
@@ -110,7 +144,9 @@ pub enum RoomResponse {
     LayerChange(LayerChange),
     TileChange(TileChange),
     Users(Users),
-    // ... Plus Map, which is not json but binary
+    CreateGroup,
+    CreateLayer(CreateLayer), // u32 is group id
+                              // ... Plus Map, which is not json but binary
 }
 
 #[derive(Deserialize)]
