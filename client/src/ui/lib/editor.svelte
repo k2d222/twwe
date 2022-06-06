@@ -6,20 +6,27 @@
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError, clearDialog } from './dialog'
+  import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
 
   export let map: Map
 
   let cont: HTMLElement
+
   let canvas = document.createElement('canvas')
   let rmap = Editor.createRenderMap(canvas, map)
+
+  canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
+  canvas.addEventListener('keydown', onKeyDown)
+
   let treeViewVisible = true
   let selectedLayer = map.gameLayerID()
   let selectedID = 0
   let peerCount = 0
-  
+
+  let tileSelectorVisible = false
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
-  
+
   function serverOnUsers(e: UsersData) {
     peerCount = e.count
   }
@@ -35,7 +42,7 @@
 
   function serverOnGroupChange(e: GroupChange) {
     rmap.applyGroupChange(e)
-    rmap = rmap // hack to redraw treeview 
+    rmap = rmap // hack to redraw treeview
   }
 
   function serverOnCreateGroup() {
@@ -45,7 +52,7 @@
 
   function serverOnCreateLayer(e: CreateLayer) {
     rmap.createLayer(e)
-    rmap = rmap // hack to redraw treeview 
+    rmap = rmap // hack to redraw treeview
   }
 
   onMount(() => {
@@ -57,8 +64,9 @@
     server.on('creategroup', serverOnCreateGroup)
     server.on('createlayer', serverOnCreateLayer)
     server.send('users')
+    canvas.focus()
   })
-  
+
   onDestroy(() => {
     server.off('users', serverOnUsers)
     server.off('tilechange', serverOnTileChange)
@@ -81,12 +89,22 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (['Tab', 'Escape'].includes(e.key))
+    if ([' ', 'Tab'].includes(e.key)) {
       e.preventDefault()
-    if (e.key === ' ')
+
+      if (e.key === ' ')
+        tileSelectorVisible = !tileSelectorVisible
+      else if (e.key === 'Tab')
+        onToggleTreeView()
+    }
+  }
+
+
+  function onClick(e: MouseEvent) {
+    // left button pressed
+    if (e.buttons === 1 && !e.ctrlKey) {
       Editor.placeTile(rmap, ...selectedLayer, selectedID)
-    else if (e.key === 'Tab')
-      onToggleTreeView()
+    }
   }
 
   function onLayerChange(e: Event & { detail: LayerChange }) {
@@ -95,7 +113,7 @@
       server.off('refused', onRefused)
       server.off('layerchange', onLayerChange)
     }
-    
+
     // BUG: desync if the received layerchange comes from another client
     const onLayerChange = () => {
       clearDialog()
@@ -128,21 +146,19 @@
     server.on('groupchange', onGroupChange)
     server.send('groupchange', e.detail)
   }
-  
+
   function onCreateGroup() {
     server.send('creategroup')
   }
-  
+
   function onCreateLayer(e: Event & { detail: CreateLayer }) {
     server.send('createlayer', e.detail)
   }
 
 </script>
 
-<svelte:window on:keydown={onKeyDown} />
-
 <div id="editor">
-  <div bind:this={cont}></div>
+  <div bind:this={cont} on:mousemove={onClick}></div>
 	<div id="menu">
 		<div class="left">
 			<button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
@@ -159,4 +175,5 @@
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
     on:layerchange={onLayerChange} on:groupchange={onGroupChange} on:createlayer={onCreateLayer} on:creategroup={onCreateGroup} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
+  <Statusbar />
 </div>
