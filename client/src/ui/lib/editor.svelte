@@ -172,8 +172,8 @@
 			<div id="users">Users online: <span>{peerCount}</span></div>
 		</div>
 	</div>
+  <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
     on:layerchange={onLayerChange} on:groupchange={onGroupChange} on:createlayer={onCreateLayer} on:creategroup={onCreateGroup} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
-  <Statusbar />
 </div>
