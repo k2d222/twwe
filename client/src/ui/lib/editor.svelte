@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { GroupChange, LayerChange, CreateLayer } from '../../server/protocol'
+  import type { UsersData, TileChange, GroupChange, LayerChange, CreateLayer } from '../../server/protocol'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import TreeView from './treeView.svelte'
@@ -20,20 +20,20 @@
   
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
   
-  function serverOnUsers(e) {
+  function serverOnUsers(e: UsersData) {
     peerCount = e.count
   }
 
-  function serverOnTileChange(e) {
+  function serverOnTileChange(e: TileChange) {
     rmap.applyTileChange(e)
   }
 
-  function serverOnLayerChange(e) {
+  function serverOnLayerChange(e: LayerChange) {
     rmap.applyLayerChange(e)
     rmap = rmap // hack to redraw treeview
   }
 
-  function serverOnGroupChange(e) {
+  function serverOnGroupChange(e: GroupChange) {
     rmap.applyGroupChange(e)
     rmap = rmap // hack to redraw treeview 
   }
@@ -43,7 +43,7 @@
     rmap = rmap // hack to redraw treeview
   }
 
-  function serverOnCreateLayer(e) {
+  function serverOnCreateLayer(e: CreateLayer) {
     rmap.createLayer(e)
     rmap = rmap // hack to redraw treeview 
   }
@@ -90,7 +90,7 @@
   }
 
   function onLayerChange(e: Event & { detail: LayerChange }) {
-    const onRefused = (e) => {
+    const onRefused = (e: string) => {
       showError('Server refused that operation: ' + e)
       server.off('refused', onRefused)
       server.off('layerchange', onLayerChange)
@@ -110,7 +110,7 @@
   }
 
   function onGroupChange(e: Event & { detail: GroupChange }) {
-    const onRefused = (e) => {
+    const onRefused = (e: string) => {
       showError('Server refused that operation: ' + e)
       server.off('refused', onRefused)
       server.off('groupchange', onGroupChange)

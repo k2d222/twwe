@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from 'svelte'
-  export let visible=false
   export let x = 0
   export let y = 0
 
@@ -16,7 +15,7 @@
       onClose()
   }
 
-  let self
+  let self: HTMLElement
 
   function getStyle(x: number, y: number) {
     let top = Math.min(y, window.innerHeight - self.offsetHeight)
@@ -24,7 +23,7 @@
     return `top: ${top}px; left: ${left}px`
   }
   
-  let style
+  let style: string
   
   onMount(() => {
     style = getStyle(x, y)
