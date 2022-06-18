@@ -68,16 +68,32 @@ canvas {
   bottom: 0;
   right: 0;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   background: rgba(0, 0, 0, .5);
   padding: 5rem;
-  
-  .content {
+
+  > .content {
+    position: relative;
     padding: 3rem 5rem;
     border-radius: 15px;
     background: white;
     border: 1px solid black;
+  
+    > img {
+      position: absolute;
+      top: calc(50% - 1rem);
+      left: 1.5rem;
+      width: 2rem;
+    }
+  }
+  
+  > button {
+    position: relative;
+    bottom: 2.5rem;
+    height: 2rem;
+    padding: 0 1rem;
   }
   
   &.hidden {
@@ -100,17 +116,6 @@ nav {
     transform: translateX(-100%);
   }
   
-  #nav-toggle {
-    position: absolute;
-    left: 100%;
-    top: calc(50% - 2rem);
-    height: 4rem;
-    background: white;
-    border: 1px solid lightgrey;
-    border-left: 0;
-    box-shadow: 0 0 10px -5px black;
-  }  
-      
   #tree {
     padding: 1rem;
     height: 100%;
@@ -169,29 +174,45 @@ nav {
   }
 
   .layer {
-    margin-left: .5rem;
     border-left: 1px solid black;
     padding-left: .5rem;
+    margin-left: .5rem;
   }
-  
-  .group > .title > b, .layer > label {
-    margin-right: 1rem;
+
+  .layer,
+  .group > .title {
+    display: flex;
+    align-items: center;
+    gap: .2rem;
+  }
+    
+  .layer > label,
+  .group > .title > b {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex-grow: 1;
+    padding-right: .5rem;
+  }
+    
+  .layer > span,
+  .group > .title > span {
+    flex-shrink: 0;
+    width: 1rem;
   }
 }
 
 #statusbar {
-  border-top: 1px solid black;
-  height: 2.5em;
-  width: 100vw;
   position: fixed;
+  left: 15rem;
+  right: 0;
   bottom: 0;
-  background-color: white;
 
   #tooltip {
-    margin-left: 15em;
-    height: 2.5em;
-    display: flex;
-    align-items: center;
+    float: right;
+    padding: .2rem 1rem;
+    height: 100%;
+    background-color: white;
   }
 }
 
@@ -316,4 +337,37 @@ nav {
       border: 1px solid grey;
     }
   }
+}
+
+.context {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+
+  .content {
+    position: absolute;
+    padding: .5rem;
+    background: white;
+    border: 1px solid lightgrey;
+    display: flex; 
+    flex-direction: column;
+    gap: .5rem;
+    box-shadow: 5px 5px 20px -15px black;
+    border-radius: 5px;
+    
+    label {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      gap: 1rem;
+    }
+    
+    input[type=number] {
+      width: 4rem;
+    }
+  }
+}
+
+nav.hidden .context {
+  display: none;
 }

@@ -14,11 +14,11 @@ export class Group {
   layers: Layer[]
 
   constructor() {
-    this.name = 'unnamed group'
+    this.name = ''
     this.offX = 0
     this.offY = 0
-    this.paraX = 0
-    this.paraY = 0
+    this.paraX = 100
+    this.paraY = 100
     this.layers = []
   }
 

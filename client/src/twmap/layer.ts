@@ -8,6 +8,6 @@ export abstract class Layer {
   
   constructor(type: LayerType) {
     this.type = type
-    this.name = 'unnamed layer'
+    this.name = ''
   }
 }

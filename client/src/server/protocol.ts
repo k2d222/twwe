@@ -1,6 +1,7 @@
 import type { Color } from '../twmap/types'
 
-// this file contains the type of messages sent and received via websocket.
+// This file contains the type of messages sent and received via websocket.
+// It must correspond with file protocol.rs in server.
 
 // TODO: for now, can only edit tile id of tile layers.
 export type TileChange = {
@@ -10,7 +11,7 @@ export type TileChange = {
   y: number,
   id: number,
 }
- 
+
 export type GroupChange = {
   group: number,
   order?: number,
@@ -24,11 +25,18 @@ export type GroupChange = {
   // clipW?: number,
   // clipH?: number,
   name?: string,
+  delete?: boolean,
 }
- 
-export type LayerChange = {
+
+export type CommonLayerChange = {
   group: number,
   layer: number,
+  order?: { group: number } | { layer: number },
+  name?: string
+  delete?: boolean,
+}
+ 
+export type TileLayerChange = CommonLayerChange & {
   // width?: number,
   // height?: number,
   // flags?: number,
@@ -36,9 +44,14 @@ export type LayerChange = {
   // colorEnv?: number, // TODO
   // colorEnvOffset?: number, // TODO
   // image: number, // TODO
-  name?: string
 }
- 
+
+export type QuadLayerChange = CommonLayerChange & {
+  // TODO
+}
+
+export type LayerChange = TileLayerChange | QuadLayerChange
+
 export type UsersData = {
   count: number
 }
@@ -48,11 +61,17 @@ export type MapInfo = {
   users: number,
 }
 
+export type CreateLayer = {
+  kind: 'tiles' | 'quads',
+  group: number,
+}
+
 // queries (name and content type) that can be received from the server
 export interface ServerQueryMap {
   'maps': MapInfo[]
   'join': boolean
   'map': ArrayBuffer
+  'users': UsersData
 }
 
 // queries (name and content type) that can be sent by the client
@@ -60,20 +79,29 @@ export interface ClientQueryMap {
   'maps': null
   'join': string
   'map': null
+  'users': null
 }
 
 export type Query = keyof ServerQueryMap & keyof ClientQueryMap 
 
 // events (name and content type) that can be received from the server
 export interface ServerEventMap extends ServerQueryMap {
-  'change': TileChange
-  'users': UsersData
+  'groupchange': GroupChange
+  'layerchange': LayerChange
+  'tilechange': TileChange
   'maps': MapInfo[]
+  'creategroup': null
+  'createlayer': CreateLayer
+  'refused': string
 }
 
 // events (name and content type) that can be sent by the client
 export interface ClientEventMap extends ClientQueryMap {
-  'change': TileChange
+  'groupchange': GroupChange
+  'layerchange': LayerChange
+  'tilechange': TileChange
+  'creategroup': null
+  'createlayer': CreateLayer
   'join': string // string is map_name
   'save': null
 }

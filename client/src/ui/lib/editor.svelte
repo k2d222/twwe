@@ -1,24 +1,11 @@
-<script context="module" lang="ts">
-	import { pServer } from '../global'
-  import { writable } from 'svelte/store'
-  import type { RenderMap } from '../../gl/renderMap'
-
-  let peerCount = writable(0)
-  let rmap: RenderMap
-
-  pServer
-  .then((server) => {
-    server.on('users', (e) => { peerCount.set(e.count) })
-    server.on('change', (e) => { rmap.applyTileChange(e) })
-  })
-</script>
-
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { server } from '../global'
   import type { Map } from '../../twmap/map'
+  import type { UsersData, TileChange, GroupChange, LayerChange, CreateLayer } from '../../server/protocol'
+  import { onMount, onDestroy } from 'svelte'
+  import { server } from '../global'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
+  import { showInfo, showError, clearDialog } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
 
@@ -27,21 +14,66 @@
   let cont: HTMLElement
 
   let canvas = document.createElement('canvas')
-  canvas.tabIndex = 1 // make canvas focusable to catch keyboard events 
-  canvas.addEventListener('keydown', onKeyDown)
+  let rmap = Editor.createRenderMap(canvas, map)
 
-  rmap = Editor.createRenderMap(canvas, map)
+  canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
+  canvas.addEventListener('keydown', onKeyDown)
 
   let treeViewVisible = true
   let selectedLayer = map.gameLayerID()
   let selectedID = 0
-  
+  let peerCount = 0
+
   let tileSelectorVisible = false
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
 
+  function serverOnUsers(e: UsersData) {
+    peerCount = e.count
+  }
+
+  function serverOnTileChange(e: TileChange) {
+    rmap.applyTileChange(e)
+  }
+
+  function serverOnLayerChange(e: LayerChange) {
+    rmap.applyLayerChange(e)
+    rmap = rmap // hack to redraw treeview
+  }
+
+  function serverOnGroupChange(e: GroupChange) {
+    rmap.applyGroupChange(e)
+    rmap = rmap // hack to redraw treeview
+  }
+
+  function serverOnCreateGroup() {
+    rmap.createGroup()
+    rmap = rmap // hack to redraw treeview
+  }
+
+  function serverOnCreateLayer(e: CreateLayer) {
+    rmap.createLayer(e)
+    rmap = rmap // hack to redraw treeview
+  }
+
   onMount(() => {
     cont.append(canvas)
+    server.on('users', serverOnUsers)
+    server.on('tilechange', serverOnTileChange)
+    server.on('layerchange', serverOnLayerChange)
+    server.on('groupchange', serverOnGroupChange)
+    server.on('creategroup', serverOnCreateGroup)
+    server.on('createlayer', serverOnCreateLayer)
+    server.send('users')
     canvas.focus()
+  })
+
+  onDestroy(() => {
+    server.off('users', serverOnUsers)
+    server.off('tilechange', serverOnTileChange)
+    server.off('layerchange', serverOnLayerChange)
+    server.off('groupchange', serverOnGroupChange)
+    server.off('creategroup', serverOnCreateGroup)
+    server.off('createlayer', serverOnCreateLayer)
   })
 
   function onToggleTreeView() {
@@ -75,6 +107,54 @@
     }
   }
 
+  function onLayerChange(e: Event & { detail: LayerChange }) {
+    const onRefused = (e: string) => {
+      showError('Server refused that operation: ' + e)
+      server.off('refused', onRefused)
+      server.off('layerchange', onLayerChange)
+    }
+
+    // BUG: desync if the received layerchange comes from another client
+    const onLayerChange = () => {
+      clearDialog()
+      server.off('refused', onRefused)
+      server.off('layerchange', onLayerChange)
+    }
+
+    showInfo('Asking permission to server…', false)
+    server.on('refused', onRefused)
+    server.on('layerchange', onLayerChange)
+    server.send('layerchange', e.detail)
+  }
+
+  function onGroupChange(e: Event & { detail: GroupChange }) {
+    const onRefused = (e: string) => {
+      showError('Server refused that operation: ' + e)
+      server.off('refused', onRefused)
+      server.off('groupchange', onGroupChange)
+    }
+
+    // BUG: desync if the received groupchange comes from another client
+    const onGroupChange = () => {
+      clearDialog()
+      server.off('refused', onRefused)
+      server.off('groupchange', onGroupChange)
+    }
+
+    showInfo('Asking permission to server…', false)
+    server.on('refused', onRefused)
+    server.on('groupchange', onGroupChange)
+    server.send('groupchange', e.detail)
+  }
+
+  function onCreateGroup() {
+    server.send('creategroup')
+  }
+
+  function onCreateLayer(e: Event & { detail: CreateLayer }) {
+    server.send('createlayer', e.detail)
+  }
+
 </script>
 
 <div id="editor">
@@ -89,10 +169,11 @@
 			<span id="map-name">{map.name}</span>
 		</div>
 		<div class="right">
-			<div id="users">Users online: <span>{$peerCount}</span></div>
+			<div id="users">Users online: <span>{peerCount}</span></div>
 		</div>
 	</div>
   <Statusbar />
-  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
+  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
+    on:layerchange={onLayerChange} on:groupchange={onGroupChange} on:createlayer={onCreateLayer} on:creategroup={onCreateGroup} />
+  <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
 </div>

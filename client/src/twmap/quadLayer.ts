@@ -11,6 +11,8 @@ export class QuadLayer extends Layer {
 
   constructor() {
     super(LayerType.QUADS)
+    this.quads = []
+    this.image = null
   }
 
   load(df: DataFile, info: MapLayerQuads) {

@@ -11,7 +11,7 @@ export class Image {
   img: HTMLImageElement | null
 
   constructor() {
-    this.name = 'unnamed image'
+    this.name = ''
     this.width = 0
     this.height = 0
     this.data = null

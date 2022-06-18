@@ -20,5 +20,5 @@
   </Router>
 {:catch e}
   {console.error(e)}
-  <Dialog>Failed to connect to the server {VITE_BACKEND_HOST}:{VITE_BACKEND_PORT}.</Dialog>
+  <Dialog type="error">Failed to connect to the server {VITE_BACKEND_HOST}:{VITE_BACKEND_PORT}.</Dialog>
 {/await}

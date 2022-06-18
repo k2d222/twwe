@@ -55,5 +55,5 @@
 	</div>
 {:catch e}
 	{console.error(e)}
-	<Dialog>Failed to query maps.</Dialog>
+	<Dialog type="error">Failed to query maps.</Dialog>
 {/await}
