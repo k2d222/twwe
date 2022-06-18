@@ -267,7 +267,7 @@ nav {
   justify-content: center;
   align-items: center;
   background: white;
-  padding: 4rem;
+  padding: 3rem;
   
   &.hidden {
     display: none;
@@ -275,29 +275,68 @@ nav {
   
   .buttons {
     display: flex;
-    justify-content: flex-end;
     gap: 1rem;
+    
+    > input[type=text] {
+      flex-grow: 1;
+    }
+
+    button {
+      font-size: 1.5rem;
+    }
+
+    &.right {
+      justify-content: flex-end;
+    }
+  }
+  
+  #new-map {
+    & > *:first-child {
+      flex-grow: 1;
+    }
+
+    button, input {
+      font-size: 1rem;
+    }
+    
+    label.file {
+      border: 1px solid grey;
+      border-radius: 3px;
+      padding: .5rem 1rem;
+
+      > input[type="file"] {
+        display: none;
+      }
+    }
+  }
+
+  #join-map {
+    margin-top: 1rem;
   }
 
   button {
-    margin-top: 1rem;
-    font-size: 1.5rem;
     border: none;
-    outline: none;
     border-radius: 3px;
     padding: .4rem 1rem;
-    color: white;
-    
-    &.refresh {
+    color: black;
     background: lightgrey;
-      img {
-        width: 100%;
-        height: 100%;
-      }
+
+    &:hover {
+      background: #a8a8a8;
+    }
+    
+    &.refresh img {
+      width: 100%;
+      height: 100%;
     }
 
     &.join {
+      color: white;
       background: teal;
+
+      &:hover {
+        background: #006262;
+      }
     }
   }
   
@@ -306,11 +345,12 @@ nav {
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 30rem;
+    max-width: 100%;
 
     .list {
       overflow: auto;
-      min-width: 30rem;
-      max-width: 100%;
+      width: 100%;
     }
 
     .row {
@@ -335,6 +375,18 @@ nav {
     .header {
       font-weight: bold;
       border: 1px solid grey;
+    }
+  }
+  
+  .settings {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 1rem;
+    
+    > span:nth-child(2n) {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
     }
   }
 }
