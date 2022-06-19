@@ -66,12 +66,32 @@ export type CreateLayer = {
   group: number,
 }
 
+export type CreateBlankMap = {
+  name: string,
+  // version: MapVersion // TODO
+  width: number,
+  height: number,
+  defaultLayers: boolean,
+}
+
+export type CreateCloneMap = {
+  name: string,
+  clone: string,
+}
+
+export type CreateUploadMap = {
+  name: string,
+}
+
+export type CreateMap = CreateBlankMap | CreateCloneMap | CreateUploadMap;
+
 // queries (name and content type) that can be received from the server
 export interface ServerQueryMap {
   'maps': MapInfo[]
   'join': boolean
   'map': ArrayBuffer
   'users': UsersData
+  'createmap': boolean
 }
 
 // queries (name and content type) that can be sent by the client
@@ -80,6 +100,7 @@ export interface ClientQueryMap {
   'join': string
   'map': null
   'users': null
+  'createmap': CreateMap
 }
 
 export type Query = keyof ServerQueryMap & keyof ClientQueryMap 
@@ -93,6 +114,7 @@ export interface ServerEventMap extends ServerQueryMap {
   'creategroup': null
   'createlayer': CreateLayer
   'refused': string
+  'uploadcomplete': null
 }
 
 // events (name and content type) that can be sent by the client

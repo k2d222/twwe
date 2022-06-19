@@ -53,7 +53,7 @@ impl LazyMap {
         log::debug!("unloaded map {}", self.path.display());
     }
 
-    fn get(&self) -> MappedMutexGuard<TwMap> {
+    pub fn get(&self) -> MappedMutexGuard<TwMap> {
         // lazy-load map if not loaded
         let mut map = self.map.lock();
         if *map == None {
@@ -107,6 +107,13 @@ impl Room {
         };
         peer.tx.unbounded_send(Message::Binary(buf))?;
 
+        Ok(())
+    }
+
+    pub fn save_copy(&self, path: &PathBuf) -> Res<()> {
+        // clone the map to release the lock as soon as possible
+        self.map.get().clone().save_file(path)?;
+        log::info!("cloned {} to {}", self.map.path.display(), path.display());
         Ok(())
     }
 

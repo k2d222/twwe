@@ -278,10 +278,11 @@ nav {
     gap: 1rem;
     
     > input[type=text] {
+      width: 5rem;
       flex-grow: 1;
     }
 
-    button {
+    > button, > input[type=text] {
       font-size: 1.5rem;
     }
 
