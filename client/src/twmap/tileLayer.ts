@@ -31,15 +31,16 @@ export class TileLayer extends Layer {
     this.height = info.height
     this.color = info.color
 
+    this.image = null
     if (info.image !== -1) {
       const imagesInfo = df.getType(MapItemType.IMAGE)
-      const imageItem = df.getItem(imagesInfo.start + info.image)
-      const imageInfo = parseMapImage(imageItem.data)
-      this.image = new Image()
-      this.image.load(df, imageInfo)
-    }
-    else {
-      this.image = null
+      
+      if (imagesInfo) {
+        const imageItem = df.getItem(imagesInfo.start + info.image)
+        const imageInfo = parseMapImage(imageItem.data)
+        this.image = new Image()
+        this.image.load(df, imageInfo)
+      }
     }
 
     const tileData = df.getData(info.data)

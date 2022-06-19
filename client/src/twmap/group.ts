@@ -28,11 +28,16 @@ export class Group {
     this.offY = info.offY
     this.paraX = info.paraX
     this.paraY = info.paraY
-    this.loadLayers(df, info.startLayer, info.numLayers)
+    this.layers = this.loadLayers(df, info.startLayer, info.numLayers)
   }
 
   private loadLayers(df: DataFile, startLayer: number, numLayers: number) {
     const layersInfo = df.getType(MapItemType.LAYER)
+    
+    if (!layersInfo)
+      return []
+
+    const layers = []
 
     for (let l = 0; l < numLayers; l++) {
       const layerItem = df.getItem(layersInfo.start + startLayer + l)
@@ -42,17 +47,19 @@ export class Group {
         const tileLayerInfo = parseMapLayerTiles(layerItem.data)
         const layer = new TileLayer()
         layer.load(df, tileLayerInfo)
-        this.layers.push(layer)
+        layers.push(layer)
       }
       else if (layerInfo.type === LayerType.QUADS) {
         const quadLayerInfo = parseMapLayerQuads(layerItem.data)
         const layer = new QuadLayer()
         layer.load(df, quadLayerInfo)
-        this.layers.push(layer)
+        layers.push(layer)
       }
       else {
         console.warn('unsupported layer type:', layerInfo.type, layerInfo)
       }
     }
+    
+    return layers
   }
 }

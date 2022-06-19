@@ -34,6 +34,10 @@ export class Map {
   
   private loadImages(df: DataFile) {
     const imagesInfo = df.getType(MapItemType.IMAGE)
+
+    if (!imagesInfo)
+      return []
+
     const images = []
     
     for (let i = 0; i < imagesInfo.num; i++) {
@@ -50,6 +54,10 @@ export class Map {
   
   private loadGroups(df: DataFile) {
     const groupsInfo = df.getType(MapItemType.GROUP)
+    
+    if (!groupsInfo)
+      return []
+    
     const groups = []
 
     for (let g = 0; g < groupsInfo.num; g++) {
