@@ -46,14 +46,14 @@
       server.on('refused', onRefused)
       server.on('uploadcomplete', onUpload)
       await server.sendBinaryBlocking(data, (progress) => {
-        showInfo("Uploading map " + Math.round(progress / data.byteLength * 100) + "% …", false)
+        showInfo("Uploading map " + Math.round(progress / data.byteLength * 100) + "% …", 'none')
       })
     }
     reader.onerror = () => {
       showError("Failed to load the file from your computer.")
     }
     reader.onprogress = (e) => {
-      showInfo("Loading map " + Math.round(e.loaded / e.total * 100) + "% …", false)
+      showInfo("Loading map " + Math.round(e.loaded / e.total * 100) + "% …", 'none')
     }
 
     reader.readAsArrayBuffer(file)
@@ -90,7 +90,7 @@
       }
     }
     
-    showInfo('Querying the server…', false)
+    showInfo('Querying the server…', 'none')
     const onRefused = (err: string) => {
       showError('Map creation refused: ' + err)
     }

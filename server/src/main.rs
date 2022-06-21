@@ -121,7 +121,7 @@ impl Server {
                 debug_assert!(map.check().is_ok());
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
                 map.save_file(&path).unwrap();
-                rooms.insert(create_map.name, Arc::new(Room::new(path)));
+                rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
             CreateParams::Clone(params) => {
                 let room = self
@@ -130,18 +130,18 @@ impl Server {
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
                 room.save_copy(&path).unwrap();
                 let mut rooms = self.rooms.lock().unwrap();
-                rooms.insert(create_map.name, Arc::new(Room::new(path)));
+                rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
-            CreateParams::Upload => {
+            CreateParams::Upload {} => {
                 let mut rooms = self.rooms.lock().unwrap();
                 let upload_path: PathBuf = format!("uploads/{}.map", peer.addr).into();
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
                 std::fs::rename(&upload_path, &path).map_err(|_| "upload a map first")?;
-                rooms.insert(create_map.name, Arc::new(Room::new(path)));
+                rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
         }
 
-        let str = serde_json::to_string(&GlobalResponse::CreateMap(true)).unwrap();
+        let str = serde_json::to_string(&GlobalResponse::CreateMap(create_map.name)).unwrap();
         peer.tx.unbounded_send(Message::Text(str)).ok();
         Ok(())
     }
@@ -151,6 +151,24 @@ impl Server {
         map.save_file(&path)?;
         let str = serde_json::to_string(&GlobalResponse::UploadComplete)?;
         peer.tx.unbounded_send(Message::Text(str))?;
+        Ok(())
+    }
+
+    fn handle_delete_map(&self, peer: &Peer, name: String) -> Result<(), &'static str> {
+        match self.room(&name) {
+            Some(room) => {
+                if room.peers().len() != 0 {
+                    return Err("map contains users");
+                } else {
+                    self.rooms().remove(&name);
+                    std::fs::remove_file(room.map.path.to_owned()).unwrap();
+                }
+            }
+            None => return Err("no map found with the given name"),
+        }
+
+        let str = serde_json::to_string(&GlobalResponse::DeleteMap(name)).unwrap();
+        peer.tx.unbounded_send(Message::Text(str)).ok();
         Ok(())
     }
 
@@ -167,6 +185,12 @@ impl Server {
                         e.into()
                     })
                 }
+                GlobalRequest::DeleteMap(name) => self.handle_delete_map(peer, name).map_err(|e| {
+                    let str =
+                        serde_json::to_string(&GlobalResponse::Refused(e.to_owned())).unwrap();
+                    peer.tx.unbounded_send(Message::Text(str)).ok();
+                    e.into()
+                }),
             },
             Request::Room(req) => {
                 let room = { peer.room.clone().ok_or("peer is not in a room")? };

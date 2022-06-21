@@ -89,7 +89,7 @@ canvas {
     }
   }
   
-  > button {
+  > button, > .buttons {
     position: relative;
     bottom: 2.5rem;
     height: 2rem;
@@ -326,7 +326,7 @@ nav {
       background: #a8a8a8;
     }
     
-    &.refresh img {
+    &.refresh img, &.delete img {
       width: 100%;
       height: 100%;
     }

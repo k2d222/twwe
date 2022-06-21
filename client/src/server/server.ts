@@ -22,7 +22,8 @@ export class Server {
       'creategroup': [],
       'createlayer': [],
       'uploadcomplete': [],
-      'createmap': []
+      'createmap': [],
+      'deletemap': [],
     }
   }
   

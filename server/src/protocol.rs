@@ -141,11 +141,10 @@ pub struct CreateCloneParams {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-#[serde(untagged)]
 pub enum CreateParams {
     Blank(CreateBlankParams),
     Clone(CreateCloneParams),
-    Upload,
+    Upload {},
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -186,6 +185,7 @@ pub enum GlobalRequest {
     Join(String), // join a room
     Maps,
     CreateMap(CreateMap),
+    DeleteMap(String),
 }
 
 #[derive(Serialize)]
@@ -195,7 +195,10 @@ pub enum GlobalResponse {
     Join(bool),
     Refused(String),
     UploadComplete,
-    CreateMap(bool),
+
+    // TODO: broadcast those two and dynamically update the map list in the client.
+    CreateMap(String),
+    DeleteMap(String),
 }
 
 #[derive(Deserialize)]

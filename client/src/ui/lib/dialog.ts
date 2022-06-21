@@ -2,6 +2,8 @@ import Dialog from './dialog.svelte'
 
 type DialogType = 'info' | 'warning' | 'error'
 
+type DialogControls = 'closable' | 'yesno' | 'none'
+
 let dialog: Dialog | null = null
 
 export function clearDialog() {
@@ -11,33 +13,33 @@ export function clearDialog() {
   }
 }
 
-export function showDialog(type: DialogType, message: string, closable: boolean): Promise<void> {
+export function showDialog(type: DialogType, message: string, controls: DialogControls = 'none'): Promise<boolean> {
   clearDialog()
   dialog = new Dialog({
     target: document.body,
     props: {
       type,
       message,
-      closable,
+      controls,
     }
   })
   
   return new Promise((resolve) => {
-    dialog.$on('close', () => {
+    dialog.$on('close', (e) => {
       clearDialog()
-      resolve() 
+      resolve(e.detail)
     })
   })
 }
 
 
-export function showInfo(msg: string, closable = true) {
-  return showDialog('info', msg, closable)
+export function showInfo(msg: string, controls: DialogControls = 'closable') {
+  return showDialog('info', msg, controls)
 }
 
-export function showWarning(msg: string, closable = true) {
-  return showDialog('warning', msg, closable)
+export function showWarning(msg: string, controls: DialogControls = 'closable') {
+  return showDialog('warning', msg, controls)
 }
-export function showError(msg: string, closable = true) {
-  return showDialog('error', msg, closable)
+export function showError(msg: string, controls: DialogControls = 'closable') {
+  return showDialog('error', msg, controls)
 }

@@ -3,7 +3,7 @@
 	import Dialog from '../lib/dialog.svelte'
 	import { navigate } from "svelte-routing"
 	import { pServer } from '../global'
-	import { showInfo, clearDialog } from '../lib/dialog'
+	import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
 
 	let selected: string
 	
@@ -17,7 +17,7 @@
 	}
 		
 	async function refresh() {
-		showInfo("Updating maps infos…", false)
+		showInfo("Updating maps infos…", 'none')
 		const server = await pServer
 		let mapInfos = await server.query('maps')
 		sortMapInfos(mapInfos)
@@ -27,6 +27,27 @@
 	}
 
 	let pMapInfos = refresh()
+
+	async function onDelete() {
+		const server = await pServer
+		const res = await showWarning('Are you sure you want to delete "' + selected + '"?', 'yesno')
+		
+		const onRefused = (err: string) => {
+			showError('Map deletion failed: ' + err)
+		}
+
+		if (res) {
+			showInfo('Deleting map…', 'none')
+			// COMBAK: this is ugly, need to refactor server error handling globally
+			server.on('refused', onRefused)
+			const success = await server.query('deletemap', selected)
+			server.off('refused', onRefused)
+			if (success) {
+				clearDialog()
+				pMapInfos = refresh()
+			}
+		}
+	}
 
 </script>
 
@@ -55,6 +76,7 @@
 			<div id="join-map" class="buttons right">
 				<button class="refresh" on:click={refresh}><img src="/assets/refresh.svg" alt="refresh"/></button>
 				<button class="create" on:click={() => navigate('/create/')}>New…</button>
+				<button class="delete" on:click={onDelete}><img src="/assets/trash.svg" alt="delete"/></button>
 				<button class="join" on:click={() => navigate('/edit/' + selected)}>Join</button>
 			</div>
 		</div>

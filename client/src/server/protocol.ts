@@ -94,7 +94,8 @@ export interface ServerQueryMap {
   'join': boolean
   'map': ArrayBuffer
   'users': UsersData
-  'createmap': boolean
+  'createmap': string
+  'deletemap': string
 }
 
 // queries (name and content type) that can be sent by the client
@@ -104,6 +105,7 @@ export interface ClientQueryMap {
   'map': null
   'users': null
   'createmap': CreateMap
+  'deletemap': string
 }
 
 export type Query = keyof ServerQueryMap & keyof ClientQueryMap 
