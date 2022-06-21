@@ -1,12 +1,13 @@
 <script type="ts">
+	import type { MapInfo } from '../../server/protocol'
 	import Dialog from '../lib/dialog.svelte'
 	import { navigate } from "svelte-routing"
 	import { pServer } from '../global'
 	import { showInfo, clearDialog } from '../lib/dialog'
 
-	let selected
+	let selected: string
 	
-	function sortMapInfos(mapInfos) {
+	function sortMapInfos(mapInfos: MapInfo[]) {
 		mapInfos.sort((a, b) => {
       if (a.users === b.users)
         return a.name.localeCompare(b.name)
@@ -26,8 +27,6 @@
 	}
 
 	let pMapInfos = refresh()
-
-	let newMapName = ""
 
 </script>
 

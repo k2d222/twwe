@@ -67,7 +67,6 @@ export type CreateLayer = {
 }
 
 export type CreateBlankMap = {
-  name: string,
   // version: MapVersion // TODO
   width: number,
   height: number,
@@ -75,15 +74,19 @@ export type CreateBlankMap = {
 }
 
 export type CreateCloneMap = {
-  name: string,
   clone: string,
 }
 
 export type CreateUploadMap = {
-  name: string,
 }
 
-export type CreateMap = CreateBlankMap | CreateCloneMap | CreateUploadMap;
+export type CreateMap = {
+  name: string,
+} & (
+  { blank: CreateBlankMap } |
+  { clone: CreateCloneMap } |
+  { upload: CreateUploadMap }
+)
 
 // queries (name and content type) that can be received from the server
 export interface ServerQueryMap {

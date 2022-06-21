@@ -11,13 +11,20 @@
   let defaultLayers = true
 
   let clone = ''
+  
+  let mapUploaded = false
 
   let creationMethod: 'blank' | 'clone' | 'upload' = 'blank'
 
   let mapInfos = []
-  $: server.query('maps').then(infos => mapInfos = infos)
+  $: server.query('maps').then(infos => {
+    infos.sort((a, b) => a.name.localeCompare(b.name))
+    mapInfos = infos
+  })
 
   function onFileChange(e: Event) {
+    mapUploaded = false
+
     const file = (e.target as HTMLInputElement).files[0]
     const reader = new FileReader()
 
@@ -31,6 +38,7 @@
       server.off('refused', onRefused)
       server.off('uploadcomplete', onUpload)
       showInfo('Map upload complete.')
+      mapUploaded = true
     }
 
     reader.onload = async () => {
@@ -53,28 +61,32 @@
 
   async function onCreateMap() {
     if (name === '') {
-      showError('You must enter a map name first.')
+      showError('Please enter a map name first.')
       return
     }
 
     let create: CreateMap
     if (creationMethod === 'blank') {
       create = {
-        name, width, height, defaultLayers
+        name, blank: { width, height, defaultLayers }
       }
     }
     else if (creationMethod === 'clone') {
       if (clone === '') {
-        showError('You must select the name of the map to clone first.')
+        showError('Please select the map to clone first.')
         return
       }
       create = {
-        name, clone
+        name, clone: { clone }
       }
     }
     else if (creationMethod === 'upload') {
+      if (!mapUploaded) {
+        showError('Please upload a map first.')
+        return
+      }
       create = {
-        name
+        name, upload: {}
       }
     }
     
