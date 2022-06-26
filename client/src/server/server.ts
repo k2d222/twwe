@@ -21,6 +21,9 @@ export class Server {
       'refused': [],
       'creategroup': [],
       'createlayer': [],
+      'uploadcomplete': [],
+      'createmap': [],
+      'deletemap': [],
     }
   }
   
@@ -121,5 +124,21 @@ export class Server {
       type, content
     })
     this.socket.send(message)
+  }
+
+  sendBinaryBlocking(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void> {
+    const bytes = data.byteLength
+    return new Promise((resolve) => {
+      this.socket.send(data)
+      const interval = setInterval(() => {
+        if (this.socket.bufferedAmount === 0) {
+          clearInterval(interval)
+          resolve()
+        }
+        else {
+          if (onProgress) onProgress(bytes - this.socket.bufferedAmount)
+        }
+      }, 200)
+    })
   }
 }

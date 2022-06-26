@@ -121,7 +121,7 @@
       server.off('layerchange', onLayerChange)
     }
 
-    showInfo('Asking permission to server…', false)
+    showInfo('Asking permission to server…', 'none')
     server.on('refused', onRefused)
     server.on('layerchange', onLayerChange)
     server.send('layerchange', e.detail)
@@ -141,7 +141,7 @@
       server.off('groupchange', onGroupChange)
     }
 
-    showInfo('Asking permission to server…', false)
+    showInfo('Asking permission to server…', 'none')
     server.on('refused', onRefused)
     server.on('groupchange', onGroupChange)
     server.send('groupchange', e.detail)

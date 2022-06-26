@@ -124,6 +124,36 @@ pub struct MapInfo {
     pub users: u32,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateBlankParams {
+    pub version: Option<twmap::Version>,
+    pub width: u32,
+    pub height: u32,
+    pub default_layers: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCloneParams {
+    pub clone: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CreateParams {
+    Blank(CreateBlankParams),
+    Clone(CreateCloneParams),
+    Upload {},
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateMap {
+    pub name: String,
+    #[serde(flatten)]
+    pub params: CreateParams,
+}
+
 #[derive(Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RoomRequest {
@@ -154,6 +184,8 @@ pub enum RoomResponse {
 pub enum GlobalRequest {
     Join(String), // join a room
     Maps,
+    CreateMap(CreateMap),
+    DeleteMap(String),
 }
 
 #[derive(Serialize)]
@@ -162,6 +194,11 @@ pub enum GlobalResponse {
     Maps(Vec<MapInfo>),
     Join(bool),
     Refused(String),
+    UploadComplete,
+
+    // TODO: broadcast those two and dynamically update the map list in the client.
+    CreateMap(String),
+    DeleteMap(String),
 }
 
 #[derive(Deserialize)]

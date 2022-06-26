@@ -2,13 +2,19 @@
 	import { createEventDispatcher } from 'svelte'
 
 	export let type: 'info' | 'warning' | 'error' | '' = ''
-	export let closable = false
+	export let controls: 'closable' | 'yesno' | 'none' = 'none'
 	export let message = ""
 
 	const dispatch = createEventDispatcher()
 	
 	function onClose() {
 		dispatch('close')
+	}
+	function onYes() {
+		dispatch('close', true)
+	}
+	function onNo() {
+		dispatch('close', false)
 	}
 </script>
 
@@ -26,8 +32,13 @@
     <slot></slot>
   </div>
 	
-	{#if closable}
+	{#if controls === 'closable'}
 		<button on:click={onClose}>Close</button>
+	{:else if controls === 'yesno'}
+		<div class="buttons">
+			<button on:click={onNo}>Cancel</button>
+			<button on:click={onYes}>Proceed</button>
+		</div>
 	{/if}
 
 </div>
