@@ -1,11 +1,10 @@
 use std::{
     collections::HashMap,
-    env,
-    error::Error,
-    io,
+    env, io,
     net::SocketAddr,
     path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
+    time::SystemTime,
 };
 
 use glob::glob;
@@ -26,7 +25,12 @@ use tungstenite::Message;
 use twmap::TwMap;
 
 type Tx = UnboundedSender<Message>;
-type Res<T> = Result<T, Box<dyn Error>>;
+type Res = Result<ResponseContent, &'static str>;
+
+fn server_error<E: std::fmt::Display>(err: E) -> &'static str {
+    log::error!("{}", err);
+    "internal server error"
+}
 
 pub struct Peer {
     // name: String, // TODO add more information about users
@@ -65,48 +69,126 @@ impl Server {
         self.rooms().get(name).map(Arc::to_owned)
     }
 
-    fn handle_join_room(&self, peer: &mut Peer, room_name: String) -> Res<()> {
-        if let Some(room) = &peer.room {
-            room.remove_peer(peer);
+    fn respond(&self, peer: &Peer, id: u32, content: Res) {
+        let msg = Response {
+            timestamp: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            id,
+            content,
+        };
+        let str = serde_json::to_string(&msg).unwrap(); // this must not fail
+        peer.tx.unbounded_send(Message::Text(str)).ok(); // this is ok to fail (peer logout)
+    }
+
+    // fn broadcast_to_all(&self, content: ResponseContent) {
+    //     let msg = Broadcast {
+    //         timestamp: SystemTime::now()
+    //             .duration_since(SystemTime::UNIX_EPOCH)
+    //             .unwrap()
+    //             .as_secs(),
+    //         content,
+    //     };
+
+    //     let str = serde_json::to_string(&msg).unwrap(); // this must not fail
+    //     let msg = Message::Text(str);
+
+    //     for room in self.rooms().values() {
+    //         for tx in room.peers().values() {
+    //             tx.unbounded_send(msg.to_owned()).ok();
+    //         }
+    //     }
+    // }
+
+    fn broadcast_to_room(&self, peer: &Peer, content: ResponseContent) {
+        let msg = Broadcast {
+            timestamp: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            content,
+        };
+
+        let str = serde_json::to_string(&msg).unwrap(); // this must not fail
+        let msg = Message::Text(str);
+
+        if let Some(room) = peer.room.clone() {
+            for tx in room.peers().values() {
+                tx.unbounded_send(msg.to_owned()).ok();
+            }
         }
-
-        let room = self
-            .room(&room_name)
-            .ok_or("peer wants to join non-existing room")?;
-
-        room.add_peer(peer);
-        peer.room = Some(room);
-
-        // send acknowledgement
-        let str = serde_json::to_string(&GlobalResponse::Join(true))?;
-        peer.tx.unbounded_send(Message::Text(str))?;
-        Ok(())
     }
 
-    fn handle_query_maps(&self, peer: &Peer) -> Res<()> {
-        let maps: Vec<MapInfo> = self
-            .rooms()
-            .iter()
-            .map(|(name, map)| MapInfo {
-                name: name.to_owned(),
-                users: map.peers().len() as u32,
-            })
-            .collect();
-        let str = serde_json::to_string(&GlobalResponse::Maps(maps))?;
-        peer.tx.unbounded_send(Message::Text(str))?;
-        Ok(())
+    fn broadcast_to_others(&self, peer: &Peer, content: ResponseContent) {
+        let msg = Broadcast {
+            timestamp: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            content,
+        };
+
+        let str = serde_json::to_string(&msg).unwrap(); // this must not fail
+        let msg = Message::Text(str);
+
+        if let Some(room) = peer.room.clone() {
+            for (addr, tx) in room.peers().iter() {
+                if !addr.eq(&peer.addr) {
+                    tx.unbounded_send(msg.to_owned()).ok();
+                }
+            }
+        }
     }
 
-    fn handle_create_map(&self, peer: &Peer, create_map: CreateMap) -> Result<(), &'static str> {
+    fn broadcast_users(&self, peer: &Peer) {
+        let list_users = ListUsers {
+            global_count: self.rooms().values().map(|r| r.peer_count() as u32).sum(),
+            room_count: peer.room.clone().map(|r| r.peer_count() as u32),
+        };
+
+        self.broadcast_to_room(&peer, ResponseContent::ListUsers(list_users));
+    }
+
+    fn respond_and_broadcast(&self, peer: &Peer, id: u32, content: Res) {
+        self.respond(peer, id, content.clone());
+
+        if let Ok(content) = content {
+            match content {
+                ResponseContent::CreateMap(_) => (),
+                ResponseContent::JoinMap(_) => {
+                    peer.room.clone().unwrap().send_map(&peer).unwrap();
+                    self.broadcast_users(peer);
+                }
+                ResponseContent::SaveMap(_) => (),
+                ResponseContent::DeleteMap(_) => (),
+                ResponseContent::CreateGroup(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::EditGroup(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::ReorderGroup(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::DeleteGroup(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::CreateLayer(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::EditLayer(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::ReorderLayer(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::DeleteLayer(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::EditTile(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::SendMap(_) => (),
+                ResponseContent::ListUsers(_) => (),
+                ResponseContent::ListMaps(_) => (),
+                ResponseContent::UploadComplete => (),
+            }
+        }
+    }
+
+    fn handle_create_map(&self, peer: &Peer, create_map: CreateMap) -> Res {
         if create_map.name == "" {
-            return Err("empty name".into());
+            return Err("empty name");
         }
         if self.room(&create_map.name).is_some() {
-            return Err("name already taken".into());
+            return Err("name already taken");
         }
 
         match create_map.params {
-            CreateParams::Blank(params) => {
+            CreateParams::Blank(ref params) => {
                 let mut rooms = self.rooms.lock().unwrap();
                 let mut map = TwMap::empty(params.version.unwrap_or(twmap::Version::DDNet06));
                 let mut group = twmap::Group::physics();
@@ -123,7 +205,7 @@ impl Server {
                 map.save_file(&path).unwrap();
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
-            CreateParams::Clone(params) => {
+            CreateParams::Clone(ref params) => {
                 let room = self
                     .room(&params.clone)
                     .ok_or("cannot clone non-existing map")?;
@@ -141,62 +223,150 @@ impl Server {
             }
         }
 
-        let str = serde_json::to_string(&GlobalResponse::CreateMap(create_map.name)).unwrap();
-        peer.tx.unbounded_send(Message::Text(str)).ok();
-        Ok(())
+        Ok(ResponseContent::CreateMap(create_map))
     }
 
-    fn handle_upload_map(&self, peer: &Peer, map: &mut TwMap) -> Res<()> {
-        let path: PathBuf = format!("uploads/{}.map", peer.addr).into();
-        map.save_file(&path)?;
-        let str = serde_json::to_string(&GlobalResponse::UploadComplete)?;
-        peer.tx.unbounded_send(Message::Text(str))?;
-        Ok(())
+    fn handle_join_map(&self, peer: &mut Peer, join_map: JoinMap) -> Res {
+        if let Some(room) = &peer.room {
+            room.remove_peer(peer);
+        }
+
+        let room = self.room(&join_map.name).ok_or("map does not exist")?;
+
+        room.add_peer(peer);
+        peer.room = Some(room);
+
+        Ok(ResponseContent::JoinMap(join_map))
     }
 
-    fn handle_delete_map(&self, peer: &Peer, name: String) -> Result<(), &'static str> {
-        match self.room(&name) {
+    fn handle_save_map(&self, _peer: &mut Peer, save_map: SaveMap) -> Res {
+        let room = self.room(&save_map.name).ok_or("map does not exist")?;
+        room.save_map()?;
+        Ok(ResponseContent::SaveMap(save_map))
+    }
+
+    fn handle_delete_map(&self, _peer: &Peer, delete_map: DeleteMap) -> Res {
+        match self.room(&delete_map.name) {
             Some(room) => {
                 if room.peers().len() != 0 {
-                    return Err("map contains users");
+                    Err("map contains users")
                 } else {
-                    self.rooms().remove(&name);
-                    std::fs::remove_file(room.map.path.to_owned()).unwrap();
+                    self.rooms().remove(&delete_map.name);
+                    std::fs::remove_file(room.map.path.to_owned()).map_err(server_error)?;
+                    Ok(ResponseContent::DeleteMap(delete_map))
                 }
             }
-            None => return Err("no map found with the given name"),
+            None => Err("no map found with the given name"),
         }
-
-        let str = serde_json::to_string(&GlobalResponse::DeleteMap(name)).unwrap();
-        peer.tx.unbounded_send(Message::Text(str)).ok();
-        Ok(())
     }
 
-    fn handle_request(&self, peer: &mut Peer, req: Request) -> Res<()> {
-        match req {
-            Request::Global(req) => match req {
-                GlobalRequest::Join(room) => self.handle_join_room(peer, room),
-                GlobalRequest::Maps => self.handle_query_maps(peer),
-                GlobalRequest::CreateMap(create_map) => {
-                    self.handle_create_map(peer, create_map).map_err(|e| {
-                        let str =
-                            serde_json::to_string(&GlobalResponse::Refused(e.to_owned())).unwrap();
-                        peer.tx.unbounded_send(Message::Text(str)).ok();
-                        e.into()
-                    })
-                }
-                GlobalRequest::DeleteMap(name) => self.handle_delete_map(peer, name).map_err(|e| {
-                    let str =
-                        serde_json::to_string(&GlobalResponse::Refused(e.to_owned())).unwrap();
-                    peer.tx.unbounded_send(Message::Text(str)).ok();
-                    e.into()
-                }),
-            },
-            Request::Room(req) => {
-                let room = { peer.room.clone().ok_or("peer is not in a room")? };
-                room.handle_request(peer, req)
-            }
-        }
+    fn handle_create_group(&self, peer: &mut Peer, create_group: CreateGroup) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.create_group(&create_group);
+        Ok(ResponseContent::CreateGroup(create_group))
+    }
+
+    fn handle_edit_group(&self, peer: &mut Peer, edit_group: EditGroup) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.edit_group(&edit_group)?;
+        Ok(ResponseContent::EditGroup(edit_group))
+    }
+
+    fn handle_reorder_group(&self, peer: &mut Peer, reorder_group: ReorderGroup) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.reorder_group(&reorder_group)?;
+        Ok(ResponseContent::ReorderGroup(reorder_group))
+    }
+
+    fn handle_delete_group(&self, peer: &mut Peer, delete_group: DeleteGroup) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.delete_group(&delete_group)?;
+        Ok(ResponseContent::DeleteGroup(delete_group))
+    }
+
+    fn handle_create_layer(&self, peer: &mut Peer, create_layer: CreateLayer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.create_layer(&create_layer)?;
+        Ok(ResponseContent::CreateLayer(create_layer))
+    }
+
+    fn handle_edit_layer(&self, peer: &mut Peer, edit_layer: EditLayer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.edit_layer(&edit_layer)?;
+        Ok(ResponseContent::EditLayer(edit_layer))
+    }
+
+    fn handle_reorder_layer(&self, peer: &mut Peer, reorder_layer: ReorderLayer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.reorder_layer(&reorder_layer)?;
+        Ok(ResponseContent::ReorderLayer(reorder_layer))
+    }
+
+    fn handle_delete_layer(&self, peer: &mut Peer, delete_layer: DeleteLayer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.delete_layer(&delete_layer)?;
+        Ok(ResponseContent::DeleteLayer(delete_layer))
+    }
+
+    fn handle_edit_tile(&self, peer: &mut Peer, edit_tile: EditTile) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.set_tile(&edit_tile)?;
+        Ok(ResponseContent::EditTile(edit_tile))
+    }
+
+    fn handle_send_map(&self, peer: &Peer, send_map: SendMap) -> Res {
+        let room = self
+            .room(&send_map.name)
+            .ok_or("user is not connected to a map")?;
+        room.send_map(peer)?;
+        Ok(ResponseContent::SendMap(send_map))
+    }
+
+    fn handle_list_maps(&self) -> Res {
+        let maps: Vec<MapInfo> = self
+            .rooms()
+            .iter()
+            .map(|(name, map)| MapInfo {
+                name: name.to_owned(),
+                users: map.peers().len() as u32,
+            })
+            .collect();
+        Ok(ResponseContent::ListMaps(ListMaps { maps }))
+    }
+
+    fn handle_list_users(&self, peer: &Peer) -> Res {
+        Ok(ResponseContent::ListUsers(ListUsers {
+            global_count: self.rooms().values().map(|r| r.peer_count() as u32).sum(),
+            room_count: peer.room.clone().map(|r| r.peer_count() as u32),
+        }))
+    }
+
+    fn handle_request(&self, peer: &mut Peer, req: Request) {
+        let res = match req.content {
+            RequestContent::CreateMap(content) => self.handle_create_map(peer, content),
+            RequestContent::JoinMap(content) => self.handle_join_map(peer, content),
+            RequestContent::SaveMap(content) => self.handle_save_map(peer, content),
+            RequestContent::DeleteMap(content) => self.handle_delete_map(peer, content),
+            RequestContent::CreateGroup(content) => self.handle_create_group(peer, content),
+            RequestContent::EditGroup(content) => self.handle_edit_group(peer, content),
+            RequestContent::ReorderGroup(content) => self.handle_reorder_group(peer, content),
+            RequestContent::DeleteGroup(content) => self.handle_delete_group(peer, content),
+            RequestContent::CreateLayer(content) => self.handle_create_layer(peer, content),
+            RequestContent::EditLayer(content) => self.handle_edit_layer(peer, content),
+            RequestContent::ReorderLayer(content) => self.handle_reorder_layer(peer, content),
+            RequestContent::DeleteLayer(content) => self.handle_delete_layer(peer, content),
+            RequestContent::EditTile(content) => self.handle_edit_tile(peer, content),
+            RequestContent::SendMap(content) => self.handle_send_map(peer, content),
+            RequestContent::ListUsers => self.handle_list_users(peer),
+            RequestContent::ListMaps => self.handle_list_maps(),
+        };
+        self.respond_and_broadcast(peer, req.id, res);
+    }
+
+    fn handle_upload_map(&self, peer: &Peer, map: &mut TwMap) -> Res {
+        let path: PathBuf = format!("uploads/{}.map", peer.addr).into();
+        map.save_file(&path).map_err(server_error)?;
+        Ok(ResponseContent::UploadComplete)
     }
 
     async fn handle_connection(&self, raw_stream: TcpStream, addr: SocketAddr) {
@@ -222,9 +392,7 @@ impl Server {
 
                     match serde_json::from_str(&text) {
                         Ok(req) => {
-                            self.handle_request(&mut peer, req).unwrap_or_else(|e| {
-                                log::error!("error occured while handling request: {}", e);
-                            });
+                            self.handle_request(&mut peer, req);
                         }
                         Err(e) => {
                             log::error!("failed to parse message: {}", e);
@@ -236,22 +404,17 @@ impl Server {
 
                     match TwMap::parse(&data) {
                         Ok(mut map) => {
-                            self.handle_upload_map(&peer, &mut map).unwrap_or_else(|e| {
-                                log::error!("failed to upload map: {}", e);
-                            });
+                            let res = self.handle_upload_map(&peer, &mut map);
+                            self.respond(&peer, 0, res);
                         }
                         Err(e) => {
                             log::error!("failed to parse uploaded map: {}", e);
-                            let str = serde_json::to_string(&GlobalResponse::Refused(
-                                "not a valid map file".into(),
-                            ))
-                            .unwrap();
-                            peer.tx.unbounded_send(Message::Text(str)).ok();
+                            self.respond(&peer, 0, Err("not a valid map file"))
                         }
                     }
                 }
                 _ => {
-                    log::debug!("unhandled message type from {}", addr);
+                    log::warn!("unhandled message type from {}", addr);
                 }
             }
 
@@ -263,6 +426,8 @@ impl Server {
         if let Some(room) = &peer.room {
             room.remove_peer(&peer);
         }
+
+        self.broadcast_users(&peer);
 
         // if the peer uploaded a map but did not use it, we want to delete it now.
         let upload_path: PathBuf = format!("uploads/{}.map", peer.addr).into();

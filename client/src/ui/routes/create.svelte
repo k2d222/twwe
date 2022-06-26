@@ -17,37 +17,26 @@
   let creationMethod: 'blank' | 'clone' | 'upload' = 'blank'
 
   let mapInfos = []
-  $: server.query('maps').then(infos => {
-    infos.sort((a, b) => a.name.localeCompare(b.name))
-    mapInfos = infos
+  $: server.query('listmaps', null).then(listMaps => {
+    listMaps.maps.sort((a, b) => a.name.localeCompare(b.name))
+    mapInfos = listMaps.maps
   })
 
   function onFileChange(e: Event) {
-    mapUploaded = false
-
     const file = (e.target as HTMLInputElement).files[0]
     const reader = new FileReader()
 
-    const onRefused = (reason: string) => {
-      server.off('refused', onRefused)
-      server.off('uploadcomplete', onUpload)
-      showError('Failed to upload map: ' + reason)
-    }
-
-    const onUpload = () => {
-      server.off('refused', onRefused)
-      server.off('uploadcomplete', onUpload)
-      showInfo('Map upload complete.')
-      mapUploaded = true
-    }
-
     reader.onload = async () => {
       const data = reader.result as ArrayBuffer
-      server.on('refused', onRefused)
-      server.on('uploadcomplete', onUpload)
-      await server.sendBinaryBlocking(data, (progress) => {
-        showInfo("Uploading map " + Math.round(progress / data.byteLength * 100) + "% …", 'none')
-      })
+      try {
+        await server.uploadMap(data, (progress) => {
+          showInfo("Uploading map " + Math.round(progress / data.byteLength * 100) + "% …", 'none')
+        })
+        showInfo('Map upload complete.')
+      }
+      catch (e) {
+        showError('Failed to upload map: ' + e)
+      }
     }
     reader.onerror = () => {
       showError("Failed to load the file from your computer.")
@@ -55,7 +44,6 @@
     reader.onprogress = (e) => {
       showInfo("Loading map " + Math.round(e.loaded / e.total * 100) + "% …", 'none')
     }
-
     reader.readAsArrayBuffer(file)
   }
 
@@ -91,18 +79,13 @@
     }
     
     showInfo('Querying the server…', 'none')
-    const onRefused = (err: string) => {
-      showError('Map creation refused: ' + err)
-    }
-    // COMBAK: this is ugly, need to refactor server error handling globally
-    server.on('refused', onRefused)
-    const success = await server.query('createmap', create)
-    server.off('refused', onRefused)
-    if (success) {
+    try {
+      await server.query('createmap', create)
       clearDialog()
       navigate('/edit/' + name)
-    } else {
-      showError('Map creation failed.')
+    }
+    catch (e) {
+      showError('Map creation failed: ' + e)
     }
   }
 
