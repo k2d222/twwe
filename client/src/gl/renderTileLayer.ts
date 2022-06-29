@@ -59,18 +59,18 @@ export class RenderTileLayer extends RenderLayer {
     }
 
     // Enable texture
-    gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord);
-    gl.uniform1i(shader.locs.unifs.uTexCoord, 1);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture.tex);
+    gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
+    gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
+    gl.bindTexture(gl.TEXTURE_2D, this.texture.tex)
 
     // Vertex colors are not needed
-    gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor);
-    gl.uniform1i(shader.locs.unifs.uVertexColor, 0);
+    gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
+    gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
 
     // Set color mask
     const { r, g, b, a } = this.layer.color
     const col = [r, g, b, a].map(x => x / 255)
-    gl.uniform4fv(shader.locs.unifs.uColorMask, col);
+    gl.uniform4fv(shader.locs.unifs.uColorMask, col)
 
     const { x1, x2, y1, y2 } = viewport.screen()
     const minX = Math.max(0, Math.floor(x1 / this.chunkSize))
@@ -82,19 +82,25 @@ export class RenderTileLayer extends RenderLayer {
       for (let x = minX; x < maxX; x++) {
         const { tileCount, vertex, texCoord } = this.buffers[y][x]
         // Vertex attribute
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertex);
-        gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex)
+        gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0)
 
         // Texture coord attribute
-        gl.bindBuffer(gl.ARRAY_BUFFER, texCoord);
-        gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.TRIANGLES, 0, tileCount * 6);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoord)
+        gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0)
+        gl.drawArrays(gl.TRIANGLES, 0, tileCount * 6)
       }
     }
 
     // keep textures disabled by default
-    gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
-    gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
+    gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
+    gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
+    
+    this.renderOutline()
+  }
+  
+  private renderOutline() {
+    
   }
 
   private createBuffers() {

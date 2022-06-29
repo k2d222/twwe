@@ -29,13 +29,13 @@ export async function downloadMap(mapName: string) {
   const blob = new Blob([buf], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
 
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = mapName + '.map';
+  const link = document.createElement('a')
+  link.href = url
+  link.download = mapName + '.map'
 
-  document.body.append(link);
-  link.click();
-  link.remove();
+  document.body.append(link)
+  link.click()
+  link.remove()
 }
 
 export function getLayerImage(rmap: RenderMap, groupID: number, layerID: number) {

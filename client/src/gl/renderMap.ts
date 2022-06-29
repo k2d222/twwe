@@ -138,6 +138,6 @@ export class RenderMap {
     if (this.gameGroup.visible && this.gameLayer.visible)
       this.gameLayer.render()
     
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindTexture(gl.TEXTURE_2D, null)
   }
 }

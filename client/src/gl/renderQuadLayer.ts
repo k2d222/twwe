@@ -47,41 +47,41 @@ export class RenderQuadLayer extends RenderLayer {
       return
 
     if (!this.texture) { // textureless quad
-      gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
-      gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
+      gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
+      gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
     }
     else if (!this.texture.loaded) {
       this.texture.load()
     }
     else {
-      gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord);
-      gl.uniform1i(shader.locs.unifs.uTexCoord, 1);
-      gl.bindTexture(gl.TEXTURE_2D, this.texture.tex);
+      gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
+      gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
+      gl.bindTexture(gl.TEXTURE_2D, this.texture.tex)
     }
 
-    gl.enableVertexAttribArray(shader.locs.attrs.aVertexColor);
-    gl.uniform1i(shader.locs.unifs.uVertexColor, 1);
+    gl.enableVertexAttribArray(shader.locs.attrs.aVertexColor)
+    gl.uniform1i(shader.locs.unifs.uVertexColor, 1)
 
-    gl.uniform4fv(shader.locs.unifs.uColorMask, [1.0, 1.0, 1.0, 1.0]);
+    gl.uniform4fv(shader.locs.unifs.uColorMask, [1.0, 1.0, 1.0, 1.0])
 
     // Set attributes
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf);
-    gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf)
+    gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0)
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf);
-    gl.vertexAttribPointer(shader.locs.attrs.aVertexColor, 4, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf)
+    gl.vertexAttribPointer(shader.locs.attrs.aVertexColor, 4, gl.FLOAT, false, 0, 0)
 
     if (this.texture) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf);
-      gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf)
+      gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0)
     }
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuf);
-    gl.drawElements(gl.TRIANGLES, this.layer.quads.length * 6, gl.UNSIGNED_SHORT, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuf)
+    gl.drawElements(gl.TRIANGLES, this.layer.quads.length * 6, gl.UNSIGNED_SHORT, 0)
 
     // keep textures disabled by default
-    gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord);
-    gl.uniform1i(shader.locs.unifs.uTexCoord, 0);
+    gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
+    gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
   }
 
   private initBuffers() {
@@ -100,17 +100,17 @@ export class RenderQuadLayer extends RenderLayer {
       t++
     }
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, this.vertexArr, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf)
+    gl.bufferData(gl.ARRAY_BUFFER, this.vertexArr, gl.STATIC_DRAW)
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, this.colorArr, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf)
+    gl.bufferData(gl.ARRAY_BUFFER, this.colorArr, gl.STATIC_DRAW)
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, this.texCoordArr, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf)
+    gl.bufferData(gl.ARRAY_BUFFER, this.texCoordArr, gl.STATIC_DRAW)
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuf);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indexArr, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuf)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indexArr, gl.STATIC_DRAW)
   }
 }
 
@@ -120,7 +120,7 @@ function makeVertices(q: LayerQuad) {
     q.points[2].x / 512 / 64, q.points[2].y / 512 / 64,
     q.points[3].x / 512 / 64, q.points[3].y / 512 / 64,
     q.points[1].x / 512 / 64, q.points[1].y / 512 / 64,
-  ];
+  ]
 }
 
 function makeColors(q: LayerQuad) {
@@ -130,7 +130,7 @@ function makeColors(q: LayerQuad) {
     ...comp(q.colors[2]),
     ...comp(q.colors[3]),
     ...comp(q.colors[1]),
-  ];
+  ]
 }
 
 function makeTexCoords(q: LayerQuad) {
