@@ -212,5 +212,5 @@
     on:deletelayer={onDeleteLayer} on:deletegroup={onDeleteGroup}
     on:reorderlayer={onReorderLayer} on:reordergroup={onReorderGroup}
   />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
+  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
 </div>
