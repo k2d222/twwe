@@ -1,25 +1,25 @@
 export enum TileFlag {
-	VFLIP  = 1,
-	HFLIP  = 2,
-	OPAQUE = 4,
-	ROTATE = 8,
+  VFLIP  = 1,
+  HFLIP  = 2,
+  OPAQUE = 4,
+  ROTATE = 8,
 }
 
 export enum LayerType {
-	INVALID =	0,
-	GAME    =	1,
-	TILES   =	2,
-	QUADS   =	3,
+  INVALID = 0,
+  GAME    = 1,
+  TILES   = 2,
+  QUADS   = 3,
 }
 
 export enum MapItemType {
-	VERSION   = 0,
-	INFO      = 1,
-	IMAGE     = 2,
-	ENVELOPE  = 3,
-	GROUP     = 4,
-	LAYER     = 5,
-	ENVPOINTS = 6,
+  VERSION   = 0,
+  INFO      = 1,
+  IMAGE     = 2,
+  ENVELOPE  = 3,
+  GROUP     = 4,
+  LAYER     = 5,
+  ENVPOINTS = 6,
 }
 
 export type Color = {

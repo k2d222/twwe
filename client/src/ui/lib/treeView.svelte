@@ -185,7 +185,7 @@
       </div>
     {/each}
 
-    <button	on:click={onCreateGroup}>Add group</button>
+    <button on:click={onCreateGroup}>Add group</button>
 
   </div>
 </nav>

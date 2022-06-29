@@ -61,12 +61,12 @@ export class Map {
     const groups = []
 
     for (let g = 0; g < groupsInfo.num; g++) {
-    	const groupItem = df.getItem(groupsInfo.start + g)
-    	const groupInfo = parseMapGroup(groupItem.data)
+      const groupItem = df.getItem(groupsInfo.start + g)
+      const groupInfo = parseMapGroup(groupItem.data)
 
-    	const grp = new Group()
+      const grp = new Group()
       grp.load(df, groupInfo)
-    	groups.push(grp)
+      groups.push(grp)
     }
 
     return groups

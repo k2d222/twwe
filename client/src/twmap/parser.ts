@@ -41,9 +41,9 @@ export function parseMapLayerQuads(layerData: ArrayBuffer): MapLayerQuads {
   const d = new DataReader(layerData)
   d.reset()
 
-	/*obj.version =*/ d.uint32()
-	/*obj.type =*/ d.uint32()
-	/*obj.flags =*/ d.uint32()
+  /*obj.version =*/ d.uint32()
+  /*obj.type =*/ d.uint32()
+  /*obj.flags =*/ d.uint32()
 
   return {
     version: d.uint32(),
@@ -58,9 +58,9 @@ export function parseMapLayerTiles(layerData: ArrayBuffer): MapLayerTiles {
   const d = new DataReader(layerData)
   d.reset()
 
-	/*obj.version =*/ d.uint32()
-	/*obj.type =*/ d.uint32()
-	/*obj.flags =*/ d.uint32()
+  /*obj.version =*/ d.uint32()
+  /*obj.type =*/ d.uint32()
+  /*obj.flags =*/ d.uint32()
 
   return {
     version: d.uint32(),
