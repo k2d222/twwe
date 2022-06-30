@@ -161,7 +161,7 @@
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
-      showError('Failed to reorder group: ' + e)
+      showError('Failed to reorder layer: ' + e)
     }
   }
   async function onDeleteGroup(e: Event & { detail: DeleteGroup }) {
@@ -172,7 +172,7 @@
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
-      showError('Failed to reorder group: ' + e)
+      showError('Failed to delete group: ' + e)
     }
   }
   async function onDeleteLayer(e: Event & { detail: DeleteLayer }) {
@@ -183,7 +183,7 @@
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
-      showError('Failed to reorder group: ' + e)
+      showError('Failed to delete layer: ' + e)
     }
   }
 
