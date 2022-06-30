@@ -14,7 +14,7 @@ function isBroadcast(data: any): data is Broadcast<any> {
 
 export class Server {
   socket: WebSocket
-  queryListeners: { [K in keyof ResponseContent]: QueryListener<K>[] }
+  queryListeners: { [key: number]: QueryListener<any> }
   broadcastListeners: { [K in keyof ResponseContent]: BroadcastListener<K>[] }
   binaryListeners: BinaryListener[]
     
@@ -22,30 +22,7 @@ export class Server {
     this.socket = new WebSocket(`ws://${address}:${port}/`)
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = (e) => this.onMessage(e)
-    this.queryListeners = {
-      'createmap': [],
-      'joinmap': [],
-      // 'editmap': [],
-      'savemap': [],
-      'deletemap': [],
-  
-      'creategroup': [],
-      'editgroup': [],
-      'reordergroup': [],
-      'deletegroup': [],
-  
-      'createlayer': [],
-      'editlayer': [],
-      'reorderlayer': [],
-      'deletelayer': [],
-  
-      'edittile': [],
-
-      'sendmap': [],
-      'listusers': [],
-      'listmaps': [],
-      'uploadcomplete': [],
-    }
+    this.queryListeners = {}
     this.broadcastListeners = {
       'createmap': [],
       'joinmap': [],
@@ -96,9 +73,6 @@ export class Server {
   }
   
   // to help typescript a little
-  private getQueryListeners<K extends keyof ResponseContent>(type: K) {
-    return this.queryListeners[type] as QueryListener<K>[]
-  }
   private getBroadcastListeners<K extends keyof ResponseContent>(type: K) {
     return this.broadcastListeners[type] as BroadcastListener<K>[]
   }
@@ -120,22 +94,20 @@ export class Server {
       const listener = (x: Response<K>) => {
         if (x.id && x.id === reqID) {
           window.clearTimeout(timeoutID)
-          const index = this.getQueryListeners(type).indexOf(listener)
-          this.getQueryListeners(type).splice(index)
+          delete this.queryListeners[reqID]
           
           if ('ok' in x)
             resolve(x.ok.content)
           else
-            reject(x.err.content)
+            reject(x.err)
         }
       }
 
-      this.getQueryListeners(type).push(listener)
+      this.queryListeners[reqID] = listener
     
       if (timeout) {
         timeoutID = window.setTimeout(() => {
-          const index = this.getQueryListeners(type).indexOf(listener)
-          this.getQueryListeners(type).splice(index)
+          delete this.queryListeners[reqID]
           reject("timeout reached")
         }, timeout)
       }
@@ -158,10 +130,8 @@ export class Server {
       // this is a query response
       if (isResponse(data)) {
         if (data.id !== 0) {
-          const type = "ok" in data ? data.ok.type : data.err.type
-          for (const fn of this.getQueryListeners(type)) {
-            fn(data)
-          }
+          const fn = this.queryListeners[data.id]
+          fn(data)
         }
         else if ("ok" in data) {
           for (const fn of this.getBroadcastListeners(data.ok.type)) {
@@ -228,14 +198,13 @@ export class Server {
   uploadMap(data: ArrayBuffer, onProgress?: (_: number) => any) {
     return new Promise<void>((resolve, reject) => {
       const listener = (x: Response<'uploadcomplete'>) => {
-        let index = this.getQueryListeners('uploadcomplete').indexOf(listener)
-        this.getQueryListeners('uploadcomplete').splice(index, 1)
+        delete this.queryListeners[1]
         if ('ok' in x)
           resolve()
         else
-          reject(x.err.content)
+          reject(x.err)
       }
-      this.getQueryListeners('uploadcomplete').push(listener)
+      this.queryListeners[1] = listener
       this.sendBinaryBlocking(data, onProgress)
     })
   }

@@ -207,17 +207,14 @@ export interface ResponseOk<K extends keyof ResponseContent> {
   }
 }
 
-export interface ResponseErr<K> {
-  err: {
-    type: K
-    content: string,
-  }
+export interface ResponseErr {
+  err: string
 }
 
 export type Response<K extends keyof ResponseContent> = {
   timestamp: number,
   id: number,
-} & (ResponseOk<K> | ResponseErr<K>)
+} & (ResponseOk<K> | ResponseErr)
 
 export interface Broadcast<K extends keyof ResponseContent> {
   type: K,
