@@ -8,7 +8,7 @@ export class Viewport {
   // note on the coordinates systems:
   //  - all origins are top-left corner, x grows to the left and y down.
   //  - the pixel space correspond to on-screen pixels and may be equal
-  //    canvas space, depending on the canvas resolution.
+  //    to canvas space, depending on the canvas resolution.
   //  - the canvas space is the coordinate system of the canvas context.
   //  - the world space is indexed by tiles i.e. 1 unit = 1 tile.
   //  - the tile space world space but with integers.

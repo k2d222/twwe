@@ -3,6 +3,7 @@
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup } from '../../server/protocol'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
+  import { viewport } from '../../gl/global'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError, clearDialog } from './dialog'
@@ -121,13 +122,35 @@
         onToggleTreeView()
     }
   }
+  
+  let hoverTileStyle = ''
+
+  function updateHoverTile() {
+    const { scale, pos } = viewport
+    let { x, y } = viewport.mousePos
+    x = Math.floor(x)
+    y = Math.floor(y)
+
+    hoverTileStyle = `
+      width: ${scale}px;
+      height: ${scale}px;
+      top: ${(y - pos.y) * scale}px;
+      left: ${(x - pos.x) * scale}px;
+    `
+  }
 
 
-  function onClick(e: MouseEvent) {
+  function onMouseMove(e: MouseEvent) {
     // left button pressed
     if (e.buttons === 1 && !e.ctrlKey) {
       Editor.placeTile(rmap, ...selectedLayer, selectedID)
     }
+
+    updateHoverTile()
+  }
+
+  function onMouseWheel() {
+    updateHoverTile()
   }
 
   function onEditLayer(e: Event & { detail: EditLayer }) {
@@ -190,7 +213,9 @@
 </script>
 
 <div id="editor">
-  <div bind:this={cont} on:mousemove={onClick}></div>
+  <div bind:this={cont} on:mousemove={onMouseMove} on:wheel={onMouseWheel}>
+    <div id="hover-tile" style={hoverTileStyle}></div>
+  </div>
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>

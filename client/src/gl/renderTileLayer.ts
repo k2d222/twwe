@@ -95,12 +95,6 @@ export class RenderTileLayer extends RenderLayer {
     // keep textures disabled by default
     gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
     gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
-    
-    this.renderOutline()
-  }
-  
-  private renderOutline() {
-    
   }
 
   private createBuffers() {

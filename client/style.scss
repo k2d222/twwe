@@ -424,3 +424,10 @@ nav {
 nav.hidden .context {
   display: none;
 }
+
+#hover-tile {
+  position: absolute;
+  border: 4px solid black;
+  pointer-events: none;
+  z-index: 1;
+}
