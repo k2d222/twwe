@@ -405,11 +405,11 @@ impl Server {
                     match TwMap::parse(&data) {
                         Ok(mut map) => {
                             let res = self.handle_upload_map(&peer, &mut map);
-                            self.respond(&peer, 0, res);
+                            self.respond(&peer, 1, res);
                         }
                         Err(e) => {
                             log::error!("failed to parse uploaded map: {}", e);
-                            self.respond(&peer, 0, Err("not a valid map file"))
+                            self.respond(&peer, 1, Err("not a valid map file"))
                         }
                     }
                 }
