@@ -1,5 +1,5 @@
 import type { Map } from '../twmap/map'
-import type { TileChange, LayerChange, GroupChange, CreateLayer } from '../server/protocol'
+import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
 import { TileLayer } from '../twmap/tileLayer'
 import { QuadLayer } from '../twmap/quadLayer'
@@ -39,79 +39,94 @@ export class RenderMap {
     this.gameGroup.layers[gameLayerIndex] = this.gameLayer
   }
   
-  applyTileChange(change: TileChange) {
-    const group = this.groups[change.group]
-    const layer = group.layers[change.layer] as RenderTileLayer
+  editTile(change: EditTile) {
+    const rgroup = this.groups[change.group]
+    const rlayer = rgroup.layers[change.layer] as RenderTileLayer
     
-    const tile = layer.layer.getTile(change.x, change.y)
+    const tile = rlayer.layer.getTile(change.x, change.y)
 
     if (tile.index == change.id)
       return false
 
     tile.index = change.id
 
-    if (layer.layer.type === LayerType.GAME)
+    if (rlayer.layer.type === LayerType.GAME)
       this.gameLayer.recompute(change.x, change.y)
     else
-      layer.recompute(change.x, change.y)
+      rlayer.recompute(change.x, change.y)
     
     return true
   }
   
-  applyGroupChange(change: GroupChange) {
-    const group = this.groups[change.group]
+  editGroup(change: EditGroup) {
+    const rgroup = this.groups[change.group]
     
-    if (change.order) {
-      this.groups.splice(change.group, 1)
-      this.groups.splice(change.order, 0, group)
-    }
-    if (change.offX) group.group.offX = change.offX
-    if (change.offY) group.group.offY = change.offY
-    if (change.paraX) group.group.paraX = change.paraX
-    if (change.paraY) group.group.paraY = change.paraY
-    if (change.name) group.group.name = change.name
-    if (change.delete) this.groups.splice(change.group, 1)
+    if (change.offX) rgroup.group.offX = change.offX
+    if (change.offY) rgroup.group.offY = change.offY
+    if (change.paraX) rgroup.group.paraX = change.paraX
+    if (change.paraY) rgroup.group.paraY = change.paraY
+    if (change.name) rgroup.group.name = change.name
   }
   
-  applyLayerChange(change: LayerChange) {
+  reorderGroup(change: ReorderGroup) {
+    const [ group ] = this.map.groups.splice(change.group, 1)
+    const [ rgroup ] = this.groups.splice(change.group, 1)
+    this.map.groups.splice(change.newGroup, 0, group)
+    this.groups.splice(change.newGroup, 0, rgroup)
+  }
+  
+  deleteGroup(change: DeleteGroup) {
+    this.map.groups.splice(change.group, 1)
+    this.groups.splice(change.group, 1)
+  }
+  
+  editLayer(change: EditLayer) {
+    const rgroup = this.groups[change.group]
+    const rlayer = rgroup.layers[change.layer]
+
+    if (change.name) rlayer.layer.name = change.name
+    if ('color' in change) (rlayer.layer as TileLayer).color = change.color
+  }
+  
+  reorderLayer(change: ReorderLayer) {
     const group = this.groups[change.group]
     const layer = group.layers[change.layer]
 
-    if (change.order && 'layer' in change.order) {
-      group.layers.splice(change.layer, 1)
-      group.layers.splice(change.order.layer, 0, layer)
-    }
-    if (change.order && 'group' in change.order) {
-      group.layers.splice(change.layer, 1)
-      this.groups[change.order.group].layers.push(layer)
-    }
-    if (change.name) layer.layer.name = change.name
-    if ('color' in change) (layer.layer as TileLayer).color = change.color
-    if (change.delete) group.layers.splice(change.layer, 1)
+    group.layers.splice(change.layer, 1)
+    this.groups[change.newGroup].layers.splice(change.newLayer, 0, layer)
   }
   
-  createGroup() {
+  deleteLayer(change: DeleteLayer) {
+    this.map.groups[change.group].layers.splice(change.layer, 1)
+    this.groups[change.group].layers.splice(change.layer, 1)
+  }
+  
+  createGroup(_change: CreateGroup) {
     const group = new Group()
     const rgroup = new RenderGroup(group)
+    this.map.groups.push(group)
     this.groups.push(rgroup)
     return rgroup
   }
 
   createLayer(create: CreateLayer) {
-    const group = this.groups[create.group]
+    const group = this.map.groups[create.group]
+    const rgroup = this.groups[create.group]
     
+    let layer: TileLayer | QuadLayer
     let rlayer: RenderLayer
 
     if (create.kind === 'tiles') {
-      const layer = new TileLayer()
+      layer = new TileLayer()
       rlayer = new RenderTileLayer(layer)
     } 
     else if (create.kind === 'quads') {
-      const layer = new QuadLayer()
+      layer = new QuadLayer()
       rlayer = new RenderQuadLayer(layer)
     } 
 
-    group.layers.push(rlayer)
+    group.layers.push(layer)
+    rgroup.layers.push(rlayer)
     return rlayer
   }
   

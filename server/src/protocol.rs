@@ -22,20 +22,72 @@ use twmap::{Color, InvalidLayerKind, LayerKind};
 // This could be fixed in the future by implementing a history and versionning
 // system similar to how databases handle concurrent modifications.
 
+// MAPS
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateBlankParams {
+    pub version: Option<twmap::Version>,
+    pub width: u32,
+    pub height: u32,
+    pub default_layers: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCloneParams {
+    pub clone: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CreateParams {
+    Blank(CreateBlankParams),
+    Clone(CreateCloneParams),
+    Upload {},
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateMap {
+    pub name: String,
+    #[serde(flatten)]
+    pub params: CreateParams,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct JoinMap {
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SaveMap {
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteMap {
+    pub name: String,
+}
+
+// GROUPS
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateGroup {
+    pub name: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum OneGroupChange {
-    Order(u32),
     OffX(i32),
     OffY(i32),
     ParaX(i32),
     ParaY(i32),
     Name(String),
-    Delete(bool),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GroupChange {
+pub struct EditGroup {
     pub group: u32,
     #[serde(flatten)]
     pub change: OneGroupChange,
@@ -43,40 +95,23 @@ pub struct GroupChange {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum LayerOrderChange {
-    Group(u32),
-    Layer(u32),
+pub struct ReorderGroup {
+    pub group: u32,
+    pub new_group: u32,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteGroup {
+    pub group: u32,
+}
+
+// LAYERS
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum OneLayerChange {
-    Order(LayerOrderChange),
     Name(String),
     Color(Color),
-    Delete(bool),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LayerChange {
-    pub group: u32,
-    pub layer: u32,
-    #[serde(flatten)]
-    pub change: OneLayerChange,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TileChange {
-    pub group: u32,
-    pub layer: u32,
-    pub x: u32,
-    pub y: u32,
-    pub id: u8,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Users {
-    pub count: u32,
 }
 
 // see https://serde.rs/remote-derive.html
@@ -109,101 +144,152 @@ pub struct CreateLayer {
     #[serde(with = "SerdeLayerKind")]
     pub kind: LayerKind,
     pub group: u32,
+    pub name: String,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum InfoRequest {
-    // Room(String), // info on a specific room // TODO
-    Maps, // list of all available maps
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EditLayer {
+    pub group: u32,
+    pub layer: u32,
+    #[serde(flatten)]
+    pub change: OneLayerChange,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReorderLayer {
+    pub group: u32,
+    pub layer: u32,
+    pub new_group: u32,
+    pub new_layer: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteLayer {
+    pub group: u32,
+    pub layer: u32,
+}
+
+// TILES
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EditTile {
+    pub group: u32,
+    pub layer: u32,
+    pub x: u32,
+    pub y: u32,
+    pub id: u8,
+}
+
+// MISC
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SendMap {
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListUsers {
+    pub global_count: u32,
+    pub room_count: Option<u32>, // available if peer is in a room
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapInfo {
     pub name: String,
     pub users: u32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateBlankParams {
-    pub version: Option<twmap::Version>,
-    pub width: u32,
-    pub height: u32,
-    pub default_layers: bool,
+pub struct ListMaps {
+    pub maps: Vec<MapInfo>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateCloneParams {
-    pub clone: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum CreateParams {
-    Blank(CreateBlankParams),
-    Clone(CreateCloneParams),
-    Upload {},
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CreateMap {
-    pub name: String,
-    #[serde(flatten)]
-    pub params: CreateParams,
-}
-
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
-pub enum RoomRequest {
-    GroupChange(GroupChange),
-    LayerChange(LayerChange),
-    TileChange(TileChange),
-    CreateGroup,
-    CreateLayer(CreateLayer), // u32 is group id
-    Users,
-    Map,
-    Save,
-}
-
-#[derive(Serialize)]
-#[serde(tag = "type", content = "content", rename_all = "lowercase")]
-pub enum RoomResponse {
-    GroupChange(GroupChange),
-    LayerChange(LayerChange),
-    TileChange(TileChange),
-    Users(Users),
-    CreateGroup,
-    CreateLayer(CreateLayer), // u32 is group id
-                              // ... Plus Map, which is not json but binary
-}
-
-#[derive(Deserialize)]
-#[serde(tag = "type", content = "content", rename_all = "lowercase")]
-pub enum GlobalRequest {
-    Join(String), // join a room
-    Maps,
+pub enum RequestContent {
     CreateMap(CreateMap),
-    DeleteMap(String),
+    JoinMap(JoinMap),
+    // EditMap(EditMap),
+    SaveMap(SaveMap),
+    DeleteMap(DeleteMap),
+
+    CreateGroup(CreateGroup),
+    EditGroup(EditGroup),
+    ReorderGroup(ReorderGroup),
+    DeleteGroup(DeleteGroup),
+
+    CreateLayer(CreateLayer),
+    EditLayer(EditLayer),
+    ReorderLayer(ReorderLayer),
+    DeleteLayer(DeleteLayer),
+
+    EditTile(EditTile),
+    // CreateQuad(CreateQuad),
+    // EditQuad(EditQuad),
+    // DeleteQuad(DeleteQuad),
+    SendMap(SendMap),
+    ListUsers,
+    ListMaps,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
-pub enum GlobalResponse {
-    Maps(Vec<MapInfo>),
-    Join(bool),
-    Refused(String),
-    UploadComplete,
+pub enum ResponseContent {
+    CreateMap(CreateMap),
+    JoinMap(JoinMap),
+    // EditMap(EditMap),
+    SaveMap(SaveMap),
+    DeleteMap(DeleteMap),
 
-    // TODO: broadcast those two and dynamically update the map list in the client.
-    CreateMap(String),
-    DeleteMap(String),
+    CreateGroup(CreateGroup),
+    EditGroup(EditGroup),
+    ReorderGroup(ReorderGroup),
+    DeleteGroup(DeleteGroup),
+
+    CreateLayer(CreateLayer),
+    EditLayer(EditLayer),
+    ReorderLayer(ReorderLayer),
+    DeleteLayer(DeleteLayer),
+
+    EditTile(EditTile),
+    // CreateQuad(CreateQuad),
+    // EditQuad(EditQuad),
+    // DeleteQuad(DeleteQuad),
+    SendMap(SendMap),
+    ListUsers(ListUsers),
+    ListMaps(ListMaps),
+    UploadComplete,
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-pub enum Request {
-    Global(GlobalRequest),
-    Room(RoomRequest),
+#[derive(Clone, Debug, Deserialize)]
+pub struct Request {
+    pub timestamp: u64, // UNIX timestamp set by sender
+    pub id: u32,        // same ID will be set by server reply
+    #[serde(flatten)]
+    pub content: RequestContent,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "Result", rename_all = "lowercase")]
+enum SerdeResult<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Response {
+    pub timestamp: u64, // UNIX timestamp set by sender
+    pub id: u32,        // same ID will be set by client request
+    #[serde(with = "SerdeResult")]
+    #[serde(flatten)]
+    pub content: Result<ResponseContent, &'static str>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Broadcast {
+    pub timestamp: u64, // UNIX timestamp set by sender
+    #[serde(flatten)]
+    pub content: ResponseContent,
 }

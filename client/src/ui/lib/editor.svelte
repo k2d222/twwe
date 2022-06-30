@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { UsersData, TileChange, GroupChange, LayerChange, CreateLayer } from '../../server/protocol'
+  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup } from '../../server/protocol'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import TreeView from './treeView.svelte'
@@ -27,53 +27,74 @@
   let tileSelectorVisible = false
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
 
-  function serverOnUsers(e: UsersData) {
-    peerCount = e.count
+  function serverOnUsers(e: ListUsers) {
+    peerCount = e.roomCount
   }
 
-  function serverOnTileChange(e: TileChange) {
-    rmap.applyTileChange(e)
-  }
-
-  function serverOnLayerChange(e: LayerChange) {
-    rmap.applyLayerChange(e)
+  function serverOnEditTile(e: EditTile) {
+    rmap.editTile(e)
     rmap = rmap // hack to redraw treeview
   }
-
-  function serverOnGroupChange(e: GroupChange) {
-    rmap.applyGroupChange(e)
+  function serverOnEditGroup(e: EditGroup) {
+    rmap.editGroup(e)
     rmap = rmap // hack to redraw treeview
   }
-
-  function serverOnCreateGroup() {
-    rmap.createGroup()
+  function serverOnEditLayer(e: EditLayer) {
+    rmap.editLayer(e)
     rmap = rmap // hack to redraw treeview
   }
-
+  function serverOnCreateGroup(e: CreateGroup) {
+    rmap.createGroup(e)
+    rmap = rmap // hack to redraw treeview
+  }
   function serverOnCreateLayer(e: CreateLayer) {
     rmap.createLayer(e)
+    rmap = rmap // hack to redraw treeview
+  }
+  function serverOnDeleteGroup(e: DeleteGroup) {
+    rmap.deleteGroup(e)
+    rmap = rmap // hack to redraw treeview
+  }
+  function serverOnDeleteLayer(e: DeleteLayer) {
+    rmap.deleteLayer(e)
+    rmap = rmap // hack to redraw treeview
+  }
+  function serverOnReorderGroup(e: ReorderGroup) {
+    rmap.reorderGroup(e)
+    rmap = rmap // hack to redraw treeview
+  }
+  function serverOnReorderLayer(e: ReorderLayer) {
+    rmap.reorderLayer(e)
     rmap = rmap // hack to redraw treeview
   }
 
   onMount(() => {
     cont.append(canvas)
-    server.on('users', serverOnUsers)
-    server.on('tilechange', serverOnTileChange)
-    server.on('layerchange', serverOnLayerChange)
-    server.on('groupchange', serverOnGroupChange)
+    server.on('listusers', serverOnUsers)
+    server.on('edittile', serverOnEditTile)
+    server.on('editlayer', serverOnEditLayer)
+    server.on('editgroup', serverOnEditGroup)
     server.on('creategroup', serverOnCreateGroup)
     server.on('createlayer', serverOnCreateLayer)
-    server.send('users')
+    server.on('reordergroup', serverOnReorderGroup)
+    server.on('reorderlayer', serverOnReorderLayer)
+    server.on('deletegroup', serverOnDeleteGroup)
+    server.on('deletelayer', serverOnDeleteLayer)
+    server.send('listusers')
     canvas.focus()
   })
 
   onDestroy(() => {
-    server.off('users', serverOnUsers)
-    server.off('tilechange', serverOnTileChange)
-    server.off('layerchange', serverOnLayerChange)
-    server.off('groupchange', serverOnGroupChange)
+    server.off('listusers', serverOnUsers)
+    server.off('edittile', serverOnEditTile)
+    server.off('editlayer', serverOnEditLayer)
+    server.off('editgroup', serverOnEditGroup)
     server.off('creategroup', serverOnCreateGroup)
     server.off('createlayer', serverOnCreateLayer)
+    server.off('reordergroup', serverOnReorderGroup)
+    server.off('reorderlayer', serverOnReorderLayer)
+    server.off('deletegroup', serverOnDeleteGroup)
+    server.off('deletelayer', serverOnDeleteLayer)
   })
 
   function onToggleTreeView() {
@@ -81,7 +102,9 @@
   }
 
   async function onSaveMap() {
-    server.send('save')
+    showInfo('Saving map…', 'none')
+    await server.query('savemap', { name: map.name })
+    showInfo('Map saved on server.', 'closable')
   }
 
   function onDownloadMap() {
@@ -107,52 +130,61 @@
     }
   }
 
-  function onLayerChange(e: Event & { detail: LayerChange }) {
-    const onRefused = (e: string) => {
-      showError('Server refused that operation: ' + e)
-      server.off('refused', onRefused)
-      server.off('layerchange', onLayerChange)
-    }
-
-    // BUG: desync if the received layerchange comes from another client
-    const onLayerChange = () => {
-      clearDialog()
-      server.off('refused', onRefused)
-      server.off('layerchange', onLayerChange)
-    }
-
-    showInfo('Asking permission to server…', 'none')
-    server.on('refused', onRefused)
-    server.on('layerchange', onLayerChange)
-    server.send('layerchange', e.detail)
+  function onEditLayer(e: Event & { detail: EditLayer }) {
+    server.send('editlayer', e.detail)
   }
-
-  function onGroupChange(e: Event & { detail: GroupChange }) {
-    const onRefused = (e: string) => {
-      showError('Server refused that operation: ' + e)
-      server.off('refused', onRefused)
-      server.off('groupchange', onGroupChange)
-    }
-
-    // BUG: desync if the received groupchange comes from another client
-    const onGroupChange = () => {
-      clearDialog()
-      server.off('refused', onRefused)
-      server.off('groupchange', onGroupChange)
-    }
-
-    showInfo('Asking permission to server…', 'none')
-    server.on('refused', onRefused)
-    server.on('groupchange', onGroupChange)
-    server.send('groupchange', e.detail)
+  function onEditGroup(e: Event & { detail: EditGroup }) {
+    server.send('editgroup', e.detail)
   }
-
-  function onCreateGroup() {
-    server.send('creategroup')
+  function onCreateGroup(e: Event & { detail: CreateGroup }) {
+    server.send('creategroup', e.detail)
   }
-
   function onCreateLayer(e: Event & { detail: CreateLayer }) {
     server.send('createlayer', e.detail)
+  }
+  async function onReorderGroup(e: Event & { detail: ReorderGroup }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('reordergroup', e.detail)
+      rmap.reorderGroup(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder group: ' + e)
+    }
+  }
+  async function onReorderLayer(e: Event & { detail: ReorderLayer }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('reorderlayer', e.detail)
+      rmap.reorderLayer(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder group: ' + e)
+    }
+  }
+  async function onDeleteGroup(e: Event & { detail: DeleteGroup }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('deletegroup', e.detail)
+      rmap.deleteGroup(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder group: ' + e)
+    }
+  }
+  async function onDeleteLayer(e: Event & { detail: DeleteLayer }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('deletelayer', e.detail)
+      rmap.deleteLayer(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder group: ' + e)
+    }
   }
 
 </script>
@@ -174,6 +206,11 @@
 	</div>
   <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
-    on:layerchange={onLayerChange} on:groupchange={onGroupChange} on:createlayer={onCreateLayer} on:creategroup={onCreateGroup} />
+    on:layerchange={onEditLayer} on:groupchange={onEditGroup}
+    on:createlayer={onCreateLayer} on:creategroup={onCreateGroup}
+    on:editlayer={onEditLayer} on:editgroup={onEditGroup}
+    on:deletelayer={onDeleteLayer} on:deletegroup={onDeleteGroup}
+    on:reorderlayer={onReorderLayer} on:reordergroup={onReorderGroup}
+  />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
 </div>

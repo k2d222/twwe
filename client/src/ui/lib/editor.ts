@@ -1,4 +1,4 @@
-import type { TileChange } from '../../server/protocol'
+import type { EditTile } from '../../server/protocol'
 import { server } from '../global'
 import { Map } from '../../twmap/map'
 import { viewport, renderer, init as glInit } from '../../gl/global'
@@ -7,10 +7,8 @@ import { LayerType } from '../../twmap/types'
 
 
 export async function loadMap(mapName: string) {
-  const joined = server.query('join', mapName)
-  if (!joined)
-    throw "failed to join room"
-  const buf = await server.query('map')
+  await server.query('joinmap', { name: mapName })
+  const buf = await server.queryMap({ name: mapName })
   return new Map(mapName, buf)
 }
 
@@ -27,7 +25,7 @@ export function createRenderMap(canvas: HTMLCanvasElement, map: Map) {
 }
 
 export async function downloadMap(mapName: string) {
-  const buf = await server.query('map')
+  const buf = await server.query('sendmap', { name: mapName })
   const blob = new Blob([buf], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
 
@@ -54,7 +52,7 @@ export function placeTile(rmap: RenderMap, group: number, layer: number, id: num
   x = Math.floor(x)
   y = Math.floor(y)
 
-  let change: TileChange = {
+  let change: EditTile = {
     group,
     layer,
     x,
@@ -62,11 +60,11 @@ export function placeTile(rmap: RenderMap, group: number, layer: number, id: num
     id,
   }
 
-  const res = rmap.applyTileChange(change)
+  const res = rmap.editTile(change)
 
   // only send change if succeeded e.g. not redundant
   if(res)
-    server.send('tilechange', change)
+    server.send('edittile', change)
 }
 
 // export function setupCanvasEvents(canvas: HTMLCanvasElement) {
