@@ -1,6 +1,7 @@
 import type { Map } from '../twmap/map'
 import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
+import type { LayerTile } from '../twmap/types'
 import { TileLayer } from '../twmap/tileLayer'
 import { QuadLayer } from '../twmap/quadLayer'
 import { Group } from '../twmap/group'
@@ -43,9 +44,12 @@ export class RenderMap {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer] as RenderTileLayer
     
+    if (change.x < 0 || change.y < 0 || change.x >= rlayer.layer.width || change.y >= rlayer.layer.height)
+      return false
+    
     const tile = rlayer.layer.getTile(change.x, change.y)
 
-    if (tile.index == change.id)
+    if (tile.index === change.id)
       return false
 
     tile.index = change.id
@@ -83,9 +87,35 @@ export class RenderMap {
   editLayer(change: EditLayer) {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer]
+    const defaultTile: LayerTile = { index: 0, flags: 0 }
 
     if (change.name) rlayer.layer.name = change.name
-    if ('color' in change) (rlayer.layer as TileLayer).color = change.color
+
+    if (rlayer instanceof RenderTileLayer) {
+      if ('color' in change) rlayer.layer.color = change.color
+      if ('width' in change) {
+        rlayer.layer.setWidth(change.width, defaultTile)
+        // COMBAK: easiest is to rebuild the whole layer...
+        const newLayer = new RenderTileLayer(rlayer.layer)
+        rgroup.layers[change.layer] = newLayer
+        if (rlayer === this.gameLayer) {
+          newLayer.texture = this.gameLayer.texture
+          newLayer.texture.loaded = false // again, a trick
+          this.gameLayer = newLayer
+        }
+      }
+      if ('height' in change) {
+        rlayer.layer.setHeight(change.height, defaultTile)
+        // COMBAK: easiest is to rebuild the whole layer...
+        const newLayer = new RenderTileLayer(rlayer.layer)
+        rgroup.layers[change.layer] = newLayer
+        if (rlayer === this.gameLayer) {
+          newLayer.texture = this.gameLayer.texture
+          newLayer.texture.loaded = false // again, a trick
+          this.gameLayer = newLayer
+        }
+      }
+    }
   }
   
   reorderLayer(change: ReorderLayer) {
@@ -117,7 +147,9 @@ export class RenderMap {
     let rlayer: RenderLayer
 
     if (create.kind === 'tiles') {
-      layer = new TileLayer()
+      const { width, height } = this.gameLayer.layer
+      const defaultTile: LayerTile = { index: 0, flags: 0 }
+      layer = TileLayer.create(width, height, defaultTile)
       rlayer = new RenderTileLayer(layer)
     } 
     else if (create.kind === 'quads') {
