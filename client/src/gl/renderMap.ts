@@ -135,8 +135,7 @@ export class RenderMap {
       group.render()
     
     // render the game layer on top of the rest.
-    if (this.gameGroup.visible && this.gameLayer.visible)
-      this.gameLayer.render()
+    this.gameGroup.renderLayer(this.gameLayer)
     
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
