@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup } from '../../server/protocol'
+  import { TileLayer } from '../../twmap/tileLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import { viewport } from '../../gl/global'
@@ -70,7 +71,7 @@
   }
 
   onMount(() => {
-    cont.append(canvas)
+    cont.prepend(canvas)
     server.on('listusers', serverOnUsers)
     server.on('edittile', serverOnEditTile)
     server.on('editlayer', serverOnEditLayer)
@@ -124,19 +125,47 @@
   }
   
   let hoverTileStyle = ''
+  let layerOutlineStyle = ''
 
-  function updateHoverTile() {
+  function updateOutlines() {
+    const layer = map.groups[selectedLayer[0]].layers[selectedLayer[1]]
     const { scale, pos } = viewport
     let { x, y } = viewport.mousePos
     x = Math.floor(x)
     y = Math.floor(y)
+
+    let color = 'black'
+    if (layer instanceof TileLayer && (x < 0 || y < 0 || x > layer.width || y > layer.height)) {
+      color = 'red'
+    }
 
     hoverTileStyle = `
       width: ${scale}px;
       height: ${scale}px;
       top: ${(y - pos.y) * scale}px;
       left: ${(x - pos.x) * scale}px;
+      border-width: ${scale / 16}px;
+      border-color: ${color};
     `
+
+    if (layer instanceof TileLayer) {
+      layerOutlineStyle = `
+        width: ${layer.width * scale}px;
+        height: ${layer.height * scale}px;
+        top: ${-pos.y * scale}px;
+        left: ${-pos.x * scale}px;
+      `
+    }
+    else {
+      layerOutlineStyle = `
+        display: none;
+      `
+    }
+  }
+
+  $: {
+    selectedLayer
+    updateOutlines()
   }
 
 
@@ -146,11 +175,11 @@
       Editor.placeTile(rmap, ...selectedLayer, selectedID)
     }
 
-    updateHoverTile()
+    updateOutlines()
   }
 
   function onMouseWheel() {
-    updateHoverTile()
+    updateOutlines()
   }
 
   function onEditLayer(e: Event & { detail: EditLayer }) {
@@ -215,6 +244,7 @@
 <div id="editor">
   <div bind:this={cont} on:mousemove={onMouseMove} on:wheel={onMouseWheel}>
     <div id="hover-tile" style={hoverTileStyle}></div>
+    <div id="layer-outline" style={layerOutlineStyle}></div>
   </div>
   <div id="menu">
     <div class="left">
