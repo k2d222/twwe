@@ -1,6 +1,6 @@
-import type { DataFile } from './datafile';
-import type { MapImage } from './types';
-import { parseString } from './parser';
+import type { DataFile } from './datafile'
+import type { MapImage } from './types'
+import { parseString } from './parser'
 
 
 export class Image {

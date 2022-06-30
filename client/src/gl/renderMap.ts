@@ -13,10 +13,10 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
 function createGameTexture() {
-	const image = new Image()
-	image.name = 'Game'
-	image.loadExternal('/entities/DDNet.png')
-	return new Texture(image)
+  const image = new Image()
+  image.name = 'Game'
+  image.loadExternal('/entities/DDNet.png')
+  return new Texture(image)
 }
 
 export class RenderMap {
@@ -138,6 +138,6 @@ export class RenderMap {
     if (this.gameGroup.visible && this.gameLayer.visible)
       this.gameLayer.render()
     
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindTexture(gl.TEXTURE_2D, null)
   }
 }

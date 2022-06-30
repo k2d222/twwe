@@ -191,19 +191,19 @@
 
 <div id="editor">
   <div bind:this={cont} on:mousemove={onClick}></div>
-	<div id="menu">
-		<div class="left">
-			<button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
-			<button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
-			<button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
-		</div>
-		<div class="middle">
-			<span id="map-name">{map.name}</span>
-		</div>
-		<div class="right">
-			<div id="users">Users online: <span>{peerCount}</span></div>
-		</div>
-	</div>
+  <div id="menu">
+    <div class="left">
+      <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
+      <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
+      <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
+    </div>
+    <div class="middle">
+      <span id="map-name">{map.name}</span>
+    </div>
+    <div class="right">
+      <div id="users">Users online: <span>{peerCount}</span></div>
+    </div>
+  </div>
   <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
     on:layerchange={onEditLayer} on:groupchange={onEditGroup}
@@ -212,5 +212,5 @@
     on:deletelayer={onDeleteLayer} on:deletegroup={onDeleteGroup}
     on:reorderlayer={onReorderLayer} on:reordergroup={onReorderGroup}
   />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} />
+  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
 </div>

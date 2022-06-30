@@ -117,7 +117,7 @@
         <input id="createDefault" type="checkbox" bind:checked={defaultLayers} />
       {:else if creationMethod === 'upload'}
         <span>Upload file</span>
-      	<span><input type="file" placeholder="upload map file…" accept=".map" on:change={onFileChange} /></span>
+        <span><input type="file" placeholder="upload map file…" accept=".map" on:change={onFileChange} /></span>
       {:else if creationMethod === 'clone'}
         <span>Cloned map</span>
         <select bind:value={clone} placeholder='Select a map to clone…'>

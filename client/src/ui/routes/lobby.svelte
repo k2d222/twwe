@@ -22,7 +22,7 @@
     let { maps } = await server.query('listmaps', null)
     sortMapInfos(maps)
     selected = maps[0].name
-    clearDialog();
+    clearDialog()
     return maps
   }
 
