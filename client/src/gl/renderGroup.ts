@@ -28,12 +28,8 @@ export class RenderGroup {
     this.visible = true
   }
   
-  render() {
-    if (!this.visible)
-      return    
-    
+  private preRender() {
     // TODO: offset
-    const mv = mat4.create()
     const { offX, offY, paraX, paraY } = this.group
     const { x1, x2, y1, y2 } = viewport.screen()
     const w = x2 - x1
@@ -44,12 +40,29 @@ export class RenderGroup {
     
     // console.log(this.group.name, offX, offY, paraX, paraY)
     
+    const mv = mat4.create()
     mat4.translate(mv, mv, [cx, cy, 0])
     // mat4.translate(mv, mv, [offX, offY, 0])
     gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
+  }
+  
+  render() {
+    if (!this.visible)
+      return
+    
+    this.preRender()
 
     for(const layer of this.layers)
       layer.render()
+  }
+  
+  renderLayer(layer: RenderLayer) {
+    if (!this.visible)
+      return
+    
+    this.preRender()
+    
+    layer.render()
   }
 }
 
