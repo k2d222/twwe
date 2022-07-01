@@ -13,9 +13,13 @@ use futures::channel::mpsc::UnboundedSender;
 
 use tungstenite::protocol::Message;
 
-use twmap::{GameLayer, Group, Layer, LayerKind, QuadsLayer, TilesLayer, TwMap};
+use twmap::{GameLayer, Group, Layer, LayerKind, QuadsLayer, TileMapLayer, TilesLayer, TwMap};
 
-use crate::{protocol::*, Peer};
+use crate::{
+    protocol::*,
+    twmap_map_edit::{extend_layer, shrink_layer},
+    Peer,
+};
 
 type Tx = UnboundedSender<Message>;
 
@@ -28,6 +32,40 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
     let mut map = TwMap::parse_file(&path)?;
     map.load()?;
     Ok(map)
+}
+
+pub fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
+    let old_width = layer.tiles().shape().0 as isize;
+    let diff = width as isize - old_width;
+
+    if width == 0 || width > 10000 {
+        return Err("invalid layer dimensions");
+    }
+
+    if diff > 0 {
+        extend_layer(layer, 0, 0, 0, diff as usize);
+    } else if diff < 0 {
+        shrink_layer(layer, 0, 0, 0, -diff as usize);
+    }
+
+    Ok(())
+}
+
+pub fn set_layer_height<T: TileMapLayer>(layer: &mut T, height: usize) -> Result<(), &'static str> {
+    let old_height = layer.tiles().shape().0 as isize;
+    let diff = height as isize - old_height;
+
+    if height == 0 || height > 10000 {
+        return Err("invalid layer dimensions");
+    }
+
+    if diff > 0 {
+        extend_layer(layer, 0, diff as usize, 0, 0);
+    } else if diff < 0 {
+        shrink_layer(layer, 0, -diff as usize, 0, 0);
+    }
+
+    Ok(())
 }
 
 // We want the room to have the map loaded when at least 1 peer is connected, but unloaded
@@ -272,6 +310,30 @@ impl Room {
             Color(color) => match layer {
                 Layer::Tiles(layer) => layer.color = color,
                 _ => return Err("cannot change layer color"),
+            },
+            Width(width) => match layer {
+                Layer::Game(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Tiles(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Tele(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Speedup(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Switch(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Tune(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Front(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Quads(_) | Layer::Invalid(_) | Layer::Sounds(_) => {
+                    return Err("cannot change layer dimensions")
+                }
+            },
+            Height(height) => match layer {
+                Layer::Game(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Tiles(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Tele(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Speedup(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Switch(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Tune(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Front(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Quads(_) | Layer::Invalid(_) | Layer::Sounds(_) => {
+                    return Err("cannot change layer dimensions")
+                }
             },
         }
 

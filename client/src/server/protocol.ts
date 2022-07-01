@@ -83,8 +83,8 @@ export interface CommonLayerChange {
 }
 
 export interface EditTileLayer extends CommonLayerChange {
-  // width?: number,
-  // height?: number,
+  width?: number,
+  height?: number,
   // flags?: number,
   color?: Color,
   // colorEnv?: number, // TODO

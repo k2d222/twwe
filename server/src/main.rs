@@ -21,6 +21,8 @@ use room::Room;
 mod protocol;
 use protocol::*;
 
+mod twmap_map_edit;
+
 use tungstenite::Message;
 use twmap::TwMap;
 

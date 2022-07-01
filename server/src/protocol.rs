@@ -112,6 +112,8 @@ pub struct DeleteGroup {
 pub enum OneLayerChange {
     Name(String),
     Color(Color),
+    Width(u32),
+    Height(u32),
 }
 
 // see https://serde.rs/remote-derive.html

@@ -78,7 +78,6 @@
 
   function colorToStr(c: Color) {
     let hex = (i: number) => ('0' + i.toString(16)).slice(-2)
-    console.log(`#${hex(c.r)}${hex(c.g)}${hex(c.b)}`)
     return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`
   }
 
@@ -164,6 +163,10 @@
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
                 {#if layer.layer instanceof TileLayer}
+                  <label>Width <input type="number" min={1} max={10000} value={layer.layer.width}
+                    on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
+                  <label>Height <input type="number" min={1} max={10000} value={layer.layer.height}
+                    on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
                   {@const col = layer.layer.color}
                   <label>Color <input type="color" value={colorToStr(layer.layer.color)}
                     on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
