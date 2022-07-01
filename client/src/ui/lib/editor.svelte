@@ -70,6 +70,42 @@
     rmap = rmap // hack to redraw treeview
   }
 
+  function updateOutlines() {
+    const layer = map.groups[selectedLayer[0]].layers[selectedLayer[1]]
+    const { scale, pos } = viewport
+    let { x, y } = viewport.mousePos
+    x = Math.floor(x)
+    y = Math.floor(y)
+
+    let color = 'black'
+    if (layer instanceof TileLayer && (x < 0 || y < 0 || x > layer.width || y > layer.height)) {
+      color = 'red'
+    }
+
+    hoverTileStyle = `
+      width: ${scale}px;
+      height: ${scale}px;
+      top: ${(y - pos.y) * scale}px;
+      left: ${(x - pos.x) * scale}px;
+      border-width: ${scale / 16}px;
+      border-color: ${color};
+    `
+
+    if (layer instanceof TileLayer) {
+      layerOutlineStyle = `
+        width: ${layer.width * scale}px;
+        height: ${layer.height * scale}px;
+        top: ${-pos.y * scale}px;
+        left: ${-pos.x * scale}px;
+      `
+    }
+    else {
+      layerOutlineStyle = `
+        display: none;
+      `
+    }
+  }
+
   onMount(() => {
     cont.prepend(canvas)
     server.on('listusers', serverOnUsers)
@@ -84,6 +120,15 @@
     server.on('deletelayer', serverOnDeleteLayer)
     server.send('listusers')
     canvas.focus()
+    
+    // this is me being lazy, but really there are many events that should
+    // toggle a redraw of the outlines, such as mouse move, view move, zoom,
+    // change active layer, resize layers…
+    const updateForever = () => {
+      updateOutlines()
+      requestAnimationFrame(updateForever)
+    }
+    updateForever()
   })
 
   onDestroy(() => {
@@ -127,59 +172,11 @@
   let hoverTileStyle = ''
   let layerOutlineStyle = ''
 
-  function updateOutlines() {
-    const layer = map.groups[selectedLayer[0]].layers[selectedLayer[1]]
-    const { scale, pos } = viewport
-    let { x, y } = viewport.mousePos
-    x = Math.floor(x)
-    y = Math.floor(y)
-
-    let color = 'black'
-    if (layer instanceof TileLayer && (x < 0 || y < 0 || x > layer.width || y > layer.height)) {
-      color = 'red'
-    }
-
-    hoverTileStyle = `
-      width: ${scale}px;
-      height: ${scale}px;
-      top: ${(y - pos.y) * scale}px;
-      left: ${(x - pos.x) * scale}px;
-      border-width: ${scale / 16}px;
-      border-color: ${color};
-    `
-
-    if (layer instanceof TileLayer) {
-      layerOutlineStyle = `
-        width: ${layer.width * scale}px;
-        height: ${layer.height * scale}px;
-        top: ${-pos.y * scale}px;
-        left: ${-pos.x * scale}px;
-      `
-    }
-    else {
-      layerOutlineStyle = `
-        display: none;
-      `
-    }
-  }
-
-  $: {
-    selectedLayer
-    updateOutlines()
-  }
-
-
   function onMouseMove(e: MouseEvent) {
     // left button pressed
     if (e.buttons === 1 && !e.ctrlKey) {
       Editor.placeTile(rmap, ...selectedLayer, selectedID)
     }
-
-    updateOutlines()
-  }
-
-  function onMouseWheel() {
-    updateOutlines()
   }
 
   function onEditLayer(e: Event & { detail: EditLayer }) {
@@ -242,7 +239,7 @@
 </script>
 
 <div id="editor">
-  <div bind:this={cont} on:mousemove={onMouseMove} on:wheel={onMouseWheel}>
+  <div bind:this={cont} on:mousemove={onMouseMove}>
     <div id="hover-tile" style={hoverTileStyle}></div>
     <div id="layer-outline" style={layerOutlineStyle}></div>
   </div>
