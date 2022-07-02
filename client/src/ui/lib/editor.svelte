@@ -179,17 +179,49 @@
     }
   }
 
-  function onEditLayer(e: Event & { detail: EditLayer }) {
-    server.send('editlayer', e.detail)
+  async function onEditLayer(e: Event & { detail: EditLayer }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('editlayer', e.detail)
+      rmap.editLayer(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit layer: ' + e)
+    }
   }
-  function onEditGroup(e: Event & { detail: EditGroup }) {
-    server.send('editgroup', e.detail)
+  async function onEditGroup(e: Event & { detail: EditGroup }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('editgroup', e.detail)
+      rmap.editGroup(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit group: ' + e)
+    }
   }
-  function onCreateGroup(e: Event & { detail: CreateGroup }) {
-    server.send('creategroup', e.detail)
+  async function onCreateGroup(e: Event & { detail: CreateGroup }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('creategroup', e.detail)
+      rmap.createGroup(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to create group: ' + e)
+    }
   }
-  function onCreateLayer(e: Event & { detail: CreateLayer }) {
-    server.send('createlayer', e.detail)
+  async function onCreateLayer(e: Event & { detail: CreateLayer }) {
+    try {
+      showInfo('Please wait…')
+      await server.query('createlayer', e.detail)
+      rmap.createLayer(e.detail)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to create layer: ' + e)
+    }
   }
   async function onReorderGroup(e: Event & { detail: ReorderGroup }) {
     try {
