@@ -9,7 +9,7 @@ import { RenderGroup } from './renderGroup'
 import { RenderTileLayer } from './renderTileLayer'
 import { RenderQuadLayer } from './renderQuadLayer'
 import { gl } from './global'
-import { LayerType } from '../twmap/types'
+import { TileLayerFlags } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
@@ -32,12 +32,12 @@ export class RenderMap {
 
     // COMBAK: this is hacky but I don't see other ways to handle the
     // game layer edge-case for now.
-    this.gameGroup = this.groups.find(g => g.group.name === 'Game')
-    const gameLayerIndex = this.gameGroup.group.layers.findIndex(l => l.type === LayerType.GAME)
-    const gameLayer = this.gameGroup.layers[gameLayerIndex] as RenderTileLayer
+    const [ g, l ] = this.map.gameLayerID()
+    this.gameGroup = this.groups[g]
+    const gameLayer = this.gameGroup.layers[l] as RenderTileLayer
     this.gameLayer = new RenderTileLayer(gameLayer.layer)
     this.gameLayer.texture = createGameTexture()
-    this.gameGroup.layers[gameLayerIndex] = this.gameLayer
+    this.gameGroup.layers[l] = this.gameLayer
   }
   
   editTile(change: EditTile) {
@@ -54,7 +54,7 @@ export class RenderMap {
 
     tile.index = change.id
 
-    if (rlayer.layer.type === LayerType.GAME)
+    if (rlayer.layer instanceof TileLayer && rlayer.layer.flags === TileLayerFlags.GAME)
       this.gameLayer.recompute(change.x, change.y)
     else
       rlayer.recompute(change.x, change.y)

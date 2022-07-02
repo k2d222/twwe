@@ -1,4 +1,5 @@
-import { MapItemType, LayerType } from './types'
+import { MapItemType, TileLayerFlags } from './types'
+import { TileLayer } from './tileLayer'
 import { DataFile } from './datafile'
 import { parseMapGroup, parseMapImage } from './parser'
 // import { Texture } from './texture'
@@ -23,7 +24,7 @@ export class Map {
       let g = this.groups[i]
       for (let j = 0; j < g.layers.length; j++) {
         let l = g.layers[j]
-        if (l.type === LayerType.GAME) {
+        if (l instanceof TileLayer && l.flags == TileLayerFlags.GAME) {
           return [ i, j ]
         }
       }

@@ -1,5 +1,5 @@
 import type { DataFile } from './datafile'
-import { Color, LayerTile, LayerType, MapLayerTiles, MapItemType } from './types'
+import { Color, LayerTile, LayerType, MapLayerTiles, MapItemType, TileLayerFlags } from './types'
 import { Layer } from './layer'
 import { parseLayerTiles, parseMapImage } from './parser'
 import { Image } from './image'
@@ -13,6 +13,7 @@ function cloneLayerTile(tile: LayerTile): LayerTile {
 }
 
 export class TileLayer extends Layer {
+  flags: TileLayerFlags
   width: number
   height: number
   tiles: LayerTile[]
@@ -21,6 +22,7 @@ export class TileLayer extends Layer {
 
   constructor() {
     super(LayerType.TILES)
+    this.flags = TileLayerFlags.TILES
     this.width = 0
     this.height = 0
     this.tiles = []
@@ -41,7 +43,7 @@ export class TileLayer extends Layer {
   }
 
   load(df: DataFile, info: MapLayerTiles) {
-    this.type = info.flags // game, tiles, tele…
+    this.flags = info.flags
     this.name = info.name
     this.width = info.width
     this.height = info.height
