@@ -1,8 +1,9 @@
 import type { DataFile } from './datafile'
+import type { Map } from './map'
+import type { Image } from './image'
 import { Layer } from './layer'
-import { LayerType, LayerQuad, MapLayerQuads, MapItemType } from './types'
-import { parseLayerQuads, parseMapImage } from './parser'
-import { Image } from './image'
+import { LayerType, LayerQuad, MapLayerQuads } from './types'
+import { parseLayerQuads } from './parser'
 
 
 export class QuadLayer extends Layer {
@@ -15,7 +16,7 @@ export class QuadLayer extends Layer {
     this.image = null
   }
 
-  load(df: DataFile, info: MapLayerQuads) {
+  load(map: Map, df: DataFile, info: MapLayerQuads) {
     this.name = info.name
 
     const quadData = df.getData(info.data)
@@ -23,14 +24,7 @@ export class QuadLayer extends Layer {
 
     this.image = null
     if (info.image !== -1) {
-      const imagesInfo = df.getType(MapItemType.IMAGE)
-      
-      if (imagesInfo) {
-        const imageItem = df.getItem(imagesInfo.start + info.image)
-        const imageInfo = parseMapImage(imageItem.data)
-        this.image = new Image()
-        this.image.load(df, imageInfo)
-      }
+      this.image = map.images[info.image]
     }
   }
 }

@@ -3,8 +3,11 @@
   import type { EditGroup, DeleteGroup, ReorderGroup, EditLayer, CreateLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Color } from '../../twmap/types'
+  import type { Image } from '../../twmap/image'
+  import type { Layer } from '../../twmap/layer'
   import { TileLayer } from '../../twmap/tileLayer'
   import ContextMenu from './contextMenu.svelte'
+  import ImagePicker from './imagePicker.svelte'
 
   const dispatch = createEventDispatcher()
 
@@ -76,6 +79,24 @@
     dispatch('createlayer', create)
   }
 
+  function openFilePicker(layer: Layer) {
+    const picker = new ImagePicker({
+      target: document.body,
+      props: {
+        images: rmap.map.images,
+        image: layer.image
+      }
+    })
+    type EvtType = Event & { detail: {} | { external: string } | { embedded: Image } }
+    picker.$on('pick', (e: EvtType) => {
+      console.log(e.detail)
+      picker.$destroy()
+    })
+    picker.$on('cancel', () => {
+      picker.$destroy()
+    })
+  }
+
   function colorToStr(c: Color) {
     let hex = (i: number) => ('0' + i.toString(16)).slice(-2)
     return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`
@@ -116,6 +137,7 @@
 
           {#if cm.g === g && cm.l === null}
             <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
+              <span>Group #{g} {group.group.name}</span>
               <label>Order <input type="number" min={0} max={rmap.groups.length - 1} value={g}
                 on:change={(e) => onReorderGroup({ group: g, newGroup: intVal(e.target) })}></label>
               <label>Pos X <input type="number" value={group.group.offX}
@@ -158,6 +180,7 @@
 
             {#if cm.g === g && cm.l === l}
               <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
+                <span>Layer {layer.layer.name}</span>
                 <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
@@ -167,6 +190,9 @@
                     on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
                   <label>Height <input type="number" min={1} max={10000} value={layer.layer.height}
                     on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
+                  {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
+                  <label>Image <input type="button" value={img}
+                    on:click={() => openFilePicker(layer.layer)}></label>
                   {@const col = layer.layer.color}
                   <label>Color <input type="color" value={colorToStr(layer.layer.color)}
                     on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>

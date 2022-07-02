@@ -66,7 +66,7 @@ export class Map {
       const groupInfo = parseMapGroup(groupItem.data)
 
       const grp = new Group()
-      grp.load(df, groupInfo)
+      grp.load(this, df, groupInfo)
       groups.push(grp)
     }
 

@@ -63,10 +63,7 @@ canvas {
 
 #dialog {
   position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
+  inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -408,6 +405,11 @@ nav {
     box-shadow: 5px 5px 20px -15px black;
     border-radius: 5px;
     
+    span {
+      text-align: center;
+      font-weight: bold;
+    }
+    
     label {
       display: flex;
       justify-content: space-between;
@@ -417,6 +419,11 @@ nav {
     
     input[type=number] {
       width: 4rem;
+    }
+
+    input {
+      min-width: 4rem;
+      max-width: 8rem;
     }
   }
 }
@@ -437,4 +444,107 @@ nav.hidden .context {
   position: fixed;
   outline: 4px solid white;
   pointer-events: none;
+}
+
+#image-picker {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, .5);
+  padding: 5rem;
+  
+  $img-size: 10rem;
+  
+  > .footer {
+    background: white;
+    border: 1px solid black;
+    border-top: none;
+    width: 100%;
+    padding: .5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    button {
+      font-size: 1.3rem;
+      border: none;
+      border-radius: 3px;
+      padding: .4rem 1rem;
+      background: lightgrey;
+
+      &:hover {
+        background: #a8a8a8;
+      }
+      
+      &.confirm {
+        color: white;
+        background: teal;
+
+        &:hover {
+          background: #006262;
+        }
+      }
+    }
+  }
+  
+  > .content {
+    position: relative;
+    padding: 3rem 5rem;
+    background: white;
+    border: 1px solid black;
+    overflow: auto;
+    
+    .images {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      
+      .image {
+        width: $img-size;
+        height: $img-size;
+        border: 1px solid grey;
+        border-radius: 3px;
+        position: relative;
+        overflow: hidden;
+        
+        &.selected {
+          border: 4px solid blue;
+        }
+        
+        .hover {
+          position: absolute;
+          width: 100%;
+          bottom: -2.1rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          padding: .3rem;
+          // background: rgba(0, 0, 0, .6);
+          // color: white;
+          background: white;
+          transition: all .2s;
+          text-align: center;
+          border-top: 1px solid grey;
+        }
+
+        &:hover .hover {
+          bottom: 0;
+        }
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter:
+            drop-shadow( 1px  0px 0px rgba(0, 0, 0, .4))
+            drop-shadow( 0px  1px 0px rgba(0, 0, 0, .4))
+            drop-shadow(-1px  0px 0px rgba(0, 0, 0, .4))
+            drop-shadow( 0px -1px 0px rgba(0, 0, 0, .4));
+        }
+      }
+    }
+  }
 }
