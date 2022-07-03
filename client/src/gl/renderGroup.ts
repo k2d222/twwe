@@ -1,6 +1,7 @@
 import type { Group } from '../twmap/group'
 import type { RenderLayer } from './renderLayer'
 import type { Layer } from '../twmap/layer'
+import type { RenderMap } from './renderMap'
 import { mat4 } from 'gl-matrix'
 import { TileLayer } from '../twmap/tileLayer'
 import { QuadLayer } from '../twmap/quadLayer'
@@ -8,11 +9,11 @@ import { RenderTileLayer } from '../gl/renderTileLayer'
 import { RenderQuadLayer } from '../gl/renderQuadLayer'
 import { gl, shader, viewport } from './global'
 
-function createRenderLayer(layer: Layer) {
+function createRenderLayer(rmap: RenderMap, layer: Layer) {
   if (layer instanceof TileLayer)
-    return new RenderTileLayer(layer)
+    return new RenderTileLayer(rmap, layer)
   else if (layer instanceof QuadLayer)
-    return new RenderQuadLayer(layer)
+    return new RenderQuadLayer(rmap, layer)
   else
     throw new Error('not a layer type we can render at the moment')
 }
@@ -22,9 +23,9 @@ export class RenderGroup {
   layers: RenderLayer[]
   visible: boolean
   
-  constructor(group: Group) {
+  constructor(rmap: RenderMap, group: Group) {
     this.group = group
-    this.layers = group.layers.map(l => createRenderLayer(l))
+    this.layers = group.layers.map(l => createRenderLayer(rmap, l))
     this.visible = true
   }
   

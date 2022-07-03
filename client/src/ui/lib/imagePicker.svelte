@@ -61,7 +61,6 @@
   
   export let image: Image | null = null
   export let external = -1
-  $: console.log(image, images)
 
   // only keep embedded images
   $: images = images.filter(img => !img.img)

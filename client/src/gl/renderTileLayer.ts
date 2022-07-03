@@ -1,10 +1,10 @@
 import type { TileLayer } from '../twmap/tileLayer'
 import type { LayerTile } from '../twmap/types'
+import type { RenderMap } from './renderMap'
+import type { Texture } from './texture'
 import { RenderLayer } from './renderLayer'
 import { gl, shader, viewport } from './global'
-import { Texture } from './texture'
 import { TileFlag } from '../twmap/types'
-
 
 export class RenderTileLayer extends RenderLayer {
   layer: TileLayer
@@ -19,15 +19,17 @@ export class RenderTileLayer extends RenderLayer {
 
   chunkSize: number
 
-  constructor(layer: TileLayer) {
+  constructor(rmap: RenderMap, layer: TileLayer) {
     super()
     this.layer = layer
     this.visible = true
 
-    if (layer.image !== null)
-      this.texture = new Texture(layer.image)
-    else
-      this.texture = null
+    this.texture = null
+
+    if (layer.image !== null) {
+      const index = rmap.map.images.indexOf(layer.image)
+      this.texture  = rmap.textures[index]
+    }
 
     this.chunkSize = 64
 
@@ -39,10 +41,17 @@ export class RenderTileLayer extends RenderLayer {
       this.initBuffers()
   }
 
-  recompute(x: number, y: number) {
+  recomputeChunk(x: number, y: number) {
     const chunkX = Math.floor(x / this.chunkSize)
     const chunkY = Math.floor(y / this.chunkSize)
     this.initChunkBuffer(chunkX, chunkY)
+  }
+  
+  recompute() {
+    this.deleteBuffers()
+    this.createBuffers()
+    if (this.texture && this.texture.loaded)
+      this.initBuffers()
   }
 
   render() {
@@ -111,6 +120,16 @@ export class RenderTileLayer extends RenderLayer {
         }
       }
     }
+  }
+  
+  private deleteBuffers() {
+    for (let row of this.buffers) {
+      for (let buf of row) {
+        gl.deleteBuffer(buf.vertex)
+        gl.deleteBuffer(buf.texCoord)
+      }
+    }
+    this.buffers = []
   }
 
   private chunkTileCount(chunkX: number, chunkY: number) {

@@ -31,20 +31,22 @@ const PhysicsLayers = [
 
 export class RenderMap {
   map: Map
+  textures: Texture[] // analogous to Map images
   groups: RenderGroup[]
   gameLayer: RenderTileLayer
   gameGroup: RenderGroup
   
   constructor(map: Map) {
     this.map = map
-    this.groups = map.groups.map(g => new RenderGroup(g))
+    this.textures = map.images.map(img => new Texture(img))
+    this.groups = map.groups.map(g => new RenderGroup(this, g))
 
     // COMBAK: this is hacky but I don't see other ways to handle the
     // game layer edge-case for now.
     const [ g, l ] = this.map.gameLayerID()
     this.gameGroup = this.groups[g]
     const gameLayer = this.gameGroup.layers[l] as RenderTileLayer
-    this.gameLayer = new RenderTileLayer(gameLayer.layer)
+    this.gameLayer = new RenderTileLayer(this, gameLayer.layer)
     this.gameLayer.texture = createGameTexture()
     this.gameGroup.layers[l] = this.gameLayer
   }
@@ -64,9 +66,9 @@ export class RenderMap {
     tile.index = change.id
 
     if (rlayer.layer instanceof TileLayer && rlayer.layer.flags === TileLayerFlags.GAME)
-      this.gameLayer.recompute(change.x, change.y)
+      this.gameLayer.recomputeChunk(change.x, change.y)
     else
-      rlayer.recompute(change.x, change.y)
+      rlayer.recomputeChunk(change.x, change.y)
     
     return true
   }
@@ -101,31 +103,12 @@ export class RenderMap {
 
     if (rlayer instanceof RenderTileLayer) {
       if ('color' in change) rlayer.layer.color = change.color
-      if ('width' in change) {
-        // changing the size of any physics layer applies to all physics layers
-        if (rlayer.layer.flags in PhysicsLayers) {
-          for (let rlayer of rgroup.layers) {
-            if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
-              this.setLayerWidth(rgroup, rlayer, change.width)
-            }
-          }
-        }
-        else {
-          this.setLayerWidth(rgroup, rlayer, change.width)
-        }
-      }
-      if ('height' in change) {
-        // changing the size of any physics layer applies to all physics layers
-        if (rlayer.layer.flags in PhysicsLayers) {
-          for (let rlayer of rgroup.layers) {
-            if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
-              this.setLayerHeight(rgroup, rlayer, change.height)
-            }
-          }
-        }
-        else {
-          this.setLayerHeight(rgroup, rlayer, change.height)
-        }
+      if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
+      if ('width' in change) this.setLayerHeight(rgroup, rlayer, change.height)
+      if ('image' in change) {
+        rlayer.layer.image = this.map.images[change.image]
+        rlayer.texture = this.textures[change.image]
+        rlayer.recompute()
       }
     }
   }
@@ -145,7 +128,7 @@ export class RenderMap {
   
   createGroup(_change: CreateGroup) {
     const group = new Group()
-    const rgroup = new RenderGroup(group)
+    const rgroup = new RenderGroup(this, group)
     this.map.groups.push(group)
     this.groups.push(rgroup)
     return rgroup
@@ -162,11 +145,11 @@ export class RenderMap {
       const { width, height } = this.gameLayer.layer
       const defaultTile: LayerTile = { index: 0, flags: 0 }
       layer = TileLayer.create(width, height, defaultTile)
-      rlayer = new RenderTileLayer(layer)
+      rlayer = new RenderTileLayer(this, layer)
     } 
     else if (create.kind === 'quads') {
       layer = new QuadLayer()
-      rlayer = new RenderQuadLayer(layer)
+      rlayer = new RenderQuadLayer(this, layer)
     } 
 
     group.layers.push(layer)
@@ -186,29 +169,37 @@ export class RenderMap {
   
   private setLayerWidth(rgroup: RenderGroup, rlayer: RenderTileLayer, width: number) {
     const defaultTile: LayerTile = { index: 0, flags: 0 }
-    rlayer.layer.setWidth(width, defaultTile)
-    // COMBAK: easiest is to rebuild the whole layer...
-    const newLayer = new RenderTileLayer(rlayer.layer)
-    const l = rgroup.layers.indexOf(rlayer)
-    rgroup.layers[l] = newLayer
-    if (rlayer === this.gameLayer) {
-      newLayer.texture = this.gameLayer.texture
-      newLayer.texture.loaded = false // again, a trick
-      this.gameLayer = newLayer
+
+    // changing the size of any physics layer applies to all physics layers
+    if (rlayer.layer.flags in PhysicsLayers) {
+      for (let rlayer of rgroup.layers) {
+        if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+          rlayer.layer.setWidth(width, defaultTile)
+          rlayer.recompute()
+        }
+      }
+    }
+    else {
+      this.setLayerWidth(rgroup, rlayer, width)
+      rlayer.recompute()
     }
   }
 
   private setLayerHeight(rgroup: RenderGroup, rlayer: RenderTileLayer, height: number) {
     const defaultTile: LayerTile = { index: 0, flags: 0 }
-    rlayer.layer.setHeight(height, defaultTile)
-    // COMBAK: easiest is to rebuild the whole layer...
-    const newLayer = new RenderTileLayer(rlayer.layer)
-    const l = rgroup.layers.indexOf(rlayer)
-    rgroup.layers[l] = newLayer
-    if (rlayer === this.gameLayer) {
-      newLayer.texture = this.gameLayer.texture
-      newLayer.texture.loaded = false // again, a trick
-      this.gameLayer = newLayer
+
+    // changing the size of any physics layer applies to all physics layers
+    if (rlayer.layer.flags in PhysicsLayers) {
+      for (let rlayer of rgroup.layers) {
+        if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+          rlayer.layer.setHeight(height, defaultTile)
+          rlayer.recompute()
+        }
+      }
+    }
+    else {
+      this.setLayerHeight(rgroup, rlayer, height)
+      rlayer.recompute()
     }
   }
 }

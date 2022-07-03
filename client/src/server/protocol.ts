@@ -89,11 +89,12 @@ export interface EditTileLayer extends CommonLayerChange {
   color?: Color,
   // colorEnv?: number, // TODO
   // colorEnvOffset?: number, // TODO
-  // image: number, // TODO
+  image?: number | null,
 }
 
 export interface EditQuadLayer extends CommonLayerChange {
   // TODO
+  image?: number,
 }
 
 export type EditLayer = EditTileLayer | EditQuadLayer

@@ -295,6 +295,15 @@ impl Room {
 
     pub fn edit_layer(&self, edit_layer: &EditLayer) -> Result<(), &'static str> {
         let mut map = self.map.get();
+
+        // need to check that before mutably borrowing map
+        // COMBAK: I suck at rust there must be a better way
+        if let OneLayerChange::Image(Some(i)) = edit_layer.change {
+            if i as usize >= map.images.len() {
+                return Err("invalid layer image");
+            }
+        }
+
         let group = map
             .groups
             .get_mut(edit_layer.group as usize)
@@ -364,6 +373,11 @@ impl Room {
                 Layer::Quads(_) | Layer::Invalid(_) | Layer::Sounds(_) => {
                     return Err("cannot change layer dimensions")
                 }
+            },
+            Image(image) => match layer {
+                Layer::Tiles(layer) => layer.image = image,
+                Layer::Quads(layer) => layer.image = image,
+                _ => return Err("cannot change layer image"),
             },
         }
 

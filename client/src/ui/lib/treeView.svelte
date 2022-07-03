@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import type { EditGroup, DeleteGroup, ReorderGroup, EditLayer, CreateLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
+  import type { CreateGroup, EditGroup, DeleteGroup, ReorderGroup, CreateLayer, EditLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Color } from '../../twmap/types'
   import { TileLayerFlags } from '../../twmap/types'
@@ -10,6 +10,7 @@
   import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
+  import { showWarning } from '../lib/dialog'
 
   const dispatch = createEventDispatcher()
 
@@ -74,14 +75,15 @@
   }
 
   function onCreateGroup() {
-    dispatch('creategroup', { name: "" })
+    const create: CreateGroup = { name: "" }
+    dispatch('creategroup', create)
   }
 
   function onCreateLayer(create: CreateLayer) {
     dispatch('createlayer', create)
   }
 
-  function openFilePicker(layer: Layer) {
+  function openFilePicker(edit: EditLayer, layer: Layer) {
     const picker = new ImagePicker({
       target: document.body,
       props: {
@@ -91,7 +93,15 @@
     })
     type EvtType = Event & { detail: {} | { external: string } | { embedded: Image } }
     picker.$on('pick', (e: EvtType) => {
-      console.log(e.detail)
+      if ('embedded' in e.detail) {
+        const image = rmap.map.images.indexOf(e.detail.embedded)
+        edit.image = image
+        dispatch('editlayer', edit)
+      }
+      else {
+        showWarning('TODO external images not supported atm.', 'closable')
+      }
+      dispatch('editlayerimage')
       picker.$destroy()
     })
     picker.$on('cancel', () => {
@@ -223,7 +233,7 @@
                   {#if layer.layer.flags === TileLayerFlags.TILES}
                     {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                     <label>Image <input type="button" value={img}
-                      on:click={() => openFilePicker(layer.layer)}></label>
+                      on:click={() => openFilePicker({ group: g, layer: l }, layer.layer)}></label>
                   {/if}
                   {@const col = layer.layer.color}
                   <label>Color <input type="color" value={colorToStr(layer.layer.color)}
@@ -233,7 +243,7 @@
                 {:else if layer.layer instanceof QuadLayer}
                   {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                   <label>Image <input type="button" value={img}
-                    on:click={() => openFilePicker(layer.layer)}></label>
+                    on:click={() => openFilePicker({ group: g, layer: l }, layer.layer)}></label>
                 {/if}
                 <label>Name <input type="text" value={layer.layer.name}
                   on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>

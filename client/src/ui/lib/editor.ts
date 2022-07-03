@@ -3,7 +3,6 @@ import { server } from '../global'
 import { Map } from '../../twmap/map'
 import { viewport, renderer, init as glInit } from '../../gl/global'
 import { RenderMap } from '../../gl/renderMap'
-import { LayerType } from '../../twmap/types'
 
 
 export async function loadMap(mapName: string) {

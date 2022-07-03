@@ -114,6 +114,7 @@ pub enum OneLayerChange {
     Color(Color),
     Width(u32),
     Height(u32),
+    Image(Option<u16>),
 }
 
 // see https://serde.rs/remote-derive.html

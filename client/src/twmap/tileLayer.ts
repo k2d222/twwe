@@ -1,7 +1,7 @@
 import type { DataFile } from './datafile'
 import type { Map } from './map'
 import type { Image } from './image'
-import { Color, LayerTile, LayerType, MapLayerTiles, MapItemType, TileLayerFlags } from './types'
+import { Color, LayerTile, LayerType, MapLayerTiles, TileLayerFlags } from './types'
 import { Layer } from './layer'
 import { parseLayerTiles } from './parser'
 
