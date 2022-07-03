@@ -35,7 +35,7 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
 }
 
 pub fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
-    let old_width = layer.tiles().shape().0 as isize;
+    let old_width = layer.tiles().shape().1 as isize;
     let diff = width as isize - old_width;
 
     if width == 0 || width > 10000 {
@@ -312,25 +312,55 @@ impl Room {
                 _ => return Err("cannot change layer color"),
             },
             Width(width) => match layer {
-                Layer::Game(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Game(_)
+                | Layer::Front(_)
+                | Layer::Tele(_)
+                | Layer::Speedup(_)
+                | Layer::Switch(_)
+                | Layer::Tune(_) => {
+                    for layer in group.layers.iter_mut() {
+                        match layer {
+                            Layer::Game(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Front(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Tele(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Speedup(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Switch(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Tune(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Tiles(_)
+                            | Layer::Quads(_)
+                            | Layer::Sounds(_)
+                            | Layer::Invalid(_) => (),
+                        }
+                    }
+                }
                 Layer::Tiles(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Tele(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Speedup(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Switch(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Tune(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Front(layer) => set_layer_width(layer, width as usize)?,
                 Layer::Quads(_) | Layer::Invalid(_) | Layer::Sounds(_) => {
                     return Err("cannot change layer dimensions")
                 }
             },
             Height(height) => match layer {
-                Layer::Game(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Game(_)
+                | Layer::Front(_)
+                | Layer::Tele(_)
+                | Layer::Speedup(_)
+                | Layer::Switch(_)
+                | Layer::Tune(_) => {
+                    for layer in group.layers.iter_mut() {
+                        match layer {
+                            Layer::Game(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Front(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Tele(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Speedup(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Switch(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Tune(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Tiles(_)
+                            | Layer::Quads(_)
+                            | Layer::Sounds(_)
+                            | Layer::Invalid(_) => (),
+                        }
+                    }
+                }
                 Layer::Tiles(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Tele(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Speedup(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Switch(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Tune(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Front(layer) => set_layer_height(layer, height as usize)?,
                 Layer::Quads(_) | Layer::Invalid(_) | Layer::Sounds(_) => {
                     return Err("cannot change layer dimensions")
                 }

@@ -9,7 +9,7 @@ import { RenderGroup } from './renderGroup'
 import { RenderTileLayer } from './renderTileLayer'
 import { RenderQuadLayer } from './renderQuadLayer'
 import { gl } from './global'
-import { LayerType } from '../twmap/types'
+import { TileLayerFlags } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
@@ -19,6 +19,15 @@ function createGameTexture() {
   image.loadExternal('/entities/DDNet.png')
   return new Texture(image)
 }
+
+const PhysicsLayers = [
+  TileLayerFlags.GAME,
+  TileLayerFlags.FRONT,
+  TileLayerFlags.TELE,
+  TileLayerFlags.SPEEDUP,
+  TileLayerFlags.SWITCH,
+  TileLayerFlags.TUNE,
+]
 
 export class RenderMap {
   map: Map
@@ -32,12 +41,12 @@ export class RenderMap {
 
     // COMBAK: this is hacky but I don't see other ways to handle the
     // game layer edge-case for now.
-    this.gameGroup = this.groups.find(g => g.group.name === 'Game')
-    const gameLayerIndex = this.gameGroup.group.layers.findIndex(l => l.type === LayerType.GAME)
-    const gameLayer = this.gameGroup.layers[gameLayerIndex] as RenderTileLayer
+    const [ g, l ] = this.map.gameLayerID()
+    this.gameGroup = this.groups[g]
+    const gameLayer = this.gameGroup.layers[l] as RenderTileLayer
     this.gameLayer = new RenderTileLayer(gameLayer.layer)
     this.gameLayer.texture = createGameTexture()
-    this.gameGroup.layers[gameLayerIndex] = this.gameLayer
+    this.gameGroup.layers[l] = this.gameLayer
   }
   
   editTile(change: EditTile) {
@@ -54,7 +63,7 @@ export class RenderMap {
 
     tile.index = change.id
 
-    if (rlayer.layer.type === LayerType.GAME)
+    if (rlayer.layer instanceof TileLayer && rlayer.layer.flags === TileLayerFlags.GAME)
       this.gameLayer.recompute(change.x, change.y)
     else
       rlayer.recompute(change.x, change.y)
@@ -87,32 +96,35 @@ export class RenderMap {
   editLayer(change: EditLayer) {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer]
-    const defaultTile: LayerTile = { index: 0, flags: 0 }
 
     if (change.name) rlayer.layer.name = change.name
 
     if (rlayer instanceof RenderTileLayer) {
       if ('color' in change) rlayer.layer.color = change.color
       if ('width' in change) {
-        rlayer.layer.setWidth(change.width, defaultTile)
-        // COMBAK: easiest is to rebuild the whole layer...
-        const newLayer = new RenderTileLayer(rlayer.layer)
-        rgroup.layers[change.layer] = newLayer
-        if (rlayer === this.gameLayer) {
-          newLayer.texture = this.gameLayer.texture
-          newLayer.texture.loaded = false // again, a trick
-          this.gameLayer = newLayer
+        // changing the size of any physics layer applies to all physics layers
+        if (rlayer.layer.flags in PhysicsLayers) {
+          for (let rlayer of rgroup.layers) {
+            if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+              this.setLayerWidth(rgroup, rlayer, change.width)
+            }
+          }
+        }
+        else {
+          this.setLayerWidth(rgroup, rlayer, change.width)
         }
       }
       if ('height' in change) {
-        rlayer.layer.setHeight(change.height, defaultTile)
-        // COMBAK: easiest is to rebuild the whole layer...
-        const newLayer = new RenderTileLayer(rlayer.layer)
-        rgroup.layers[change.layer] = newLayer
-        if (rlayer === this.gameLayer) {
-          newLayer.texture = this.gameLayer.texture
-          newLayer.texture.loaded = false // again, a trick
-          this.gameLayer = newLayer
+        // changing the size of any physics layer applies to all physics layers
+        if (rlayer.layer.flags in PhysicsLayers) {
+          for (let rlayer of rgroup.layers) {
+            if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+              this.setLayerHeight(rgroup, rlayer, change.height)
+            }
+          }
+        }
+        else {
+          this.setLayerHeight(rgroup, rlayer, change.height)
         }
       }
     }
@@ -170,5 +182,33 @@ export class RenderMap {
     this.gameGroup.renderLayer(this.gameLayer)
     
     gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+  
+  private setLayerWidth(rgroup: RenderGroup, rlayer: RenderTileLayer, width: number) {
+    const defaultTile: LayerTile = { index: 0, flags: 0 }
+    rlayer.layer.setWidth(width, defaultTile)
+    // COMBAK: easiest is to rebuild the whole layer...
+    const newLayer = new RenderTileLayer(rlayer.layer)
+    const l = rgroup.layers.indexOf(rlayer)
+    rgroup.layers[l] = newLayer
+    if (rlayer === this.gameLayer) {
+      newLayer.texture = this.gameLayer.texture
+      newLayer.texture.loaded = false // again, a trick
+      this.gameLayer = newLayer
+    }
+  }
+
+  private setLayerHeight(rgroup: RenderGroup, rlayer: RenderTileLayer, height: number) {
+    const defaultTile: LayerTile = { index: 0, flags: 0 }
+    rlayer.layer.setHeight(height, defaultTile)
+    // COMBAK: easiest is to rebuild the whole layer...
+    const newLayer = new RenderTileLayer(rlayer.layer)
+    const l = rgroup.layers.indexOf(rlayer)
+    rgroup.layers[l] = newLayer
+    if (rlayer === this.gameLayer) {
+      newLayer.texture = this.gameLayer.texture
+      newLayer.texture.loaded = false // again, a trick
+      this.gameLayer = newLayer
+    }
   }
 }

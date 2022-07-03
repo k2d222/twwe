@@ -42,7 +42,7 @@ export function getLayerImage(rmap: RenderMap, groupID: number, layerID: number)
   const map = rmap.map
   const layer = map.groups[groupID].layers[layerID]
   let image = layer.image
-  if (layer.type === LayerType.GAME)
+  if (layer === rmap.gameLayer.layer)
     image = rmap.gameLayer.texture.image
   return image
 }
