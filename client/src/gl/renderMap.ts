@@ -104,7 +104,7 @@ export class RenderMap {
     if (rlayer instanceof RenderTileLayer) {
       if ('color' in change) rlayer.layer.color = change.color
       if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
-      if ('width' in change) this.setLayerHeight(rgroup, rlayer, change.height)
+      if ('height' in change) this.setLayerHeight(rgroup, rlayer, change.height)
       if ('image' in change) {
         rlayer.layer.image = this.map.images[change.image]
         rlayer.texture = this.textures[change.image]

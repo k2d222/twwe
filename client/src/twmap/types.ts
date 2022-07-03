@@ -80,7 +80,7 @@ export type MapLayerQuads = MapObj & {
 
 export type MapLayerTiles = MapObj & {
   version: number,
- width: number,
+  width: number,
   height: number,
   flags: TileLayerFlags,
   color: Color,

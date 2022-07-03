@@ -42,7 +42,9 @@ export interface DeleteMap {
 
 // GROUPS
 
-export interface CreateGroup {}
+export interface CreateGroup {
+  name: string
+}
 
 // must have exactly one of the optional fields
 export interface EditGroup {

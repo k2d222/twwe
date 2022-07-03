@@ -69,8 +69,9 @@
       showError('Failed to edit group: ' + e)
     }
   }
-  async function onCreateGroup(change: CreateGroup) {
+  async function onCreateGroup() {
     try {
+      const change: CreateGroup = { name: "" }
       showInfo('Please wait…')
       await server.query('creategroup', change)
       rmap.createGroup(change)
@@ -136,7 +137,7 @@
     }
   }
 
-  function openFilePicker(edit: EditLayer, layer: Layer) {
+  function openFilePicker(g: number, l: number, layer: Layer) {
     const picker = new ImagePicker({
       target: document.body,
       props: {
@@ -149,11 +150,14 @@
       if (e.detail) {
         const index = rmap.map.images.indexOf(e.detail)
         if (index !== -1) {
-          // dispatch('editlayer', edit)
+          onEditLayer({ group: g, layer: l, image: index })
+        }
+        else {
+          showWarning('external images not supported atm.')
         }
       }
       else {
-        showWarning('TODO external images not supported atm.', 'closable')
+        onEditLayer({ group: g, layer: l, image: null })
       }
     })
     picker.$on('cancel', () => {
@@ -285,17 +289,17 @@
                   {#if layer.layer.flags === TileLayerFlags.TILES}
                     {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                     <label>Image <input type="button" value={img}
-                      on:click={() => openFilePicker({ group: g, layer: l }, layer.layer)}></label>
+                      on:click={() => openFilePicker(g, l, layer.layer)}></label>
+                    {@const col = layer.layer.color}
+                    <label>Color <input type="color" value={colorToStr(layer.layer.color)}
+                      on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
+                    <label>Opacity <input type="range" min={0} max={255} value={col.a}
+                      on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
                   {/if}
-                  {@const col = layer.layer.color}
-                  <label>Color <input type="color" value={colorToStr(layer.layer.color)}
-                    on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
-                  <label>Opacity <input type="range" min={0} max={255} value={col.a}
-                    on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
                 {:else if layer.layer instanceof QuadLayer}
                   {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                   <label>Image <input type="button" value={img}
-                    on:click={() => openFilePicker({ group: g, layer: l }, layer.layer)}></label>
+                    on:click={() => openFilePicker(g, l, layer.layer)}></label>
                 {/if}
                 <label>Name <input type="text" value={layer.layer.name}
                   on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>

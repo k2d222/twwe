@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Image } from '../../twmap/image'
+  import { Image } from '../../twmap/image'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
@@ -66,12 +66,17 @@
   $: images = images.filter(img => !img.img)
 
   function onConfirm() {
-    if (image)
-      dispatch('pick', { embedded: image })
-    else if (external !== -1)
-      dispatch('pick', { external: externalImages[external] })
-    else
-      dispatch('pick', {})
+    if (image) {
+      dispatch('pick', image)
+    }
+    else if (external !== -1) {
+      const image = new Image()
+      image.loadExternal(externalImages[external])
+      dispatch('pick', image)
+    }
+    else {
+      dispatch('pick', null)
+    }
   }
 
   function onCancel() {
