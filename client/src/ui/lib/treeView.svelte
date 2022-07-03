@@ -3,9 +3,11 @@
   import type { EditGroup, DeleteGroup, ReorderGroup, EditLayer, CreateLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Color } from '../../twmap/types'
+  import { TileLayerFlags } from '../../twmap/types'
   import type { Image } from '../../twmap/image'
   import type { Layer } from '../../twmap/layer'
   import { TileLayer } from '../../twmap/tileLayer'
+  import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
 
@@ -190,14 +192,20 @@
                     on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
                   <label>Height <input type="number" min={1} max={10000} value={layer.layer.height}
                     on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
-                  {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
-                  <label>Image <input type="button" value={img}
-                    on:click={() => openFilePicker(layer.layer)}></label>
+                  {#if layer.layer.flags === TileLayerFlags.TILES}
+                    {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
+                    <label>Image <input type="button" value={img}
+                      on:click={() => openFilePicker(layer.layer)}></label>
+                  {/if}
                   {@const col = layer.layer.color}
                   <label>Color <input type="color" value={colorToStr(layer.layer.color)}
                     on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
                   <label>Opacity <input type="range" min={0} max={255} value={col.a}
                     on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
+                {:else if layer.layer instanceof QuadLayer}
+                  {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
+                  <label>Image <input type="button" value={img}
+                    on:click={() => openFilePicker(layer.layer)}></label>
                 {/if}
                 <label>Name <input type="text" value={layer.layer.name}
                   on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
