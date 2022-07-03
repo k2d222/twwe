@@ -179,94 +179,6 @@
     }
   }
 
-  async function onEditLayer(e: Event & { detail: EditLayer }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('editlayer', e.detail)
-      rmap.editLayer(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to edit layer: ' + e)
-    }
-  }
-  async function onEditGroup(e: Event & { detail: EditGroup }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('editgroup', e.detail)
-      rmap.editGroup(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to edit group: ' + e)
-    }
-  }
-  async function onCreateGroup(e: Event & { detail: CreateGroup }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('creategroup', e.detail)
-      rmap.createGroup(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to create group: ' + e)
-    }
-  }
-  async function onCreateLayer(e: Event & { detail: CreateLayer }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('createlayer', e.detail)
-      rmap.createLayer(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to create layer: ' + e)
-    }
-  }
-  async function onReorderGroup(e: Event & { detail: ReorderGroup }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('reordergroup', e.detail)
-      rmap.reorderGroup(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to reorder group: ' + e)
-    }
-  }
-  async function onReorderLayer(e: Event & { detail: ReorderLayer }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('reorderlayer', e.detail)
-      rmap.reorderLayer(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to reorder layer: ' + e)
-    }
-  }
-  async function onDeleteGroup(e: Event & { detail: DeleteGroup }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('deletegroup', e.detail)
-      rmap.deleteGroup(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to delete group: ' + e)
-    }
-  }
-  async function onDeleteLayer(e: Event & { detail: DeleteLayer }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('deletelayer', e.detail)
-      rmap.deleteLayer(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to delete layer: ' + e)
-    }
-  }
 
 </script>
 
@@ -289,12 +201,6 @@
     </div>
   </div>
   <Statusbar />
-  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
-    on:layerchange={onEditLayer} on:groupchange={onEditGroup}
-    on:createlayer={onCreateLayer} on:creategroup={onCreateGroup}
-    on:editlayer={onEditLayer} on:editgroup={onEditGroup}
-    on:deletelayer={onDeleteLayer} on:deletegroup={onDeleteGroup}
-    on:reorderlayer={onReorderLayer} on:reordergroup={onReorderGroup}
-  />
+  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
 </div>

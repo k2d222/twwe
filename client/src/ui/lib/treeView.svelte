@@ -10,7 +10,8 @@
   import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
-  import { showWarning } from '../lib/dialog'
+  import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
+  import { server } from '../global'
 
   const dispatch = createEventDispatcher()
 
@@ -46,41 +47,93 @@
     cm = { g: null, l: null }
   }
 
-  function onEditGroup(change: EditGroup) {
-    dispatch('editgroup', change)
+  async function onEditLayer(change: EditLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('editlayer', change)
+      rmap.editLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit layer: ' + e)
+    }
   }
-
-  function onEditLayer(change: EditLayer) {
-    dispatch('editlayer', change)
+  async function onEditGroup(change: EditGroup) {
+    try {
+      showInfo('Please wait…')
+      await server.query('editgroup', change)
+      rmap.editGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit group: ' + e)
+    }
   }
-  
-  function onReorderGroup(reorder: ReorderGroup) {
-    dispatch('reordergroup', reorder)
-    hideCM()
+  async function onCreateGroup(change: CreateGroup) {
+    try {
+      showInfo('Please wait…')
+      await server.query('creategroup', change)
+      rmap.createGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to create group: ' + e)
+    }
   }
-
-  function onReorderLayer(reorder: ReorderLayer) {
-    dispatch('reorderlayer', reorder)
-    hideCM()
+  async function onCreateLayer(change: CreateLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('createlayer', change)
+      rmap.createLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to create layer: ' + e)
+    }
   }
-
-  function onDeleteGroup(del: DeleteGroup) {
-    dispatch('deletegroup', del)
-    hideCM()
+  async function onReorderGroup(change: ReorderGroup) {
+    try {
+      showInfo('Please wait…')
+      await server.query('reordergroup', change)
+      rmap.reorderGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder group: ' + e)
+    }
   }
-
-  function onDeleteLayer(del: DeleteLayer) {
-    dispatch('deletelayer', del)
-    hideCM()
+  async function onReorderLayer(change: ReorderLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('reorderlayer', change)
+      rmap.reorderLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder layer: ' + e)
+    }
   }
-
-  function onCreateGroup() {
-    const create: CreateGroup = { name: "" }
-    dispatch('creategroup', create)
+  async function onDeleteGroup(change: DeleteGroup) {
+    try {
+      showInfo('Please wait…')
+      await server.query('deletegroup', change)
+      rmap.deleteGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to delete group: ' + e)
+    }
   }
-
-  function onCreateLayer(create: CreateLayer) {
-    dispatch('createlayer', create)
+  async function onDeleteLayer(change: DeleteLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('deletelayer', change)
+      rmap.deleteLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to delete layer: ' + e)
+    }
   }
 
   function openFilePicker(edit: EditLayer, layer: Layer) {
@@ -91,18 +144,17 @@
         image: layer.image
       }
     })
-    type EvtType = Event & { detail: {} | { external: string } | { embedded: Image } }
-    picker.$on('pick', (e: EvtType) => {
-      if ('embedded' in e.detail) {
-        const image = rmap.map.images.indexOf(e.detail.embedded)
-        edit.image = image
-        dispatch('editlayer', edit)
+    picker.$on('pick', async (e: Event & { detail: Image | null }) => {
+      picker.$destroy()
+      if (e.detail) {
+        const index = rmap.map.images.indexOf(e.detail)
+        if (index !== -1) {
+          // dispatch('editlayer', edit)
+        }
       }
       else {
         showWarning('TODO external images not supported atm.', 'closable')
       }
-      dispatch('editlayerimage')
-      picker.$destroy()
     })
     picker.$on('cancel', () => {
       picker.$destroy()
