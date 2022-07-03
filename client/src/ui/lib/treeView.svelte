@@ -120,6 +120,34 @@
   function strVal(target: EventTarget) {
     return (target as HTMLInputElement).value
   }
+  
+  function layerName(layer: Layer) {
+    const quotedName = layer.name ? " '" + layer.name + "'" : ""
+    if (layer instanceof TileLayer) {
+      switch (layer.flags) {
+        case TileLayerFlags.FRONT:
+          return "Front Layer"
+        case TileLayerFlags.GAME:
+          return "Game Layer"
+        case TileLayerFlags.SPEEDUP:
+          return "Speedup Layer"
+        case TileLayerFlags.SWITCH:
+          return "Switch Layer"
+        case TileLayerFlags.TELE:
+          return "Tele Layer"
+        case TileLayerFlags.TILES:
+          return "Tile Layer" + quotedName
+        case TileLayerFlags.TUNE:
+          return "Tune Layer"
+      }
+    }
+    else if (layer instanceof QuadLayer) {
+      return "Quad Layer" + quotedName
+    }
+    else {
+      return "Layer" + quotedName
+    }
+  }
 
 </script>
 
@@ -182,7 +210,7 @@
 
             {#if cm.g === g && cm.l === l}
               <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
-                <span>Layer {layer.layer.name}</span>
+                <span>{layerName(layer.layer)}</span>
                 <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
