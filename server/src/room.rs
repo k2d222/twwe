@@ -35,7 +35,7 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
 }
 
 pub fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
-    let old_width = layer.tiles().shape().0 as isize;
+    let old_width = layer.tiles().shape().1 as isize;
     let diff = width as isize - old_width;
 
     if width == 0 || width > 10000 {
