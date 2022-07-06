@@ -1,6 +1,8 @@
+import type { SendMap, SendImage } from '../../server/protocol'
 import { server } from '../global'
 import { showInfo, clearDialog } from './dialog'
-
+import { Map } from '../../twmap/map'
+import { Image } from '../../twmap/image'
 
 export async function uploadFile(file: File) {
   return new Promise<void>((resolve, reject) => {
@@ -50,4 +52,29 @@ export async function decodePng(file: File): Promise<ImageData> {
       resolve(data)
     }
   })
+}
+
+export async function queryMap(sendMap: SendMap): Promise<Map> {
+  let data: ArrayBuffer
+  const listener = (d: ArrayBuffer) => data = d
+  server.binaryListeners.push(listener)
+  await server.query('sendmap', sendMap)
+  let index = server.binaryListeners.indexOf(listener)
+  server.binaryListeners.splice(index, 1)
+  const map = new Map(sendMap.name, data)
+  return map
+}
+
+export async function queryImage(sendImage: SendImage): Promise<Image> {
+  let data: ArrayBuffer
+  const listener = (d: ArrayBuffer) => data = d
+  server.binaryListeners.push(listener)
+  const imageInfo = await server.query('sendimage', sendImage)
+  let index = server.binaryListeners.indexOf(listener)
+  server.binaryListeners.splice(index, 1)
+  const image = new ImageData(new Uint8ClampedArray(data), imageInfo.width, imageInfo.height)
+  const img = new Image()
+  img.loadEmbedded(image)
+  img.name = imageInfo.name
+  return img
 }

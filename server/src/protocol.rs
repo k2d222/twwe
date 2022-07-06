@@ -215,6 +215,19 @@ pub struct AddImage {
     pub index: u32,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SendImage {
+    pub index: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ImageInfo {
+    pub index: u32,
+    pub name: String,
+    pub width: u32,
+    pub height: u32,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RequestContent {
@@ -242,6 +255,7 @@ pub enum RequestContent {
     ListUsers,
     ListMaps,
     AddImage(AddImage),
+    SendImage(SendImage),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -271,6 +285,7 @@ pub enum ResponseContent {
     ListUsers(ListUsers),
     ListMaps(ListMaps),
     AddImage(AddImage),
+    SendImage(ImageInfo),
     UploadComplete,
 }
 

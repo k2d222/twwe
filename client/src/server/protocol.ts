@@ -147,6 +147,16 @@ export interface AddImage {
   index: number,
 }
 
+export interface SendImage {
+  index: number,
+}
+
+export interface ImageInfo {
+  name: string,
+  index: number,
+  width: number,
+  height: number,
+}
 
 // queries (name and content type) that can be sent by the client
 export interface RequestContent {
@@ -172,6 +182,7 @@ export interface RequestContent {
   'listusers': null
   'listmaps': null
   'addimage': AddImage
+  'sendimage': SendImage
 }
 
 // queries (name and content type) that can be received from the server
@@ -199,6 +210,7 @@ export interface ResponseContent {
   'listmaps': ListMaps
   'uploadcomplete': null
   'addimage': AddImage
+  'sendimage': ImageInfo
 }
 
 export type Query = keyof ResponseContent & keyof RequestContent 

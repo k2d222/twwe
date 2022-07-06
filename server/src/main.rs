@@ -182,6 +182,7 @@ impl Server {
                 ResponseContent::ListMaps(_) => (),
                 ResponseContent::UploadComplete => (),
                 ResponseContent::AddImage(_) => (),
+                ResponseContent::SendImage(_) => (),
             }
         }
     }
@@ -357,6 +358,14 @@ impl Server {
         Ok(ResponseContent::AddImage(add_image))
     }
 
+    fn handle_send_image(&self, peer: &Peer, send_image: SendImage) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        // room.send_image(&send_image)?;
+        let image_info = room.image_info(send_image.index)?;
+        room.send_image(peer, send_image.index)?;
+        Ok(ResponseContent::SendImage(image_info))
+    }
+
     fn handle_upload_file(&self, peer: &Peer, data: &[u8]) -> Res {
         let path: PathBuf = format!("uploads/{}", peer.addr).into();
         let mut file = File::create(path).map_err(server_error)?;
@@ -383,6 +392,7 @@ impl Server {
             RequestContent::ListUsers => self.handle_list_users(peer),
             RequestContent::ListMaps => self.handle_list_maps(),
             RequestContent::AddImage(content) => self.handle_add_image(peer, content),
+            RequestContent::SendImage(content) => self.handle_send_image(peer, content),
         };
         self.respond_and_broadcast(peer, req.id, res);
     }

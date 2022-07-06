@@ -1,9 +1,16 @@
 <script lang="ts">
-  import { loadMap } from '../lib/editor'
+  import { server } from '../global'
+  import { queryMap } from '../lib/util'
   import Dialog from '../lib/dialog.svelte'
   import Editor from '../lib/editor.svelte'
 
   export let mapName: string
+  
+  async function loadMap(name: string) {
+    await server.query('joinmap', { name })
+    const map = await queryMap({ name })
+    return map
+  }
   
   const pLoadMap = loadMap(mapName)
 </script>

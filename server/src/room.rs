@@ -463,6 +463,40 @@ impl Room {
         image.name = add_image.name.to_owned();
         map.images.push(Image::Embedded(image));
 
+        // TODO: would be nice to have access to image.check() (which is private).
+        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
+
         Ok(())
+    }
+
+    pub fn image_info(&self, index: u32) -> Result<ImageInfo, &'static str> {
+        let map = self.map.get();
+        let image = map
+            .images
+            .get(index as usize)
+            .ok_or("invalid image index")?;
+        Ok(ImageInfo {
+            index: index as u32,
+            name: image.name().to_owned(),
+            width: image.width() as u32,
+            height: image.height() as u32,
+        })
+    }
+
+    pub fn send_image(&self, peer: &Peer, index: u32) -> Result<(), &'static str> {
+        let map = self.map.get();
+        let image = map
+            .images
+            .get(index as usize)
+            .ok_or("invalid image index")?;
+
+        match image {
+            twmap::Image::External(_) => Err("cannot send external image"),
+            twmap::Image::Embedded(image) => {
+                let data = image.image.unwrap_ref().as_raw().to_owned();
+                peer.tx.unbounded_send(Message::Binary(data)).ok();
+                Ok(())
+            }
+        }
     }
 }

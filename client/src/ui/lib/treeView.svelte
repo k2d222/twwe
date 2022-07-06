@@ -160,6 +160,7 @@
           const data = await decodePng(image)
           const img = new Image()
           img.loadEmbedded(data)
+          img.name = name
           rmap.addImage(img)
           onEditLayer({ group: g, layer: l, image: index })
         }

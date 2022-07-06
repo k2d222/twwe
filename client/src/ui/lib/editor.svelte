@@ -10,6 +10,7 @@
   import { showInfo, showError, clearDialog } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
+  import { queryImage } from './util'
 
   export let map: Map
 
@@ -41,7 +42,14 @@
     rmap.editGroup(e)
     rmap = rmap // hack to redraw treeview
   }
-  function serverOnEditLayer(e: EditLayer) {
+  async function serverOnEditLayer(e: EditLayer) {
+    // fetch missing images...
+    if (e.image) {
+      for (let i = map.images.length; i <= e.image; i++) {
+        const image = await queryImage({ index: i })
+        rmap.addImage(image)
+      }
+    }
     rmap.editLayer(e)
     rmap = rmap // hack to redraw treeview
   }
@@ -123,7 +131,7 @@
     
     // this is me being lazy, but really there are many events that should
     // toggle a redraw of the outlines, such as mouse move, view move, zoom,
-    // change active layer, resize layers…
+    // change active layer, resize layers...
     const updateForever = () => {
       updateOutlines()
       requestAnimationFrame(updateForever)
@@ -149,7 +157,7 @@
   }
 
   async function onSaveMap() {
-    showInfo('Saving map…', 'none')
+    showInfo('Saving map...', 'none')
     await server.query('savemap', { name: map.name })
     showInfo('Map saved on server.', 'closable')
   }

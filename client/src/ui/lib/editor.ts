@@ -1,15 +1,8 @@
 import type { EditTile } from '../../server/protocol'
+import type { Map } from '../../twmap/map'
 import { server } from '../global'
-import { Map } from '../../twmap/map'
 import { viewport, renderer, init as glInit } from '../../gl/global'
 import { RenderMap } from '../../gl/renderMap'
-
-
-export async function loadMap(mapName: string) {
-  await server.query('joinmap', { name: mapName })
-  const buf = await server.queryMap({ name: mapName })
-  return new Map(mapName, buf)
-}
 
 export function createRenderMap(canvas: HTMLCanvasElement, map: Map) {
   glInit(canvas)
