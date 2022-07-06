@@ -141,7 +141,8 @@
       props: {
         images: rmap.map.images,
         image: layer.image
-      }
+      },
+      accessors: true,
     })
 
     picker.$on('pick', async (e: Event & { detail: File | Image | string | null }) => {
@@ -156,7 +157,7 @@
           const name = image.name.replace(/\.[^\.]+$/, '')
           const index = rmap.map.images.length
           await uploadFile(image)
-          await server.query('addimage', { name, index })
+          await server.query('createimage', { name, index })
           const data = await decodePng(image)
           const img = new Image()
           img.loadEmbedded(data)
@@ -177,6 +178,20 @@
         img.loadExternal(image)
         const index = rmap.addImage(img)
         onEditLayer({ group: g, layer: l, image: index })
+      }
+    })
+
+    picker.$on('delete', async (e: Event & { detail: Image }) => {
+      const image = e.detail
+
+      try {
+        const index = rmap.map.images.indexOf(image)
+        await server.query('deleteimage', { index })
+        rmap.removeImage(index)
+        picker.$set({ images: rmap.map.images })
+      }
+      catch (e) {
+        showError('Failed to delete image: ' + e)
       }
     })
 

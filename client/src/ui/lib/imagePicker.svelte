@@ -62,9 +62,6 @@
   export let image: Image | null = null
   export let external = -1
 
-  // only keep embedded images
-  $: images = images.filter(img => !img.img)
-
   function onConfirm() {
     if (image) {
       dispatch('pick', image)
@@ -89,6 +86,10 @@
   function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
     dispatch('pick', file)
+  }
+  
+  function onDeleteImage(image: Image) {
+    dispatch('delete', image)
   }
 
   function selectExternal(i: number) {
@@ -131,15 +132,17 @@
     <h3>Upload</h3>
     <label>Select a file:&nbsp;
       <input type="file" placeholder="upload png file…" accept=".png,image/png" on:change={onFileChange}/>
+      (The image must be png of 1024&times;1024 pixels)
     </label>
     <h3>Embedded images</h3>
     <div class="images">
-      {#each images as img}
+      {#each images.filter(i => !i.img) as img}
         <div class="image" class:selected={image === img} on:click={() => selectEmbedded(img)}>
           <img src={getImgURL(img)} alt={img.name}>
           <div class="hover">
             <span>{img.name}</span>
           </div>
+          <button on:click={() => onDeleteImage(img)}>&times;</button>
         </div>
       {/each}
     </div>

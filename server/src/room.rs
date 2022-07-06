@@ -466,7 +466,7 @@ impl Room {
         }
     }
 
-    pub fn add_image(&self, path: &PathBuf, add_image: &AddImage) -> Result<(), &'static str> {
+    pub fn add_image(&self, path: &PathBuf, add_image: &CreateImage) -> Result<(), &'static str> {
         let mut map = self.map.get();
 
         if add_image.name == "" {
@@ -487,21 +487,21 @@ impl Room {
         Ok(())
     }
 
-    pub fn image_info(&self, index: u32) -> Result<ImageInfo, &'static str> {
+    pub fn image_info(&self, index: u16) -> Result<ImageInfo, &'static str> {
         let map = self.map.get();
         let image = map
             .images
             .get(index as usize)
             .ok_or("invalid image index")?;
         Ok(ImageInfo {
-            index: index as u32,
+            index: index as u16,
             name: image.name().to_owned(),
             width: image.width() as u32,
             height: image.height() as u32,
         })
     }
 
-    pub fn send_image(&self, peer: &Peer, index: u32) -> Result<(), &'static str> {
+    pub fn send_image(&self, peer: &Peer, index: u16) -> Result<(), &'static str> {
         let map = self.map.get();
         let image = map
             .images
@@ -516,5 +516,22 @@ impl Room {
                 Ok(())
             }
         }
+    }
+
+    pub fn remove_image(&self, index: u16) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if index as usize >= map.images.len() {
+            return Err("invalid image index");
+        }
+
+        if map.is_image_in_use(index) {
+            return Err("image in use");
+        }
+
+        map.images.remove(index as usize);
+        map.edit_image_indices(|i| i.map(|i| if i > index { i - 1 } else { i }));
+
+        Ok(())
     }
 }

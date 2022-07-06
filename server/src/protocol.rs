@@ -210,19 +210,24 @@ pub struct ListMaps {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AddImage {
+pub struct CreateImage {
     pub name: String,
-    pub index: u32,
+    pub index: u16,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SendImage {
-    pub index: u32,
+    pub index: u16,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteImage {
+    pub index: u16,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ImageInfo {
-    pub index: u32,
+    pub index: u16,
     pub name: String,
     pub width: u32,
     pub height: u32,
@@ -254,8 +259,10 @@ pub enum RequestContent {
     SendMap(SendMap),
     ListUsers,
     ListMaps,
-    AddImage(AddImage),
+
+    CreateImage(CreateImage),
     SendImage(SendImage),
+    DeleteImage(DeleteImage),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -284,9 +291,11 @@ pub enum ResponseContent {
     SendMap(SendMap),
     ListUsers(ListUsers),
     ListMaps(ListMaps),
-    AddImage(AddImage),
-    SendImage(ImageInfo),
     UploadComplete,
+
+    CreateImage(CreateImage),
+    SendImage(ImageInfo),
+    DeleteImage(DeleteImage),
 }
 
 #[derive(Clone, Debug, Deserialize)]

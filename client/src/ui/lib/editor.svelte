@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, AddImage } from '../../server/protocol'
+  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage } from '../../server/protocol'
   import { TileLayer } from '../../twmap/tileLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
@@ -70,10 +70,12 @@
     rmap.reorderLayer(e)
     rmap = rmap // hack to redraw treeview
   }
-  async function serverOnAddImage(e: AddImage) {
-    // fetch missing images...
+  async function serverOnCreateImage(e: CreateImage) {
     const image = await queryImage({ index: e.index })
     rmap.addImage(image)
+  }
+  async function serverOnDeleteImage(e: DeleteImage) {
+    rmap.removeImage(e.index)
   }
 
   function updateOutlines() {
@@ -124,7 +126,8 @@
     server.on('reorderlayer', serverOnReorderLayer)
     server.on('deletegroup', serverOnDeleteGroup)
     server.on('deletelayer', serverOnDeleteLayer)
-    server.on('addimage', serverOnAddImage)
+    server.on('createimage', serverOnCreateImage)
+    server.on('deleteimage', serverOnDeleteImage)
     server.send('listusers')
     canvas.focus()
     

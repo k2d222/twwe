@@ -1,4 +1,4 @@
-import type { Request, Response, RequestContent, ResponseContent, Broadcast, Query, SendMap, SendImage } from './protocol'
+import type { Request, Response, RequestContent, ResponseContent, Broadcast, Query } from './protocol'
 
 type QueryListener<K extends keyof ResponseContent> = (data: Response<K>) => void
 type BroadcastListener<K extends keyof ResponseContent> = (data: ResponseContent[K]) => void
@@ -46,8 +46,9 @@ export class Server {
       'listusers': [],
       'listmaps': [],
       'uploadcomplete': [],
-      'addimage': [],
+      'createimage': [],
       'sendimage': [],
+      'deleteimage': [],
     }
     this.binaryListeners = []
   }

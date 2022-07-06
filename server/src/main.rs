@@ -181,8 +181,9 @@ impl Server {
                 ResponseContent::ListUsers(_) => (),
                 ResponseContent::ListMaps(_) => (),
                 ResponseContent::UploadComplete => (),
-                ResponseContent::AddImage(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::CreateImage(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::SendImage(_) => (),
+                ResponseContent::DeleteImage(_) => self.broadcast_to_others(peer, content),
             }
         }
     }
@@ -351,11 +352,11 @@ impl Server {
         }))
     }
 
-    fn handle_add_image(&self, peer: &Peer, add_image: AddImage) -> Res {
+    fn handle_create_image(&self, peer: &Peer, create_image: CreateImage) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
         let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
-        room.add_image(&upload_path, &add_image)?;
-        Ok(ResponseContent::AddImage(add_image))
+        room.add_image(&upload_path, &create_image)?;
+        Ok(ResponseContent::CreateImage(create_image))
     }
 
     fn handle_send_image(&self, peer: &Peer, send_image: SendImage) -> Res {
@@ -364,6 +365,13 @@ impl Server {
         let image_info = room.image_info(send_image.index)?;
         room.send_image(peer, send_image.index)?;
         Ok(ResponseContent::SendImage(image_info))
+    }
+
+    fn handle_delete_image(&self, peer: &Peer, delete_image: DeleteImage) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        room.remove_image(delete_image.index)?;
+        Ok(ResponseContent::DeleteImage(delete_image))
     }
 
     fn handle_upload_file(&self, peer: &Peer, data: &[u8]) -> Res {
@@ -391,8 +399,9 @@ impl Server {
             RequestContent::SendMap(content) => self.handle_send_map(peer, content),
             RequestContent::ListUsers => self.handle_list_users(peer),
             RequestContent::ListMaps => self.handle_list_maps(),
-            RequestContent::AddImage(content) => self.handle_add_image(peer, content),
+            RequestContent::CreateImage(content) => self.handle_create_image(peer, content),
             RequestContent::SendImage(content) => self.handle_send_image(peer, content),
+            RequestContent::DeleteImage(content) => self.handle_delete_image(peer, content),
         };
         self.respond_and_broadcast(peer, req.id, res);
     }

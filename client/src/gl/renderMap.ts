@@ -57,6 +57,11 @@ export class RenderMap {
     return this.textures.length - 1
   }
   
+  removeImage(index: number) {
+    this.map.images.splice(index, 1)
+    this.textures.splice(index, 1)
+  }
+  
   editTile(change: EditTile) {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer] as RenderTileLayer
