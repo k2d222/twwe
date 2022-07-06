@@ -181,7 +181,7 @@ impl Server {
                 ResponseContent::ListUsers(_) => (),
                 ResponseContent::ListMaps(_) => (),
                 ResponseContent::UploadComplete => (),
-                ResponseContent::AddImage(_) => (),
+                ResponseContent::AddImage(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::SendImage(_) => (),
             }
         }

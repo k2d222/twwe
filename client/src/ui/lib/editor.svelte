@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup } from '../../server/protocol'
+  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, AddImage } from '../../server/protocol'
   import { TileLayer } from '../../twmap/tileLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import { viewport } from '../../gl/global'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
-  import { showInfo, showError, clearDialog } from './dialog'
+  import { showInfo } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
   import { queryImage } from './util'
@@ -43,13 +43,6 @@
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnEditLayer(e: EditLayer) {
-    // fetch missing images...
-    if (e.image) {
-      for (let i = map.images.length; i <= e.image; i++) {
-        const image = await queryImage({ index: i })
-        rmap.addImage(image)
-      }
-    }
     rmap.editLayer(e)
     rmap = rmap // hack to redraw treeview
   }
@@ -76,6 +69,11 @@
   function serverOnReorderLayer(e: ReorderLayer) {
     rmap.reorderLayer(e)
     rmap = rmap // hack to redraw treeview
+  }
+  async function serverOnAddImage(e: AddImage) {
+    // fetch missing images...
+    const image = await queryImage({ index: e.index })
+    rmap.addImage(image)
   }
 
   function updateOutlines() {
@@ -126,6 +124,7 @@
     server.on('reorderlayer', serverOnReorderLayer)
     server.on('deletegroup', serverOnDeleteGroup)
     server.on('deletelayer', serverOnDeleteLayer)
+    server.on('addimage', serverOnAddImage)
     server.send('listusers')
     canvas.focus()
     
