@@ -37,7 +37,7 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
     Ok(map)
 }
 
-pub fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
+fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
     let old_width = layer.tiles().shape().1 as isize;
     let diff = width as isize - old_width;
 
@@ -180,23 +180,41 @@ impl Room {
 
     pub fn set_tile(&self, edit_tile: &EditTile) -> Result<(), &'static str> {
         let mut map = self.map.get();
-        let layer = map
+        let group = map
             .groups
-            .iter_mut()
-            .find_map(|g| {
-                g.layers.iter_mut().find_map(|l| match l {
-                    Layer::Game(gl) => Some(gl),
-                    _ => None,
-                })
-            })
-            .ok_or("no game layer")?;
-        let tiles = layer.tiles.unwrap_mut(); // map must be loaded
-        let mut tile = tiles
-            .get_mut((edit_tile.y as usize, edit_tile.x as usize))
-            .ok_or("tile change outside layer")?;
-        tile.id = edit_tile.id;
+            .get_mut(edit_tile.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(edit_tile.layer as usize)
+            .ok_or("invalid layer index")?;
 
-        log::debug!("changed tile {:?}", edit_tile);
+        // because all the tilemap layers share the same fields, but cannot
+        // be mutated with the TileMapLayer trait, the easyest is to copy-paste
+        // the code with a macro.
+        macro_rules! change_layer_tile {
+            ($layer: ident) => {{
+                let tiles = $layer.tiles_mut().unwrap_mut(); // map must be loaded
+                let mut tile = tiles
+                    .get_mut((edit_tile.y as usize, edit_tile.x as usize))
+                    .ok_or("tile change outside layer")?;
+                tile.id = edit_tile.id;
+            }};
+        }
+
+        match layer {
+            Layer::Game(layer) => change_layer_tile!(layer),
+            Layer::Tiles(layer) => change_layer_tile!(layer),
+            Layer::Front(layer) => change_layer_tile!(layer),
+            Layer::Tele(layer) => change_layer_tile!(layer),
+            Layer::Speedup(layer) => change_layer_tile!(layer),
+            Layer::Switch(layer) => change_layer_tile!(layer),
+            Layer::Tune(layer) => change_layer_tile!(layer),
+            Layer::Quads(_) | Layer::Sounds(_) | Layer::Invalid(_) => {
+                return Err("layer is not a tile layer");
+            }
+        };
+
         Ok(())
     }
 
