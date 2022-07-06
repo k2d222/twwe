@@ -51,6 +51,12 @@ export class RenderMap {
     this.gameGroup.layers[l] = this.gameLayer
   }
   
+  addImage(image: Image) {
+    this.map.images.push(image)
+    this.textures.push(new Texture(image))
+    return this.textures.length - 1
+  }
+  
   editTile(change: EditTile) {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer] as RenderTileLayer

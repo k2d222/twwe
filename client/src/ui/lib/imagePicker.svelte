@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Image } from '../../twmap/image'
+  import type { Image } from '../../twmap/image'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
@@ -70,9 +70,7 @@
       dispatch('pick', image)
     }
     else if (external !== -1) {
-      const image = new Image()
-      image.loadExternal(externalImages[external])
-      dispatch('pick', image)
+      dispatch('pick', externalImages[external])
     }
     else {
       dispatch('pick', null)
@@ -88,14 +86,19 @@
       onCancel()
   }
 
+  function onFileChange(e: Event) {
+    const file = (e.target as HTMLInputElement).files[0]
+    dispatch('pick', file)
+  }
+
   function selectExternal(i: number) {
-    external = i
+    external = external === i ? -1 : i
     image = null
   }
 
   function selectEmbedded(img: Image) {
     external = -1
-    image = img  
+    image = image === img ? null : img
   }
 
   function getImgURL(image: Image) {
@@ -125,6 +128,10 @@
 
 <div id="image-picker">
   <div class="content">
+    <h3>Upload</h3>
+    <label>Select a file:&nbsp;
+      <input type="file" placeholder="upload png file…" accept=".png,image/png" on:change={onFileChange}/>
+    </label>
     <h3>Embedded images</h3>
     <div class="images">
       {#each images as img}

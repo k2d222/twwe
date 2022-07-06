@@ -209,6 +209,12 @@ pub struct ListMaps {
     pub maps: Vec<MapInfo>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AddImage {
+    pub name: String,
+    pub index: u32,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RequestContent {
@@ -235,6 +241,7 @@ pub enum RequestContent {
     SendMap(SendMap),
     ListUsers,
     ListMaps,
+    AddImage(AddImage),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -263,6 +270,7 @@ pub enum ResponseContent {
     SendMap(SendMap),
     ListUsers(ListUsers),
     ListMaps(ListMaps),
+    AddImage(AddImage),
     UploadComplete,
 }
 

@@ -139,7 +139,12 @@ export interface MapInfo {
 }
 
 export interface ListMaps {
-  maps: MapInfo[]
+  maps: MapInfo[],
+}
+
+export interface AddImage {
+  name: string,
+  index: number,
 }
 
 
@@ -166,6 +171,7 @@ export interface RequestContent {
   'sendmap': SendMap
   'listusers': null
   'listmaps': null
+  'addimage': AddImage
 }
 
 // queries (name and content type) that can be received from the server
@@ -192,6 +198,7 @@ export interface ResponseContent {
   'listusers': ListUsers
   'listmaps': ListMaps
   'uploadcomplete': null
+  'addimage': AddImage
 }
 
 export type Query = keyof ResponseContent & keyof RequestContent 

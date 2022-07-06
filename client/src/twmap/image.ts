@@ -31,6 +31,13 @@ export class Image {
     this.img.src = url
   }
   
+  loadEmbedded(data: ImageData) {
+    this.data = data
+    this.width = data.width
+    this.height = data.height
+    this.img = null
+  }
+  
   load(df: DataFile, info: MapImage) {
     this.name = parseString(df.getData(info.name))
     this.width = info.width

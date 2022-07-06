@@ -3,6 +3,7 @@
   import { server } from '../global'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { navigate } from 'svelte-routing'
+  import { uploadFile } from '../lib/util'
 
   let name = ''
 
@@ -22,31 +23,18 @@
     mapInfos = listMaps.maps
   })
 
-  function onFileChange(e: Event) {
+  async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
-    const reader = new FileReader()
     mapUploaded = false
-
-    reader.onload = async () => {
-      const data = reader.result as ArrayBuffer
-      try {
-        await server.uploadMap(data, (progress) => {
-          showInfo("Uploading map " + Math.round(progress / data.byteLength * 100) + "% …", 'none')
-        })
-        mapUploaded = true
-        showInfo('Map upload complete.')
-      }
-      catch (e) {
-        showError('Failed to upload map: ' + e)
-      }
+    
+    try {
+      await uploadFile(file)
+      mapUploaded = true
+      showInfo('Map upload complete.')
     }
-    reader.onerror = () => {
-      showError("Failed to load the file from your computer.")
+    catch (e) {
+      showError('Failed to upload map: ' + e)
     }
-    reader.onprogress = (e) => {
-      showInfo("Loading map " + Math.round(e.loaded / e.total * 100) + "% …", 'none')
-    }
-    reader.readAsArrayBuffer(file)
   }
 
   async function onCreateMap() {

@@ -1,19 +1,17 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
   import type { CreateGroup, EditGroup, DeleteGroup, ReorderGroup, CreateLayer, EditLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Color } from '../../twmap/types'
-  import { TileLayerFlags } from '../../twmap/types'
-  import type { Image } from '../../twmap/image'
   import type { Layer } from '../../twmap/layer'
+  import { TileLayerFlags } from '../../twmap/types'
+  import { Image } from '../../twmap/image'
   import { TileLayer } from '../../twmap/tileLayer'
   import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
-  import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
+  import { uploadFile, decodePng } from './util'
+  import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { server } from '../global'
-
-  const dispatch = createEventDispatcher()
 
   export let rmap: RenderMap
   export let visible = true
@@ -145,21 +143,42 @@
         image: layer.image
       }
     })
-    picker.$on('pick', async (e: Event & { detail: Image | null }) => {
+
+    picker.$on('pick', async (e: Event & { detail: File | Image | string | null }) => {
       picker.$destroy()
-      if (e.detail) {
-        const index = rmap.map.images.indexOf(e.detail)
-        if (index !== -1) {
-          onEditLayer({ group: g, layer: l, image: index })
-        }
-        else {
-          showWarning('external images not supported atm.')
-        }
-      }
-      else {
+      const image = e.detail
+
+      if (image === null) {
         onEditLayer({ group: g, layer: l, image: null })
       }
+      else if (image instanceof File) {
+        try {
+          const name = image.name.replace(/\.[^\.]+$/, '')
+          const index = rmap.map.images.length
+          await uploadFile(image)
+          await server.query('addimage', { name, index })
+          const data = await decodePng(image)
+          const img = new Image()
+          img.loadEmbedded(data)
+          rmap.addImage(img)
+          onEditLayer({ group: g, layer: l, image: index })
+        }
+        catch (e) {
+          showError('Failed to upload image: ' + e)
+        }
+      }
+      else if (image instanceof Image) {
+        const index = rmap.map.images.indexOf(image)
+        onEditLayer({ group: g, layer: l, image: index })
+      }
+      else {
+        const img = new Image()
+        img.loadExternal(image)
+        const index = rmap.addImage(img)
+        onEditLayer({ group: g, layer: l, image: index })
+      }
     })
+
     picker.$on('cancel', () => {
       picker.$destroy()
     })

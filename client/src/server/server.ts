@@ -46,6 +46,7 @@ export class Server {
       'listusers': [],
       'listmaps': [],
       'uploadcomplete': [],
+      'addimage': [],
     }
     this.binaryListeners = []
   }
@@ -195,7 +196,7 @@ export class Server {
     return data
   }
 
-  uploadMap(data: ArrayBuffer, onProgress?: (_: number) => any) {
+  uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any) {
     return new Promise<void>((resolve, reject) => {
       const listener = (x: Response<'uploadcomplete'>) => {
         delete this.queryListeners[1]

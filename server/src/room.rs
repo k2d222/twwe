@@ -13,7 +13,10 @@ use futures::channel::mpsc::UnboundedSender;
 
 use tungstenite::protocol::Message;
 
-use twmap::{GameLayer, Group, Layer, LayerKind, QuadsLayer, TileMapLayer, TilesLayer, TwMap};
+use twmap::{
+    EmbeddedImage, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, TileMapLayer, TilesLayer,
+    TwMap,
+};
 
 use crate::{
     protocol::*,
@@ -443,5 +446,23 @@ impl Room {
         } else {
             Err("cannot delete the game layer")
         }
+    }
+
+    pub fn add_image(&self, path: &PathBuf, add_image: &AddImage) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if add_image.name == "" {
+            return Err("empty image name");
+        }
+
+        if add_image.index as usize != map.images.len() {
+            return Err("invalid image index");
+        }
+
+        let mut image = EmbeddedImage::from_file(path).map_err(|_| "failed to load png image")?;
+        image.name = add_image.name.to_owned();
+        map.images.push(Image::Embedded(image));
+
+        Ok(())
     }
 }
