@@ -460,6 +460,11 @@ impl Room {
 
         if reorder_layer.group != reorder_layer.new_group {
             let layer = group.layers.remove(reorder_layer.layer as usize);
+
+            if reorder_layer.group != reorder_layer.new_group && layer.kind().is_physics_layer() {
+                return Err("cannot change physics layer group");
+            }
+
             let new_group = map
                 .groups
                 .get_mut(reorder_layer.new_group as usize)
@@ -467,10 +472,6 @@ impl Room {
 
             if reorder_layer.new_layer as usize > new_group.layers.len() {
                 return Err("invalid new layer index");
-            }
-
-            if layer.kind() == LayerKind::Game {
-                return Err("cannot reorder the game layer");
             }
 
             new_group
