@@ -8,7 +8,7 @@ export let visible = false
 const tileCount = 16
 
 let url: string
-$: if(image) url = getImgURL(image)
+$: url = image ? getImgURL(image) : ""
 
 function getImgURL(image: Image) {
   if (image.img !== null) {
