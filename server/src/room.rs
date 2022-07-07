@@ -7,6 +7,7 @@ use std::{
     sync::Arc,
 };
 
+use ndarray::Array2;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
@@ -14,8 +15,9 @@ use futures::channel::mpsc::UnboundedSender;
 use tungstenite::protocol::Message;
 
 use twmap::{
-    constants, EmbeddedImage, ExternalImage, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer,
-    TileMapLayer, TilesLayer, TwMap,
+    constants, CompressedData, EmbeddedImage, ExternalImage, FrontLayer, GameLayer, Group, Image,
+    Layer, LayerKind, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileMapLayer, TilesLayer,
+    TuneLayer, TwMap,
 };
 
 use crate::{
@@ -290,6 +292,23 @@ impl Room {
             .groups
             .get_mut(create_layer.group as usize)
             .ok_or("invalid group index")?;
+
+        macro_rules! add_layer {
+            ($kind: expr, $struct: ident, $enum: expr) => {{
+                if !group.is_physics_group() {
+                    return Err("cannot create physics layer outside of the physics group");
+                }
+
+                if group.layers.iter().find(|l| l.kind() == $kind).is_some() {
+                    return Err("cannot create multiple physics layers of the same kind");
+                }
+
+                let tiles = CompressedData::Loaded(Array2::default(default_layer_size));
+                let layer = $struct { tiles };
+                group.layers.push($enum(layer));
+            }};
+        }
+
         match create_layer.kind {
             // LayerKind::Game => todo!(),
             LayerKind::Tiles => {
@@ -302,13 +321,14 @@ impl Room {
                 layer.name = create_layer.name.to_owned();
                 group.layers.push(Layer::Quads(layer));
             }
-            // LayerKind::Front => todo!(),
-            // LayerKind::Tele => todo!(),
-            // LayerKind::Speedup => todo!(),
-            // LayerKind::Switch => todo!(),
-            // LayerKind::Tune => todo!(),
-            // LayerKind::Sounds => todo!(),
-            _ => return Err("invalid new layer kind"),
+            LayerKind::Front => add_layer!(LayerKind::Front, FrontLayer, Layer::Front),
+            LayerKind::Tele => add_layer!(LayerKind::Tele, TeleLayer, Layer::Tele),
+            LayerKind::Speedup => add_layer!(LayerKind::Speedup, SpeedupLayer, Layer::Speedup),
+            LayerKind::Switch => add_layer!(LayerKind::Switch, SwitchLayer, Layer::Switch),
+            LayerKind::Tune => add_layer!(LayerKind::Tune, TuneLayer, Layer::Tune),
+            LayerKind::Sounds | LayerKind::Game | LayerKind::Invalid(_) => {
+                return Err("invalid new layer kind");
+            }
         }
 
         Ok(())

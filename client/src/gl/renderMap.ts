@@ -34,7 +34,7 @@ export class RenderMap {
   textures: Texture[] // analogous to Map images
   groups: RenderGroup[]
   gameLayer: RenderTileLayer
-  gameGroup: RenderGroup
+  physicsGroup: RenderGroup
   
   constructor(map: Map) {
     this.map = map
@@ -44,11 +44,15 @@ export class RenderMap {
     // COMBAK: this is hacky but I don't see other ways to handle the
     // game layer edge-case for now.
     const [ g, l ] = this.map.gameLayerID()
-    this.gameGroup = this.groups[g]
-    const gameLayer = this.gameGroup.layers[l] as RenderTileLayer
+    this.physicsGroup = this.groups[g]
+    const gameLayer = this.physicsGroup.layers[l] as RenderTileLayer
     this.gameLayer = new RenderTileLayer(this, gameLayer.layer)
     this.gameLayer.texture = createGameTexture()
-    this.gameGroup.layers[l] = this.gameLayer
+    this.physicsGroup.layers[l] = this.gameLayer
+  }
+  
+  findPhysicsLayer(flags: TileLayerFlags) {
+    return this.physicsGroup.layers.find(l => l.layer instanceof TileLayer && l.layer.flags === flags)
   }
   
   addImage(image: Image) {
@@ -167,7 +171,30 @@ export class RenderMap {
     else if (create.kind === 'quads') {
       layer = new QuadLayer()
       rlayer = new RenderQuadLayer(this, layer)
-    } 
+    }
+    else if (['front', 'tele', 'speedup', 'switch', 'tune'].includes(create.kind)) {
+      const { width, height } = this.gameLayer.layer
+      const defaultTile: LayerTile = { index: 0, flags: 0 }
+      layer = TileLayer.create(width, height, defaultTile)
+      layer.flags =
+        create.kind === 'front' ? TileLayerFlags.FRONT :
+        create.kind === 'tele' ? TileLayerFlags.TELE :
+        create.kind === 'speedup' ? TileLayerFlags.SPEEDUP :
+        create.kind === 'switch' ? TileLayerFlags.SWITCH :
+        create.kind === 'tune' ? TileLayerFlags.TUNE :
+        TileLayerFlags.TILES
+      layer.name = 
+        create.kind === 'front' ? 'Front' :
+        create.kind === 'tele' ? 'Tele' :
+        create.kind === 'speedup' ? 'Speedup' :
+        create.kind === 'switch' ? 'Switch' :
+        create.kind === 'tune' ? 'Tune' :
+        ''
+      rlayer = new RenderTileLayer(this, layer)
+    }
+    else {
+      throw 'cannot create layer kind ' + create.kind
+    }
 
     group.layers.push(layer)
     rgroup.layers.push(rlayer)
@@ -179,7 +206,7 @@ export class RenderMap {
       group.render()
     
     // render the game layer on top of the rest.
-    this.gameGroup.renderLayer(this.gameLayer)
+    this.physicsGroup.renderLayer(this.gameLayer)
     
     gl.bindTexture(gl.TEXTURE_2D, null)
   }

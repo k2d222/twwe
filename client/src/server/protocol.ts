@@ -73,7 +73,7 @@ export interface DeleteGroup {
 // LAYERS
 
 export type CreateLayer = {
-  kind: 'tiles' | 'quads',
+  kind: 'tiles' | 'quads' | 'front' | 'tele' | 'speedup' | 'switch' | 'tune' | 'sounds', 
   group: number,
   name: string,
 }

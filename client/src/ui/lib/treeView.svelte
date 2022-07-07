@@ -323,6 +323,36 @@
                 on:click={() => onCreateLayer({ kind: 'quads', group: g, name: "" })}>
                 Add quad layer
               </button>
+              {#if !rmap.findPhysicsLayer(TileLayerFlags.SWITCH)}
+                <button
+                  on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
+                  Add switch layer
+                </button>
+              {/if}
+              {#if !rmap.findPhysicsLayer(TileLayerFlags.FRONT)}
+                <button
+                  on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
+                  Add front layer
+                </button>
+              {/if}
+              {#if !rmap.findPhysicsLayer(TileLayerFlags.TUNE)}
+                <button
+                  on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
+                  Add tune layer
+                </button>
+              {/if}
+              {#if !rmap.findPhysicsLayer(TileLayerFlags.SPEEDUP)}
+                <button
+                  on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
+                  Add speedup layer
+                </button>
+              {/if}
+              {#if !rmap.findPhysicsLayer(TileLayerFlags.TELE)}
+                <button
+                  on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
+                  Add tele layer
+                </button>
+              {/if}
               <button
                 on:click={() => onDeleteGroup({ group: g })}>
                 Delete group
@@ -364,14 +394,18 @@
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
                     <label>Opacity <input type="range" min={0} max={255} value={col.a}
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
+                    {#if layer.layer.flags === TileLayerFlags.TILES}
+                      <label>Name <input type="text" value={layer.layer.name}
+                        on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
+                    {/if}
                   {/if}
                 {:else if layer.layer instanceof QuadLayer}
                   {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                   <label>Image <input type="button" value={img}
                     on:click={() => openFilePicker(g, l, layer.layer)}></label>
+                  <label>Name <input type="text" value={layer.layer.name}
+                    on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
                 {/if}
-                <label>Name <input type="text" value={layer.layer.name}
-                  on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
                 <button
                   on:click={() => onDeleteLayer({ group: g, layer: l })}>
                   Delete layer
