@@ -56,19 +56,43 @@
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteGroup(e: DeleteGroup) {
+    const [ g, l ] = selectedLayer
+    const group = rmap.groups[g]
     rmap.deleteGroup(e)
+    if (e.group === g) {
+      selectedLayer = [ -1, -1 ]
+    }
+    else {
+      selectedLayer = [ rmap.groups.indexOf(group), l ]
+    }
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteLayer(e: DeleteLayer) {
+    const [ g, l ] = selectedLayer
+    const layer = rmap.groups[g].layers[l]
     rmap.deleteLayer(e)
+    if (e.group === g && e.layer === l) {
+      selectedLayer = [ -1, -1 ]
+    }
+    else {
+      const newGroup = rmap.groups.find(g => g.layers.includes(layer))
+      selectedLayer = [ rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer) ]
+    }
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderGroup(e: ReorderGroup) {
+    const [ g, l ] = selectedLayer
+    const group = rmap.groups[g]
     rmap.reorderGroup(e)
+    selectedLayer = [ rmap.groups.indexOf(group), l ]
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderLayer(e: ReorderLayer) {
+    const [ g, l ] = selectedLayer
+    const layer = rmap.groups[g].layers[l]
     rmap.reorderLayer(e)
+    const newGroup = rmap.groups.find(g => g.layers.includes(layer))
+    selectedLayer = [ rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer) ]
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {

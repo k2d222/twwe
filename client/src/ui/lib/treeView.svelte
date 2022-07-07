@@ -27,8 +27,15 @@
     return str.split(',').map(x => parseInt(x)) as [number, number]
   }
 
+  function select(g: number, l: number) {
+    // WARN: There is a dependency cycle here between strSelected and selected and I'm not
+    // sure how well svelte handles this.
+    strSelected = toStr(g, l)
+  }
+
   let strSelected = toStr(...selected)
   $: selected = fromStr(strSelected)
+  $: select(...selected)
   
   // ContextMenu
   let cm = { g: null, l: null }
@@ -94,45 +101,73 @@
     try {
       showInfo('Please wait…')
       await server.query('reordergroup', change)
+      const [ g, l ] = selected
+      const group = rmap.groups[g]
       rmap.reorderGroup(change)
+      select(rmap.groups.indexOf(group), l)
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to reorder group: ' + e)
     }
+    hideCM()
   }
   async function onReorderLayer(change: ReorderLayer) {
     try {
       showInfo('Please wait…')
       await server.query('reorderlayer', change)
+      const [ g, l ] = selected
+      const layer = rmap.groups[g].layers[l]
       rmap.reorderLayer(change)
+      const newGroup = rmap.groups.find(g => g.layers.includes(layer))
+      select(rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer))
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to reorder layer: ' + e)
     }
+    hideCM()
   }
   async function onDeleteGroup(change: DeleteGroup) {
     try {
       showInfo('Please wait…')
       await server.query('deletegroup', change)
+      const [ g, l ] = selected
+      const group = rmap.groups[g]
       rmap.deleteGroup(change)
+      if (change.group === g) {
+        select(-1, -1)
+      }
+      else {
+        select(rmap.groups.indexOf(group), l)
+      }
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to delete group: ' + e)
     }
+    hideCM()
   }
   async function onDeleteLayer(change: DeleteLayer) {
     try {
       showInfo('Please wait…')
       await server.query('deletelayer', change)
+      const [ g, l ] = selected
+      const layer = rmap.groups[g].layers[l]
       rmap.deleteLayer(change)
+      if (change.group === g && change.layer === l) {
+        select(-1, -1)
+      }
+      else {
+        const newGroup = rmap.groups.find(g => g.layers.includes(layer))
+        select(rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer))
+      }
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to delete layer: ' + e)
     }
+    hideCM()
   }
 
   function openFilePicker(g: number, l: number, layer: Layer) {
