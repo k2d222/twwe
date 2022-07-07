@@ -14,8 +14,8 @@ use futures::channel::mpsc::UnboundedSender;
 use tungstenite::protocol::Message;
 
 use twmap::{
-    EmbeddedImage, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, TileMapLayer, TilesLayer,
-    TwMap,
+    constants, EmbeddedImage, ExternalImage, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer,
+    TileMapLayer, TilesLayer, TwMap,
 };
 
 use crate::{
@@ -485,20 +485,47 @@ impl Room {
         }
     }
 
-    pub fn add_image(&self, path: &PathBuf, add_image: &CreateImage) -> Result<(), &'static str> {
+    pub fn add_embedded_image(
+        &self,
+        path: &PathBuf,
+        name: String,
+        index: u16,
+    ) -> Result<(), &'static str> {
         let mut map = self.map.get();
 
-        if add_image.name == "" {
+        if name == "" {
             return Err("empty image name");
         }
 
-        if add_image.index as usize != map.images.len() {
+        if index as usize != map.images.len() {
             return Err("invalid image index");
         }
 
         let mut image = EmbeddedImage::from_file(path).map_err(|_| "failed to load png image")?;
-        image.name = add_image.name.to_owned();
+        image.name = name;
         map.images.push(Image::Embedded(image));
+
+        // TODO: would be nice to have access to image.check() (which is private).
+        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
+
+        Ok(())
+    }
+
+    pub fn add_external_image(&self, name: String, index: u16) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if index as usize != map.images.len() {
+            return Err("invalid image index");
+        }
+        let (width, height) =
+            constants::external_dimensions(&name, map.version).ok_or("invalid external image")?;
+
+        let image = ExternalImage {
+            name,
+            width,
+            height,
+        };
+        map.images.push(Image::External(image));
 
         // TODO: would be nice to have access to image.check() (which is private).
         // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)

@@ -60,7 +60,7 @@
   export let images: Image[] = []
   
   export let image: Image | null = null
-  export let external = -1
+  $: external = image && image.img ? externalImages.indexOf(image.name) : -1
 
   function onConfirm() {
     if (image) {
@@ -93,13 +93,13 @@
   }
 
   function selectExternal(i: number) {
-    external = external === i ? -1 : i
     image = null
+    external = external === i ? -1 : i
   }
 
   function selectEmbedded(img: Image) {
-    external = -1
     image = image === img ? null : img
+    external = -1
   }
 
   function getImgURL(image: Image) {
@@ -120,7 +120,7 @@
     }
   }
 
-  $: selectedName = image ? image.name + " (embedded)" : external !== -1 ? externalImages[external] + " (external)" : "none"
+  $: selectedName = external !== -1 ? externalImages[external] + ' (external)' : image ? image.name + ' (embedded)' : 'none'
   
 
 </script>

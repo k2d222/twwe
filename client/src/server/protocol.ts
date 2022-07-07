@@ -145,6 +145,7 @@ export interface ListMaps {
 export interface CreateImage {
   name: string,
   index: number,
+  external: boolean,
 }
 
 export interface DeleteImage {

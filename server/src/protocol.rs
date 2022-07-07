@@ -213,6 +213,7 @@ pub struct ListMaps {
 pub struct CreateImage {
     pub name: String,
     pub index: u16,
+    pub external: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

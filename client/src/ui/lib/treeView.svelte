@@ -9,7 +9,7 @@
   import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
-  import { uploadFile, decodePng } from './util'
+  import { decodePng, externalImageUrl, queryImage } from './util'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { server } from '../global'
 
@@ -148,29 +148,60 @@
       picker.$destroy()
       const image = e.detail
 
-      if (image === null) {
+      if (image === null) { // no image used
         onEditLayer({ group: g, layer: l, image: null })
       }
-      else if (image instanceof Image) {
+      else if (image instanceof Image) { // use embedded image
         const index = rmap.map.images.indexOf(image)
         onEditLayer({ group: g, layer: l, image: index })
       }
-      else {
-        const img = new Image()
-        img.loadExternal(image)
-        const index = rmap.addImage(img)
-        onEditLayer({ group: g, layer: l, image: index })
+      else { // new external image
+        const index = rmap.map.images.length
+        const url = externalImageUrl(image)
+        const embed = await showInfo('Do you wish to embed this image?', 'yesno');
+        if (embed) {
+          try {
+            showInfo('Uploading image...', 'none')
+            const resp = await fetch(url)
+            const file = await resp.arrayBuffer()
+            await server.uploadFile(file)
+            await server.query('createimage', { name: image, index, external: false })
+            const img = await queryImage({ index })
+            rmap.addImage(img)
+            onEditLayer({ group: g, layer: l, image: index })
+            clearDialog()
+          }
+          catch (e) {
+            showError('Failed to upload image: ' + e)
+          }
+        }
+        else {
+          try {
+            showInfo('Creating image...', 'none')
+            const index = rmap.map.images.length
+            await server.query('createimage', { name: image, index, external: true })
+            const img = new Image()
+            img.loadExternal(url)
+            img.name = image
+            rmap.addImage(img)
+            onEditLayer({ group: g, layer: l, image: index })
+            clearDialog()
+          }
+          catch (e) {
+            showError('Failed to create external image: ' + e)
+          }
+        }
       }
     })
 
     picker.$on('upload', async (e: Event & { detail: File }) => {
       const image = e.detail
       try {
+        showInfo('Uploading image...', 'none')
         const name = image.name.replace(/\.[^\.]+$/, '')
         const index = rmap.map.images.length
-        await uploadFile(image)
-        showInfo('Uploading image...', 'none')
-        await server.query('createimage', { name, index })
+        await server.uploadFile(await image.arrayBuffer())
+        await server.query('createimage', { name, index, external: false })
         const data = await decodePng(image)
         const img = new Image()
         img.loadEmbedded(data)

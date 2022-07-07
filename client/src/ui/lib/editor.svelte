@@ -2,6 +2,7 @@
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage } from '../../server/protocol'
   import { TileLayer } from '../../twmap/tileLayer'
+  import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import { viewport } from '../../gl/global'
@@ -10,7 +11,7 @@
   import { showInfo } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
-  import { queryImage } from './util'
+  import { queryImage, externalImageUrl } from './util'
 
   export let map: Map
 
@@ -71,8 +72,16 @@
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {
-    const image = await queryImage({ index: e.index })
-    rmap.addImage(image)
+    if (e.external) {
+      const image = new Image()
+      image.loadExternal(externalImageUrl(e.name))
+      image.name = e.name
+      rmap.addImage(image)
+    }
+    else {
+      const image = await queryImage({ index: e.index })
+      rmap.addImage(image)
+    }
   }
   async function serverOnDeleteImage(e: DeleteImage) {
     rmap.removeImage(e.index)

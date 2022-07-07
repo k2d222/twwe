@@ -3,7 +3,6 @@
   import { server } from '../global'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { navigate } from 'svelte-routing'
-  import { uploadFile } from '../lib/util'
 
   let name = ''
 
@@ -28,7 +27,8 @@
     mapUploaded = false
     
     try {
-      await uploadFile(file)
+      showInfo('Uploading map...', 'none')
+      await server.uploadFile(await file.arrayBuffer())
       mapUploaded = true
       showInfo('Map upload complete.')
     }

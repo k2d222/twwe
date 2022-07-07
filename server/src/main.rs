@@ -354,8 +354,18 @@ impl Server {
 
     fn handle_create_image(&self, peer: &Peer, create_image: CreateImage) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
-        let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
-        room.add_image(&upload_path, &create_image)?;
+
+        if create_image.external {
+            room.add_external_image(create_image.name.to_owned(), create_image.index)?;
+        } else {
+            let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
+            room.add_embedded_image(
+                &upload_path,
+                create_image.name.to_owned(),
+                create_image.index,
+            )?;
+        }
+
         Ok(ResponseContent::CreateImage(create_image))
     }
 

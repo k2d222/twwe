@@ -1,37 +1,7 @@
 import type { SendMap, SendImage } from '../../server/protocol'
 import { server } from '../global'
-import { showInfo, clearDialog } from './dialog'
 import { Map } from '../../twmap/map'
 import { Image } from '../../twmap/image'
-
-export async function uploadFile(file: File) {
-  return new Promise<void>((resolve, reject) => {
-    const reader = new FileReader()
-
-    reader.onload = async () => {
-      const data = reader.result as ArrayBuffer
-      try {
-        await server.uploadFile(data, (progress) => {
-          showInfo("Uploading file " + Math.round(progress / data.byteLength * 100) + "% …", 'none')
-        })
-        clearDialog()
-        resolve()
-      }
-      catch (e) {
-        clearDialog()
-        reject(e)
-      }
-    }
-    reader.onerror = (e) => {
-      clearDialog()
-      reject(e)
-    }
-    reader.onprogress = (e) => {
-      showInfo("Loading file " + Math.round(e.loaded / e.total * 100) + "% …", 'none')
-    }
-    reader.readAsArrayBuffer(file)
-  })
-}
 
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
@@ -52,6 +22,10 @@ export async function decodePng(file: File): Promise<ImageData> {
       resolve(data)
     }
   })
+}
+
+export function externalImageUrl(name: string) {
+  return '/mapres/' + name + '.png'
 }
 
 export async function queryMap(sendMap: SendMap): Promise<Map> {
