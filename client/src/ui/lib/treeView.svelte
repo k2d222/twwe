@@ -358,35 +358,37 @@
                 on:click={() => onCreateLayer({ kind: 'quads', group: g, name: "" })}>
                 Add quad layer
               </button>
-              {#if !rmap.findPhysicsLayer(TileLayerFlags.SWITCH)}
-                <button
-                  on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
-                  Add switch layer
-                </button>
-              {/if}
-              {#if !rmap.findPhysicsLayer(TileLayerFlags.FRONT)}
-                <button
-                  on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
-                  Add front layer
-                </button>
-              {/if}
-              {#if !rmap.findPhysicsLayer(TileLayerFlags.TUNE)}
-                <button
-                  on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
-                  Add tune layer
-                </button>
-              {/if}
-              {#if !rmap.findPhysicsLayer(TileLayerFlags.SPEEDUP)}
-                <button
-                  on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
-                  Add speedup layer
-                </button>
-              {/if}
-              {#if !rmap.findPhysicsLayer(TileLayerFlags.TELE)}
-                <button
-                  on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
-                  Add tele layer
-                </button>
+              {#if group === rmap.physicsGroup}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.SWITCH)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
+                    Add switch layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.FRONT)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
+                    Add front layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.TUNE)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
+                    Add tune layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.SPEEDUP)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
+                    Add speedup layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.TELE)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
+                    Add tele layer
+                  </button>
+                {/if}
               {/if}
               <button
                 on:click={() => onDeleteGroup({ group: g })}>
