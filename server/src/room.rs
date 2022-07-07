@@ -324,9 +324,7 @@ impl Room {
         if let Image(Some(i)) = edit_layer.change {
             let image = map.images.get(i as usize).ok_or("invalid image index")?;
 
-            if image.width() != 1024 || image.height() != 1024 {
-                return Err("tile layer images must have dimensions (1024, 1024)");
-            }
+            let tile_dims_ok = image.width() == 1024 && image.height() == 1024;
 
             let group = map
                 .groups
@@ -338,7 +336,12 @@ impl Room {
                 .ok_or("invalid layer index")?;
 
             match layer {
-                Layer::Tiles(layer) => layer.image = Some(i),
+                Layer::Tiles(layer) => {
+                    if !tile_dims_ok {
+                        return Err("tile layer images must have dimensions (1024, 1024)");
+                    }
+                    layer.image = Some(i)
+                }
                 Layer::Quads(layer) => layer.image = Some(i),
                 _ => return Err("cannot change layer image"),
             }

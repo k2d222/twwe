@@ -60,7 +60,8 @@
   export let images: Image[] = []
   
   export let image: Image | null = null
-  $: external = image && image.img ? externalImages.indexOf(image.name) : -1
+  let external = -1
+  $: external = image && image.img ? externalImages.indexOf(image.name) : external
 
   function onConfirm() {
     if (image) {
