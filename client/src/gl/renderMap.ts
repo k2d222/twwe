@@ -165,11 +165,11 @@ export class RenderMap {
   }
   
   reorderLayer(change: ReorderLayer) {
-    const group = this.groups[change.group]
-    const layer = group.layers[change.layer]
-
-    group.layers.splice(change.layer, 1)
-    this.groups[change.newGroup].layers.splice(change.newLayer, 0, layer)
+    const rgroup = this.groups[change.group]
+    const [ rlayer ] = rgroup.layers.splice(change.layer, 1)
+    const [ layer ] = rgroup.group.layers.splice(change.layer, 1)
+    this.groups[change.newGroup].layers.splice(change.newLayer, 0, rlayer)
+    this.groups[change.newGroup].group.layers.splice(change.newLayer, 0, layer)
   }
   
   deleteLayer(change: DeleteLayer) {
