@@ -1,16 +1,8 @@
 import type { EditTile } from '../../server/protocol'
+import type { Map } from '../../twmap/map'
 import { server } from '../global'
-import { Map } from '../../twmap/map'
 import { viewport, renderer, init as glInit } from '../../gl/global'
 import { RenderMap } from '../../gl/renderMap'
-import { LayerType } from '../../twmap/types'
-
-
-export async function loadMap(mapName: string) {
-  await server.query('joinmap', { name: mapName })
-  const buf = await server.queryMap({ name: mapName })
-  return new Map(mapName, buf)
-}
 
 export function createRenderMap(canvas: HTMLCanvasElement, map: Map) {
   glInit(canvas)
@@ -42,7 +34,7 @@ export function getLayerImage(rmap: RenderMap, groupID: number, layerID: number)
   const map = rmap.map
   const layer = map.groups[groupID].layers[layerID]
   let image = layer.image
-  if (layer.type === LayerType.GAME)
+  if (layer === rmap.gameLayer.layer)
     image = rmap.gameLayer.texture.image
   return image
 }

@@ -19,6 +19,7 @@ export class Image {
   }
 
   loadExternal(url: string) {
+    this.data = null
     this.img = document.createElement('img')
     this.img.onerror = () => console.warn('failed to load image:', url)
     this.img.onload = () => {
@@ -29,14 +30,21 @@ export class Image {
     }
     this.img.src = url
   }
-
+  
+  loadEmbedded(data: ImageData) {
+    this.data = data
+    this.width = data.width
+    this.height = data.height
+    this.img = null
+  }
+  
   load(df: DataFile, info: MapImage) {
     this.name = parseString(df.getData(info.name))
     this.width = info.width
     this.height = info.height
 
     if (info.external) {
-      const url = 'mapres/' + this.name + '.png'
+      const url = '/mapres/' + this.name + '.png'
       this.loadExternal(url)
     }
     else {

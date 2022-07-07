@@ -114,6 +114,7 @@ pub enum OneLayerChange {
     Color(Color),
     Width(u32),
     Height(u32),
+    Image(Option<u16>),
 }
 
 // see https://serde.rs/remote-derive.html
@@ -208,6 +209,31 @@ pub struct ListMaps {
     pub maps: Vec<MapInfo>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateImage {
+    pub name: String,
+    pub index: u16,
+    pub external: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SendImage {
+    pub index: u16,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteImage {
+    pub index: u16,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ImageInfo {
+    pub index: u16,
+    pub name: String,
+    pub width: u32,
+    pub height: u32,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RequestContent {
@@ -234,6 +260,10 @@ pub enum RequestContent {
     SendMap(SendMap),
     ListUsers,
     ListMaps,
+
+    CreateImage(CreateImage),
+    SendImage(SendImage),
+    DeleteImage(DeleteImage),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -263,6 +293,10 @@ pub enum ResponseContent {
     ListUsers(ListUsers),
     ListMaps(ListMaps),
     UploadComplete,
+
+    CreateImage(CreateImage),
+    SendImage(ImageInfo),
+    DeleteImage(DeleteImage),
 }
 
 #[derive(Clone, Debug, Deserialize)]

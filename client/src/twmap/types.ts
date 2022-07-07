@@ -7,9 +7,18 @@ export enum TileFlag {
 
 export enum LayerType {
   INVALID = 0,
-  GAME    = 1,
   TILES   = 2,
   QUADS   = 3,
+}
+
+export enum TileLayerFlags {
+  TILES = 0,
+  GAME = 1,
+  TELE = 2,
+  SPEEDUP = 4,
+  FRONT = 8,
+  SWITCH = 16,
+  TUNE = 32,
 }
 
 export enum MapItemType {
@@ -56,7 +65,7 @@ export type MapGroupObj = MapObj & {
 }
 
 export type MapLayer = MapObj & {
-  type: number,
+  type: LayerType,
   flags: number,
 }
 
@@ -73,7 +82,7 @@ export type MapLayerTiles = MapObj & {
   version: number,
   width: number,
   height: number,
-  flags: number,
+  flags: TileLayerFlags,
   color: Color,
   colorEnv: number,
   colorEnvOffset: number,

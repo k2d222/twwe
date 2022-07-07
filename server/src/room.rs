@@ -13,7 +13,10 @@ use futures::channel::mpsc::UnboundedSender;
 
 use tungstenite::protocol::Message;
 
-use twmap::{GameLayer, Group, Layer, LayerKind, QuadsLayer, TileMapLayer, TilesLayer, TwMap};
+use twmap::{
+    constants, EmbeddedImage, ExternalImage, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer,
+    TileMapLayer, TilesLayer, TwMap,
+};
 
 use crate::{
     protocol::*,
@@ -34,8 +37,8 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
     Ok(map)
 }
 
-pub fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
-    let old_width = layer.tiles().shape().0 as isize;
+fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
+    let old_width = layer.tiles().shape().1 as isize;
     let diff = width as isize - old_width;
 
     if width == 0 || width > 10000 {
@@ -177,23 +180,41 @@ impl Room {
 
     pub fn set_tile(&self, edit_tile: &EditTile) -> Result<(), &'static str> {
         let mut map = self.map.get();
-        let layer = map
+        let group = map
             .groups
-            .iter_mut()
-            .find_map(|g| {
-                g.layers.iter_mut().find_map(|l| match l {
-                    Layer::Game(gl) => Some(gl),
-                    _ => None,
-                })
-            })
-            .ok_or("no game layer")?;
-        let tiles = layer.tiles.unwrap_mut(); // map must be loaded
-        let mut tile = tiles
-            .get_mut((edit_tile.y as usize, edit_tile.x as usize))
-            .ok_or("tile change outside layer")?;
-        tile.id = edit_tile.id;
+            .get_mut(edit_tile.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(edit_tile.layer as usize)
+            .ok_or("invalid layer index")?;
 
-        log::debug!("changed tile {:?}", edit_tile);
+        // because all the tilemap layers share the same fields, but cannot
+        // be mutated with the TileMapLayer trait, the easyest is to copy-paste
+        // the code with a macro.
+        macro_rules! change_layer_tile {
+            ($layer: ident) => {{
+                let tiles = $layer.tiles_mut().unwrap_mut(); // map must be loaded
+                let mut tile = tiles
+                    .get_mut((edit_tile.y as usize, edit_tile.x as usize))
+                    .ok_or("tile change outside layer")?;
+                tile.id = edit_tile.id;
+            }};
+        }
+
+        match layer {
+            Layer::Game(layer) => change_layer_tile!(layer),
+            Layer::Tiles(layer) => change_layer_tile!(layer),
+            Layer::Front(layer) => change_layer_tile!(layer),
+            Layer::Tele(layer) => change_layer_tile!(layer),
+            Layer::Speedup(layer) => change_layer_tile!(layer),
+            Layer::Switch(layer) => change_layer_tile!(layer),
+            Layer::Tune(layer) => change_layer_tile!(layer),
+            Layer::Quads(_) | Layer::Sounds(_) | Layer::Invalid(_) => {
+                return Err("layer is not a tile layer");
+            }
+        };
+
         Ok(())
     }
 
@@ -294,7 +315,38 @@ impl Room {
     }
 
     pub fn edit_layer(&self, edit_layer: &EditLayer) -> Result<(), &'static str> {
+        use OneLayerChange::*;
         let mut map = self.map.get();
+
+        // COMBAK: layer mutable borrow interferes with immutable borrow of image.
+        // I copy-pasted code but there must be a better way.
+
+        if let Image(Some(i)) = edit_layer.change {
+            let image = map.images.get(i as usize).ok_or("invalid image index")?;
+
+            let tile_dims_ok = image.width() == 1024 && image.height() == 1024;
+
+            let group = map
+                .groups
+                .get_mut(edit_layer.group as usize)
+                .ok_or("invalid group index")?;
+            let layer = group
+                .layers
+                .get_mut(edit_layer.layer as usize)
+                .ok_or("invalid layer index")?;
+
+            match layer {
+                Layer::Tiles(layer) => {
+                    if !tile_dims_ok {
+                        return Err("tile layer images must have dimensions (1024, 1024)");
+                    }
+                    layer.image = Some(i)
+                }
+                Layer::Quads(layer) => layer.image = Some(i),
+                _ => return Err("cannot change layer image"),
+            }
+        }
+
         let group = map
             .groups
             .get_mut(edit_layer.group as usize)
@@ -304,7 +356,6 @@ impl Room {
             .get_mut(edit_layer.layer as usize)
             .ok_or("invalid layer index")?;
 
-        use OneLayerChange::*;
         match edit_layer.change.clone() {
             Name(name) => *layer.name_mut().ok_or("cannot change layer name")? = name,
             Color(color) => match layer {
@@ -312,28 +363,64 @@ impl Room {
                 _ => return Err("cannot change layer color"),
             },
             Width(width) => match layer {
-                Layer::Game(layer) => set_layer_width(layer, width as usize)?,
+                Layer::Game(_)
+                | Layer::Front(_)
+                | Layer::Tele(_)
+                | Layer::Speedup(_)
+                | Layer::Switch(_)
+                | Layer::Tune(_) => {
+                    for layer in group.layers.iter_mut() {
+                        match layer {
+                            Layer::Game(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Front(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Tele(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Speedup(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Switch(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Tune(layer) => set_layer_width(layer, width as usize)?,
+                            Layer::Tiles(_)
+                            | Layer::Quads(_)
+                            | Layer::Sounds(_)
+                            | Layer::Invalid(_) => (),
+                        }
+                    }
+                }
                 Layer::Tiles(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Tele(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Speedup(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Switch(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Tune(layer) => set_layer_width(layer, width as usize)?,
-                Layer::Front(layer) => set_layer_width(layer, width as usize)?,
                 Layer::Quads(_) | Layer::Invalid(_) | Layer::Sounds(_) => {
                     return Err("cannot change layer dimensions")
                 }
             },
             Height(height) => match layer {
-                Layer::Game(layer) => set_layer_height(layer, height as usize)?,
+                Layer::Game(_)
+                | Layer::Front(_)
+                | Layer::Tele(_)
+                | Layer::Speedup(_)
+                | Layer::Switch(_)
+                | Layer::Tune(_) => {
+                    for layer in group.layers.iter_mut() {
+                        match layer {
+                            Layer::Game(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Front(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Tele(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Speedup(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Switch(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Tune(layer) => set_layer_height(layer, height as usize)?,
+                            Layer::Tiles(_)
+                            | Layer::Quads(_)
+                            | Layer::Sounds(_)
+                            | Layer::Invalid(_) => (),
+                        }
+                    }
+                }
                 Layer::Tiles(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Tele(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Speedup(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Switch(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Tune(layer) => set_layer_height(layer, height as usize)?,
-                Layer::Front(layer) => set_layer_height(layer, height as usize)?,
                 Layer::Quads(_) | Layer::Invalid(_) | Layer::Sounds(_) => {
                     return Err("cannot change layer dimensions")
                 }
+            },
+            Image(Some(_)) => (), // already handled
+            Image(None) => match layer {
+                Layer::Tiles(layer) => layer.image = None,
+                Layer::Quads(layer) => layer.image = None,
+                _ => return Err("cannot change layer image"),
             },
         }
 
@@ -399,5 +486,101 @@ impl Room {
         } else {
             Err("cannot delete the game layer")
         }
+    }
+
+    pub fn add_embedded_image(
+        &self,
+        path: &PathBuf,
+        name: String,
+        index: u16,
+    ) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if name == "" {
+            return Err("empty image name");
+        }
+
+        if index as usize != map.images.len() {
+            return Err("invalid image index");
+        }
+
+        let mut image = EmbeddedImage::from_file(path).map_err(|_| "failed to load png image")?;
+        image.name = name;
+        map.images.push(Image::Embedded(image));
+
+        // TODO: would be nice to have access to image.check() (which is private).
+        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
+
+        Ok(())
+    }
+
+    pub fn add_external_image(&self, name: String, index: u16) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if index as usize != map.images.len() {
+            return Err("invalid image index");
+        }
+        let (width, height) =
+            constants::external_dimensions(&name, map.version).ok_or("invalid external image")?;
+
+        let image = ExternalImage {
+            name,
+            width,
+            height,
+        };
+        map.images.push(Image::External(image));
+
+        // TODO: would be nice to have access to image.check() (which is private).
+        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
+
+        Ok(())
+    }
+
+    pub fn image_info(&self, index: u16) -> Result<ImageInfo, &'static str> {
+        let map = self.map.get();
+        let image = map
+            .images
+            .get(index as usize)
+            .ok_or("invalid image index")?;
+        Ok(ImageInfo {
+            index: index as u16,
+            name: image.name().to_owned(),
+            width: image.width() as u32,
+            height: image.height() as u32,
+        })
+    }
+
+    pub fn send_image(&self, peer: &Peer, index: u16) -> Result<(), &'static str> {
+        let map = self.map.get();
+        let image = map
+            .images
+            .get(index as usize)
+            .ok_or("invalid image index")?;
+
+        match image {
+            twmap::Image::External(_) => Err("cannot send external image"),
+            twmap::Image::Embedded(image) => {
+                let data = image.image.unwrap_ref().as_raw().to_owned();
+                peer.tx.unbounded_send(Message::Binary(data)).ok();
+                Ok(())
+            }
+        }
+    }
+
+    pub fn remove_image(&self, index: u16) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if index as usize >= map.images.len() {
+            return Err("invalid image index");
+        }
+
+        if map.is_image_in_use(index) {
+            return Err("image in use");
+        }
+
+        map.images.remove(index as usize);
+        map.edit_image_indices(|i| i.map(|i| if i > index { i - 1 } else { i }));
+
+        Ok(())
     }
 }

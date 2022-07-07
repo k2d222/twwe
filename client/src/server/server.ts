@@ -1,4 +1,4 @@
-import type { Request, Response, RequestContent, ResponseContent, Broadcast, Query, SendMap } from './protocol'
+import type { Request, Response, RequestContent, ResponseContent, Broadcast, Query } from './protocol'
 
 type QueryListener<K extends keyof ResponseContent> = (data: Response<K>) => void
 type BroadcastListener<K extends keyof ResponseContent> = (data: ResponseContent[K]) => void
@@ -46,6 +46,9 @@ export class Server {
       'listusers': [],
       'listmaps': [],
       'uploadcomplete': [],
+      'createimage': [],
+      'sendimage': [],
+      'deleteimage': [],
     }
     this.binaryListeners = []
   }
@@ -185,17 +188,7 @@ export class Server {
     })
   }
   
-  async queryMap(sendMap: SendMap) {
-    let data: ArrayBuffer
-    const listener = (d: ArrayBuffer) => data = d
-    this.binaryListeners.push(listener)
-    await this.query('sendmap', sendMap)
-    let index = this.binaryListeners.indexOf(listener)
-    this.binaryListeners.splice(index, 1)
-    return data
-  }
-
-  uploadMap(data: ArrayBuffer, onProgress?: (_: number) => any) {
+  uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any) {
     return new Promise<void>((resolve, reject) => {
       const listener = (x: Response<'uploadcomplete'>) => {
         delete this.queryListeners[1]

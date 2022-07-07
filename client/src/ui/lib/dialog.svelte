@@ -36,8 +36,8 @@
     <button on:click={onClose}>Close</button>
   {:else if controls === 'yesno'}
     <div class="buttons">
-      <button on:click={onNo}>Cancel</button>
-      <button on:click={onYes}>Proceed</button>
+      <button on:click={onNo}>No</button>
+      <button on:click={onYes}>Yes</button>
     </div>
   {/if}
 

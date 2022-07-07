@@ -1,15 +1,17 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup } from '../../server/protocol'
+  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage } from '../../server/protocol'
   import { TileLayer } from '../../twmap/tileLayer'
+  import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import { viewport } from '../../gl/global'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
-  import { showInfo, showError, clearDialog } from './dialog'
+  import { showInfo } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
+  import { queryImage, externalImageUrl } from './util'
 
   export let map: Map
 
@@ -41,7 +43,7 @@
     rmap.editGroup(e)
     rmap = rmap // hack to redraw treeview
   }
-  function serverOnEditLayer(e: EditLayer) {
+  async function serverOnEditLayer(e: EditLayer) {
     rmap.editLayer(e)
     rmap = rmap // hack to redraw treeview
   }
@@ -68,6 +70,21 @@
   function serverOnReorderLayer(e: ReorderLayer) {
     rmap.reorderLayer(e)
     rmap = rmap // hack to redraw treeview
+  }
+  async function serverOnCreateImage(e: CreateImage) {
+    if (e.external) {
+      const image = new Image()
+      image.loadExternal(externalImageUrl(e.name))
+      image.name = e.name
+      rmap.addImage(image)
+    }
+    else {
+      const image = await queryImage({ index: e.index })
+      rmap.addImage(image)
+    }
+  }
+  async function serverOnDeleteImage(e: DeleteImage) {
+    rmap.removeImage(e.index)
   }
 
   function updateOutlines() {
@@ -118,12 +135,14 @@
     server.on('reorderlayer', serverOnReorderLayer)
     server.on('deletegroup', serverOnDeleteGroup)
     server.on('deletelayer', serverOnDeleteLayer)
+    server.on('createimage', serverOnCreateImage)
+    server.on('deleteimage', serverOnDeleteImage)
     server.send('listusers')
     canvas.focus()
     
     // this is me being lazy, but really there are many events that should
     // toggle a redraw of the outlines, such as mouse move, view move, zoom,
-    // change active layer, resize layers…
+    // change active layer, resize layers...
     const updateForever = () => {
       updateOutlines()
       requestAnimationFrame(updateForever)
@@ -149,7 +168,7 @@
   }
 
   async function onSaveMap() {
-    showInfo('Saving map…', 'none')
+    showInfo('Saving map...', 'none')
     await server.query('savemap', { name: map.name })
     showInfo('Map saved on server.', 'closable')
   }
@@ -179,62 +198,6 @@
     }
   }
 
-  function onEditLayer(e: Event & { detail: EditLayer }) {
-    server.send('editlayer', e.detail)
-  }
-  function onEditGroup(e: Event & { detail: EditGroup }) {
-    server.send('editgroup', e.detail)
-  }
-  function onCreateGroup(e: Event & { detail: CreateGroup }) {
-    server.send('creategroup', e.detail)
-  }
-  function onCreateLayer(e: Event & { detail: CreateLayer }) {
-    server.send('createlayer', e.detail)
-  }
-  async function onReorderGroup(e: Event & { detail: ReorderGroup }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('reordergroup', e.detail)
-      rmap.reorderGroup(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to reorder group: ' + e)
-    }
-  }
-  async function onReorderLayer(e: Event & { detail: ReorderLayer }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('reorderlayer', e.detail)
-      rmap.reorderLayer(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to reorder layer: ' + e)
-    }
-  }
-  async function onDeleteGroup(e: Event & { detail: DeleteGroup }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('deletegroup', e.detail)
-      rmap.deleteGroup(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to delete group: ' + e)
-    }
-  }
-  async function onDeleteLayer(e: Event & { detail: DeleteLayer }) {
-    try {
-      showInfo('Please wait…')
-      await server.query('deletelayer', e.detail)
-      rmap.deleteLayer(e.detail)
-      rmap = rmap // hack to redraw treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to delete layer: ' + e)
-    }
-  }
 
 </script>
 
@@ -257,12 +220,6 @@
     </div>
   </div>
   <Statusbar />
-  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer}
-    on:layerchange={onEditLayer} on:groupchange={onEditGroup}
-    on:createlayer={onCreateLayer} on:creategroup={onCreateGroup}
-    on:editlayer={onEditLayer} on:editgroup={onEditGroup}
-    on:deletelayer={onDeleteLayer} on:deletegroup={onDeleteGroup}
-    on:reorderlayer={onReorderLayer} on:reordergroup={onReorderGroup}
-  />
+  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
 </div>

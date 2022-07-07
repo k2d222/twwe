@@ -42,7 +42,9 @@ export interface DeleteMap {
 
 // GROUPS
 
-export interface CreateGroup {}
+export interface CreateGroup {
+  name: string
+}
 
 // must have exactly one of the optional fields
 export interface EditGroup {
@@ -89,11 +91,12 @@ export interface EditTileLayer extends CommonLayerChange {
   color?: Color,
   // colorEnv?: number, // TODO
   // colorEnvOffset?: number, // TODO
-  // image: number, // TODO
+  image?: number | null,
 }
 
 export interface EditQuadLayer extends CommonLayerChange {
   // TODO
+  image?: number,
 }
 
 export type EditLayer = EditTileLayer | EditQuadLayer
@@ -136,9 +139,29 @@ export interface MapInfo {
 }
 
 export interface ListMaps {
-  maps: MapInfo[]
+  maps: MapInfo[],
 }
 
+export interface CreateImage {
+  name: string,
+  index: number,
+  external: boolean,
+}
+
+export interface DeleteImage {
+  index: number,
+}
+
+export interface SendImage {
+  index: number,
+}
+
+export interface ImageInfo {
+  name: string,
+  index: number,
+  width: number,
+  height: number,
+}
 
 // queries (name and content type) that can be sent by the client
 export interface RequestContent {
@@ -163,6 +186,10 @@ export interface RequestContent {
   'sendmap': SendMap
   'listusers': null
   'listmaps': null
+
+  'createimage': CreateImage
+  'sendimage': SendImage
+  'deleteimage': DeleteImage
 }
 
 // queries (name and content type) that can be received from the server
@@ -189,6 +216,10 @@ export interface ResponseContent {
   'listusers': ListUsers
   'listmaps': ListMaps
   'uploadcomplete': null
+
+  'createimage': CreateImage
+  'sendimage': ImageInfo
+  'deleteimage': DeleteImage
 }
 
 export type Query = keyof ResponseContent & keyof RequestContent 

@@ -1,7 +1,8 @@
 import type { QuadLayer } from '../twmap/quadLayer'
 import type { LayerQuad } from '../twmap/types'
+import type { Texture } from './texture'
+import type { RenderMap } from './renderMap'
 import { RenderLayer } from './renderLayer'
-import { Texture } from './texture'
 import { gl, shader } from './global'
 
 export class RenderQuadLayer extends RenderLayer {
@@ -19,15 +20,17 @@ export class RenderQuadLayer extends RenderLayer {
   texCoordBuf: WebGLBuffer
   indexBuf: WebGLBuffer
 
-  constructor(layer: QuadLayer) {
+  constructor(rmap: RenderMap, layer: QuadLayer) {
     super()
     this.layer = layer
     this.visible = true
+    
+    this.texture = null
 
-    if (this.layer.image !== null)
-      this.texture = new Texture(this.layer.image)
-    else
-      this.texture = null
+    if (layer.image !== null) {
+      const index = rmap.map.images.indexOf(layer.image)
+      this.texture = rmap.textures[index]
+    }
 
     const quadCount = this.layer.quads.length
     this.colorArr = new Float32Array(quadCount * 4 * 4)

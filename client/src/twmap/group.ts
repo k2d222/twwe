@@ -1,5 +1,6 @@
 import type { Layer } from './layer'
 import type { DataFile } from './datafile'
+import type { Map } from './map'
 import { TileLayer } from './tileLayer'
 import { QuadLayer } from './quadLayer'
 import { MapGroupObj, MapItemType, LayerType } from './types'
@@ -22,16 +23,16 @@ export class Group {
     this.layers = []
   }
 
-  load(df: DataFile, info: MapGroupObj) {
+  load(map: Map, df: DataFile, info: MapGroupObj) {
     this.name = info.name
     this.offX = info.offX
     this.offY = info.offY
     this.paraX = info.paraX
     this.paraY = info.paraY
-    this.layers = this.loadLayers(df, info.startLayer, info.numLayers)
+    this.layers = this.loadLayers(map, df, info.startLayer, info.numLayers)
   }
 
-  private loadLayers(df: DataFile, startLayer: number, numLayers: number) {
+  private loadLayers(map: Map, df: DataFile, startLayer: number, numLayers: number) {
     const layersInfo = df.getType(MapItemType.LAYER)
     
     if (!layersInfo)
@@ -46,13 +47,13 @@ export class Group {
       if (layerInfo.type === LayerType.TILES) {
         const tileLayerInfo = parseMapLayerTiles(layerItem.data)
         const layer = new TileLayer()
-        layer.load(df, tileLayerInfo)
+        layer.load(map, df, tileLayerInfo)
         layers.push(layer)
       }
       else if (layerInfo.type === LayerType.QUADS) {
         const quadLayerInfo = parseMapLayerQuads(layerItem.data)
         const layer = new QuadLayer()
-        layer.load(df, quadLayerInfo)
+        layer.load(map, df, quadLayerInfo)
         layers.push(layer)
       }
       else {

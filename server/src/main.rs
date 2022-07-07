@@ -1,11 +1,15 @@
 use std::{
     collections::HashMap,
-    env, io,
+    env,
+    fs::File,
+    io,
     net::SocketAddr,
     path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
     time::SystemTime,
 };
+
+use std::io::prelude::*;
 
 use glob::glob;
 
@@ -177,6 +181,9 @@ impl Server {
                 ResponseContent::ListUsers(_) => (),
                 ResponseContent::ListMaps(_) => (),
                 ResponseContent::UploadComplete => (),
+                ResponseContent::CreateImage(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::SendImage(_) => (),
+                ResponseContent::DeleteImage(_) => self.broadcast_to_others(peer, content),
             }
         }
     }
@@ -218,9 +225,11 @@ impl Server {
             }
             CreateParams::Upload {} => {
                 let mut rooms = self.rooms.lock().unwrap();
-                let upload_path: PathBuf = format!("uploads/{}.map", peer.addr).into();
+                let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
                 std::fs::rename(&upload_path, &path).map_err(|_| "upload a map first")?;
+                let mut map = TwMap::parse_file(upload_path).map_err(|_| "not a valid map file")?;
+                map.save_file(&path).map_err(|_| "not a valid map file")?;
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
         }
@@ -343,6 +352,45 @@ impl Server {
         }))
     }
 
+    fn handle_create_image(&self, peer: &Peer, create_image: CreateImage) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        if create_image.external {
+            room.add_external_image(create_image.name.to_owned(), create_image.index)?;
+        } else {
+            let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
+            room.add_embedded_image(
+                &upload_path,
+                create_image.name.to_owned(),
+                create_image.index,
+            )?;
+        }
+
+        Ok(ResponseContent::CreateImage(create_image))
+    }
+
+    fn handle_send_image(&self, peer: &Peer, send_image: SendImage) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        // room.send_image(&send_image)?;
+        let image_info = room.image_info(send_image.index)?;
+        room.send_image(peer, send_image.index)?;
+        Ok(ResponseContent::SendImage(image_info))
+    }
+
+    fn handle_delete_image(&self, peer: &Peer, delete_image: DeleteImage) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        room.remove_image(delete_image.index)?;
+        Ok(ResponseContent::DeleteImage(delete_image))
+    }
+
+    fn handle_upload_file(&self, peer: &Peer, data: &[u8]) -> Res {
+        let path: PathBuf = format!("uploads/{}", peer.addr).into();
+        let mut file = File::create(path).map_err(server_error)?;
+        file.write_all(data).map_err(server_error)?;
+        Ok(ResponseContent::UploadComplete)
+    }
+
     fn handle_request(&self, peer: &mut Peer, req: Request) {
         let res = match req.content {
             RequestContent::CreateMap(content) => self.handle_create_map(peer, content),
@@ -361,14 +409,11 @@ impl Server {
             RequestContent::SendMap(content) => self.handle_send_map(peer, content),
             RequestContent::ListUsers => self.handle_list_users(peer),
             RequestContent::ListMaps => self.handle_list_maps(),
+            RequestContent::CreateImage(content) => self.handle_create_image(peer, content),
+            RequestContent::SendImage(content) => self.handle_send_image(peer, content),
+            RequestContent::DeleteImage(content) => self.handle_delete_image(peer, content),
         };
         self.respond_and_broadcast(peer, req.id, res);
-    }
-
-    fn handle_upload_map(&self, peer: &Peer, map: &mut TwMap) -> Res {
-        let path: PathBuf = format!("uploads/{}.map", peer.addr).into();
-        map.save_file(&path).map_err(server_error)?;
-        Ok(ResponseContent::UploadComplete)
     }
 
     async fn handle_connection(&self, raw_stream: TcpStream, addr: SocketAddr) {
@@ -403,17 +448,8 @@ impl Server {
                 }
                 Message::Binary(data) => {
                     log::debug!("binary message received from {}", addr);
-
-                    match TwMap::parse(&data) {
-                        Ok(mut map) => {
-                            let res = self.handle_upload_map(&peer, &mut map);
-                            self.respond(&peer, 1, res);
-                        }
-                        Err(e) => {
-                            log::error!("failed to parse uploaded map: {}", e);
-                            self.respond(&peer, 1, Err("not a valid map file"))
-                        }
-                    }
+                    let res = self.handle_upload_file(&peer, &data);
+                    self.respond(&peer, 1, res);
                 }
                 _ => {
                     log::warn!("unhandled message type from {}", addr);
@@ -432,7 +468,7 @@ impl Server {
         self.broadcast_users(&peer);
 
         // if the peer uploaded a map but did not use it, we want to delete it now.
-        let upload_path: PathBuf = format!("uploads/{}.map", peer.addr).into();
+        let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
         std::fs::remove_file(&upload_path).ok();
 
         println!("{} disconnected", &addr);

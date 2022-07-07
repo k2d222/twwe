@@ -1,8 +1,9 @@
 import type { DataFile } from './datafile'
-import { Color, LayerTile, LayerType, MapLayerTiles, MapItemType } from './types'
+import type { Map } from './map'
+import type { Image } from './image'
+import { Color, LayerTile, LayerType, MapLayerTiles, TileLayerFlags } from './types'
 import { Layer } from './layer'
-import { parseLayerTiles, parseMapImage } from './parser'
-import { Image } from './image'
+import { parseLayerTiles } from './parser'
 
 
 function cloneLayerTile(tile: LayerTile): LayerTile {
@@ -13,6 +14,7 @@ function cloneLayerTile(tile: LayerTile): LayerTile {
 }
 
 export class TileLayer extends Layer {
+  flags: TileLayerFlags
   width: number
   height: number
   tiles: LayerTile[]
@@ -21,6 +23,7 @@ export class TileLayer extends Layer {
 
   constructor() {
     super(LayerType.TILES)
+    this.flags = TileLayerFlags.TILES
     this.width = 0
     this.height = 0
     this.tiles = []
@@ -40,8 +43,8 @@ export class TileLayer extends Layer {
     return this.tiles[y * this.width + x]
   }
 
-  load(df: DataFile, info: MapLayerTiles) {
-    this.type = info.flags // game, tiles, tele…
+  load(map: Map, df: DataFile, info: MapLayerTiles) {
+    this.flags = info.flags
     this.name = info.name
     this.width = info.width
     this.height = info.height
@@ -49,14 +52,7 @@ export class TileLayer extends Layer {
 
     this.image = null
     if (info.image !== -1) {
-      const imagesInfo = df.getType(MapItemType.IMAGE)
-      
-      if (imagesInfo) {
-        const imageItem = df.getItem(imagesInfo.start + info.image)
-        const imageInfo = parseMapImage(imageItem.data)
-        this.image = new Image()
-        this.image.load(df, imageInfo)
-      }
+      this.image = map.images[info.image]
     }
 
     const tileData = df.getData(info.data)

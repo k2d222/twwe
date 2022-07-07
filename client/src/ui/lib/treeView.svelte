@@ -1,12 +1,17 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
-  import type { EditGroup, DeleteGroup, ReorderGroup, EditLayer, CreateLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
+  import type { CreateGroup, EditGroup, DeleteGroup, ReorderGroup, CreateLayer, EditLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Color } from '../../twmap/types'
+  import type { Layer } from '../../twmap/layer'
+  import { TileLayerFlags } from '../../twmap/types'
+  import { Image } from '../../twmap/image'
   import { TileLayer } from '../../twmap/tileLayer'
+  import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
-
-  const dispatch = createEventDispatcher()
+  import ImagePicker from './imagePicker.svelte'
+  import { decodePng, externalImageUrl, queryImage } from './util'
+  import { showInfo, showError, clearDialog } from '../lib/dialog'
+  import { server } from '../global'
 
   export let rmap: RenderMap
   export let visible = true
@@ -40,40 +45,193 @@
     cm = { g: null, l: null }
   }
 
-  function onEditGroup(change: EditGroup) {
-    dispatch('editgroup', change)
+  async function onEditLayer(change: EditLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('editlayer', change)
+      rmap.editLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit layer: ' + e)
+    }
+  }
+  async function onEditGroup(change: EditGroup) {
+    try {
+      showInfo('Please wait…')
+      await server.query('editgroup', change)
+      rmap.editGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit group: ' + e)
+    }
+  }
+  async function onCreateGroup() {
+    try {
+      const change: CreateGroup = { name: "" }
+      showInfo('Please wait…')
+      await server.query('creategroup', change)
+      rmap.createGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to create group: ' + e)
+    }
+  }
+  async function onCreateLayer(change: CreateLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('createlayer', change)
+      rmap.createLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to create layer: ' + e)
+    }
+  }
+  async function onReorderGroup(change: ReorderGroup) {
+    try {
+      showInfo('Please wait…')
+      await server.query('reordergroup', change)
+      rmap.reorderGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder group: ' + e)
+    }
+  }
+  async function onReorderLayer(change: ReorderLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('reorderlayer', change)
+      rmap.reorderLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to reorder layer: ' + e)
+    }
+  }
+  async function onDeleteGroup(change: DeleteGroup) {
+    try {
+      showInfo('Please wait…')
+      await server.query('deletegroup', change)
+      rmap.deleteGroup(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to delete group: ' + e)
+    }
+  }
+  async function onDeleteLayer(change: DeleteLayer) {
+    try {
+      showInfo('Please wait…')
+      await server.query('deletelayer', change)
+      rmap.deleteLayer(change)
+      rmap = rmap // hack to redraw treeview
+      clearDialog()
+    } catch (e) {
+      showError('Failed to delete layer: ' + e)
+    }
   }
 
-  function onEditLayer(change: EditLayer) {
-    dispatch('editlayer', change)
-  }
-  
-  function onReorderGroup(reorder: ReorderGroup) {
-    dispatch('reordergroup', reorder)
-    hideCM()
-  }
+  function openFilePicker(g: number, l: number, layer: Layer) {
+    const picker = new ImagePicker({
+      target: document.body,
+      props: {
+        images: rmap.map.images,
+        image: layer.image
+      },
+    })
 
-  function onReorderLayer(reorder: ReorderLayer) {
-    dispatch('reorderlayer', reorder)
-    hideCM()
-  }
+    picker.$on('pick', async (e: Event & { detail: Image | string | null }) => {
+      picker.$destroy()
+      const image = e.detail
 
-  function onDeleteGroup(del: DeleteGroup) {
-    dispatch('deletegroup', del)
-    hideCM()
-  }
+      if (image === null) { // no image used
+        onEditLayer({ group: g, layer: l, image: null })
+      }
+      else if (image instanceof Image) { // use embedded image
+        const index = rmap.map.images.indexOf(image)
+        onEditLayer({ group: g, layer: l, image: index })
+      }
+      else { // new external image
+        const index = rmap.map.images.length
+        const url = externalImageUrl(image)
+        const embed = await showInfo('Do you wish to embed this image?', 'yesno');
+        if (embed) {
+          try {
+            showInfo('Uploading image...', 'none')
+            const resp = await fetch(url)
+            const file = await resp.arrayBuffer()
+            await server.uploadFile(file)
+            await server.query('createimage', { name: image, index, external: false })
+            const img = await queryImage({ index })
+            rmap.addImage(img)
+            onEditLayer({ group: g, layer: l, image: index })
+            clearDialog()
+          }
+          catch (e) {
+            showError('Failed to upload image: ' + e)
+          }
+        }
+        else {
+          try {
+            showInfo('Creating image...', 'none')
+            const index = rmap.map.images.length
+            await server.query('createimage', { name: image, index, external: true })
+            const img = new Image()
+            img.loadExternal(url)
+            img.name = image
+            rmap.addImage(img)
+            onEditLayer({ group: g, layer: l, image: index })
+            clearDialog()
+          }
+          catch (e) {
+            showError('Failed to create external image: ' + e)
+          }
+        }
+      }
+    })
 
-  function onDeleteLayer(del: DeleteLayer) {
-    dispatch('deletelayer', del)
-    hideCM()
-  }
+    picker.$on('upload', async (e: Event & { detail: File }) => {
+      const image = e.detail
+      try {
+        showInfo('Uploading image...', 'none')
+        const name = image.name.replace(/\.[^\.]+$/, '')
+        const index = rmap.map.images.length
+        await server.uploadFile(await image.arrayBuffer())
+        await server.query('createimage', { name, index, external: false })
+        const data = await decodePng(image)
+        const img = new Image()
+        img.loadEmbedded(data)
+        img.name = name
+        rmap.addImage(img)
+        picker.$set({ images: rmap.map.images })
+        clearDialog()
+      }
+      catch (e) {
+        showError('Failed to upload image: ' + e)
+      }
+    })
 
-  function onCreateGroup() {
-    dispatch('creategroup', { name: "" })
-  }
+    picker.$on('delete', async (e: Event & { detail: Image }) => {
+      const image = e.detail
 
-  function onCreateLayer(create: CreateLayer) {
-    dispatch('createlayer', create)
+      try {
+        const index = rmap.map.images.indexOf(image)
+        await server.query('deleteimage', { index })
+        rmap.removeImage(index)
+        picker.$set({ images: rmap.map.images })
+      }
+      catch (e) {
+        showError('Failed to delete image: ' + e)
+      }
+    })
+
+    picker.$on('cancel', () => {
+      picker.$destroy()
+    })
   }
 
   function colorToStr(c: Color) {
@@ -97,6 +255,34 @@
   function strVal(target: EventTarget) {
     return (target as HTMLInputElement).value
   }
+  
+  function layerName(layer: Layer) {
+    const quotedName = layer.name ? " '" + layer.name + "'" : ""
+    if (layer instanceof TileLayer) {
+      switch (layer.flags) {
+        case TileLayerFlags.FRONT:
+          return "Front Layer"
+        case TileLayerFlags.GAME:
+          return "Game Layer"
+        case TileLayerFlags.SPEEDUP:
+          return "Speedup Layer"
+        case TileLayerFlags.SWITCH:
+          return "Switch Layer"
+        case TileLayerFlags.TELE:
+          return "Tele Layer"
+        case TileLayerFlags.TILES:
+          return "Tile Layer" + quotedName
+        case TileLayerFlags.TUNE:
+          return "Tune Layer"
+      }
+    }
+    else if (layer instanceof QuadLayer) {
+      return "Quad Layer" + quotedName
+    }
+    else {
+      return "Layer" + quotedName
+    }
+  }
 
 </script>
 
@@ -116,6 +302,7 @@
 
           {#if cm.g === g && cm.l === null}
             <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
+              <span>Group #{g} {group.group.name}</span>
               <label>Order <input type="number" min={0} max={rmap.groups.length - 1} value={g}
                 on:change={(e) => onReorderGroup({ group: g, newGroup: intVal(e.target) })}></label>
               <label>Pos X <input type="number" value={group.group.offX}
@@ -158,6 +345,7 @@
 
             {#if cm.g === g && cm.l === l}
               <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
+                <span>{layerName(layer.layer)}</span>
                 <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
@@ -167,11 +355,20 @@
                     on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
                   <label>Height <input type="number" min={1} max={10000} value={layer.layer.height}
                     on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
-                  {@const col = layer.layer.color}
-                  <label>Color <input type="color" value={colorToStr(layer.layer.color)}
-                    on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
-                  <label>Opacity <input type="range" min={0} max={255} value={col.a}
-                    on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
+                  {#if layer.layer.flags === TileLayerFlags.TILES}
+                    {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
+                    <label>Image <input type="button" value={img}
+                      on:click={() => openFilePicker(g, l, layer.layer)}></label>
+                    {@const col = layer.layer.color}
+                    <label>Color <input type="color" value={colorToStr(layer.layer.color)}
+                      on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
+                    <label>Opacity <input type="range" min={0} max={255} value={col.a}
+                      on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
+                  {/if}
+                {:else if layer.layer instanceof QuadLayer}
+                  {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
+                  <label>Image <input type="button" value={img}
+                    on:click={() => openFilePicker(g, l, layer.layer)}></label>
                 {/if}
                 <label>Name <input type="text" value={layer.layer.name}
                   on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
