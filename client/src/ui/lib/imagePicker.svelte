@@ -85,7 +85,7 @@
 
   function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
-    dispatch('pick', file)
+    dispatch('upload', file)
   }
   
   function onDeleteImage(image: Image) {

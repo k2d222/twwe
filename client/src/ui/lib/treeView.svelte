@@ -142,32 +142,14 @@
         images: rmap.map.images,
         image: layer.image
       },
-      accessors: true,
     })
 
-    picker.$on('pick', async (e: Event & { detail: File | Image | string | null }) => {
+    picker.$on('pick', async (e: Event & { detail: Image | string | null }) => {
       picker.$destroy()
       const image = e.detail
 
       if (image === null) {
         onEditLayer({ group: g, layer: l, image: null })
-      }
-      else if (image instanceof File) {
-        try {
-          const name = image.name.replace(/\.[^\.]+$/, '')
-          const index = rmap.map.images.length
-          await uploadFile(image)
-          await server.query('createimage', { name, index })
-          const data = await decodePng(image)
-          const img = new Image()
-          img.loadEmbedded(data)
-          img.name = name
-          rmap.addImage(img)
-          onEditLayer({ group: g, layer: l, image: index })
-        }
-        catch (e) {
-          showError('Failed to upload image: ' + e)
-        }
       }
       else if (image instanceof Image) {
         const index = rmap.map.images.indexOf(image)
@@ -178,6 +160,27 @@
         img.loadExternal(image)
         const index = rmap.addImage(img)
         onEditLayer({ group: g, layer: l, image: index })
+      }
+    })
+
+    picker.$on('upload', async (e: Event & { detail: File }) => {
+      const image = e.detail
+      try {
+        const name = image.name.replace(/\.[^\.]+$/, '')
+        const index = rmap.map.images.length
+        await uploadFile(image)
+        showInfo('Uploading image...', 'none')
+        await server.query('createimage', { name, index })
+        const data = await decodePng(image)
+        const img = new Image()
+        img.loadEmbedded(data)
+        img.name = name
+        rmap.addImage(img)
+        picker.$set({ images: rmap.map.images })
+        clearDialog()
+      }
+      catch (e) {
+        showError('Failed to upload image: ' + e)
       }
     })
 

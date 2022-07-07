@@ -315,13 +315,32 @@ impl Room {
     }
 
     pub fn edit_layer(&self, edit_layer: &EditLayer) -> Result<(), &'static str> {
+        use OneLayerChange::*;
         let mut map = self.map.get();
 
-        // need to check that before mutably borrowing map
-        // COMBAK: I suck at rust there must be a better way
-        if let OneLayerChange::Image(Some(i)) = edit_layer.change {
-            if i as usize >= map.images.len() {
-                return Err("invalid layer image");
+        // COMBAK: layer mutable borrow interferes with immutable borrow of image.
+        // I copy-pasted code but there must be a better way.
+
+        if let Image(Some(i)) = edit_layer.change {
+            let image = map.images.get(i as usize).ok_or("invalid image index")?;
+
+            if image.width() != 1024 || image.height() != 1024 {
+                return Err("tile layer images must have dimensions (1024, 1024)");
+            }
+
+            let group = map
+                .groups
+                .get_mut(edit_layer.group as usize)
+                .ok_or("invalid group index")?;
+            let layer = group
+                .layers
+                .get_mut(edit_layer.layer as usize)
+                .ok_or("invalid layer index")?;
+
+            match layer {
+                Layer::Tiles(layer) => layer.image = Some(i),
+                Layer::Quads(layer) => layer.image = Some(i),
+                _ => return Err("cannot change layer image"),
             }
         }
 
@@ -334,7 +353,6 @@ impl Room {
             .get_mut(edit_layer.layer as usize)
             .ok_or("invalid layer index")?;
 
-        use OneLayerChange::*;
         match edit_layer.change.clone() {
             Name(name) => *layer.name_mut().ok_or("cannot change layer name")? = name,
             Color(color) => match layer {
@@ -395,9 +413,10 @@ impl Room {
                     return Err("cannot change layer dimensions")
                 }
             },
-            Image(image) => match layer {
-                Layer::Tiles(layer) => layer.image = image,
-                Layer::Quads(layer) => layer.image = image,
+            Image(Some(_)) => (), // already handled
+            Image(None) => match layer {
+                Layer::Tiles(layer) => layer.image = None,
+                Layer::Quads(layer) => layer.image = None,
                 _ => return Err("cannot change layer image"),
             },
         }
