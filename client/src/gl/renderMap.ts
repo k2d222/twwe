@@ -122,6 +122,12 @@ export class RenderMap {
         rlayer.recompute()
       }
     }
+    else if (rlayer instanceof RenderQuadLayer) {
+      if ('image' in change) {
+        rlayer.layer.image = this.map.images[change.image]
+        rlayer.texture = this.textures[change.image]
+      }
+    }
   }
   
   reorderLayer(change: ReorderLayer) {
