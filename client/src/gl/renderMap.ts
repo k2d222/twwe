@@ -1,6 +1,7 @@
 import type { Map } from '../twmap/map'
 import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { LayerTile } from '../twmap/types'
+import type { RenderLayer } from './renderLayer'
 import { TileLayer } from '../twmap/tileLayer'
 import { QuadLayer } from '../twmap/quadLayer'
 import { Group } from '../twmap/group'
@@ -11,6 +12,12 @@ import { gl } from './global'
 import { TileLayerFlags, LayerType } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
+import { isPhysicsLayer } from '../ui/lib/util'
+
+
+export function isPhysicsRenderLayer(rlayer: RenderLayer): rlayer is RenderTileLayer {
+  return isPhysicsLayer(rlayer.layer)
+}
 
 function createEditorTexture(name: string, fname: string) {
   const image = new Image()
@@ -18,15 +25,6 @@ function createEditorTexture(name: string, fname: string) {
   image.name = name
   return new Texture(image)
 }
-
-const PhysicsLayers = [
-  TileLayerFlags.GAME,
-  TileLayerFlags.FRONT,
-  TileLayerFlags.TELE,
-  TileLayerFlags.SPEEDUP,
-  TileLayerFlags.SWITCH,
-  TileLayerFlags.TUNE,
-]
 
 export class RenderMap {
   map: Map
@@ -286,9 +284,9 @@ export class RenderMap {
     const defaultTile: LayerTile = { index: 0, flags: 0 }
 
     // changing the size of any physics layer applies to all physics layers
-    if (rlayer.layer.flags in PhysicsLayers) {
+    if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
-        if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+        if (isPhysicsRenderLayer(rlayer)) {
           rlayer.layer.setWidth(width, defaultTile)
           rlayer.recompute()
         }
@@ -304,9 +302,9 @@ export class RenderMap {
     const defaultTile: LayerTile = { index: 0, flags: 0 }
 
     // changing the size of any physics layer applies to all physics layers
-    if (rlayer.layer.flags in PhysicsLayers) {
+    if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
-        if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+        if (isPhysicsRenderLayer(rlayer)) {
           rlayer.layer.setHeight(height, defaultTile)
           rlayer.recompute()
         }

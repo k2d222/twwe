@@ -9,7 +9,7 @@
   import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
-  import { decodePng, externalImageUrl, queryImage } from './util'
+  import { decodePng, externalImageUrl, queryImage, isPhysicsLayer } from './util'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { server } from '../global'
 
@@ -411,8 +411,10 @@
             {#if cm.g === g && cm.l === l}
               <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
                 <span>{layerName(layer.layer)}</span>
-                <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
-                  on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
+                {#if !isPhysicsLayer(layer.layer)}
+                  <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
+                    on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
+                {/if}
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
                 {#if layer.layer instanceof TileLayer}
