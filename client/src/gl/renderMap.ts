@@ -19,9 +19,9 @@ export function isPhysicsRenderLayer(rlayer: RenderLayer): rlayer is RenderTileL
   return isPhysicsLayer(rlayer.layer)
 }
 
-function createEditorTexture(name: string, fname: string) {
+function createEditorTexture(name: string, file: string) {
   const image = new Image()
-  image.loadExternal(`/editor/${fname}.png`)
+  image.loadExternal(file)
   image.name = name
   return new Texture(image)
 }
@@ -47,7 +47,7 @@ export class RenderMap {
     this.physicsGroup = this.groups[g]
 
     this.gameLayer = this.physicsGroup.layers[l] as RenderTileLayer
-    this.gameLayer.texture = createEditorTexture('Game', 'front')
+    this.gameLayer.texture = createEditorTexture('Game', '/entities/DDNet.png')
     this.gameLayer.layer.image = this.gameLayer.texture.image
     
     this.teleLayer = this.findPhysicsLayer(TileLayerFlags.TELE) || null
@@ -57,23 +57,23 @@ export class RenderMap {
     this.tuneLayer = this.findPhysicsLayer(TileLayerFlags.TUNE) || null
     
     if (this.teleLayer) {
-      this.teleLayer.texture = createEditorTexture('Tele', 'tele')
+      this.teleLayer.texture = createEditorTexture('Tele', '/editor/tele.png')
       this.teleLayer.layer.image = this.teleLayer.texture.image
     }
     if (this.speedupLayer) {
-      this.speedupLayer.texture = createEditorTexture('Speedup', 'speedup')
+      this.speedupLayer.texture = createEditorTexture('Speedup', '/editor/speedup.png')
       this.speedupLayer.layer.image = this.speedupLayer.texture.image
     }
     if (this.frontLayer) {
-      this.frontLayer.texture = this.gameLayer.texture
+      this.frontLayer.texture = createEditorTexture('Front', '/editor/front.png')
       this.frontLayer.layer.image = this.frontLayer.texture.image
     }
     if (this.switchLayer) {
-      this.switchLayer.texture = createEditorTexture('Switch', 'switch')
+      this.switchLayer.texture = createEditorTexture('Switch', '/editor/switch.png')
       this.switchLayer.layer.image = this.switchLayer.texture.image
     }
     if (this.tuneLayer) {
-      this.tuneLayer.texture = createEditorTexture('Tune', 'tune')
+      this.tuneLayer.texture = createEditorTexture('Tune', '/editor/tune.png')
       this.tuneLayer.layer.image = this.tuneLayer.texture.image
     }
   }
