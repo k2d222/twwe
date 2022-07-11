@@ -147,7 +147,7 @@ pub struct CreateLayer {
     #[serde(with = "SerdeLayerKind")]
     pub kind: LayerKind,
     pub group: u32,
-    pub name: String,
+    pub name: String, // this is ignored for physics layers
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

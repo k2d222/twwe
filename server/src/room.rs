@@ -265,7 +265,7 @@ impl Room {
             ParaY(para_y) => group.parallax_y = para_y,
             Name(name) => {
                 if group.is_physics_group() {
-                    return Err("cannot delete the physics group");
+                    return Err("cannot rename the physics group");
                 }
                 group.name = name
             }
@@ -309,6 +309,10 @@ impl Room {
     }
 
     pub fn create_layer(&self, create_layer: &CreateLayer) -> Result<(), &'static str> {
+        if create_layer.name.len() > Layer::MAX_NAME_LENGTH {
+            return Err("layer name too long");
+        }
+
         let mut map = self.map.get();
         let default_layer_size = map.find_physics_layer::<GameLayer>().unwrap().tiles.shape();
         let group = map
@@ -316,7 +320,7 @@ impl Room {
             .get_mut(create_layer.group as usize)
             .ok_or("invalid group index")?;
 
-        macro_rules! add_layer {
+        macro_rules! physics_layer {
             ($kind: expr, $struct: ident, $enum: expr) => {{
                 if !group.is_physics_group() {
                     return Err("cannot create physics layer outside of the physics group");
@@ -344,11 +348,11 @@ impl Room {
                 layer.name = create_layer.name.to_owned();
                 group.layers.push(Layer::Quads(layer));
             }
-            LayerKind::Front => add_layer!(LayerKind::Front, FrontLayer, Layer::Front),
-            LayerKind::Tele => add_layer!(LayerKind::Tele, TeleLayer, Layer::Tele),
-            LayerKind::Speedup => add_layer!(LayerKind::Speedup, SpeedupLayer, Layer::Speedup),
-            LayerKind::Switch => add_layer!(LayerKind::Switch, SwitchLayer, Layer::Switch),
-            LayerKind::Tune => add_layer!(LayerKind::Tune, TuneLayer, Layer::Tune),
+            LayerKind::Front => physics_layer!(LayerKind::Front, FrontLayer, Layer::Front),
+            LayerKind::Tele => physics_layer!(LayerKind::Tele, TeleLayer, Layer::Tele),
+            LayerKind::Speedup => physics_layer!(LayerKind::Speedup, SpeedupLayer, Layer::Speedup),
+            LayerKind::Switch => physics_layer!(LayerKind::Switch, SwitchLayer, Layer::Switch),
+            LayerKind::Tune => physics_layer!(LayerKind::Tune, TuneLayer, Layer::Tune),
             LayerKind::Sounds | LayerKind::Game | LayerKind::Invalid(_) => {
                 return Err("invalid new layer kind");
             }
