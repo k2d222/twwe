@@ -234,11 +234,20 @@ impl Room {
         Ok(())
     }
 
-    pub fn create_group(&self, create_group: &CreateGroup) {
+    pub fn create_group(&self, create_group: &CreateGroup) -> Result<(), &'static str> {
         let mut map = self.map.get();
         let mut group = Group::default();
+
+        if create_group.name.len() > Group::MAX_NAME_LENGTH {
+            return Err("group name too long");
+        }
+        if map.groups.len() == u16::MAX as usize {
+            return Err("max number of groups reached");
+        }
+
         group.name = create_group.name.to_owned();
         map.groups.push(group);
+        Ok(())
     }
 
     pub fn edit_group(&self, edit_group: &EditGroup) -> Result<(), &'static str> {

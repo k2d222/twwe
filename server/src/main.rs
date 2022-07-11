@@ -210,7 +210,7 @@ impl Server {
                 };
                 group.layers.push(twmap::Layer::Game(layer));
                 map.groups.push(group);
-                debug_assert!(map.check().is_ok());
+                map.check().map_err(server_error)?;
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
                 map.save_file(&path).unwrap();
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
@@ -220,7 +220,7 @@ impl Server {
                     .room(&params.clone)
                     .ok_or("cannot clone non-existing map")?;
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
-                room.save_copy(&path).unwrap();
+                room.save_copy(&path)?;
                 let mut rooms = self.rooms.lock().unwrap();
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
@@ -241,6 +241,7 @@ impl Server {
     fn handle_join_map(&self, peer: &mut Peer, join_map: JoinMap) -> Res {
         if let Some(room) = &peer.room {
             room.remove_peer(peer);
+            self.broadcast_users(peer);
         }
 
         let room = self.room(&join_map.name).ok_or("map does not exist")?;
@@ -274,7 +275,7 @@ impl Server {
 
     fn handle_create_group(&self, peer: &mut Peer, create_group: CreateGroup) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
-        room.create_group(&create_group);
+        room.create_group(&create_group)?;
         Ok(ResponseContent::CreateGroup(create_group))
     }
 
