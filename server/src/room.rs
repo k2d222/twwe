@@ -105,6 +105,9 @@ impl LazyMap {
             None => panic!("failed to load map {}", self.path.display()),
         }
     }
+    pub fn get_opt(&self) -> MutexGuard<Option<TwMap>> {
+        self.map.lock()
+    }
 }
 
 pub struct Room {
@@ -141,6 +144,14 @@ impl Room {
         self.peers.lock()
     }
 
+    pub fn remove_closed_peers(&self) {
+        let mut peers = self.peers();
+        peers.retain(|_, tx| !tx.is_closed());
+        if peers.is_empty() {
+            self.map.unload()
+        }
+    }
+
     pub fn send_map(&self, peer: &Peer) -> Result<(), &'static str> {
         let buf = {
             let mut buf = Vec::new();
@@ -170,11 +181,14 @@ impl Room {
         let _lck = self.saving.lock();
 
         // clone the map to release the lock as soon as possible
+        let mut tmp_path = self.map.path.clone();
+        tmp_path.set_extension("map.tmp");
         self.map
             .get()
             .clone()
-            .save_file(&self.map.path)
+            .save_file(&tmp_path)
             .map_err(server_error)?;
+        std::fs::rename(&tmp_path, &self.map.path).map_err(server_error)?;
 
         log::debug!("saved {}", self.map.path.display());
         Ok(())

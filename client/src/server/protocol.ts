@@ -163,6 +163,12 @@ export interface ImageInfo {
   height: number,
 }
 
+export type ServerError = {
+  serverError: null,
+} | {
+  mapError: string,
+}
+
 // queries (name and content type) that can be sent by the client
 export interface RequestContent {
   'createmap': CreateMap
@@ -220,6 +226,8 @@ export interface ResponseContent {
   'createimage': CreateImage
   'sendimage': ImageInfo
   'deleteimage': DeleteImage
+  
+  'error': ServerError
 }
 
 export type Query = keyof ResponseContent & keyof RequestContent 
