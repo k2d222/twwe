@@ -43,7 +43,7 @@ fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &
     let old_width = layer.tiles().shape().1 as isize;
     let diff = width as isize - old_width;
 
-    if width == 0 || width > 10000 {
+    if width < 2 || width > 10000 {
         return Err("invalid layer dimensions");
     }
 
@@ -60,7 +60,7 @@ pub fn set_layer_height<T: TileMapLayer>(layer: &mut T, height: usize) -> Result
     let old_height = layer.tiles().shape().0 as isize;
     let diff = height as isize - old_height;
 
-    if height == 0 || height > 10000 {
+    if height < 2 || height > 10000 {
         return Err("invalid layer dimensions");
     }
 
@@ -370,8 +370,7 @@ impl Room {
 
         if let Image(Some(i)) = edit_layer.change {
             let image = map.images.get(i as usize).ok_or("invalid image index")?;
-
-            let tile_dims_ok = image.width() == 1024 && image.height() == 1024;
+            let tile_dims_ok = image.width() % 16 == 0 && image.height() % 16 == 0;
 
             let group = map
                 .groups
@@ -385,7 +384,7 @@ impl Room {
             match layer {
                 Layer::Tiles(layer) => {
                     if !tile_dims_ok {
-                        return Err("tile layer images must have dimensions (1024, 1024)");
+                        return Err("invalid image dimensions for tile layer");
                     }
                     layer.image = Some(i)
                 }
