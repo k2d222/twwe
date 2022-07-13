@@ -1,7 +1,10 @@
 import type { SendMap, SendImage } from '../../server/protocol'
+import type { Layer } from '../../twmap/layer'
 import { server } from '../global'
 import { Map } from '../../twmap/map'
 import { Image } from '../../twmap/image'
+import { TileLayer } from '../../twmap/tileLayer'
+import { TileLayerFlags } from '../../twmap/types'
 
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
@@ -51,4 +54,18 @@ export async function queryImage(sendImage: SendImage): Promise<Image> {
   img.loadEmbedded(image)
   img.name = imageInfo.name
   return img
+}
+
+
+export const PhysicsLayers = [
+  TileLayerFlags.GAME,
+  TileLayerFlags.FRONT,
+  TileLayerFlags.TELE,
+  TileLayerFlags.SPEEDUP,
+  TileLayerFlags.SWITCH,
+  TileLayerFlags.TUNE,
+]
+
+export function isPhysicsLayer(layer: Layer): layer is TileLayer {
+  return layer instanceof TileLayer && PhysicsLayers.includes(layer.flags)
 }

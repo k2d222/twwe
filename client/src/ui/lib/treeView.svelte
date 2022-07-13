@@ -9,7 +9,7 @@
   import { QuadLayer } from '../../twmap/quadLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
-  import { decodePng, externalImageUrl, queryImage } from './util'
+  import { decodePng, externalImageUrl, queryImage, isPhysicsLayer } from './util'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { server } from '../global'
 
@@ -27,8 +27,15 @@
     return str.split(',').map(x => parseInt(x)) as [number, number]
   }
 
+  function select(g: number, l: number) {
+    // WARN: There is a dependency cycle here between strSelected and selected and I'm not
+    // sure how well svelte handles this.
+    strSelected = toStr(g, l)
+  }
+
   let strSelected = toStr(...selected)
   $: selected = fromStr(strSelected)
+  $: select(...selected)
   
   // ContextMenu
   let cm = { g: null, l: null }
@@ -94,45 +101,73 @@
     try {
       showInfo('Please wait…')
       await server.query('reordergroup', change)
+      const [ g, l ] = selected
+      const group = rmap.groups[g]
       rmap.reorderGroup(change)
+      select(rmap.groups.indexOf(group), l)
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to reorder group: ' + e)
     }
+    hideCM()
   }
   async function onReorderLayer(change: ReorderLayer) {
     try {
       showInfo('Please wait…')
       await server.query('reorderlayer', change)
+      const [ g, l ] = selected
+      const layer = rmap.groups[g].layers[l]
       rmap.reorderLayer(change)
+      const newGroup = rmap.groups.find(g => g.layers.includes(layer))
+      select(rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer))
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to reorder layer: ' + e)
     }
+    hideCM()
   }
   async function onDeleteGroup(change: DeleteGroup) {
     try {
       showInfo('Please wait…')
       await server.query('deletegroup', change)
+      const [ g, l ] = selected
+      const group = rmap.groups[g]
       rmap.deleteGroup(change)
+      if (change.group === g) {
+        select(-1, -1)
+      }
+      else {
+        select(rmap.groups.indexOf(group), l)
+      }
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to delete group: ' + e)
     }
+    hideCM()
   }
   async function onDeleteLayer(change: DeleteLayer) {
     try {
       showInfo('Please wait…')
       await server.query('deletelayer', change)
+      const [ g, l ] = selected
+      const layer = rmap.groups[g].layers[l]
       rmap.deleteLayer(change)
+      if (change.group === g && change.layer === l) {
+        select(-1, -1)
+      }
+      else {
+        const newGroup = rmap.groups.find(g => g.layers.includes(layer))
+        select(rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer))
+      }
       rmap = rmap // hack to redraw treeview
       clearDialog()
     } catch (e) {
       showError('Failed to delete layer: ' + e)
     }
+    hideCM()
   }
 
   function openFilePicker(g: number, l: number, layer: Layer) {
@@ -323,6 +358,38 @@
                 on:click={() => onCreateLayer({ kind: 'quads', group: g, name: "" })}>
                 Add quad layer
               </button>
+              {#if group === rmap.physicsGroup}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.SWITCH)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
+                    Add switch layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.FRONT)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
+                    Add front layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.TUNE)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
+                    Add tune layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.SPEEDUP)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
+                    Add speedup layer
+                  </button>
+                {/if}
+                {#if !rmap.findPhysicsLayer(TileLayerFlags.TELE)}
+                  <button
+                    on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
+                    Add tele layer
+                  </button>
+                {/if}
+              {/if}
               <button
                 on:click={() => onDeleteGroup({ group: g })}>
                 Delete group
@@ -346,8 +413,10 @@
             {#if cm.g === g && cm.l === l}
               <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
                 <span>{layerName(layer.layer)}</span>
-                <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
-                  on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
+                {#if !isPhysicsLayer(layer.layer)}
+                  <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
+                    on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
+                {/if}
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
                 {#if layer.layer instanceof TileLayer}
@@ -364,14 +433,18 @@
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
                     <label>Opacity <input type="range" min={0} max={255} value={col.a}
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
+                    {#if layer.layer.flags === TileLayerFlags.TILES}
+                      <label>Name <input type="text" value={layer.layer.name}
+                        on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
+                    {/if}
                   {/if}
                 {:else if layer.layer instanceof QuadLayer}
                   {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                   <label>Image <input type="button" value={img}
                     on:click={() => openFilePicker(g, l, layer.layer)}></label>
+                  <label>Name <input type="text" value={layer.layer.name}
+                    on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
                 {/if}
-                <label>Name <input type="text" value={layer.layer.name}
-                  on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
                 <button
                   on:click={() => onDeleteLayer({ group: g, layer: l })}>
                   Delete layer

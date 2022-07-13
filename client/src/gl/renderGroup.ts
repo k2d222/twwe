@@ -47,15 +47,20 @@ export class RenderGroup {
     gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
   }
   
-  render() {
+  renderLayers(layers: RenderLayer[]) {
     if (!this.visible)
       return
     
     this.preRender()
 
-    for(const layer of this.layers)
+    for(const layer of layers)
       layer.render()
   }
+
+  render() {
+    this.renderLayers(this.layers)
+  }
+  
   
   renderLayer(layer: RenderLayer) {
     if (!this.visible)

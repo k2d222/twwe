@@ -1,7 +1,7 @@
 import type { Map } from '../twmap/map'
 import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
-import type { RenderLayer } from './renderLayer'
 import type { LayerTile } from '../twmap/types'
+import type { RenderLayer } from './renderLayer'
 import { TileLayer } from '../twmap/tileLayer'
 import { QuadLayer } from '../twmap/quadLayer'
 import { Group } from '../twmap/group'
@@ -9,46 +9,78 @@ import { RenderGroup } from './renderGroup'
 import { RenderTileLayer } from './renderTileLayer'
 import { RenderQuadLayer } from './renderQuadLayer'
 import { gl } from './global'
-import { TileLayerFlags } from '../twmap/types'
+import { TileLayerFlags, LayerType } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
+import { isPhysicsLayer } from '../ui/lib/util'
 
-function createGameTexture() {
-  const image = new Image()
-  image.name = 'Game'
-  image.loadExternal('/entities/DDNet.png')
-  return new Texture(image)
+
+export function isPhysicsRenderLayer(rlayer: RenderLayer): rlayer is RenderTileLayer {
+  return isPhysicsLayer(rlayer.layer)
 }
 
-const PhysicsLayers = [
-  TileLayerFlags.GAME,
-  TileLayerFlags.FRONT,
-  TileLayerFlags.TELE,
-  TileLayerFlags.SPEEDUP,
-  TileLayerFlags.SWITCH,
-  TileLayerFlags.TUNE,
-]
+function createEditorTexture(name: string, file: string) {
+  const image = new Image()
+  image.loadExternal(file)
+  image.name = name
+  return new Texture(image)
+}
 
 export class RenderMap {
   map: Map
   textures: Texture[] // analogous to Map images
   groups: RenderGroup[]
+  physicsGroup: RenderGroup
   gameLayer: RenderTileLayer
-  gameGroup: RenderGroup
-  
+  teleLayer: RenderTileLayer | null
+  speedupLayer: RenderTileLayer | null
+  frontLayer: RenderTileLayer | null
+  switchLayer: RenderTileLayer | null
+  tuneLayer: RenderTileLayer | null
+
   constructor(map: Map) {
     this.map = map
     this.textures = map.images.map(img => new Texture(img))
     this.groups = map.groups.map(g => new RenderGroup(this, g))
 
-    // COMBAK: this is hacky but I don't see other ways to handle the
-    // game layer edge-case for now.
     const [ g, l ] = this.map.gameLayerID()
-    this.gameGroup = this.groups[g]
-    const gameLayer = this.gameGroup.layers[l] as RenderTileLayer
-    this.gameLayer = new RenderTileLayer(this, gameLayer.layer)
-    this.gameLayer.texture = createGameTexture()
-    this.gameGroup.layers[l] = this.gameLayer
+    this.physicsGroup = this.groups[g]
+
+    this.gameLayer = this.physicsGroup.layers[l] as RenderTileLayer
+    this.gameLayer.texture = createEditorTexture('Game', '/entities/DDNet.png')
+    this.gameLayer.layer.image = this.gameLayer.texture.image
+    
+    this.teleLayer = this.findPhysicsLayer(TileLayerFlags.TELE) || null
+    this.speedupLayer = this.findPhysicsLayer(TileLayerFlags.SPEEDUP) || null
+    this.frontLayer = this.findPhysicsLayer(TileLayerFlags.FRONT) || null
+    this.switchLayer = this.findPhysicsLayer(TileLayerFlags.SWITCH) || null
+    this.tuneLayer = this.findPhysicsLayer(TileLayerFlags.TUNE) || null
+    
+    if (this.teleLayer) {
+      this.teleLayer.texture = createEditorTexture('Tele', '/editor/tele.png')
+      this.teleLayer.layer.image = this.teleLayer.texture.image
+    }
+    if (this.speedupLayer) {
+      this.speedupLayer.texture = createEditorTexture('Speedup', '/editor/speedup.png')
+      this.speedupLayer.layer.image = this.speedupLayer.texture.image
+    }
+    if (this.frontLayer) {
+      this.frontLayer.texture = createEditorTexture('Front', '/editor/front.png')
+      this.frontLayer.layer.image = this.frontLayer.texture.image
+    }
+    if (this.switchLayer) {
+      this.switchLayer.texture = createEditorTexture('Switch', '/editor/switch.png')
+      this.switchLayer.layer.image = this.switchLayer.texture.image
+    }
+    if (this.tuneLayer) {
+      this.tuneLayer.texture = createEditorTexture('Tune', '/editor/tune.png')
+      this.tuneLayer.layer.image = this.tuneLayer.texture.image
+    }
+  }
+  
+  findPhysicsLayer(flags: TileLayerFlags) {
+    return this.physicsGroup.layers
+      .find(l => l.layer instanceof TileLayer && l.layer.flags === flags) as RenderTileLayer
   }
   
   addImage(image: Image) {
@@ -131,11 +163,11 @@ export class RenderMap {
   }
   
   reorderLayer(change: ReorderLayer) {
-    const group = this.groups[change.group]
-    const layer = group.layers[change.layer]
-
-    group.layers.splice(change.layer, 1)
-    this.groups[change.newGroup].layers.splice(change.newLayer, 0, layer)
+    const rgroup = this.groups[change.group]
+    const [ rlayer ] = rgroup.layers.splice(change.layer, 1)
+    const [ layer ] = rgroup.group.layers.splice(change.layer, 1)
+    this.groups[change.newGroup].layers.splice(change.newLayer, 0, rlayer)
+    this.groups[change.newGroup].group.layers.splice(change.newLayer, 0, layer)
   }
   
   deleteLayer(change: DeleteLayer) {
@@ -156,7 +188,7 @@ export class RenderMap {
     const rgroup = this.groups[create.group]
     
     let layer: TileLayer | QuadLayer
-    let rlayer: RenderLayer
+    let rlayer: RenderTileLayer | RenderQuadLayer
 
     if (create.kind === 'tiles') {
       const { width, height } = this.gameLayer.layer
@@ -167,7 +199,60 @@ export class RenderMap {
     else if (create.kind === 'quads') {
       layer = new QuadLayer()
       rlayer = new RenderQuadLayer(this, layer)
-    } 
+    }
+    else if (create.kind === 'front') {
+      const { width, height } = this.gameLayer.layer
+      const defaultTile: LayerTile = { index: 0, flags: 0 }
+      layer = TileLayer.create(width, height, defaultTile)
+      layer.flags = TileLayerFlags.FRONT
+      layer.name = 'Front'
+      rlayer = new RenderTileLayer(this, layer)
+      rlayer.texture = createEditorTexture('Front', 'front')
+      layer.image = rlayer.texture.image
+    }
+    else if (create.kind === 'tele') {
+      const { width, height } = this.gameLayer.layer
+      const defaultTile: LayerTile = { index: 0, flags: 0 }
+      layer = TileLayer.create(width, height, defaultTile)
+      layer.flags = TileLayerFlags.TELE
+      layer.name = 'Tele'
+      rlayer = new RenderTileLayer(this, layer)
+      rlayer.texture = createEditorTexture('Tele', 'tele')
+      layer.image = rlayer.texture.image
+    }
+    else if (create.kind === 'speedup') {
+      const { width, height } = this.gameLayer.layer
+      const defaultTile: LayerTile = { index: 0, flags: 0 }
+      layer = TileLayer.create(width, height, defaultTile)
+      layer.flags = TileLayerFlags.SPEEDUP
+      layer.name = 'Speedup'
+      rlayer = new RenderTileLayer(this, layer)
+      rlayer.texture = createEditorTexture('Speedup', 'speedup')
+      layer.image = rlayer.texture.image
+    }
+    else if (create.kind === 'switch') {
+      const { width, height } = this.gameLayer.layer
+      const defaultTile: LayerTile = { index: 0, flags: 0 }
+      layer = TileLayer.create(width, height, defaultTile)
+      layer.flags = TileLayerFlags.SWITCH
+      layer.name = 'Switch'
+      rlayer = new RenderTileLayer(this, layer)
+      rlayer.texture = createEditorTexture('Switch', 'switch')
+      layer.image = rlayer.texture.image
+    }
+    else if (create.kind === 'tune') {
+      const { width, height } = this.gameLayer.layer
+      const defaultTile: LayerTile = { index: 0, flags: 0 }
+      layer = TileLayer.create(width, height, defaultTile)
+      layer.flags = TileLayerFlags.TUNE
+      layer.name = 'Tune'
+      rlayer = new RenderTileLayer(this, layer)
+      rlayer.texture = createEditorTexture('Tune', 'tune')
+      layer.image = rlayer.texture.image
+    }
+    else {
+      throw 'cannot create layer kind ' + create.kind
+    }
 
     group.layers.push(layer)
     rgroup.layers.push(rlayer)
@@ -175,11 +260,22 @@ export class RenderMap {
   }
   
   render() {
-    for (const group of this.groups)
-      group.render()
+    for (const group of this.groups) {
+      if (group === this.physicsGroup) {
+        group.renderLayers(group.layers.filter(l => {
+          return l.layer.type === LayerType.QUADS
+          || l instanceof RenderTileLayer && l.layer.flags === TileLayerFlags.TILES
+        }))
+      }
+      else {
+        group.render()
+      }
+    }
     
-    // render the game layer on top of the rest.
-    this.gameGroup.renderLayer(this.gameLayer)
+    // render the physics layers on top of the rest.
+    this.physicsGroup.renderLayers(this.physicsGroup.layers.filter(l => {
+      return l instanceof RenderTileLayer && l.layer.flags !== TileLayerFlags.TILES
+    }))
     
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
@@ -188,9 +284,9 @@ export class RenderMap {
     const defaultTile: LayerTile = { index: 0, flags: 0 }
 
     // changing the size of any physics layer applies to all physics layers
-    if (rlayer.layer.flags in PhysicsLayers) {
+    if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
-        if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+        if (isPhysicsRenderLayer(rlayer)) {
           rlayer.layer.setWidth(width, defaultTile)
           rlayer.recompute()
         }
@@ -206,9 +302,9 @@ export class RenderMap {
     const defaultTile: LayerTile = { index: 0, flags: 0 }
 
     // changing the size of any physics layer applies to all physics layers
-    if (rlayer.layer.flags in PhysicsLayers) {
+    if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
-        if (rlayer instanceof RenderTileLayer && rlayer.layer.flags in PhysicsLayers) {
+        if (isPhysicsRenderLayer(rlayer)) {
           rlayer.layer.setHeight(height, defaultTile)
           rlayer.recompute()
         }
