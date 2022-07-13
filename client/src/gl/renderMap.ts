@@ -29,6 +29,7 @@ function createEditorTexture(name: string, file: string) {
 export class RenderMap {
   map: Map
   textures: Texture[] // analogous to Map images
+  blankTexture: Texture // texture displayed when the layer has no image
   groups: RenderGroup[]
   physicsGroup: RenderGroup
   gameLayer: RenderTileLayer
@@ -41,6 +42,7 @@ export class RenderMap {
   constructor(map: Map) {
     this.map = map
     this.textures = map.images.map(img => new Texture(img))
+    this.blankTexture = createEditorTexture('', '/editor/blank.png')
     this.groups = map.groups.map(g => new RenderGroup(this, g))
 
     const [ g, l ] = this.map.gameLayerID()
@@ -149,15 +151,27 @@ export class RenderMap {
       if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
       if ('height' in change) this.setLayerHeight(rgroup, rlayer, change.height)
       if ('image' in change) {
-        rlayer.layer.image = this.map.images[change.image]
-        rlayer.texture = this.textures[change.image]
+        if (change.image === null) {
+          rlayer.layer.image = null
+          rlayer.texture = this.blankTexture
+        }
+        else {
+          rlayer.layer.image = this.map.images[change.image]
+          rlayer.texture = this.textures[change.image]
+        }
         rlayer.recompute()
       }
     }
     else if (rlayer instanceof RenderQuadLayer) {
       if ('image' in change) {
-        rlayer.layer.image = this.map.images[change.image]
-        rlayer.texture = this.textures[change.image]
+        if (change.image === null) {
+          rlayer.layer.image = null
+          rlayer.texture = this.blankTexture
+        }
+        else {
+          rlayer.layer.image = this.map.images[change.image]
+          rlayer.texture = this.textures[change.image]
+        }
       }
     }
   }

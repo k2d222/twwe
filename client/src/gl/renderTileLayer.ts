@@ -30,6 +30,9 @@ export class RenderTileLayer extends RenderLayer {
       const index = rmap.map.images.indexOf(layer.image)
       this.texture  = rmap.textures[index]
     }
+    else {
+      this.texture = rmap.blankTexture
+    }
 
     this.chunkSize = 64
 
@@ -212,8 +215,8 @@ function makeTexCoords(tile: LayerTile, atlasSize: number) {
   const tx = tile.index % tileCount
   const ty = Math.floor(tile.index / tileCount)
   
-  const half_pix = 0.5 / atlasSize
-  // const half_pix = 0
+  // const half_pix = 0.5 / atlasSize
+  const half_pix = 0
 
   let x0 = tx / tileCount + half_pix
   let x1 = (tx + 1) / tileCount - half_pix
