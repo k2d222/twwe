@@ -1,7 +1,7 @@
-import { MapItemType, TileLayerFlags } from './types'
-import { TileLayer } from './tileLayer'
+import { ItemType, TilesLayerFlags } from './types'
+import { TilesLayer } from './tilesLayer'
 import { DataFile } from './datafile'
-import { parseMapGroup, parseMapImage } from './parser'
+import { parseGroup, parseImage } from './parser'
 // import { Texture } from './texture'
 import { Group } from './group'
 import { Image } from './image'
@@ -24,7 +24,7 @@ export class Map {
       let g = this.groups[i]
       for (let j = 0; j < g.layers.length; j++) {
         let l = g.layers[j]
-        if (l instanceof TileLayer && l.flags == TileLayerFlags.GAME) {
+        if (l instanceof TilesLayer && l.flags == TilesLayerFlags.GAME) {
           return [ i, j ]
         }
       }
@@ -34,7 +34,7 @@ export class Map {
   }
   
   private loadImages(df: DataFile) {
-    const imagesInfo = df.getType(MapItemType.IMAGE)
+    const imagesInfo = df.getType(ItemType.IMAGE)
 
     if (!imagesInfo)
       return []
@@ -43,7 +43,7 @@ export class Map {
     
     for (let i = 0; i < imagesInfo.num; i++) {
       const imageItem = df.getItem(imagesInfo.start + i)
-      const imageInfo = parseMapImage(imageItem.data)
+      const imageInfo = parseImage(imageItem.data)
       
       const img = new Image()
       img.load(df, imageInfo)
@@ -54,7 +54,7 @@ export class Map {
   }
   
   private loadGroups(df: DataFile) {
-    const groupsInfo = df.getType(MapItemType.GROUP)
+    const groupsInfo = df.getType(ItemType.GROUP)
     
     if (!groupsInfo)
       return []
@@ -63,7 +63,7 @@ export class Map {
 
     for (let g = 0; g < groupsInfo.num; g++) {
       const groupItem = df.getItem(groupsInfo.start + g)
-      const groupInfo = parseMapGroup(groupItem.data)
+      const groupInfo = parseGroup(groupItem.data)
 
       const grp = new Group()
       grp.load(this, df, groupInfo)

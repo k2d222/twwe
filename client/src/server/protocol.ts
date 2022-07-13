@@ -84,7 +84,7 @@ export interface CommonLayerChange {
   name?: string
 }
 
-export interface EditTileLayer extends CommonLayerChange {
+export interface EditTilesLayer extends CommonLayerChange {
   width?: number,
   height?: number,
   // flags?: number,
@@ -94,12 +94,12 @@ export interface EditTileLayer extends CommonLayerChange {
   image?: number | null,
 }
 
-export interface EditQuadLayer extends CommonLayerChange {
+export interface EditQuadsLayer extends CommonLayerChange {
   // TODO
   image?: number,
 }
 
-export type EditLayer = EditTileLayer | EditQuadLayer
+export type EditLayer = EditTilesLayer | EditQuadsLayer
 
 export interface ReorderLayer {
   group: number,

@@ -1,7 +1,7 @@
-import type { MapGroupObj, MapLayer, MapLayerQuads, MapLayerTiles, LayerQuad, LayerTile, MapImage, Color, Coord } from './types'
+import * as Info from './types'
 import { DataReader } from './dataReader'
 
-export function parseMapGroup(groupData: ArrayBuffer): MapGroupObj {
+export function parseGroup(groupData: ArrayBuffer): Info.Group {
   const d = new DataReader(groupData)
   d.reset()
 
@@ -26,7 +26,7 @@ export function parseMapGroup(groupData: ArrayBuffer): MapGroupObj {
   }
 }
 
-export function parseMapLayer(layerData: ArrayBuffer): MapLayer {
+export function parseLayer(layerData: ArrayBuffer): Info.Layer {
   const d = new DataReader(layerData)
   d.reset()
 
@@ -37,7 +37,7 @@ export function parseMapLayer(layerData: ArrayBuffer): MapLayer {
   }
 }
 
-export function parseMapLayerQuads(layerData: ArrayBuffer): MapLayerQuads {
+export function parseQuadsLayer(layerData: ArrayBuffer): Info.QuadsLayer {
   const d = new DataReader(layerData)
   d.reset()
 
@@ -54,7 +54,7 @@ export function parseMapLayerQuads(layerData: ArrayBuffer): MapLayerQuads {
   }
 }
 
-export function parseMapLayerTiles(layerData: ArrayBuffer): MapLayerTiles {
+export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
   const d = new DataReader(layerData)
   d.reset()
 
@@ -62,7 +62,7 @@ export function parseMapLayerTiles(layerData: ArrayBuffer): MapLayerTiles {
   /*obj.type =*/ d.uint32()
   /*obj.flags =*/ d.uint32()
 
-  return {
+  const data = {
     version: d.uint32(),
     width: d.int32(),
     height: d.int32(),
@@ -80,12 +80,34 @@ export function parseMapLayerTiles(layerData: ArrayBuffer): MapLayerTiles {
 
     image: d.int32(),
     data: d.int32(),
+    
+    name: "",
 
-    name: d.int32Str(3),
+    dataTele: -1,
+    dataSpeedup: -1,
+    dataFront: -1,
+    dataSwitch: -1,
+    dataTune: -1,
   }
+  
+  // version 3 extension
+  if (data.version >= 3) {
+    data.name = d.int32Str(3)
+  }
+  
+  // ddnet extension
+  if (data.flags !== Info.TilesLayerFlags.TILES && data.flags !== Info.TilesLayerFlags.GAME) {
+    data.dataTele = d.int32()
+    data.dataSpeedup = d.int32()
+    data.dataFront = d.int32()
+    data.dataSwitch = d.int32()
+    data.dataTune = d.int32()
+  }
+  
+  return data
 }
 
-export function parseMapImage(layerData: ArrayBuffer): MapImage {
+export function parseImage(layerData: ArrayBuffer): Info.Image {
   const d = new DataReader(layerData)
   d.reset()
 
@@ -99,8 +121,8 @@ export function parseMapImage(layerData: ArrayBuffer): MapImage {
   }
 }
 
-export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[] {
-  const quads: LayerQuad[] = []
+export function parseQuads(layerData: ArrayBuffer, num: number): Info.Quad[] {
+  const quads: Info.Quad[] = []
 
   const d = new DataReader(layerData)
   d.reset()
@@ -115,7 +137,7 @@ export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[
       })
     }
 
-    const colors: Color[] = []
+    const colors: Info.Color[] = []
     for (let i = 0; i < 4; i++) {
       colors.push({
         r: d.uint32() & 0xff,
@@ -125,7 +147,7 @@ export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[
       })
     }
 
-    const texCoords: Coord[] = []
+    const texCoords: Info.Coord[] = []
     for (let i = 0; i < 4; i++) {
       texCoords.push({ x: d.int32(), y: d.int32() })
     }
@@ -146,8 +168,8 @@ export function parseLayerQuads(layerData: ArrayBuffer, num: number): LayerQuad[
   return quads
 }
 
-export function parseLayerTiles(tileData: ArrayBuffer, num: number): LayerTile[] {
-  const tiles: LayerTile[] = []
+export function parseTiles(tileData: ArrayBuffer, num: number): Info.Tile[] {
+  const tiles: Info.Tile[] = []
   const d = new DataReader(tileData)
   d.reset()
 

@@ -1,13 +1,13 @@
-import type { TileLayer } from '../twmap/tileLayer'
-import type { LayerTile } from '../twmap/types'
+import type { TilesLayer } from '../twmap/tilesLayer'
+import type * as Info from '../twmap/types'
 import type { RenderMap } from './renderMap'
 import type { Texture } from './texture'
 import { RenderLayer } from './renderLayer'
 import { gl, shader, viewport } from './global'
 import { TileFlag } from '../twmap/types'
 
-export class RenderTileLayer extends RenderLayer {
-  layer: TileLayer
+export class RenderTilesLayer extends RenderLayer {
+  layer: TilesLayer
   visible: boolean
   texture: Texture | null
 
@@ -19,7 +19,7 @@ export class RenderTileLayer extends RenderLayer {
 
   chunkSize: number
 
-  constructor(rmap: RenderMap, layer: TileLayer) {
+  constructor(rmap: RenderMap, layer: TilesLayer) {
     super()
     this.layer = layer
     this.visible = true
@@ -210,13 +210,13 @@ function makeVertices(x: number, y: number) {
   ]
 }
 
-function makeTexCoords(tile: LayerTile, atlasSize: number) {
+function makeTexCoords(tile: Info.Tile, atlasSize: number) {
   const tileCount = 16
   const tx = tile.index % tileCount
   const ty = Math.floor(tile.index / tileCount)
   
-  // const half_pix = 0.5 / atlasSize
-  const half_pix = 0
+  const half_pix = 0.5 / atlasSize
+  // const half_pix = 0
 
   let x0 = tx / tileCount + half_pix
   let x1 = (tx + 1) / tileCount - half_pix

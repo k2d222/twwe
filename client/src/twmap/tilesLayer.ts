@@ -1,29 +1,29 @@
 import type { DataFile } from './datafile'
 import type { Map } from './map'
 import type { Image } from './image'
-import { Color, LayerTile, LayerType, MapLayerTiles, TileLayerFlags } from './types'
+import * as Info from './types'
 import { Layer } from './layer'
-import { parseLayerTiles } from './parser'
+import { parseTiles } from './parser'
 
 
-function cloneLayerTile(tile: LayerTile): LayerTile {
+function cloneLayerTile(tile: Info.Tile): Info.Tile {
   return {
     index: tile.index,
     flags: tile.flags,
   }
 }
 
-export class TileLayer extends Layer {
-  flags: TileLayerFlags
+export class TilesLayer extends Layer {
+  flags: Info.TilesLayerFlags
   width: number
   height: number
-  tiles: LayerTile[]
-  color: Color
+  tiles: Info.Tile[]
+  color: Info.Color
   image: Image | null
 
   constructor() {
-    super(LayerType.TILES)
-    this.flags = TileLayerFlags.TILES
+    super(Info.LayerType.TILES)
+    this.flags = Info.TilesLayerFlags.TILES
     this.width = 0
     this.height = 0
     this.tiles = []
@@ -31,11 +31,11 @@ export class TileLayer extends Layer {
     this.image = null
   }
 
-  static create(width: number, height: number, fill: LayerTile) {
-    const self = new TileLayer()
+  static create(width: number, height: number, fill: Info.Tile) {
+    const self = new TilesLayer()
     self.width = width
     self.height = height
-    self.tiles = new Array<LayerTile>(width * height).fill(fill)
+    self.tiles = new Array<Info.Tile>(width * height).fill(fill)
     return self
   }
 
@@ -43,7 +43,7 @@ export class TileLayer extends Layer {
     return this.tiles[y * this.width + x]
   }
 
-  load(map: Map, df: DataFile, info: MapLayerTiles) {
+  load(map: Map, df: DataFile, info: Info.TilesLayer) {
     this.flags = info.flags
     this.name = info.name
     this.width = info.width
@@ -56,10 +56,10 @@ export class TileLayer extends Layer {
     }
 
     const tileData = df.getData(info.data)
-    this.tiles = parseLayerTiles(tileData, info.width * info.height)
+    this.tiles = parseTiles(tileData, info.width * info.height)
   }
   
-  setWidth(width: number, fill: LayerTile) {
+  setWidth(width: number, fill: Info.Tile) {
     if (width < this.width) {
       this.tiles = this.tiles.filter((_, i) => (i % this.width) < width)
     }
@@ -73,7 +73,7 @@ export class TileLayer extends Layer {
     this.width = width
   }
 
-  setHeight(height: number, fill: LayerTile) {
+  setHeight(height: number, fill: Info.Tile) {
     if (height < this.height) {
       this.tiles.splice(height * this.width, (this.height - height) * this.width)
     }

@@ -3,8 +3,8 @@ import type { Layer } from '../../twmap/layer'
 import { server } from '../global'
 import { Map } from '../../twmap/map'
 import { Image } from '../../twmap/image'
-import { TileLayer } from '../../twmap/tileLayer'
-import { TileLayerFlags } from '../../twmap/types'
+import { TilesLayer } from '../../twmap/tilesLayer'
+import { TilesLayerFlags } from '../../twmap/types'
 
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
@@ -58,14 +58,14 @@ export async function queryImage(sendImage: SendImage): Promise<Image> {
 
 
 export const PhysicsLayers = [
-  TileLayerFlags.GAME,
-  TileLayerFlags.FRONT,
-  TileLayerFlags.TELE,
-  TileLayerFlags.SPEEDUP,
-  TileLayerFlags.SWITCH,
-  TileLayerFlags.TUNE,
+  TilesLayerFlags.GAME,
+  TilesLayerFlags.FRONT,
+  TilesLayerFlags.TELE,
+  TilesLayerFlags.SPEEDUP,
+  TilesLayerFlags.SWITCH,
+  TilesLayerFlags.TUNE,
 ]
 
-export function isPhysicsLayer(layer: Layer): layer is TileLayer {
-  return layer instanceof TileLayer && PhysicsLayers.includes(layer.flags)
+export function isPhysicsLayer(layer: Layer): layer is TilesLayer {
+  return layer instanceof TilesLayer && PhysicsLayers.includes(layer.flags)
 }

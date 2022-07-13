@@ -1,10 +1,10 @@
 import type { Layer } from './layer'
 import type { DataFile } from './datafile'
 import type { Map } from './map'
-import { TileLayer } from './tileLayer'
-import { QuadLayer } from './quadLayer'
-import { MapGroupObj, MapItemType, LayerType } from './types'
-import { parseMapLayer, parseMapLayerTiles, parseMapLayerQuads } from './parser'
+import { TilesLayer } from './tilesLayer'
+import { QuadsLayer } from './quadsLayer'
+import * as Info from './types'
+import { parseLayer, parseTilesLayer, parseQuadsLayer } from './parser'
 
 export class Group {
   name: string
@@ -23,7 +23,7 @@ export class Group {
     this.layers = []
   }
 
-  load(map: Map, df: DataFile, info: MapGroupObj) {
+  load(map: Map, df: DataFile, info: Info.Group) {
     this.name = info.name
     this.offX = info.offX
     this.offY = info.offY
@@ -33,7 +33,7 @@ export class Group {
   }
 
   private loadLayers(map: Map, df: DataFile, startLayer: number, numLayers: number) {
-    const layersInfo = df.getType(MapItemType.LAYER)
+    const layersInfo = df.getType(Info.ItemType.LAYER)
     
     if (!layersInfo)
       return []
@@ -42,18 +42,18 @@ export class Group {
 
     for (let l = 0; l < numLayers; l++) {
       const layerItem = df.getItem(layersInfo.start + startLayer + l)
-      const layerInfo = parseMapLayer(layerItem.data)
+      const layerInfo = parseLayer(layerItem.data)
 
-      if (layerInfo.type === LayerType.TILES) {
-        const tileLayerInfo = parseMapLayerTiles(layerItem.data)
-        const layer = new TileLayer()
-        layer.load(map, df, tileLayerInfo)
+      if (layerInfo.type === Info.LayerType.TILES) {
+        const tilessLayerInfo = parseTilesLayer(layerItem.data)
+        const layer = new TilesLayer()
+        layer.load(map, df, tilessLayerInfo)
         layers.push(layer)
       }
-      else if (layerInfo.type === LayerType.QUADS) {
-        const quadLayerInfo = parseMapLayerQuads(layerItem.data)
-        const layer = new QuadLayer()
-        layer.load(map, df, quadLayerInfo)
+      else if (layerInfo.type === Info.LayerType.QUADS) {
+        const quadsLayerInfo = parseQuadsLayer(layerItem.data)
+        const layer = new QuadsLayer()
+        layer.load(map, df, quadsLayerInfo)
         layers.push(layer)
       }
       else {

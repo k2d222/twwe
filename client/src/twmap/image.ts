@@ -1,5 +1,5 @@
 import type { DataFile } from './datafile'
-import type { MapImage } from './types'
+import type * as Info from './types'
 import { parseString } from './parser'
 
 
@@ -38,7 +38,7 @@ export class Image {
     this.img = null
   }
   
-  load(df: DataFile, info: MapImage) {
+  load(df: DataFile, info: Info.Image) {
     this.name = parseString(df.getData(info.name))
     this.width = info.width
     this.height = info.height

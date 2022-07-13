@@ -3,10 +3,10 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Color } from '../../twmap/types'
   import type { Layer } from '../../twmap/layer'
-  import { TileLayerFlags } from '../../twmap/types'
+  import { TilesLayerFlags } from '../../twmap/types'
   import { Image } from '../../twmap/image'
-  import { TileLayer } from '../../twmap/tileLayer'
-  import { QuadLayer } from '../../twmap/quadLayer'
+  import { TilesLayer } from '../../twmap/tilesLayer'
+  import { QuadsLayer } from '../../twmap/quadsLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
   import { decodePng, externalImageUrl, queryImage, isPhysicsLayer } from './util'
@@ -293,25 +293,25 @@
   
   function layerName(layer: Layer) {
     const quotedName = layer.name ? " '" + layer.name + "'" : ""
-    if (layer instanceof TileLayer) {
+    if (layer instanceof TilesLayer) {
       switch (layer.flags) {
-        case TileLayerFlags.FRONT:
+        case TilesLayerFlags.FRONT:
           return "Front Layer"
-        case TileLayerFlags.GAME:
+        case TilesLayerFlags.GAME:
           return "Game Layer"
-        case TileLayerFlags.SPEEDUP:
+        case TilesLayerFlags.SPEEDUP:
           return "Speedup Layer"
-        case TileLayerFlags.SWITCH:
+        case TilesLayerFlags.SWITCH:
           return "Switch Layer"
-        case TileLayerFlags.TELE:
+        case TilesLayerFlags.TELE:
           return "Tele Layer"
-        case TileLayerFlags.TILES:
+        case TilesLayerFlags.TILES:
           return "Tile Layer" + quotedName
-        case TileLayerFlags.TUNE:
+        case TilesLayerFlags.TUNE:
           return "Tune Layer"
       }
     }
-    else if (layer instanceof QuadLayer) {
+    else if (layer instanceof QuadsLayer) {
       return "Quad Layer" + quotedName
     }
     else {
@@ -359,31 +359,31 @@
                 Add quad layer
               </button>
               {#if group === rmap.physicsGroup}
-                {#if !rmap.findPhysicsLayer(TileLayerFlags.SWITCH)}
+                {#if !rmap.findPhysicsLayer(TilesLayerFlags.SWITCH)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
                     Add switch layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TileLayerFlags.FRONT)}
+                {#if !rmap.findPhysicsLayer(TilesLayerFlags.FRONT)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
                     Add front layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TileLayerFlags.TUNE)}
+                {#if !rmap.findPhysicsLayer(TilesLayerFlags.TUNE)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
                     Add tune layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TileLayerFlags.SPEEDUP)}
+                {#if !rmap.findPhysicsLayer(TilesLayerFlags.SPEEDUP)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
                     Add speedup layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TileLayerFlags.TELE)}
+                {#if !rmap.findPhysicsLayer(TilesLayerFlags.TELE)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
                     Add tele layer
@@ -402,7 +402,7 @@
         {#each group.layers as layer, l}
           <div class="layer" class:visible={layer.visible}>
             <label>
-              <input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} disabled={!(layer.layer instanceof TileLayer)} />
+              <input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} disabled={!(layer.layer instanceof TilesLayer)} />
               {layer.layer.name || '<no name>'}
             </label>
             <span class="eye"
@@ -419,12 +419,12 @@
                 {/if}
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
-                {#if layer.layer instanceof TileLayer}
+                {#if layer.layer instanceof TilesLayer}
                   <label>Width <input type="number" min={2} max={10000} value={layer.layer.width}
                     on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
                   <label>Height <input type="number" min={2} max={10000} value={layer.layer.height}
                     on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
-                  {#if layer.layer.flags === TileLayerFlags.TILES}
+                  {#if layer.layer.flags === TilesLayerFlags.TILES}
                     {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                     <label>Image <input type="button" value={img}
                       on:click={() => openFilePicker(g, l, layer.layer)}></label>
@@ -433,12 +433,12 @@
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
                     <label>Opacity <input type="range" min={0} max={255} value={col.a}
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
-                    {#if layer.layer.flags === TileLayerFlags.TILES}
+                    {#if layer.layer.flags === TilesLayerFlags.TILES}
                       <label>Name <input type="text" value={layer.layer.name}
                         on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
                     {/if}
                   {/if}
-                {:else if layer.layer instanceof QuadLayer}
+                {:else if layer.layer instanceof QuadsLayer}
                   {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
                   <label>Image <input type="button" value={img}
                     on:click={() => openFilePicker(g, l, layer.layer)}></label>

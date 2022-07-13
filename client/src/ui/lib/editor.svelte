@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError } from '../../server/protocol'
-  import { TileLayer } from '../../twmap/tileLayer'
+  import { TilesLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
@@ -128,7 +128,7 @@
     y = Math.floor(y)
 
     let color = 'black'
-    if (layer instanceof TileLayer && (x < 0 || y < 0 || x > layer.width || y > layer.height)) {
+    if (layer instanceof TilesLayer && (x < 0 || y < 0 || x > layer.width || y > layer.height)) {
       color = 'red'
     }
 
@@ -141,7 +141,7 @@
       border-color: ${color};
     `
 
-    if (layer instanceof TileLayer) {
+    if (layer instanceof TilesLayer) {
       layerOutlineStyle = `
         width: ${layer.width * scale}px;
         height: ${layer.height * scale}px;
