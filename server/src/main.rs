@@ -2,7 +2,6 @@ use std::{
     collections::HashMap,
     env,
     fs::File,
-    io,
     net::SocketAddr,
     path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
@@ -15,7 +14,9 @@ use glob::glob;
 
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
-    future, StreamExt, TryStreamExt,
+    future,
+    stream::FuturesUnordered,
+    StreamExt, TryStreamExt,
 };
 use tokio::net::{TcpListener, TcpStream};
 
@@ -107,7 +108,7 @@ impl Server {
     //     }
     // }
 
-    fn broadcast_to_room(&self, peer: &Peer, content: ResponseContent) {
+    fn broadcast_to_room(&self, room: &Room, content: ResponseContent) {
         let msg = Broadcast {
             timestamp: SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
@@ -119,10 +120,8 @@ impl Server {
         let str = serde_json::to_string(&msg).unwrap(); // this must not fail
         let msg = Message::Text(str);
 
-        if let Some(room) = peer.room.clone() {
-            for tx in room.peers().values() {
-                tx.unbounded_send(msg.to_owned()).ok();
-            }
+        for tx in room.peers().values() {
+            tx.unbounded_send(msg.to_owned()).ok();
         }
     }
 
@@ -152,8 +151,9 @@ impl Server {
             global_count: self.rooms().values().map(|r| r.peer_count() as u32).sum(),
             room_count: peer.room.clone().map(|r| r.peer_count() as u32),
         };
-
-        self.broadcast_to_room(&peer, ResponseContent::ListUsers(list_users));
+        if let Some(room) = peer.room.clone() {
+            self.broadcast_to_room(&room, ResponseContent::ListUsers(list_users));
+        }
     }
 
     fn respond_and_broadcast(&self, peer: &Peer, id: u32, content: Res) {
@@ -184,6 +184,7 @@ impl Server {
                 ResponseContent::CreateImage(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::SendImage(_) => (),
                 ResponseContent::DeleteImage(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::Error(_) => (),
             }
         }
     }
@@ -209,7 +210,7 @@ impl Server {
                 };
                 group.layers.push(twmap::Layer::Game(layer));
                 map.groups.push(group);
-                debug_assert!(map.check().is_ok());
+                map.check().map_err(server_error)?;
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
                 map.save_file(&path).unwrap();
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
@@ -219,7 +220,7 @@ impl Server {
                     .room(&params.clone)
                     .ok_or("cannot clone non-existing map")?;
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
-                room.save_copy(&path).unwrap();
+                room.save_copy(&path)?;
                 let mut rooms = self.rooms.lock().unwrap();
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
@@ -240,6 +241,7 @@ impl Server {
     fn handle_join_map(&self, peer: &mut Peer, join_map: JoinMap) -> Res {
         if let Some(room) = &peer.room {
             room.remove_peer(peer);
+            self.broadcast_users(peer);
         }
 
         let room = self.room(&join_map.name).ok_or("map does not exist")?;
@@ -273,7 +275,7 @@ impl Server {
 
     fn handle_create_group(&self, peer: &mut Peer, create_group: CreateGroup) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
-        room.create_group(&create_group);
+        room.create_group(&create_group)?;
         Ok(ResponseContent::CreateGroup(create_group))
     }
 
@@ -451,9 +453,7 @@ impl Server {
                     let res = self.handle_upload_file(&peer, &data);
                     self.respond(&peer, 1, res);
                 }
-                _ => {
-                    log::warn!("unhandled message type from {}", addr);
-                }
+                _ => (),
             }
 
             future::ok(())
@@ -471,7 +471,32 @@ impl Server {
         let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
         std::fs::remove_file(&upload_path).ok();
 
-        println!("{} disconnected", &addr);
+        log::info!("disconnected {}", &addr);
+    }
+
+    fn recover_after_panic(&self, addr: SocketAddr) {
+        let rooms = self.rooms();
+        let room = rooms
+            .iter()
+            .find(|(_, room)| room.peers().contains_key(&addr));
+        match room {
+            Some((_, room)) => {
+                room.remove_closed_peers();
+                let map = room.map.get_opt();
+                if let Some(map) = &*map {
+                    let response = if let Err(e) = map.check() {
+                        log::error!("map error is: {}", e);
+                        Error::MapError(e.to_string())
+                    } else {
+                        Error::ServerError
+                    };
+                    self.broadcast_to_room(room, ResponseContent::Error(response));
+                }
+            }
+            None => {
+                log::error!("could not find a room containing the peer that caused the panic");
+            }
+        }
     }
 }
 
@@ -500,7 +525,7 @@ fn create_server() -> Server {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), io::Error> {
+async fn main() {
     std::fs::remove_dir_all("uploads").ok();
     std::fs::create_dir("uploads").ok();
 
@@ -516,11 +541,28 @@ async fn main() -> Result<(), io::Error> {
     let listener = try_socket.expect("Failed to bind");
     log::info!("Listening on: {}", addr);
 
-    // Let's spawn the handling of each connection in a separate task.
-    while let Ok((stream, addr)) = listener.accept().await {
-        let state = state.clone();
-        tokio::spawn(async move { state.handle_connection(stream, addr).await });
-    }
+    let mut connections = FuturesUnordered::new();
 
-    Ok(())
+    loop {
+        tokio::select! {
+            _ = connections.next() => (),
+            res = listener.accept() => {
+                match res {
+                    Ok((stream, addr)) => {
+                        let state = state.clone();
+                        let state2 = state.clone();
+                        let handle = async move {
+                            let res = tokio::spawn(async move { state.handle_connection(stream, addr).await }).await;
+                            if let Err(e) = res {
+                                log::error!("task for peer {} panicked: {}", addr, e);
+                                state2.recover_after_panic(addr);
+                            }
+                        };
+                        connections.push(handle);
+                    },
+                    Err(e) => log::error!("accept() failed: {}", e)
+                }
+            },
+        }
+    }
 }

@@ -147,7 +147,7 @@ pub struct CreateLayer {
     #[serde(with = "SerdeLayerKind")]
     pub kind: LayerKind,
     pub group: u32,
-    pub name: String,
+    pub name: String, // this is ignored for physics layers
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -234,6 +234,13 @@ pub struct ImageInfo {
     pub height: u32,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Error {
+    ServerError,      // server panicked
+    MapError(String), // map is corrupted
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RequestContent {
@@ -297,6 +304,8 @@ pub enum ResponseContent {
     CreateImage(CreateImage),
     SendImage(ImageInfo),
     DeleteImage(DeleteImage),
+
+    Error(Error),
 }
 
 #[derive(Clone, Debug, Deserialize)]

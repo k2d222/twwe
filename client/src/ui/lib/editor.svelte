@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage } from '../../server/protocol'
+  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError } from '../../server/protocol'
   import { TileLayer } from '../../twmap/tileLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
@@ -8,7 +8,7 @@
   import { viewport } from '../../gl/global'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
-  import { showInfo } from './dialog'
+  import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl } from './util'
@@ -110,6 +110,15 @@
   async function serverOnDeleteImage(e: DeleteImage) {
     rmap.removeImage(e.index)
   }
+  function serverOnError(e: ServerError) {
+    if ('serverError' in e) {
+      showError('The server met an unexpected error. You should download or save the map, then reload the page.', 'closable')
+    }
+    else if ('mapError' in e) {
+      console.error('map error', e)
+      showError('The server met an unexpected error and the map got corrupted. Reload the page to rollback to last save.', 'closable')
+    }
+  }
 
   function updateOutlines() {
     const layer = map.groups[selectedLayer[0]].layers[selectedLayer[1]]
@@ -161,6 +170,7 @@
     server.on('deletelayer', serverOnDeleteLayer)
     server.on('createimage', serverOnCreateImage)
     server.on('deleteimage', serverOnDeleteImage)
+    server.on('error', serverOnError)
     server.send('listusers')
     canvas.focus()
     
@@ -192,9 +202,14 @@
   }
 
   async function onSaveMap() {
-    showInfo('Saving map...', 'none')
-    await server.query('savemap', { name: map.name })
-    showInfo('Map saved on server.', 'closable')
+    try {
+      showInfo('Saving map...', 'none')
+      await server.query('savemap', { name: map.name })
+      showInfo('Map saved on server.', 'closable')
+    }
+    catch (e) {
+      showError('Failed to save map: ' + e)
+    }
   }
 
   function onDownloadMap() {

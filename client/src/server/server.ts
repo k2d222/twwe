@@ -49,6 +49,8 @@ export class Server {
       'createimage': [],
       'sendimage': [],
       'deleteimage': [],
+      
+      'error': []
     }
     this.binaryListeners = []
   }

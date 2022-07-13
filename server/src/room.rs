@@ -15,9 +15,9 @@ use futures::channel::mpsc::UnboundedSender;
 use tungstenite::protocol::Message;
 
 use twmap::{
-    constants, CompressedData, EmbeddedImage, ExternalImage, FrontLayer, GameLayer, Group, Image,
-    Layer, LayerKind, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileMapLayer, TilesLayer,
-    TuneLayer, TwMap,
+    constants, map_checks::CheckData, CompressedData, EmbeddedImage, ExternalImage, FrontLayer,
+    GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer,
+    TileMapLayer, TilesLayer, TuneLayer, TwMap,
 };
 
 use crate::{
@@ -43,7 +43,7 @@ fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &
     let old_width = layer.tiles().shape().1 as isize;
     let diff = width as isize - old_width;
 
-    if width == 0 || width > 10000 {
+    if width < 2 || width > 10000 {
         return Err("invalid layer dimensions");
     }
 
@@ -60,7 +60,7 @@ pub fn set_layer_height<T: TileMapLayer>(layer: &mut T, height: usize) -> Result
     let old_height = layer.tiles().shape().0 as isize;
     let diff = height as isize - old_height;
 
-    if height == 0 || height > 10000 {
+    if height < 2 || height > 10000 {
         return Err("invalid layer dimensions");
     }
 
@@ -105,6 +105,9 @@ impl LazyMap {
             None => panic!("failed to load map {}", self.path.display()),
         }
     }
+    pub fn get_opt(&self) -> MutexGuard<Option<TwMap>> {
+        self.map.lock()
+    }
 }
 
 pub struct Room {
@@ -141,6 +144,14 @@ impl Room {
         self.peers.lock()
     }
 
+    pub fn remove_closed_peers(&self) {
+        let mut peers = self.peers();
+        peers.retain(|_, tx| !tx.is_closed());
+        if peers.is_empty() {
+            self.map.unload()
+        }
+    }
+
     pub fn send_map(&self, peer: &Peer) -> Result<(), &'static str> {
         let buf = {
             let mut buf = Vec::new();
@@ -170,11 +181,14 @@ impl Room {
         let _lck = self.saving.lock();
 
         // clone the map to release the lock as soon as possible
+        let mut tmp_path = self.map.path.clone();
+        tmp_path.set_extension("map.tmp");
         self.map
             .get()
             .clone()
-            .save_file(&self.map.path)
+            .save_file(&tmp_path)
             .map_err(server_error)?;
+        std::fs::rename(&tmp_path, &self.map.path).map_err(server_error)?;
 
         log::debug!("saved {}", self.map.path.display());
         Ok(())
@@ -220,11 +234,20 @@ impl Room {
         Ok(())
     }
 
-    pub fn create_group(&self, create_group: &CreateGroup) {
+    pub fn create_group(&self, create_group: &CreateGroup) -> Result<(), &'static str> {
         let mut map = self.map.get();
         let mut group = Group::default();
+
+        if create_group.name.len() > Group::MAX_NAME_LENGTH {
+            return Err("group name too long");
+        }
+        if map.groups.len() == u16::MAX as usize {
+            return Err("max number of groups reached");
+        }
+
         group.name = create_group.name.to_owned();
         map.groups.push(group);
+        Ok(())
     }
 
     pub fn edit_group(&self, edit_group: &EditGroup) -> Result<(), &'static str> {
@@ -242,7 +265,7 @@ impl Room {
             ParaY(para_y) => group.parallax_y = para_y,
             Name(name) => {
                 if group.is_physics_group() {
-                    return Err("cannot delete the physics group");
+                    return Err("cannot rename the physics group");
                 }
                 group.name = name
             }
@@ -286,6 +309,10 @@ impl Room {
     }
 
     pub fn create_layer(&self, create_layer: &CreateLayer) -> Result<(), &'static str> {
+        if create_layer.name.len() > Layer::MAX_NAME_LENGTH {
+            return Err("layer name too long");
+        }
+
         let mut map = self.map.get();
         let default_layer_size = map.find_physics_layer::<GameLayer>().unwrap().tiles.shape();
         let group = map
@@ -293,7 +320,7 @@ impl Room {
             .get_mut(create_layer.group as usize)
             .ok_or("invalid group index")?;
 
-        macro_rules! add_layer {
+        macro_rules! physics_layer {
             ($kind: expr, $struct: ident, $enum: expr) => {{
                 if !group.is_physics_group() {
                     return Err("cannot create physics layer outside of the physics group");
@@ -321,11 +348,11 @@ impl Room {
                 layer.name = create_layer.name.to_owned();
                 group.layers.push(Layer::Quads(layer));
             }
-            LayerKind::Front => add_layer!(LayerKind::Front, FrontLayer, Layer::Front),
-            LayerKind::Tele => add_layer!(LayerKind::Tele, TeleLayer, Layer::Tele),
-            LayerKind::Speedup => add_layer!(LayerKind::Speedup, SpeedupLayer, Layer::Speedup),
-            LayerKind::Switch => add_layer!(LayerKind::Switch, SwitchLayer, Layer::Switch),
-            LayerKind::Tune => add_layer!(LayerKind::Tune, TuneLayer, Layer::Tune),
+            LayerKind::Front => physics_layer!(LayerKind::Front, FrontLayer, Layer::Front),
+            LayerKind::Tele => physics_layer!(LayerKind::Tele, TeleLayer, Layer::Tele),
+            LayerKind::Speedup => physics_layer!(LayerKind::Speedup, SpeedupLayer, Layer::Speedup),
+            LayerKind::Switch => physics_layer!(LayerKind::Switch, SwitchLayer, Layer::Switch),
+            LayerKind::Tune => physics_layer!(LayerKind::Tune, TuneLayer, Layer::Tune),
             LayerKind::Sounds | LayerKind::Game | LayerKind::Invalid(_) => {
                 return Err("invalid new layer kind");
             }
@@ -343,8 +370,7 @@ impl Room {
 
         if let Image(Some(i)) = edit_layer.change {
             let image = map.images.get(i as usize).ok_or("invalid image index")?;
-
-            let tile_dims_ok = image.width() == 1024 && image.height() == 1024;
+            let tile_dims_ok = image.width() % 16 == 0 && image.height() % 16 == 0;
 
             let group = map
                 .groups
@@ -358,7 +384,7 @@ impl Room {
             match layer {
                 Layer::Tiles(layer) => {
                     if !tile_dims_ok {
-                        return Err("tile layer images must have dimensions (1024, 1024)");
+                        return Err("invalid image dimensions for tile layer");
                     }
                     layer.image = Some(i)
                 }
@@ -517,20 +543,22 @@ impl Room {
     ) -> Result<(), &'static str> {
         let mut map = self.map.get();
 
-        if name == "" {
-            return Err("empty image name");
+        if name.len() > Image::MAX_NAME_LENGTH {
+            return Err("image name too long");
         }
 
         if index as usize != map.images.len() {
             return Err("invalid image index");
         }
 
+        if map.images.len() == u16::MAX as usize {
+            return Err("max number of images reached");
+        }
+
         let mut image = EmbeddedImage::from_file(path).map_err(|_| "failed to load png image")?;
+        image.image.check_data().map_err(|_| "invalid image data")?;
         image.name = name;
         map.images.push(Image::Embedded(image));
-
-        // TODO: would be nice to have access to image.check() (which is private).
-        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
 
         Ok(())
     }
@@ -541,6 +569,11 @@ impl Room {
         if index as usize != map.images.len() {
             return Err("invalid image index");
         }
+
+        if map.images.len() == u16::MAX as usize {
+            return Err("max number of images reached");
+        }
+
         let (width, height) =
             constants::external_dimensions(&name, map.version).ok_or("invalid external image")?;
 
@@ -550,9 +583,6 @@ impl Room {
             height,
         };
         map.images.push(Image::External(image));
-
-        // TODO: would be nice to have access to image.check() (which is private).
-        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
 
         Ok(())
     }
