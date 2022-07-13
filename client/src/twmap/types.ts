@@ -124,6 +124,11 @@ export type Tile = {
   flags: number,
 }
 
+export type Tele = {
+  number: number,
+  id: number,
+}
+
 export type Speedup = {
   force: number,
   maxSpeed: number,

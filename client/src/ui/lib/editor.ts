@@ -31,10 +31,7 @@ export async function downloadMap(mapName: string) {
 }
 
 export function getLayerImage(rmap: RenderMap, groupID: number, layerID: number) {
-  const map = rmap.map
-  const layer = map.groups[groupID].layers[layerID]
-  let image = layer.image
-  return image
+  return rmap.groups[groupID].layers[layerID].texture.image
 }
 
 export function placeTile(rmap: RenderMap, group: number, layer: number, id: number) {

@@ -187,6 +187,73 @@ export function parseTiles(tileData: ArrayBuffer, num: number): Info.Tile[] {
   return tiles
 }
 
+export function parseTeleTiles(tileData: ArrayBuffer, num: number): Info.Tele[] {
+  const tiles: Info.Tele[] = []
+  const d = new DataReader(tileData)
+  d.reset()
+
+  for (let i = 0; i < num; i++) {
+    tiles.push({
+      number: d.uint8(),
+      id: d.uint8(),
+    })
+  }
+
+  return tiles
+}
+
+export function parseSpeedupTiles(tileData: ArrayBuffer, num: number): Info.Speedup[] {
+  const tiles: Info.Speedup[] = []
+  const d = new DataReader(tileData)
+  d.reset()
+
+  for (let i = 0; i < num; i++) {
+    const tile = {
+      force: d.uint8(),
+      maxSpeed: d.uint8(),
+      id: d.uint8(),
+      angle: 0,
+    }
+    d.uint8() // skip reserved
+    tile.angle = d.uint8()
+    tiles.push(tile)
+  }
+
+  return tiles
+}
+
+export function parseSwitchTiles(tileData: ArrayBuffer, num: number): Info.Switch[] {
+  const tiles: Info.Switch[] = []
+  const d = new DataReader(tileData)
+  d.reset()
+
+  for (let i = 0; i < num; i++) {
+    tiles.push({
+      number: d.uint8(),
+      id: d.uint8(),
+      flags: d.uint8(),
+      delay: d.uint8(),
+    })
+  }
+
+  return tiles
+}
+
+export function parseTuneTiles(tileData: ArrayBuffer, num: number): Info.Tune[] {
+  const tiles: Info.Tune[] = []
+  const d = new DataReader(tileData)
+  d.reset()
+
+  for (let i = 0; i < num; i++) {
+    tiles.push({
+      number: d.uint8(),
+      id: d.uint8(),
+    })
+  }
+
+  return tiles
+}
+
 export function parseString(data: ArrayBuffer) {
   const buf = new Uint8Array(data)
 

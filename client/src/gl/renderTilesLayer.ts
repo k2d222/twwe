@@ -1,15 +1,16 @@
-import type { TilesLayer } from '../twmap/tilesLayer'
+import { TilesLayer, FrontLayer, GameLayer, TeleLayer, TuneLayer, SpeedupLayer, SwitchLayer } from '../twmap/tilesLayer'
 import type * as Info from '../twmap/types'
 import type { RenderMap } from './renderMap'
-import type { Texture } from './texture'
 import { RenderLayer } from './renderLayer'
 import { gl, shader, viewport } from './global'
 import { TileFlag } from '../twmap/types'
+import { Image } from '../twmap/image'
+import { Texture } from './texture'
 
 export class RenderTilesLayer extends RenderLayer {
   layer: TilesLayer
   visible: boolean
-  texture: Texture | null
+  texture: Texture
 
   buffers: {
     tileCount: number,
@@ -23,8 +24,6 @@ export class RenderTilesLayer extends RenderLayer {
     super()
     this.layer = layer
     this.visible = true
-
-    this.texture = null
 
     if (layer.image !== null) {
       const index = rmap.map.images.indexOf(layer.image)
@@ -40,7 +39,7 @@ export class RenderTilesLayer extends RenderLayer {
 
     this.createBuffers()
     
-    if (this.texture && this.texture.loaded)
+    if (this.texture.loaded)
       this.initBuffers()
   }
 
@@ -53,7 +52,7 @@ export class RenderTilesLayer extends RenderLayer {
   recompute() {
     this.deleteBuffers()
     this.createBuffers()
-    if (this.texture && this.texture.loaded)
+    if (this.texture.loaded)
       this.initBuffers()
   }
 
@@ -61,10 +60,7 @@ export class RenderTilesLayer extends RenderLayer {
     if (!this.visible)
       return
 
-    if (!this.texture) {
-      return
-    }
-    else if (!this.texture.loaded) {
+    if (!this.texture.loaded) {
       this.texture.load()
       this.initBuffers()
       return
@@ -196,6 +192,57 @@ export class RenderTilesLayer extends RenderLayer {
     for (let y = 0; y < this.buffers.length; y++)
       for (let x = 0; x < this.buffers[0].length; x++)
         this.initChunkBuffer(x, y)
+  }
+}
+
+export class RenderFrontLayer extends RenderTilesLayer {
+  constructor(rmap: RenderMap, layer: FrontLayer) {
+    super(rmap, layer)
+    const image = new Image()
+    image.loadExternal('/editor/front.png')
+    image.name = 'Front'
+    this.texture = new Texture(image)
+  }
+}
+
+export class RenderGameLayer extends RenderTilesLayer {
+  constructor(rmap: RenderMap, layer: GameLayer) {
+    super(rmap, layer)
+    const image = new Image()
+    image.loadExternal('/entities/DDNet.png')
+    image.name = 'Game'
+    this.texture = new Texture(image)
+  }
+}
+
+export class RenderTeleLayer extends RenderTilesLayer {
+  constructor(rmap: RenderMap, layer: TeleLayer) {
+    const tmpLayer = new TilesLayer()
+    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
+    super(rmap, tmpLayer)
+  }
+}
+
+export class RenderSpeedupLayer extends RenderTilesLayer {
+  constructor(rmap: RenderMap, layer: SpeedupLayer) {
+    const tmpLayer = new TilesLayer()
+    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
+    super(rmap, tmpLayer)
+  }
+}
+
+export class RenderSwitchLayer extends RenderTilesLayer {
+  constructor(rmap: RenderMap, layer: SwitchLayer) {
+    const tmpLayer = new TilesLayer()
+    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
+    super(rmap, tmpLayer)
+  }
+}
+export class RenderTuneLayer extends RenderTilesLayer {
+  constructor(rmap: RenderMap, layer: TuneLayer) {
+    const tmpLayer = new TilesLayer()
+    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
+    super(rmap, tmpLayer)
   }
 }
 

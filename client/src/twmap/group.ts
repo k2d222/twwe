@@ -1,7 +1,7 @@
 import type { Layer } from './layer'
 import type { DataFile } from './datafile'
 import type { Map } from './map'
-import { TilesLayer } from './tilesLayer'
+import { createLayer } from './tilesLayer'
 import { QuadsLayer } from './quadsLayer'
 import * as Info from './types'
 import { parseLayer, parseTilesLayer, parseQuadsLayer } from './parser'
@@ -45,9 +45,9 @@ export class Group {
       const layerInfo = parseLayer(layerItem.data)
 
       if (layerInfo.type === Info.LayerType.TILES) {
-        const tilessLayerInfo = parseTilesLayer(layerItem.data)
-        const layer = new TilesLayer()
-        layer.load(map, df, tilessLayerInfo)
+        const tilesLayerInfo = parseTilesLayer(layerItem.data)
+        const layer = createLayer(tilesLayerInfo.flags)
+        layer.load(map, df, tilesLayerInfo)
         layers.push(layer)
       }
       else if (layerInfo.type === Info.LayerType.QUADS) {

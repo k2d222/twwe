@@ -3,7 +3,7 @@ import type { Layer } from '../../twmap/layer'
 import { server } from '../global'
 import { Map } from '../../twmap/map'
 import { Image } from '../../twmap/image'
-import { TilesLayer } from '../../twmap/tilesLayer'
+import { AnyTilesLayer, GameLayer, FrontLayer, TeleLayer, SpeedupLayer, SwitchLayer, TuneLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 
 export async function decodePng(file: File): Promise<ImageData> {
@@ -66,6 +66,6 @@ export const PhysicsLayers = [
   TilesLayerFlags.TUNE,
 ]
 
-export function isPhysicsLayer(layer: Layer): layer is TilesLayer {
-  return layer instanceof TilesLayer && PhysicsLayers.includes(layer.flags)
+export function isPhysicsLayer(layer: Layer): layer is GameLayer | FrontLayer | TeleLayer | SpeedupLayer | SwitchLayer | TuneLayer {
+  return layer instanceof AnyTilesLayer && PhysicsLayers.includes(layer.flags)
 }

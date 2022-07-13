@@ -170,7 +170,7 @@
     hideCM()
   }
 
-  function openFilePicker(g: number, l: number, layer: Layer) {
+  function openFilePicker(g: number, l: number, layer: TilesLayer | QuadsLayer) {
     const picker = new ImagePicker({
       target: document.body,
       props: {
@@ -324,31 +324,32 @@
 <nav class:hidden={!visible}>
   <div id="tree">
 
-    {#each rmap.groups as group, g}
-      <div class="group" class:visible={group.visible} class:folded={folded[g]}>
+    {#each rmap.groups as rgroup, g}
+      {@const group = rgroup.group}
+      <div class="group" class:visible={rgroup.visible} class:folded={folded[g]}>
         <div class="title">
           <span class="fold"
             on:click={() => folded[g] = !folded[g]}></span>
-          <b>#{g} {group.group.name}</b>
+          <b>#{g} {group.name}</b>
           <span class="eye"
-            on:click={() => group.visible = !group.visible}></span>
+            on:click={() => rgroup.visible = !rgroup.visible}></span>
           <span class="options"
               on:click={(e) => showCM(e, g)}></span>
 
           {#if cm.g === g && cm.l === null}
             <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
-              <span>Group #{g} {group.group.name}</span>
+              <span>Group #{g} {group.name}</span>
               <label>Order <input type="number" min={0} max={rmap.groups.length - 1} value={g}
                 on:change={(e) => onReorderGroup({ group: g, newGroup: intVal(e.target) })}></label>
-              <label>Pos X <input type="number" value={group.group.offX}
+              <label>Pos X <input type="number" value={group.offX}
                 on:change={(e) => onEditGroup({ group: g, offX: intVal(e.target) })}></label>
-              <label>Pos Y <input type="number" value={group.group.offY}
+              <label>Pos Y <input type="number" value={group.offY}
                 on:change={(e) => onEditGroup({ group: g, offY: intVal(e.target) })}></label>
-              <label>Para X <input type="number" value={group.group.paraX}
+              <label>Para X <input type="number" value={group.paraX}
                 on:change={(e) => onEditGroup({ group: g, paraX: intVal(e.target) })}></label>
-              <label>Para Y <input type="number" value={group.group.paraY}
+              <label>Para Y <input type="number" value={group.paraY}
                 on:change={(e) => onEditGroup({ group: g, paraY: intVal(e.target) })}></label>
-              <label>Name <input type="text" value={group.group.name}
+              <label>Name <input type="text" value={group.name}
                 on:change={(e) => onEditGroup({ group: g, name: strVal(e.target) })}></label>
               <button
                 on:click={() => onCreateLayer({ kind: 'tiles', group: g, name: "" })}>
@@ -358,7 +359,7 @@
                 on:click={() => onCreateLayer({ kind: 'quads', group: g, name: "" })}>
                 Add quad layer
               </button>
-              {#if group === rmap.physicsGroup}
+              {#if rgroup === rmap.physicsGroup}
                 {#if !rmap.findPhysicsLayer(TilesLayerFlags.SWITCH)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
@@ -399,50 +400,51 @@
 
         </div>
     
-        {#each group.layers as layer, l}
-          <div class="layer" class:visible={layer.visible}>
+        {#each rgroup.layers as rlayer, l}
+          {@const layer = rlayer.layer}
+          <div class="layer" class:visible={rlayer.visible}>
             <label>
-              <input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} disabled={!(layer.layer instanceof TilesLayer)} />
-              {layer.layer.name || '<no name>'}
+              <input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} disabled={!(layer instanceof TilesLayer)} />
+              {layer.name || '<no name>'}
             </label>
             <span class="eye"
-              on:click={() => layer.visible = !layer.visible}></span>
+              on:click={() => rlayer.visible = !rlayer.visible}></span>
             <span class="options"
               on:click={(e) => showCM(e, g, l)}></span>
 
             {#if cm.g === g && cm.l === l}
               <ContextMenu x={cmX} y={cmY} on:close={hideCM}>
-                <span>{layerName(layer.layer)}</span>
-                {#if !isPhysicsLayer(layer.layer)}
+                <span>{layerName(layer)}</span>
+                {#if !isPhysicsLayer(layer)}
                   <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
                     on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
                 {/if}
                 <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
                   on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
-                {#if layer.layer instanceof TilesLayer}
-                  <label>Width <input type="number" min={2} max={10000} value={layer.layer.width}
+                {#if layer instanceof TilesLayer}
+                  <label>Width <input type="number" min={2} max={10000} value={layer.width}
                     on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
-                  <label>Height <input type="number" min={2} max={10000} value={layer.layer.height}
+                  <label>Height <input type="number" min={2} max={10000} value={layer.height}
                     on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
-                  {#if layer.layer.flags === TilesLayerFlags.TILES}
-                    {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
+                  {#if layer instanceof TilesLayer}
+                    {@const img = layer.image ? layer.image.name : "<none>" }
                     <label>Image <input type="button" value={img}
-                      on:click={() => openFilePicker(g, l, layer.layer)}></label>
-                    {@const col = layer.layer.color}
-                    <label>Color <input type="color" value={colorToStr(layer.layer.color)}
+                      on:click={() => openFilePicker(g, l, layer)}></label>
+                    {@const col = layer.color}
+                    <label>Color <input type="color" value={colorToStr(layer.color)}
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
                     <label>Opacity <input type="range" min={0} max={255} value={col.a}
                       on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
-                    {#if layer.layer.flags === TilesLayerFlags.TILES}
-                      <label>Name <input type="text" value={layer.layer.name}
+                    {#if layer.flags === TilesLayerFlags.TILES}
+                      <label>Name <input type="text" value={layer.name}
                         on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
                     {/if}
                   {/if}
-                {:else if layer.layer instanceof QuadsLayer}
-                  {@const img = layer.layer.image ? layer.layer.image.name : "<none>" }
+                {:else if layer instanceof QuadsLayer}
+                  {@const img = layer.image ? layer.image.name : "<none>" }
                   <label>Image <input type="button" value={img}
-                    on:click={() => openFilePicker(g, l, layer.layer)}></label>
-                  <label>Name <input type="text" value={layer.layer.name}
+                    on:click={() => openFilePicker(g, l, layer)}></label>
+                  <label>Name <input type="text" value={layer.name}
                     on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
                 {/if}
                 <button
