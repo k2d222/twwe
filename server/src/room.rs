@@ -15,9 +15,9 @@ use futures::channel::mpsc::UnboundedSender;
 use tungstenite::protocol::Message;
 
 use twmap::{
-    constants, CompressedData, EmbeddedImage, ExternalImage, FrontLayer, GameLayer, Group, Image,
-    Layer, LayerKind, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileMapLayer, TilesLayer,
-    TuneLayer, TwMap,
+    constants, map_checks::CheckData, CompressedData, EmbeddedImage, ExternalImage, FrontLayer,
+    GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer,
+    TileMapLayer, TilesLayer, TuneLayer, TwMap,
 };
 
 use crate::{
@@ -543,20 +543,22 @@ impl Room {
     ) -> Result<(), &'static str> {
         let mut map = self.map.get();
 
-        if name == "" {
-            return Err("empty image name");
+        if name.len() > Image::MAX_NAME_LENGTH {
+            return Err("image name too long");
         }
 
         if index as usize != map.images.len() {
             return Err("invalid image index");
         }
 
+        if map.images.len() == u16::MAX as usize {
+            return Err("max number of images reached");
+        }
+
         let mut image = EmbeddedImage::from_file(path).map_err(|_| "failed to load png image")?;
+        image.image.check_data().map_err(|_| "invalid image data")?;
         image.name = name;
         map.images.push(Image::Embedded(image));
-
-        // TODO: would be nice to have access to image.check() (which is private).
-        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
 
         Ok(())
     }
@@ -567,6 +569,11 @@ impl Room {
         if index as usize != map.images.len() {
             return Err("invalid image index");
         }
+
+        if map.images.len() == u16::MAX as usize {
+            return Err("max number of images reached");
+        }
+
         let (width, height) =
             constants::external_dimensions(&name, map.version).ok_or("invalid external image")?;
 
@@ -576,9 +583,6 @@ impl Room {
             height,
         };
         map.images.push(Image::External(image));
-
-        // TODO: would be nice to have access to image.check() (which is private).
-        // For now, this code is UNSAFE and TrUsTs UsEr InPuT (omg)
 
         Ok(())
     }
