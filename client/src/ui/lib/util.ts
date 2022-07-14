@@ -6,6 +6,10 @@ import { Image } from '../../twmap/image'
 import { AnyTilesLayer, GameLayer, FrontLayer, TeleLayer, SpeedupLayer, SwitchLayer, TuneLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 
+export type Ctor<T> = new(...args: any[]) => T
+
+export type PhysicsLayer = GameLayer | FrontLayer | TeleLayer | SpeedupLayer | SwitchLayer | TuneLayer
+
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
     const img = document.createElement('img')
@@ -66,6 +70,6 @@ export const PhysicsLayers = [
   TilesLayerFlags.TUNE,
 ]
 
-export function isPhysicsLayer(layer: Layer): layer is GameLayer | FrontLayer | TeleLayer | SpeedupLayer | SwitchLayer | TuneLayer {
+export function isPhysicsLayer(layer: Layer): layer is PhysicsLayer {
   return layer instanceof AnyTilesLayer && PhysicsLayers.includes(layer.flags)
 }

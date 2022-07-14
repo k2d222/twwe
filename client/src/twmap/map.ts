@@ -1,10 +1,13 @@
-import { ItemType, TilesLayerFlags } from './types'
-import { TilesLayer } from './tilesLayer'
+import { ItemType } from './types'
+import { GameLayer, FrontLayer, TeleLayer, SpeedupLayer, SwitchLayer, TuneLayer } from './tilesLayer'
 import { DataFile } from './datafile'
 import { parseGroup, parseImage } from './parser'
 // import { Texture } from './texture'
 import { Group } from './group'
 import { Image } from './image'
+
+export type Ctor<T> = new(...args: any[]) => T
+export type PhysicsLayer = GameLayer | FrontLayer | TeleLayer | SpeedupLayer | SwitchLayer | TuneLayer
 
 export class Map {
   name: string
@@ -18,19 +21,22 @@ export class Map {
     this.groups = this.loadGroups(df)
   }
   
-  // return [ groupID, layerID ]
-  gameLayerID(): [number, number] {
-    for (let i = 0; i < this.groups.length; i++) {
-      let g = this.groups[i]
-      for (let j = 0; j < g.layers.length; j++) {
-        let l = g.layers[j]
-        if (l instanceof TilesLayer && l.flags == TilesLayerFlags.GAME) {
-          return [ i, j ]
-        }
-      }
-    }
-    
-    return [ -1, -1 ]
+  physicsGroupIndex(): number {
+    return this.groups.findIndex(g => g.layers.findIndex(l => l instanceof GameLayer) !== -1)
+  }
+  
+  physicsGroup(): Group {
+    return this.groups[this.physicsGroupIndex()]
+  }
+
+  physicsLayerIndex<T extends PhysicsLayer>(ctor: Ctor<T>): [number, number] {
+    const g = this.physicsGroupIndex()
+    const l = this.groups[g].layers.findIndex(l => l instanceof ctor)
+    return [ g, l ]
+  }
+
+  physicsLayer<T extends PhysicsLayer>(ctor: Ctor<T>): T {
+    return this.physicsGroup().layers.find(l => l instanceof ctor) as T
   }
   
   private loadImages(df: DataFile) {

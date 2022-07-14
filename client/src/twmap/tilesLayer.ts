@@ -114,17 +114,49 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   }
 }
 
-export class GameLayer extends TilesLayer {
+export class GameLayer extends AnyTilesLayer<Info.Tile> {
+  color: Info.Color
+  image: Image | null
+
   constructor() {
-    super()
-    this.flags = Info.TilesLayerFlags.GAME
+    super(Info.TilesLayerFlags.GAME)
+    this.color = { r: 0, g: 0, b: 0, a: 0  }
+    this.image = null
+  }
+  
+  defaultTile(): Info.Tile {
+    return { index: 0, flags: 0 }
+  }
+
+  load(map: Map, df: DataFile, info: Info.TilesLayer) {
+    if ('name' in info)
+      this.name = info.name
+    this.width = info.width
+    this.height = info.height
+    this.color = info.color
+
+    this.image = null
+    if (info.image !== -1) {
+      this.image = map.images[info.image]
+    }
+
+    const tileData = df.getData(info.data)
+    this.tiles = parseTiles(tileData, info.width * info.height)
   }
 }
 
-export class FrontLayer extends TilesLayer {
+export class FrontLayer extends AnyTilesLayer<Info.Tile> {
+  color: Info.Color
+  image: Image | null
+
   constructor() {
-    super()
-    this.flags = Info.TilesLayerFlags.FRONT
+    super(Info.TilesLayerFlags.FRONT)
+    this.color = { r: 0, g: 0, b: 0, a: 0  }
+    this.image = null
+  }
+  
+  defaultTile(): Info.Tile {
+    return { index: 0, flags: 0 }
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {

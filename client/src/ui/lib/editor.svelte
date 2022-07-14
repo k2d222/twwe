@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError } from '../../server/protocol'
-  import { TilesLayer } from '../../twmap/tilesLayer'
-  import { QuadsLayer } from '../../twmap/quadsLayer'
+  import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
@@ -25,7 +24,7 @@
   canvas.addEventListener('keydown', onKeyDown)
 
   let treeViewVisible = true
-  let selectedLayer = map.gameLayerID()
+  let selectedLayer = map.physicsLayerIndex(GameLayer)
   let selectedID = 0
   let peerCount = 0
   let tileSelectorVisible = false
@@ -142,17 +141,17 @@
       border-color: ${color};
     `
 
-    if (layer instanceof QuadsLayer) {
-      layerOutlineStyle = `
-        display: none;
-      `
-    }
-    else {
+    if (layer instanceof AnyTilesLayer) {
       layerOutlineStyle = `
         width: ${layer.width * scale}px;
         height: ${layer.height * scale}px;
         top: ${-pos.y * scale}px;
         left: ${-pos.x * scale}px;
+      `
+    }
+    else {
+      layerOutlineStyle = `
+        display: none;
       `
     }
   }

@@ -1,17 +1,17 @@
-import type { Map } from '../twmap/map'
+import type { Map, PhysicsLayer } from '../twmap/map'
 import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
 import * as Info from '../twmap/types'
-import { TilesLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
+import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
+import { RenderAnyTilesLayer, RenderGameLayer, RenderTilesLayer, RenderFrontLayer, RenderSwitchLayer, RenderSpeedupLayer, RenderTeleLayer, RenderTuneLayer } from './renderTilesLayer'
 import { QuadsLayer } from '../twmap/quadsLayer'
 import { Group } from '../twmap/group'
 import { RenderGroup } from './renderGroup'
-import { RenderTilesLayer, RenderGameLayer, RenderFrontLayer } from './renderTilesLayer'
 import { RenderQuadsLayer } from './renderQuadsLayer'
 import { gl } from './global'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
-import { isPhysicsLayer } from '../ui/lib/util'
+import { isPhysicsLayer, Ctor } from '../ui/lib/util'
 
 
 export function isPhysicsRenderLayer(rlayer: RenderLayer): rlayer is RenderTilesLayer {
@@ -31,12 +31,12 @@ export class RenderMap {
   blankTexture: Texture // texture displayed when the layer has no image
   groups: RenderGroup[]
   physicsGroup: RenderGroup
-  gameLayer: RenderTilesLayer
-  teleLayer: RenderTilesLayer | null
-  speedupLayer: RenderTilesLayer | null
-  frontLayer: RenderTilesLayer | null
-  switchLayer: RenderTilesLayer | null
-  tuneLayer: RenderTilesLayer | null
+  gameLayer: RenderGameLayer
+  teleLayer: RenderTeleLayer | null
+  speedupLayer: RenderSpeedupLayer | null
+  frontLayer: RenderFrontLayer | null
+  switchLayer: RenderSwitchLayer | null
+  tuneLayer: RenderTuneLayer | null
 
   constructor(map: Map) {
     this.map = map
@@ -44,21 +44,20 @@ export class RenderMap {
     this.blankTexture = createEditorTexture('', '/editor/blank.png')
     this.groups = map.groups.map(g => new RenderGroup(this, g))
 
-    const [ g, l ] = this.map.gameLayerID()
+    const [ g, l ] = this.map.physicsLayerIndex(GameLayer)
     this.physicsGroup = this.groups[g]
 
     this.gameLayer = this.physicsGroup.layers[l] as RenderTilesLayer
     
-    this.teleLayer = this.findPhysicsLayer(Info.TilesLayerFlags.TELE) || null
-    this.speedupLayer = this.findPhysicsLayer(Info.TilesLayerFlags.SPEEDUP) || null
-    this.frontLayer = this.findPhysicsLayer(Info.TilesLayerFlags.FRONT) || null
-    this.switchLayer = this.findPhysicsLayer(Info.TilesLayerFlags.SWITCH) || null
-    this.tuneLayer = this.findPhysicsLayer(Info.TilesLayerFlags.TUNE) || null
+    this.teleLayer = this.physicsLayer(RenderTeleLayer) || null
+    this.speedupLayer = this.physicsLayer(RenderSpeedupLayer) || null
+    this.frontLayer = this.physicsLayer(RenderFrontLayer) || null
+    this.switchLayer = this.physicsLayer(RenderSwitchLayer) || null
+    this.tuneLayer = this.physicsLayer(RenderTuneLayer) || null
   }
   
-  findPhysicsLayer(flags: Info.TilesLayerFlags) {
-    return this.physicsGroup.layers
-      .find(l => l.layer instanceof TilesLayer && l.layer.flags === flags) as RenderTilesLayer
+  physicsLayer<T extends PhysicsLayer, U extends RenderAnyTilesLayer<T>>(ctor: Ctor<U>): U {
+    return this.physicsGroup.layers.find(l => l.layer instanceof ctor) as U
   }
   
   addImage(image: Image) {

@@ -5,7 +5,7 @@
   import type { Layer } from '../../twmap/layer'
   import { TilesLayerFlags } from '../../twmap/types'
   import { Image } from '../../twmap/image'
-  import { TilesLayer } from '../../twmap/tilesLayer'
+  import { AnyTilesLayer, SwitchLayer, TuneLayer, FrontLayer, SpeedupLayer, TilesLayer, TeleLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import ContextMenu from './contextMenu.svelte'
   import ImagePicker from './imagePicker.svelte'
@@ -308,7 +308,7 @@
   
   function layerName(layer: Layer) {
     const quotedName = layer.name ? " '" + layer.name + "'" : ""
-    if (layer instanceof TilesLayer) {
+    if (layer instanceof AnyTilesLayer) {
       switch (layer.flags) {
         case TilesLayerFlags.FRONT:
           return "Front Layer"
@@ -375,31 +375,31 @@
                 Add quad layer
               </button>
               {#if rgroup === rmap.physicsGroup}
-                {#if !rmap.findPhysicsLayer(TilesLayerFlags.SWITCH)}
+                {#if !rmap.map.physicsLayer(SwitchLayer)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
                     Add switch layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TilesLayerFlags.FRONT)}
+                {#if !rmap.map.physicsLayer(FrontLayer)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
                     Add front layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TilesLayerFlags.TUNE)}
+                {#if !rmap.map.physicsLayer(TuneLayer)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
                     Add tune layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TilesLayerFlags.SPEEDUP)}
+                {#if !rmap.map.physicsLayer(SpeedupLayer)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
                     Add speedup layer
                   </button>
                 {/if}
-                {#if !rmap.findPhysicsLayer(TilesLayerFlags.TELE)}
+                {#if !rmap.map.physicsLayer(TeleLayer)}
                   <button
                     on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
                     Add tele layer

@@ -7,7 +7,7 @@ import { TileFlag } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
-class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?: Info.TileFlag }>> extends RenderLayer {
+export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?: Info.TileFlag }>> extends RenderLayer {
   layer: T
   texture: Texture
 
@@ -342,7 +342,17 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
     this.textBuffer = createTextBuffer()
     textBufferInit(this.textBuffer, this.layer)
   }
-    
+
+  recomputeChunk(x: number, y: number) {
+    super.recomputeChunk(x, y)
+    textBufferInit(this.textBuffer, this.layer)
+  }
+  
+  recompute() {
+    super.recompute()
+    textBufferInit(this.textBuffer, this.layer)
+  }
+
   render() {
     super.render()
 
@@ -369,6 +379,16 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
   constructor(_: RenderMap, layer: SpeedupLayer) {
     super(layer, RenderSpeedupLayer.texture)
     this.textBuffer = createTextBuffer()
+    this.initBuffer()
+  }
+
+  recomputeChunk(x: number, y: number) {
+    super.recomputeChunk(x, y)
+    this.initBuffer()
+  }
+  
+  recompute() {
+    super.recompute()
     this.initBuffer()
   }
 
@@ -433,7 +453,17 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
     this.textBuffer = createTextBuffer()
     textBufferInit(this.textBuffer, this.layer)
   }
-    
+
+  recomputeChunk(x: number, y: number) {
+    super.recomputeChunk(x, y)
+    textBufferInit(this.textBuffer, this.layer)
+  }
+  
+  recompute() {
+    super.recompute()
+    textBufferInit(this.textBuffer, this.layer)
+  }
+
   render() {
     super.render()
 
@@ -462,7 +492,17 @@ export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
     this.textBuffer = createTextBuffer()
     textBufferInit(this.textBuffer, this.layer)
   }
-    
+
+  recomputeChunk(x: number, y: number) {
+    super.recomputeChunk(x, y)
+    textBufferInit(this.textBuffer, this.layer)
+  }
+  
+  recompute() {
+    super.recompute()
+    textBufferInit(this.textBuffer, this.layer)
+  }
+
   render() {
     super.render()
 
