@@ -126,24 +126,24 @@ export type Tile = {
 
 export type Tele = {
   number: number,
-  id: number,
+  index: number,
 }
 
 export type Speedup = {
   force: number,
   maxSpeed: number,
-  id: number,
+  index: number,
   angle: number,
 }
 
 export type Switch = {
   number: number,
-  id: number,
+  index: number,
   flags: number,
   delay: number,
 }
 
 export type Tune = {
   number: number,
-  id: number,
+  index: number,
 }

@@ -146,7 +146,7 @@ export class TeleLayer extends AnyTilesLayer<Info.Tele> {
   }
   
   defaultTile(): Info.Tele {
-    return { number: 0, id: 0 }
+    return { number: 0, index: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
@@ -165,7 +165,7 @@ export class SpeedupLayer extends AnyTilesLayer<Info.Speedup> {
   }
   
   defaultTile(): Info.Speedup {
-    return { force: 0, maxSpeed: 0, id: 0, angle: 0 }
+    return { force: 0, maxSpeed: 0, index: 0, angle: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
@@ -184,7 +184,7 @@ export class SwitchLayer extends AnyTilesLayer<Info.Switch> {
   }
  
   defaultTile(): Info.Switch {
-    return { number: 0, id: 0, flags: 0, delay: 0 }
+    return { number: 0, index: 0, flags: 0, delay: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
@@ -202,7 +202,7 @@ export class TuneLayer extends AnyTilesLayer<Info.Tune> {
   }
 
   defaultTile(): Info.Tune {
-    return { number: 0, id: 0 }
+    return { number: 0, index: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {

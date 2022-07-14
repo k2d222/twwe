@@ -197,7 +197,7 @@ export function parseTeleTiles(tileData: ArrayBuffer, num: number): Info.Tele[] 
   for (let i = 0; i < num; i++) {
     tiles.push({
       number: d.uint8(),
-      id: d.uint8(),
+      index: d.uint8(),
     })
   }
 
@@ -232,7 +232,7 @@ export function parseSwitchTiles(tileData: ArrayBuffer, num: number): Info.Switc
   for (let i = 0; i < num; i++) {
     tiles.push({
       number: d.uint8(),
-      id: d.uint8(),
+      index: d.uint8(),
       flags: d.uint8(),
       delay: d.uint8(),
     })
@@ -249,7 +249,7 @@ export function parseTuneTiles(tileData: ArrayBuffer, num: number): Info.Tune[] 
   for (let i = 0; i < num; i++) {
     tiles.push({
       number: d.uint8(),
-      id: d.uint8(),
+      index: d.uint8(),
     })
   }
 
