@@ -213,11 +213,11 @@ export function parseSpeedupTiles(tileData: ArrayBuffer, num: number): Info.Spee
     const tile = {
       force: d.uint8(),
       maxSpeed: d.uint8(),
-      id: d.uint8(),
+      index: d.uint8(),
       angle: 0,
     }
     d.uint8() // skip reserved
-    tile.angle = d.uint8()
+    tile.angle = d.int16()
     tiles.push(tile)
   }
 

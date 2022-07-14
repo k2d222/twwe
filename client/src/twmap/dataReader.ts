@@ -25,6 +25,11 @@ export class DataReader extends DataView {
     return this.getUint32(this.off - 4, true) // little endian
   }
 
+  int16() {
+    this.off += 2
+    return this.getInt16(this.off - 2, true) // little endian
+  }
+
   int32() {
     this.off += 4
     return this.getInt32(this.off - 4, true) // little endian

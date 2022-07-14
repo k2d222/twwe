@@ -121,7 +121,7 @@ export type Quad = {
 
 export type Tile = {
   index: number,
-  flags: number,
+  flags: TileFlag,
 }
 
 export type Tele = {
@@ -139,7 +139,7 @@ export type Speedup = {
 export type Switch = {
   number: number,
   index: number,
-  flags: number,
+  flags: TileFlag,
   delay: number,
 }
 

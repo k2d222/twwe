@@ -1,4 +1,4 @@
-import { TilesLayer, FrontLayer, GameLayer, TeleLayer, TuneLayer, SpeedupLayer, SwitchLayer } from '../twmap/tilesLayer'
+import type { AnyTilesLayer, TilesLayer, FrontLayer, GameLayer, TeleLayer, TuneLayer, SpeedupLayer, SwitchLayer } from '../twmap/tilesLayer'
 import type * as Info from '../twmap/types'
 import type { RenderMap } from './renderMap'
 import { RenderLayer } from './renderLayer'
@@ -7,8 +7,8 @@ import { TileFlag } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
-export class RenderTilesLayer extends RenderLayer {
-  layer: TilesLayer
+export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?: Info.TileFlag }>> extends RenderLayer {
+  layer: T
   visible: boolean
   texture: Texture
 
@@ -20,21 +20,12 @@ export class RenderTilesLayer extends RenderLayer {
 
   chunkSize: number
 
-  constructor(rmap: RenderMap, layer: TilesLayer) {
+  constructor(layer: T, texture: Texture) {
     super()
     this.layer = layer
     this.visible = true
-
-    if (layer.image !== null) {
-      const index = rmap.map.images.indexOf(layer.image)
-      this.texture  = rmap.textures[index]
-    }
-    else {
-      this.texture = rmap.blankTexture
-    }
-
+    this.texture = texture
     this.chunkSize = 64
-
     this.buffers = []
 
     this.createBuffers()
@@ -55,6 +46,23 @@ export class RenderTilesLayer extends RenderLayer {
     if (this.texture.loaded)
       this.initBuffers()
   }
+  
+  protected preRender() {
+    // Enable texture
+    gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
+    gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
+    gl.bindTexture(gl.TEXTURE_2D, this.texture.tex)
+
+    // Vertex colors are not needed
+    gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
+    gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
+  }
+  
+  protected postRender() {
+    // keep textures disabled by default
+    gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
+    gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
+  }
 
   render() {
     if (!this.visible)
@@ -65,20 +73,8 @@ export class RenderTilesLayer extends RenderLayer {
       this.initBuffers()
       return
     }
-
-    // Enable texture
-    gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
-    gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
-    gl.bindTexture(gl.TEXTURE_2D, this.texture.tex)
-
-    // Vertex colors are not needed
-    gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
-    gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
-
-    // Set color mask
-    const { r, g, b, a } = this.layer.color
-    const col = [r, g, b, a].map(x => x / 255)
-    gl.uniform4fv(shader.locs.unifs.uColorMask, col)
+    
+    this.preRender()
 
     const { x1, x2, y1, y2 } = viewport.screen()
     const minX = Math.max(0, Math.floor(x1 / this.chunkSize))
@@ -99,10 +95,8 @@ export class RenderTilesLayer extends RenderLayer {
         gl.drawArrays(gl.TRIANGLES, 0, tileCount * 6)
       }
     }
-
-    // keep textures disabled by default
-    gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
-    gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
+    
+    this.postRender()
   }
 
   private createBuffers() {
@@ -195,54 +189,108 @@ export class RenderTilesLayer extends RenderLayer {
   }
 }
 
+  
+export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
+  constructor(rmap: RenderMap, layer: TilesLayer) {
+    const texture = (() => {
+      if (layer.image !== null) {
+        const index = rmap.map.images.indexOf(layer.image)
+        return rmap.textures[index]
+      }
+      else {
+        return rmap.blankTexture
+      }
+    })()
+
+    super(layer, texture)
+  }
+  
+  preRender() {
+    super.preRender()
+    // Set color mask
+    const { r, g, b, a } = this.layer.color
+    const col = [r, g, b, a].map(x => x / 255)
+    gl.uniform4fv(shader.locs.unifs.uColorMask, col)
+  }
+}
+
 export class RenderFrontLayer extends RenderTilesLayer {
-  constructor(rmap: RenderMap, layer: FrontLayer) {
-    super(rmap, layer)
+  static texture: Texture = (() => {
     const image = new Image()
     image.loadExternal('/editor/front.png')
     image.name = 'Front'
-    this.texture = new Texture(image)
+    return new Texture(image)
+  })()
+
+  constructor(rmap: RenderMap, layer: FrontLayer) {
+    super(rmap, layer)
+    this.texture = RenderFrontLayer.texture
   }
 }
 
 export class RenderGameLayer extends RenderTilesLayer {
-  constructor(rmap: RenderMap, layer: GameLayer) {
-    super(rmap, layer)
+  static texture: Texture = (() => {
     const image = new Image()
     image.loadExternal('/entities/DDNet.png')
     image.name = 'Game'
-    this.texture = new Texture(image)
+    return new Texture(image)
+  })()
+
+  constructor(rmap: RenderMap, layer: GameLayer) {
+    super(rmap, layer)
+    this.texture = RenderGameLayer.texture
   }
 }
 
-export class RenderTeleLayer extends RenderTilesLayer {
-  constructor(rmap: RenderMap, layer: TeleLayer) {
-    const tmpLayer = new TilesLayer()
-    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
-    super(rmap, tmpLayer)
+export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
+  static texture: Texture = (() => {
+    const image = new Image()
+    image.loadExternal('/editor/tele.png')
+    image.name = 'Tele'
+    return new Texture(image)
+  })()
+
+  constructor(_: RenderMap, layer: TeleLayer) {
+    super(layer, RenderTeleLayer.texture)
   }
 }
 
-export class RenderSpeedupLayer extends RenderTilesLayer {
-  constructor(rmap: RenderMap, layer: SpeedupLayer) {
-    const tmpLayer = new TilesLayer()
-    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
-    super(rmap, tmpLayer)
+export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
+  static texture: Texture = (() => {
+    const image = new Image()
+    image.loadExternal('/editor/speedup.png')
+    image.name = 'Speedup'
+    return new Texture(image)
+  })()
+
+  constructor(_: RenderMap, layer: SpeedupLayer) {
+    super(layer, RenderSpeedupLayer.texture)
   }
 }
 
-export class RenderSwitchLayer extends RenderTilesLayer {
-  constructor(rmap: RenderMap, layer: SwitchLayer) {
-    const tmpLayer = new TilesLayer()
-    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
-    super(rmap, tmpLayer)
+export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
+  static texture: Texture = (() => {
+    const image = new Image()
+    image.loadExternal('/editor/switch.png')
+    image.name = 'Switch'
+    return new Texture(image)
+  })()
+
+  constructor(_: RenderMap, layer: SwitchLayer) {
+    super(layer, RenderSwitchLayer.texture)
   }
 }
-export class RenderTuneLayer extends RenderTilesLayer {
-  constructor(rmap: RenderMap, layer: TuneLayer) {
-    const tmpLayer = new TilesLayer()
-    tmpLayer.init(layer.width, layer.height, tmpLayer.defaultTile)
-    super(rmap, tmpLayer)
+
+export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
+  static texture: Texture = (() => {
+    const image = new Image()
+    image.loadExternal('/editor/tune.png')
+    image.name = 'Tune'
+    return new Texture(image)
+  })()
+
+  constructor(_: RenderMap, layer: TuneLayer) {
+    super(layer, RenderTuneLayer.texture)
   }
 }
 
@@ -257,7 +305,7 @@ function makeVertices(x: number, y: number) {
   ]
 }
 
-function makeTexCoords(tile: Info.Tile, atlasSize: number) {
+function makeTexCoords(tile: { index: number, flags?: Info.TileFlag }, atlasSize: number) {
   const tileCount = 16
   const tx = tile.index % tileCount
   const ty = Math.floor(tile.index / tileCount)
@@ -276,21 +324,21 @@ function makeTexCoords(tile: Info.Tile, atlasSize: number) {
   let y3 = y0
 
   // Handle tile flags
-  if (tile.flags & TileFlag.HFLIP) {
+  if (tile.flags && tile.flags & TileFlag.HFLIP) {
     y0 = y2
     y2 = y3
     y3 = y0
     y1 = y2
   }
 
-  if (tile.flags & TileFlag.VFLIP) {
+  if (tile.flags && tile.flags & TileFlag.VFLIP) {
     x0 = x1
     x2 = x3
     x3 = x0
     x1 = x2
   }
 
-  if (tile.flags & TileFlag.ROTATE) {
+  if (tile.flags && tile.flags & TileFlag.ROTATE) {
     let tmp = y0
     y0 = y1
     y1 = y2
