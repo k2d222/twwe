@@ -62,7 +62,7 @@ export type Group = MapObj & {
   clipH: number,
 
   // version 3 extension
-  name: string,
+  name?: string,
 }
 
 export type Layer = MapObj & {
@@ -76,7 +76,7 @@ export type QuadsLayer = MapObj & {
   image: number,
   
   // version 3 extension
-  name: string,
+  name?: string,
 }
 
 export type TilesLayer = MapObj & {
@@ -91,14 +91,14 @@ export type TilesLayer = MapObj & {
   data: number,
   
   // version 3 extension
-  name: string
+  name?: string
   
   // ddnet extension
-  dataTele: number
-  dataSpeedup: number
-  dataFront: number
-  dataSwitch: number
-  dataTune: number
+  dataTele?: number
+  dataSpeedup?: number
+  dataFront?: number
+  dataSwitch?: number
+  dataTune?: number
 }
 
 export type Image = MapObj & {

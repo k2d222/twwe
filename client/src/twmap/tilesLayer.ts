@@ -87,7 +87,8 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
-    this.name = info.name
+    if ('name' in info)
+      this.name = info.name
     this.width = info.width
     this.height = info.height
     this.color = info.color
@@ -123,7 +124,8 @@ export class FrontLayer extends TilesLayer {
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
-    this.name = info.name
+    if ('name' in info)
+      this.name = info.name
     this.width = info.width
     this.height = info.height
     this.color = info.color
@@ -148,7 +150,8 @@ export class TeleLayer extends AnyTilesLayer<Info.Tele> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    this.name = info.name
+    if ('name' in info)
+      this.name = info.name
     this.width = info.width
     this.height = info.height
     const tileData = df.getData(info.dataTele)
@@ -166,7 +169,8 @@ export class SpeedupLayer extends AnyTilesLayer<Info.Speedup> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    this.name = info.name
+    if ('name' in info)
+      this.name = info.name
     this.width = info.width
     this.height = info.height
     const tileData = df.getData(info.dataSpeedup)
@@ -184,7 +188,8 @@ export class SwitchLayer extends AnyTilesLayer<Info.Switch> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    this.name = info.name
+    if ('name' in info)
+      this.name = info.name
     this.width = info.width
     this.height = info.height
     const tileData = df.getData(info.dataSwitch)
@@ -201,7 +206,8 @@ export class TuneLayer extends AnyTilesLayer<Info.Tune> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    this.name = info.name
+    if ('name' in info)
+      this.name = info.name
     this.width = info.width
     this.height = info.height
     const tileData = df.getData(info.dataTune)

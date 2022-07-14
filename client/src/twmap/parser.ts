@@ -5,7 +5,7 @@ export function parseGroup(groupData: ArrayBuffer): Info.Group {
   const d = new DataReader(groupData)
   d.reset()
 
-  return {
+  const data: Info.Group = {
     version: d.uint32(),
     offX: d.int32(),
     offY: d.int32(),
@@ -20,10 +20,14 @@ export function parseGroup(groupData: ArrayBuffer): Info.Group {
     clipY: d.int32(),
     clipW: d.int32(),
     clipH: d.int32(),
-
-    // version 3 extension
-    name: d.int32Str(3),
   }
+  
+  // version 3 extension
+  if (data.version >= 3) {
+    data.name = d.int32Str(3)
+  }
+  
+  return data
 }
 
 export function parseLayer(layerData: ArrayBuffer): Info.Layer {
@@ -45,13 +49,19 @@ export function parseQuadsLayer(layerData: ArrayBuffer): Info.QuadsLayer {
   /*obj.type =*/ d.uint32()
   /*obj.flags =*/ d.uint32()
 
-  return {
+  const data: Info.QuadsLayer = {
     version: d.uint32(),
     numQuads: d.uint32(),
     data: d.int32(),
     image: d.int32(),
-    name: d.int32Str(3),
   }
+
+  // version 3 extension
+  if (data.version >= 3) {
+    data.name = d.int32Str(3)
+  }
+  
+  return data
 }
 
 export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
@@ -62,7 +72,7 @@ export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
   /*obj.type =*/ d.uint32()
   /*obj.flags =*/ d.uint32()
 
-  const data = {
+  const data: Info.TilesLayer = {
     version: d.uint32(),
     width: d.int32(),
     height: d.int32(),
@@ -80,14 +90,6 @@ export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
 
     image: d.int32(),
     data: d.int32(),
-    
-    name: "",
-
-    dataTele: -1,
-    dataSpeedup: -1,
-    dataFront: -1,
-    dataSwitch: -1,
-    dataTune: -1,
   }
   
   // version 3 extension
