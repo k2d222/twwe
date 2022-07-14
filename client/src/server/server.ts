@@ -93,16 +93,21 @@ export class WebSocketServer implements Server {
       error: [],
     }
 
-    this.socketSend = this.socketDeferredSend.bind(this)
     this.deferredData = []
-    this.socket.addEventListener(
-      'open',
-      () => {
-        for (const data of this.deferredData) this.socket.send(data)
-        this.socketSend = this.socket.send.bind(this.socket)
-      },
-      { once: true }
-    )
+    this.makeDeferred()
+  }
+
+  private makeDeferred() {
+    // while the server is connecting, put all requests in a cache.
+    this.socketSend = this.socketDeferredSend.bind(this)
+    this.socket.addEventListener('open', this.makeDirect.bind(this), { once: true })
+  }
+
+  private makeDirect() {
+    for (const data of this.deferredData) {
+      this.socket.send(data)
+    }
+    this.socketSend = this.socket.send.bind(this.socket)
   }
 
   private socketDeferredSend(data: any) {

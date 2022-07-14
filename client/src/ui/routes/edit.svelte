@@ -7,8 +7,8 @@
   export let mapName: string
 
   async function loadMap(name: string) {
-    await server.query('joinmap', { name })
-    const map = await queryMap(server, { name })
+    await $server.query('joinmap', { name })
+    const map = await queryMap($server, { name })
     return map
   }
 

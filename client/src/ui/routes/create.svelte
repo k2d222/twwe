@@ -17,7 +17,7 @@
   let creationMethod: 'blank' | 'clone' | 'upload' = 'blank'
 
   let mapInfos = []
-  $: server.query('listmaps', null).then(listMaps => {
+  $: $server.query('listmaps', null).then(listMaps => {
     listMaps.maps.sort((a, b) => a.name.localeCompare(b.name))
     mapInfos = listMaps.maps
   })
@@ -28,7 +28,7 @@
 
     try {
       showInfo('Uploading map...', 'none')
-      await server.uploadFile(await file.arrayBuffer())
+      await $server.uploadFile(await file.arrayBuffer())
       mapUploaded = true
       showInfo('Map upload complete. Enter a name and hit "Create".')
     } catch (e) {
@@ -73,7 +73,7 @@
 
     showInfo('Querying the server…', 'none')
     try {
-      await server.query('createmap', create)
+      await $server.query('createmap', create)
       clearDialog()
       if (access === 'unlisted') {
         const url = window.location.origin + '/edit/' + encodeURIComponent(create.name)

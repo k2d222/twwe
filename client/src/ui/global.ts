@@ -1,5 +1,4 @@
-import { WebSocketServer } from '../server/server'
-import storage from '../storage'
+import type { WebSocketServer } from "src/server/server";
+import { writable, Writable } from "svelte/store";
 
-const conf = storage.load('defaultServer')
-export const server = new WebSocketServer(conf.url)
+export const server: Writable<WebSocketServer> = writable(null)

@@ -2,12 +2,12 @@ const { VITE_WEBSOCKET_URL } = import.meta.env
 
 interface ServerConfig {
   name: string,
-  url: URL,
+  url: string,
 }
 
 interface StorageSpec {
   servers: ServerConfig[],
-  defaultServer: ServerConfig,
+  currentServer: number,
 }
 
 interface StorageEntry<T> {
@@ -27,20 +27,21 @@ const entries: StorageEntries = {
     clone: function (confs: ServerConfig[]) {
       return confs.map(cloneServerConf)
     },
-    default: []
+    default: [{ name: "Default Server", url: VITE_WEBSOCKET_URL }]
   },
-  defaultServer: {
-    clone: cloneServerConf,
-    default: { url: new URL(VITE_WEBSOCKET_URL), name: 'Default server' }
+  currentServer: {
+    clone: (x) => x,
+    default: 0
   }
 }
 
 const storage = {
-  version: 0,
+  version: 1,
   init: function() {
     const storedVersion = parseInt(localStorage.getItem('version'))
     if (storedVersion !== storage.version) {
       localStorage.clear()
+      localStorage.setItem('version', '' + storage.version)
       for (const [key, entry] of Object.entries(entries)) {
         localStorage.setItem(key, JSON.stringify(entry.default))
       }
