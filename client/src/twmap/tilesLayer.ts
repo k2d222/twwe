@@ -16,7 +16,7 @@ export function createLayer(flags: Info.TilesLayerFlags) {
        : null
 }
 
-export abstract class AnyTilesLayer<Tile> extends Layer {
+export abstract class AnyTilesLayer<Tile extends { index: number }> extends Layer {
   flags: Info.TilesLayerFlags
   width: number
   height: number
@@ -35,6 +35,10 @@ export abstract class AnyTilesLayer<Tile> extends Layer {
     this.height = height
     this.tiles = Array.from({ length: width * height }, fill)
     return self
+  }
+
+  tileCount() {
+    return this.tiles.reduce((acc, t) => acc + (t.index === 0 ? 0 : 1), 0)
   }
 
   getTile(x: number, y: number) {

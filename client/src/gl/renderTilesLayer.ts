@@ -7,9 +7,8 @@ import { TileFlag } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
-export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?: Info.TileFlag }>> extends RenderLayer {
+class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?: Info.TileFlag }>> extends RenderLayer {
   layer: T
-  visible: boolean
   texture: Texture
 
   buffers: {
@@ -23,7 +22,6 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?
   constructor(layer: T, texture: Texture) {
     super()
     this.layer = layer
-    this.visible = true
     this.texture = texture
     this.chunkSize = 64
     this.buffers = []
@@ -92,6 +90,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?
         // Texture coord attribute
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoord)
         gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0)
+
         gl.drawArrays(gl.TRIANGLES, 0, tileCount * 6)
       }
     }
@@ -189,7 +188,93 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?
   }
 }
 
+const fontTexture: Texture = (() => {
+  const image = new Image()
+  image.loadExternal('/editor/font.png')
+  image.name = 'Font'
+  return new Texture(image, false)
+})()
+
+type TextBuffer = {
+  vertex: WebGLBuffer,
+  texCoord: WebGLBuffer,
+  tileCount: number,
+}
+
+function createTextBuffer(): TextBuffer {
+  return {
+    vertex: gl.createBuffer(),
+    texCoord: gl.createBuffer(),
+    tileCount: 0
+  }
+}
+
+function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ index: number, number: number }>) {
+  buffer.tileCount = layer.tileCount()
+
+  const vertexArr = new Float32Array(buffer.tileCount * 12 * 3)
+  const texCoordArr = new Float32Array(buffer.tileCount * 12 * 3)
+  let t = 0
+
+  for (let y = 0; y < layer.height; y++) {
+    for (let x = 0; x < layer.width; x++) {
+
+      const tile = layer.getTile(x, y)
+
+      if (tile.index === 0) // skip tiles with index 0
+        continue
+
+      const split = splitNumber(tile.number)
+      const vertices = makeNumberVertices(x, y, split)
+      vertexArr.set(vertices, t * 12 * 3)
+
+      const texCoords = makeNumberTexCoords(split)
+      texCoordArr.set(texCoords, t * 12 * 3)
+
+      t++
+    }
+  }
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.vertex)
+  gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.texCoord)
+  gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
+}
+
+function textPreRender() {
+  // Enable texture
+  gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
+  gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
+  gl.bindTexture(gl.TEXTURE_2D, fontTexture.tex)
+
+  // Vertex colors are not needed
+  gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
+  gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
+}
+
+function textPostRender() {
+  // keep textures disabled by default
+  gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
+  gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
+}
+
+function textRender(buffer: TextBuffer) {
+  textPreRender()
+
+  // Vertex attribute
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.vertex)
+  gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0)
+
+  // Texture coord attribute
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.texCoord)
+  gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0)
+
+  gl.drawArrays(gl.TRIANGLES, 0, buffer.tileCount * 6 * 3)
   
+  textPostRender()
+}
+
 export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
   constructor(rmap: RenderMap, layer: TilesLayer) {
     const texture = (() => {
@@ -250,8 +335,24 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
     return new Texture(image)
   })()
 
+  textBuffer: TextBuffer
+
   constructor(_: RenderMap, layer: TeleLayer) {
     super(layer, RenderTeleLayer.texture)
+    this.textBuffer = createTextBuffer()
+    textBufferInit(this.textBuffer, this.layer)
+  }
+    
+  render() {
+    super.render()
+
+    if (!fontTexture.loaded) {
+      fontTexture.load()
+      return
+    }
+
+    if (this.visible && this.active)
+      textRender(this.textBuffer)
   }
 }
 
@@ -263,8 +364,57 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
     return new Texture(image)
   })()
 
+  textBuffer: TextBuffer
+
   constructor(_: RenderMap, layer: SpeedupLayer) {
     super(layer, RenderSpeedupLayer.texture)
+    this.textBuffer = createTextBuffer()
+    this.initBuffer()
+  }
+
+  private initBuffer() {
+    this.textBuffer.tileCount = this.layer.tileCount()
+
+    const vertexArr = new Float32Array(this.textBuffer.tileCount * 12 * 3)
+    const texCoordArr = new Float32Array(this.textBuffer.tileCount * 12 * 3)
+    let t = 0
+
+    for (let y = 0; y < this.layer.height; y++) {
+      for (let x = 0; x < this.layer.width; x++) {
+
+        const tile = this.layer.getTile(x, y)
+
+        if (tile.index === 0) // skip tiles with index 0
+          continue
+
+        const split = splitNumber(tile.force)
+        const vertices = makeNumberVertices(x, y, split)
+        vertexArr.set(vertices, t * 12 * 3)
+
+        const texCoords = makeNumberTexCoords(split)
+        texCoordArr.set(texCoords, t * 12 * 3)
+
+        t++
+      }
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.textBuffer.vertex)
+    gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.textBuffer.texCoord)
+    gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
+  }
+
+  render() {
+    super.render()
+
+    if (!fontTexture.loaded) {
+      fontTexture.load()
+      return
+    }
+
+    if (this.visible && this.active)
+      textRender(this.textBuffer)
   }
 }
 
@@ -276,8 +426,24 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
     return new Texture(image)
   })()
 
+  textBuffer: TextBuffer
+
   constructor(_: RenderMap, layer: SwitchLayer) {
     super(layer, RenderSwitchLayer.texture)
+    this.textBuffer = createTextBuffer()
+    textBufferInit(this.textBuffer, this.layer)
+  }
+    
+  render() {
+    super.render()
+
+    if (!fontTexture.loaded) {
+      fontTexture.load()
+      return
+    }
+
+    if (this.visible && this.active)
+      textRender(this.textBuffer)
   }
 }
 
@@ -289,8 +455,24 @@ export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
     return new Texture(image)
   })()
 
+  textBuffer: TextBuffer
+
   constructor(_: RenderMap, layer: TuneLayer) {
     super(layer, RenderTuneLayer.texture)
+    this.textBuffer = createTextBuffer()
+    textBufferInit(this.textBuffer, this.layer)
+  }
+    
+  render() {
+    super.render()
+
+    if (!fontTexture.loaded) {
+      fontTexture.load()
+      return
+    }
+
+    if (this.visible && this.active)
+      textRender(this.textBuffer)
   }
 }
 
@@ -360,5 +542,69 @@ function makeTexCoords(tile: { index: number, flags?: Info.TileFlag }, atlasSize
     x1, y2,
     x2, y3,
   ]
+}
+
+// num must be 999 <= num <= 0
+function splitNumber(num: number): [number, number, number] {
+  return [
+    Math.floor(num / 100),     // hundreds
+    Math.floor(num / 10) % 10, // tens
+    num % 10,                  // ones
+  ]
+}
+
+function makeNumberVertices(x: number, y: number, digits: [number, number, number]) {
+  // tweaking the font appearance
+  const w = 0.7
+  const spacing = -0.4 // distance beetween numbers
+  y -= 0.05
+  x -= 0.17
+  
+  let verts = []
+  
+  for (const _ of digits) {
+    verts.push(
+      x, y,
+      x, y + w,
+      x + w, y + w,
+      x, y,
+      x + w, y + w,
+      x + w, y
+    )
+    x += w + spacing
+  }
+  
+  return verts
+}
+
+function makeNumberTexCoords(digits: [number, number, number]) {
+  const tileCount = 16
+  
+  // number offset (0 is at x=0, y=3 on the tex atlas)
+  const offX = 0
+  const offY = 3
+  
+  const texCoords = []
+  
+  for (const digit of digits) {
+    const tx = offX + digit
+    const ty = offY
+
+    const x0 = tx / tileCount
+    const x1 = (tx + 1) / tileCount
+    const y0 = ty / tileCount
+    const y1 = (ty + 1) / tileCount
+    
+    texCoords.push(
+      x0, y0,
+      x0, y1,
+      x1, y1,
+      x0, y0,
+      x1, y1,
+      x1, y0
+    )
+  }
+
+  return texCoords
 }
 

@@ -7,7 +7,6 @@ import { gl, shader } from './global'
 
 export class RenderQuadsLayer extends RenderLayer {
   layer: QuadsLayer
-  visible: boolean
   texture: Texture
 
   colorArr: Float32Array
@@ -23,7 +22,6 @@ export class RenderQuadsLayer extends RenderLayer {
   constructor(rmap: RenderMap, layer: QuadsLayer) {
     super()
     this.layer = layer
-    this.visible = true
     
     this.texture = null
 

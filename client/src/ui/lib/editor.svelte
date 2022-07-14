@@ -2,6 +2,7 @@
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError } from '../../server/protocol'
   import { TilesLayer } from '../../twmap/tilesLayer'
+  import { QuadsLayer } from '../../twmap/quadsLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
@@ -27,8 +28,8 @@
   let selectedLayer = map.gameLayerID()
   let selectedID = 0
   let peerCount = 0
-
   let tileSelectorVisible = false
+
   $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
 
   function serverOnUsers(e: ListUsers) {
@@ -141,17 +142,17 @@
       border-color: ${color};
     `
 
-    if (layer instanceof TilesLayer) {
+    if (layer instanceof QuadsLayer) {
+      layerOutlineStyle = `
+        display: none;
+      `
+    }
+    else {
       layerOutlineStyle = `
         width: ${layer.width * scale}px;
         height: ${layer.height * scale}px;
         top: ${-pos.y * scale}px;
         left: ${-pos.x * scale}px;
-      `
-    }
-    else {
-      layerOutlineStyle = `
-        display: none;
       `
     }
   }

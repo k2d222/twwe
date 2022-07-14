@@ -28,14 +28,29 @@
   }
 
   function select(g: number, l: number) {
-    // WARN: There is a dependency cycle here between strSelected and selected and I'm not
-    // sure how well svelte handles this.
+    const [ oldG, oldL ] = selected
+    if (oldG !== -1 && oldL !== -1) {
+      const group = rmap.groups[oldG]
+      if (group) {
+        const layer = group.layers[oldL]
+        if (layer)
+          layer.active = false
+      }
+    }
+    if (g !== -1 && g !== -1) {
+      const group = rmap.groups[g]
+      if (group) {
+        const layer = group.layers[l]
+        if (layer)
+          layer.active = true
+      }
+    }
     strSelected = toStr(g, l)
+    selected = [g, l]
   }
 
   let strSelected = toStr(...selected)
-  $: selected = fromStr(strSelected)
-  $: select(...selected)
+  $: select(...fromStr(strSelected))
   
   // ContextMenu
   let cm = { g: null, l: null }
@@ -404,7 +419,7 @@
           {@const layer = rlayer.layer}
           <div class="layer" class:visible={rlayer.visible}>
             <label>
-              <input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} disabled={!(layer instanceof TilesLayer)} />
+              <input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} disabled={layer instanceof QuadsLayer} />
               {layer.name || '<no name>'}
             </label>
             <span class="eye"
