@@ -399,32 +399,35 @@ nav {
     padding: .5rem;
     background: white;
     border: 1px solid lightgrey;
-    display: flex; 
-    flex-direction: column;
-    gap: .5rem;
     box-shadow: 5px 5px 20px -15px black;
     border-radius: 5px;
-    
-    span {
-      text-align: center;
-      font-weight: bold;
-    }
-    
-    label {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      gap: 1rem;
-    }
-    
-    input[type=number] {
-      width: 4rem;
-    }
+  }
+}
+ 
+.edit-layer, .edit-group {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
 
-    input {
-      min-width: 4rem;
-      max-width: 8rem;
-    }
+  span {
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  label {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: 1rem;
+  }
+  
+  input[type=number] {
+    width: 4rem;
+  }
+
+  input {
+    min-width: 4rem;
+    max-width: 8rem;
   }
 }
 

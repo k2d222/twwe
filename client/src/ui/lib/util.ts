@@ -1,14 +1,12 @@
 import type { SendMap, SendImage } from '../../server/protocol'
 import type { Layer } from '../../twmap/layer'
 import { server } from '../global'
-import { Map } from '../../twmap/map'
+import { Map, PhysicsLayer } from '../../twmap/map'
 import { Image } from '../../twmap/image'
-import { AnyTilesLayer, GameLayer, FrontLayer, TeleLayer, SpeedupLayer, SwitchLayer, TuneLayer } from '../../twmap/tilesLayer'
+import { AnyTilesLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 
 export type Ctor<T> = new(...args: any[]) => T
-
-export type PhysicsLayer = GameLayer | FrontLayer | TeleLayer | SpeedupLayer | SwitchLayer | TuneLayer
 
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {

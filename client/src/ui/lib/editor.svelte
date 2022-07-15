@@ -24,12 +24,14 @@
   canvas.addEventListener('keydown', onKeyDown)
 
   let treeViewVisible = true
-  let selectedLayer = map.physicsLayerIndex(GameLayer)
+  const gameLayer = map.physicsLayerIndex(GameLayer)
+  let g = gameLayer[0]
+  let l = gameLayer[1]
   let selectedID = 0
   let peerCount = 0
   let tileSelectorVisible = false
 
-  $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
+  $: tileSelectorImg = Editor.getLayerImage(rmap, g, l)
 
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
@@ -56,43 +58,43 @@
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteGroup(e: DeleteGroup) {
-    const [ g, l ] = selectedLayer
     const group = rmap.groups[g]
     rmap.deleteGroup(e)
     if (e.group === g) {
-      selectedLayer = [ -1, -1 ]
+      g = -1
+      l = -1
     }
     else {
-      selectedLayer = [ rmap.groups.indexOf(group), l ]
+      g = rmap.groups.indexOf(group)
     }
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteLayer(e: DeleteLayer) {
-    const [ g, l ] = selectedLayer
     const layer = rmap.groups[g].layers[l]
     rmap.deleteLayer(e)
     if (e.group === g && e.layer === l) {
-      selectedLayer = [ -1, -1 ]
+      g = -1
+      l = -1
     }
     else {
       const newGroup = rmap.groups.find(g => g.layers.includes(layer))
-      selectedLayer = [ rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer) ]
+      g = rmap.groups.indexOf(newGroup)
+      l = newGroup.layers.indexOf(layer)
     }
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderGroup(e: ReorderGroup) {
-    const [ g, l ] = selectedLayer
     const group = rmap.groups[g]
     rmap.reorderGroup(e)
-    selectedLayer = [ rmap.groups.indexOf(group), l ]
+    g = rmap.groups.indexOf(group)
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderLayer(e: ReorderLayer) {
-    const [ g, l ] = selectedLayer
     const layer = rmap.groups[g].layers[l]
     rmap.reorderLayer(e)
     const newGroup = rmap.groups.find(g => g.layers.includes(layer))
-    selectedLayer = [ rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer) ]
+    g = rmap.groups.indexOf(newGroup)
+    l = newGroup.layers.indexOf(layer)
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {
@@ -121,7 +123,7 @@
   }
 
   function updateOutlines() {
-    const layer = map.groups[selectedLayer[0]].layers[selectedLayer[1]]
+    const layer = map.groups[g].layers[l]
     const { scale, pos } = viewport
     let { x, y } = viewport.mousePos
     x = Math.floor(x)
@@ -233,7 +235,7 @@
   function onMouseMove(e: MouseEvent) {
     // left button pressed
     if (e.buttons === 1 && !e.ctrlKey) {
-      Editor.placeTile(rmap, ...selectedLayer, selectedID)
+      Editor.placeTile(rmap, g, l, selectedID)
     }
   }
 
@@ -259,6 +261,6 @@
     </div>
   </div>
   <Statusbar />
-  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
+  <TreeView visible={treeViewVisible} {rmap} bind:g={g} bind:l={l} />
   <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
 </div>
