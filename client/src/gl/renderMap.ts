@@ -66,9 +66,9 @@ export class RenderMap {
     return this.textures.length - 1
   }
   
-  removeImage(index: number) {
-    this.map.images.splice(index, 1)
-    this.textures.splice(index, 1)
+  removeImage(id: number) {
+    this.map.images.splice(id, 1)
+    this.textures.splice(id, 1)
   }
   
   editTile(change: EditTile) {
@@ -80,10 +80,10 @@ export class RenderMap {
     
     const tile = rlayer.layer.getTile(change.x, change.y)
 
-    if (tile.index === change.id)
+    if (tile.id === change.id)
       return false
 
-    tile.index = change.id
+    tile.id = change.id
 
     if (rlayer.layer instanceof TilesLayer && rlayer.layer.flags === Info.TilesLayerFlags.GAME)
       this.gameLayer.recomputeChunk(change.x, change.y)
@@ -181,7 +181,7 @@ export class RenderMap {
     if (create.kind === 'tiles') {
       const { width, height } = this.gameLayer.layer
       const layer = new TilesLayer()
-      const fill = () => { return { index: 0, flags: 0 } }
+      const fill = () => { return { id: 0, flags: 0 } }
       layer.init(width, height, fill)
       rlayer = new RenderTilesLayer(this, layer)
     } 
@@ -192,7 +192,7 @@ export class RenderMap {
     else if (create.kind === 'front') {
       const { width, height } = this.gameLayer.layer
       const layer = new FrontLayer()
-      const fill = () => { return { index: 0, flags: 0 } }
+      const fill = () => { return { id: 0, flags: 0 } }
       layer.init(width, height, fill)
       rlayer = new RenderFrontLayer(this, layer)
     }

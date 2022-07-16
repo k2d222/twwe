@@ -1,4 +1,4 @@
-import type { Color } from '../twmap/types'
+import type { Color, Tile, Tele, Speedup, Switch, Tune } from '../twmap/types'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
@@ -113,14 +113,19 @@ export interface DeleteLayer {
   layer: number,
 }
 
-// TODO: for now, can only edit tile id of tile layers.
-export interface EditTile {
+export type EditTile = {
+  type: 'tile' | 'tele' | 'speedup' | 'switch' | 'tune',
   group: number,
   layer: number,
   x: number,
   y: number,
-  id: number,
-}
+} & (
+  Tile & { type: 'tile' } |
+  Tele & { type: 'tele' } |
+  Speedup & { type: 'speedup' } |
+  Switch & { type: 'switch' } |
+  Tune & { type: 'tune' }
+)
 
 // MISC
 

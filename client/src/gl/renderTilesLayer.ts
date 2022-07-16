@@ -1,13 +1,12 @@
 import type { AnyTilesLayer, TilesLayer, FrontLayer, GameLayer, TeleLayer, TuneLayer, SpeedupLayer, SwitchLayer } from '../twmap/tilesLayer'
-import type * as Info from '../twmap/types'
 import type { RenderMap } from './renderMap'
 import { RenderLayer } from './renderLayer'
 import { gl, shader, viewport } from './global'
-import { TileFlag } from '../twmap/types'
+import { TileFlags } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
-export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?: Info.TileFlag }>> extends RenderLayer {
+export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: number }>> extends RenderLayer {
   layer: T
   texture: Texture
 
@@ -134,7 +133,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?
     for (let x = startX; x < endX; x++) {
       for (let y = startY; y < endY; y++) {
         const tile = this.layer.getTile(x, y)
-        if (tile.index !== 0)
+        if (tile.id !== 0)
           tileCount++
       }
     }
@@ -161,7 +160,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ index: number, flags?
 
         const tile = this.layer.getTile(x, y)
 
-        if (tile.index === 0) // skip tiles with index 0
+        if (tile.id === 0) // skip tiles with id 0
           continue
 
         const vertices = makeVertices(x, y)
@@ -209,7 +208,7 @@ function createTextBuffer(): TextBuffer {
   }
 }
 
-function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ index: number, number: number }>) {
+function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ id: number, number: number }>) {
   buffer.tileCount = layer.tileCount()
 
   const vertexArr = new Float32Array(buffer.tileCount * 12 * 3)
@@ -221,7 +220,7 @@ function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ index: number
 
       const tile = layer.getTile(x, y)
 
-      if (tile.index === 0) // skip tiles with index 0
+      if (tile.id === 0) // skip tiles with id 0
         continue
 
       const split = splitNumber(tile.number)
@@ -404,7 +403,7 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
 
         const tile = this.layer.getTile(x, y)
 
-        if (tile.index === 0) // skip tiles with index 0
+        if (tile.id === 0) // skip tiles with id 0
           continue
 
         const split = splitNumber(tile.force)
@@ -527,10 +526,10 @@ function makeVertices(x: number, y: number) {
   ]
 }
 
-function makeTexCoords(tile: { index: number, flags?: Info.TileFlag }, atlasSize: number) {
+function makeTexCoords(tile: { id: number, flags?: number }, atlasSize: number) {
   const tileCount = 16
-  const tx = tile.index % tileCount
-  const ty = Math.floor(tile.index / tileCount)
+  const tx = tile.id % tileCount
+  const ty = Math.floor(tile.id / tileCount)
   
   const half_pix = 0.5 / atlasSize
   // const half_pix = 0
@@ -546,21 +545,21 @@ function makeTexCoords(tile: { index: number, flags?: Info.TileFlag }, atlasSize
   let y3 = y0
 
   // Handle tile flags
-  if (tile.flags && tile.flags & TileFlag.HFLIP) {
+  if (tile.flags && tile.flags & TileFlags.HFLIP) {
     y0 = y2
     y2 = y3
     y3 = y0
     y1 = y2
   }
 
-  if (tile.flags && tile.flags & TileFlag.VFLIP) {
+  if (tile.flags && tile.flags & TileFlags.VFLIP) {
     x0 = x1
     x2 = x3
     x3 = x0
     x1 = x2
   }
 
-  if (tile.flags && tile.flags & TileFlag.ROTATE) {
+  if (tile.flags && tile.flags & TileFlags.ROTATE) {
     let tmp = y0
     y0 = y1
     y1 = y2

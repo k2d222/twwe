@@ -262,5 +262,5 @@
   </div>
   <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:g={g} bind:l={l} />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
+  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:tilesVisible={tileSelectorVisible} />
 </div>

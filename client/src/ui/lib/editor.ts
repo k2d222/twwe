@@ -1,5 +1,6 @@
 import type { EditTile } from '../../server/protocol'
 import type { Map } from '../../twmap/map'
+import { TileFlags } from '../../twmap/types'
 import { server } from '../global'
 import { viewport, renderer, init as glInit } from '../../gl/global'
 import { RenderMap } from '../../gl/renderMap'
@@ -40,11 +41,13 @@ export function placeTile(rmap: RenderMap, group: number, layer: number, id: num
   y = Math.floor(y)
 
   let change: EditTile = {
+    type: 'tile',
     group,
     layer,
     x,
     y,
     id,
+    flags: TileFlags.NONE,
   }
 
   const res = rmap.editTile(change)

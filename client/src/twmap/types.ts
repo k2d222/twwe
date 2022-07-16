@@ -1,4 +1,5 @@
-export enum TileFlag {
+export enum TileFlags {
+  NONE   = 0,
   VFLIP  = 1,
   HFLIP  = 2,
   OPAQUE = 4,
@@ -120,30 +121,30 @@ export type Quad = {
 }
 
 export type Tile = {
-  index: number,
-  flags: TileFlag,
+  id: number,
+  flags: number,
 }
 
 export type Tele = {
   number: number,
-  index: number,
+  id: number,
 }
 
 export type Speedup = {
   force: number,
   maxSpeed: number,
-  index: number,
+  id: number,
   angle: number,
 }
 
 export type Switch = {
   number: number,
-  index: number,
-  flags: TileFlag,
+  id: number,
+  flags: number,
   delay: number,
 }
 
 export type Tune = {
   number: number,
-  index: number,
+  id: number,
 }

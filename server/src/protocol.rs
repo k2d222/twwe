@@ -176,12 +176,58 @@ pub struct DeleteLayer {
 // TILES
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Tile {
+    pub id: u8,
+    pub flags: u8,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Tele {
+    pub number: u8,
+    pub id: u8,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Speedup {
+    pub force: u8,
+    pub max_speed: u8,
+    pub id: u8,
+    pub angle: i16,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Switch {
+    pub number: u8,
+    pub id: u8,
+    pub flags: u8,
+    pub delay: u8,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Tune {
+    pub number: u8,
+    pub id: u8,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum EditTileContent {
+    Tile(Tile),
+    Tele(Tele),
+    Speedup(Speedup),
+    Switch(Switch),
+    Tune(Tune),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EditTile {
     pub group: u32,
     pub layer: u32,
     pub x: u32,
     pub y: u32,
-    pub id: u8,
+    #[serde(flatten)]
+    pub content: EditTileContent,
 }
 
 // MISC

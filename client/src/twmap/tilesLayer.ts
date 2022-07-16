@@ -16,7 +16,7 @@ export function createLayer(flags: Info.TilesLayerFlags) {
        : null
 }
 
-export abstract class AnyTilesLayer<Tile extends { index: number }> extends Layer {
+export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
   flags: Info.TilesLayerFlags
   width: number
   height: number
@@ -38,7 +38,7 @@ export abstract class AnyTilesLayer<Tile extends { index: number }> extends Laye
   }
 
   tileCount() {
-    return this.tiles.reduce((acc, t) => acc + (t.index === 0 ? 0 : 1), 0)
+    return this.tiles.reduce((acc, t) => acc + (t.id === 0 ? 0 : 1), 0)
   }
 
   getTile(x: number, y: number) {
@@ -87,7 +87,7 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   }
   
   defaultTile(): Info.Tile {
-    return { index: 0, flags: 0 }
+    return { id: 0, flags: 0 }
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
@@ -108,7 +108,7 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   
   static cloneTile(tile: Info.Tile): Info.Tile {
     return {
-      index: tile.index,
+      id: tile.id,
       flags: tile.flags,
     }
   }
@@ -125,7 +125,7 @@ export class GameLayer extends AnyTilesLayer<Info.Tile> {
   }
   
   defaultTile(): Info.Tile {
-    return { index: 0, flags: 0 }
+    return { id: 0, flags: 0 }
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
@@ -156,7 +156,7 @@ export class FrontLayer extends AnyTilesLayer<Info.Tile> {
   }
   
   defaultTile(): Info.Tile {
-    return { index: 0, flags: 0 }
+    return { id: 0, flags: 0 }
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
@@ -182,7 +182,7 @@ export class TeleLayer extends AnyTilesLayer<Info.Tele> {
   }
   
   defaultTile(): Info.Tele {
-    return { number: 0, index: 0 }
+    return { number: 0, id: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
@@ -201,7 +201,7 @@ export class SpeedupLayer extends AnyTilesLayer<Info.Speedup> {
   }
   
   defaultTile(): Info.Speedup {
-    return { force: 0, maxSpeed: 0, index: 0, angle: 0 }
+    return { force: 0, maxSpeed: 0, id: 0, angle: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
@@ -220,7 +220,7 @@ export class SwitchLayer extends AnyTilesLayer<Info.Switch> {
   }
  
   defaultTile(): Info.Switch {
-    return { number: 0, index: 0, flags: 0, delay: 0 }
+    return { number: 0, id: 0, flags: 0, delay: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
@@ -238,7 +238,7 @@ export class TuneLayer extends AnyTilesLayer<Info.Tune> {
   }
 
   defaultTile(): Info.Tune {
-    return { number: 0, index: 0 }
+    return { number: 0, id: 0 }
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
