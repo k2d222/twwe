@@ -82,7 +82,7 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   
   constructor() {
     super(Info.TilesLayerFlags.TILES)
-    this.color = { r: 0, g: 0, b: 0, a: 0  }
+    this.color = { r: 255, g: 255, b: 255, a: 255 }
     this.image = null
   }
   
