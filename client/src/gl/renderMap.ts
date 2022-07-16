@@ -73,24 +73,31 @@ export class RenderMap {
   
   editTile(change: EditTile) {
     const rgroup = this.groups[change.group]
-    const rlayer = rgroup.layers[change.layer] as RenderTilesLayer
-    
-    if (change.x < 0 || change.y < 0 || change.x >= rlayer.layer.width || change.y >= rlayer.layer.height)
-      return false
-    
-    const tile = rlayer.layer.getTile(change.x, change.y)
+    const rlayer = rgroup.layers[change.layer] as RenderAnyTilesLayer<PhysicsLayer | TilesLayer>
+    const layer = rlayer.layer
 
-    if (tile.id === change.id)
+    if (change.x < 0 || change.y < 0 || change.x >= layer.width || change.y >= layer.height)
       return false
 
-    tile.id = change.id
-
-    if (rlayer.layer instanceof TilesLayer && rlayer.layer.flags === Info.TilesLayerFlags.GAME)
-      this.gameLayer.recomputeChunk(change.x, change.y)
-    else
-      rlayer.recomputeChunk(change.x, change.y)
+    const tile = layer.getTile(change.x, change.y)
     
-    return true
+    let changed = false
+
+    for (let key in tile) {
+      if (key in change && change[key] !== tile[key]) {
+        tile[key] = change[key]
+        changed = true
+      }
+    }
+
+    if (changed) {
+      if (rlayer === this.gameLayer)
+        this.gameLayer.recomputeChunk(change.x, change.y)
+      else
+        rlayer.recomputeChunk(change.x, change.y)
+    }
+
+    return changed
   }
   
   editGroup(change: EditGroup) {

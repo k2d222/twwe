@@ -148,3 +148,5 @@ export type Tune = {
   number: number,
   id: number,
 }
+
+export type AnyTile = Tile | Tele | Speedup | Switch | Tune

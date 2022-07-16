@@ -86,9 +86,10 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
     this.image = null
   }
   
-  defaultTile(): Info.Tile {
+  static defaultTile(): Info.Tile {
     return { id: 0, flags: 0 }
   }
+  defaultTile() { return TilesLayer.defaultTile() }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
     if ('name' in info)
@@ -124,9 +125,10 @@ export class GameLayer extends AnyTilesLayer<Info.Tile> {
     this.image = null
   }
   
-  defaultTile(): Info.Tile {
+  static defaultTile(): Info.Tile {
     return { id: 0, flags: 0 }
   }
+  defaultTile() { return GameLayer.defaultTile() }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
     if ('name' in info)
@@ -155,9 +157,10 @@ export class FrontLayer extends AnyTilesLayer<Info.Tile> {
     this.image = null
   }
   
-  defaultTile(): Info.Tile {
+  static defaultTile(): Info.Tile {
     return { id: 0, flags: 0 }
   }
+  defaultTile() { return FrontLayer.defaultTile() }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
     if ('name' in info)
@@ -181,9 +184,10 @@ export class TeleLayer extends AnyTilesLayer<Info.Tele> {
     super(Info.TilesLayerFlags.TELE)
   }
   
-  defaultTile(): Info.Tele {
+  static defaultTile(): Info.Tele {
     return { number: 0, id: 0 }
   }
+  defaultTile() { return TeleLayer.defaultTile() }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
     if ('name' in info)
@@ -200,9 +204,10 @@ export class SpeedupLayer extends AnyTilesLayer<Info.Speedup> {
     super(Info.TilesLayerFlags.SPEEDUP)
   }
   
-  defaultTile(): Info.Speedup {
+  static defaultTile(): Info.Speedup {
     return { force: 0, maxSpeed: 0, id: 0, angle: 0 }
   }
+  defaultTile() { return SpeedupLayer.defaultTile() }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
     if ('name' in info)
@@ -219,9 +224,10 @@ export class SwitchLayer extends AnyTilesLayer<Info.Switch> {
     super(Info.TilesLayerFlags.SWITCH)
   }
  
-  defaultTile(): Info.Switch {
+  static defaultTile(): Info.Switch {
     return { number: 0, id: 0, flags: 0, delay: 0 }
   }
+  defaultTile() { return SwitchLayer.defaultTile() }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
     if ('name' in info)
@@ -237,9 +243,10 @@ export class TuneLayer extends AnyTilesLayer<Info.Tune> {
     super(Info.TilesLayerFlags.TUNE)
   }
 
-  defaultTile(): Info.Tune {
+  static defaultTile(): Info.Tune {
     return { number: 0, id: 0 }
   }
+  defaultTile() { return TuneLayer.defaultTile() }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
     if ('name' in info)

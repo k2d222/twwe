@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError } from '../../server/protocol'
+  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
@@ -27,11 +27,9 @@
   const gameLayer = map.physicsLayerIndex(GameLayer)
   let g = gameLayer[0]
   let l = gameLayer[1]
-  let selectedID = 0
+  let selectedTile: EditTileParams
   let peerCount = 0
   let tileSelectorVisible = false
-
-  $: tileSelectorImg = Editor.getLayerImage(rmap, g, l)
 
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
@@ -235,7 +233,7 @@
   function onMouseMove(e: MouseEvent) {
     // left button pressed
     if (e.buttons === 1 && !e.ctrlKey) {
-      Editor.placeTile(rmap, g, l, selectedID)
+      Editor.placeTile(rmap, g, l, selectedTile)
     }
   }
 
@@ -262,5 +260,5 @@
   </div>
   <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:g={g} bind:l={l} />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:tilesVisible={tileSelectorVisible} />
+  <TileSelector {rmap} {g} {l} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
 </div>

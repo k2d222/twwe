@@ -113,19 +113,19 @@ export interface DeleteLayer {
   layer: number,
 }
 
-export type EditTile = {
-  type: 'tile' | 'tele' | 'speedup' | 'switch' | 'tune',
-  group: number,
-  layer: number,
-  x: number,
-  y: number,
-} & (
+export type EditTileParams = 
   Tile & { type: 'tile' } |
   Tele & { type: 'tele' } |
   Speedup & { type: 'speedup' } |
   Switch & { type: 'switch' } |
   Tune & { type: 'tune' }
-)
+
+export type EditTile = EditTileParams & {
+  group: number,
+  layer: number,
+  x: number,
+  y: number,
+}
 
 // MISC
 
