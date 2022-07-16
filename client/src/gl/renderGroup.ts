@@ -3,17 +3,29 @@ import type { RenderLayer } from './renderLayer'
 import type { Layer } from '../twmap/layer'
 import type { RenderMap } from './renderMap'
 import { mat4 } from 'gl-matrix'
-import { TileLayer } from '../twmap/tileLayer'
-import { QuadLayer } from '../twmap/quadLayer'
-import { RenderTileLayer } from '../gl/renderTileLayer'
-import { RenderQuadLayer } from '../gl/renderQuadLayer'
+import { TilesLayer, GameLayer, FrontLayer, TuneLayer, TeleLayer, SpeedupLayer, SwitchLayer } from '../twmap/tilesLayer'
+import { QuadsLayer } from '../twmap/quadsLayer'
+import { RenderTilesLayer, RenderGameLayer, RenderFrontLayer, RenderTuneLayer, RenderTeleLayer, RenderSpeedupLayer, RenderSwitchLayer } from '../gl/renderTilesLayer'
+import { RenderQuadsLayer } from '../gl/renderQuadsLayer'
 import { gl, shader, viewport } from './global'
 
 function createRenderLayer(rmap: RenderMap, layer: Layer) {
-  if (layer instanceof TileLayer)
-    return new RenderTileLayer(rmap, layer)
-  else if (layer instanceof QuadLayer)
-    return new RenderQuadLayer(rmap, layer)
+  if (layer instanceof QuadsLayer)
+    return new RenderQuadsLayer(rmap, layer)
+  else if (layer instanceof GameLayer)
+    return new RenderGameLayer(rmap, layer)
+  else if (layer instanceof FrontLayer)
+    return new RenderFrontLayer(rmap, layer)
+  else if (layer instanceof TilesLayer)
+    return new RenderTilesLayer(rmap, layer)
+  else if (layer instanceof TeleLayer)
+    return new RenderTeleLayer(rmap, layer)
+  else if (layer instanceof SpeedupLayer)
+    return new RenderSpeedupLayer(rmap, layer)
+  else if (layer instanceof SwitchLayer)
+    return new RenderSwitchLayer(rmap, layer)
+  else if (layer instanceof TuneLayer)
+    return new RenderTuneLayer(rmap, layer)
   else
     throw new Error('not a layer type we can render at the moment')
 }

@@ -1,4 +1,4 @@
-import type { EditTile } from '../../server/protocol'
+import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { Map } from '../../twmap/map'
 import { server } from '../global'
 import { viewport, renderer, init as glInit } from '../../gl/global'
@@ -30,24 +30,21 @@ export async function downloadMap(mapName: string) {
   link.remove()
 }
 
-export function getLayerImage(rmap: RenderMap, groupID: number, layerID: number) {
-  const map = rmap.map
-  const layer = map.groups[groupID].layers[layerID]
-  let image = layer.image
-  return image
+export function getLayerImage(rmap: RenderMap, g: number, l: number) {
+  return rmap.groups[g].layers[l].texture.image
 }
 
-export function placeTile(rmap: RenderMap, group: number, layer: number, id: number) {
+export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {
   let { x, y } = viewport.mousePos
   x = Math.floor(x)
   y = Math.floor(y)
-
+  
   let change: EditTile = {
-    group,
-    layer,
+    group: g,
+    layer: l,
     x,
     y,
-    id,
+    ...tile
   }
 
   const res = rmap.editTile(change)

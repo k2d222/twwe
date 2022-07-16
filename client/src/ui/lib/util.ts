@@ -1,10 +1,12 @@
 import type { SendMap, SendImage } from '../../server/protocol'
 import type { Layer } from '../../twmap/layer'
 import { server } from '../global'
-import { Map } from '../../twmap/map'
+import { Map, PhysicsLayer } from '../../twmap/map'
 import { Image } from '../../twmap/image'
-import { TileLayer } from '../../twmap/tileLayer'
-import { TileLayerFlags } from '../../twmap/types'
+import { AnyTilesLayer } from '../../twmap/tilesLayer'
+import { TilesLayerFlags } from '../../twmap/types'
+
+export type Ctor<T> = new(...args: any[]) => T
 
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
@@ -58,14 +60,28 @@ export async function queryImage(sendImage: SendImage): Promise<Image> {
 
 
 export const PhysicsLayers = [
-  TileLayerFlags.GAME,
-  TileLayerFlags.FRONT,
-  TileLayerFlags.TELE,
-  TileLayerFlags.SPEEDUP,
-  TileLayerFlags.SWITCH,
-  TileLayerFlags.TUNE,
+  TilesLayerFlags.GAME,
+  TilesLayerFlags.FRONT,
+  TilesLayerFlags.TELE,
+  TilesLayerFlags.SPEEDUP,
+  TilesLayerFlags.SWITCH,
+  TilesLayerFlags.TUNE,
 ]
 
-export function isPhysicsLayer(layer: Layer): layer is TileLayer {
-  return layer instanceof TileLayer && PhysicsLayers.includes(layer.flags)
+export function isPhysicsLayer(layer: Layer): layer is PhysicsLayer {
+  return layer instanceof AnyTilesLayer && PhysicsLayers.includes(layer.flags)
 }
+
+export function layerIndex(map: Map, layer: Layer): [number, number] {
+  for (let g = 0; g < map.groups.length; g++) {
+    const rgroup = map.groups[g]
+    for (let l = 0; l < rgroup.layers.length; l++) {
+      if (rgroup.layers[l] === layer) {
+        return [ g, l ]
+      }
+    }
+  }
+
+  return [ -1, -1 ]
+}
+

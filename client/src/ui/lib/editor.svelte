@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError } from '../../server/protocol'
-  import { TileLayer } from '../../twmap/tileLayer'
+  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
+  import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
@@ -11,7 +11,7 @@
   import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl } from './util'
+  import { queryImage, externalImageUrl, layerIndex } from './util'
 
   export let map: Map
 
@@ -24,12 +24,19 @@
   canvas.addEventListener('keydown', onKeyDown)
 
   let treeViewVisible = true
-  let selectedLayer = map.gameLayerID()
-  let selectedID = 0
+  let activeLayer = rmap.gameLayer.layer
+  $: [ g, l ] = layerIndex(rmap.map, activeLayer)
+  $: activeRlayer = rmap.groups[g].layers[l]
+  let selectedTile: EditTileParams
   let peerCount = 0
-
   let tileSelectorVisible = false
-  $: tileSelectorImg = Editor.getLayerImage(rmap, ...selectedLayer)
+
+  $: {
+    for (const rgroup of rmap.groups)
+      for (const rlayer of rgroup.layers)
+        rlayer.active = false
+    activeRlayer.active = true
+  }
 
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
@@ -56,43 +63,23 @@
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteGroup(e: DeleteGroup) {
-    const [ g, l ] = selectedLayer
-    const group = rmap.groups[g]
-    rmap.deleteGroup(e)
-    if (e.group === g) {
-      selectedLayer = [ -1, -1 ]
-    }
-    else {
-      selectedLayer = [ rmap.groups.indexOf(group), l ]
-    }
+    const deleted = rmap.deleteGroup(e)
+    if (deleted.layers.includes(activeRlayer))
+      activeLayer = rmap.gameLayer.layer
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteLayer(e: DeleteLayer) {
-    const [ g, l ] = selectedLayer
-    const layer = rmap.groups[g].layers[l]
-    rmap.deleteLayer(e)
-    if (e.group === g && e.layer === l) {
-      selectedLayer = [ -1, -1 ]
-    }
-    else {
-      const newGroup = rmap.groups.find(g => g.layers.includes(layer))
-      selectedLayer = [ rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer) ]
-    }
+    const deleted = rmap.deleteLayer(e)
+    if (deleted === activeRlayer)
+      activeLayer = rmap.gameLayer.layer
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderGroup(e: ReorderGroup) {
-    const [ g, l ] = selectedLayer
-    const group = rmap.groups[g]
     rmap.reorderGroup(e)
-    selectedLayer = [ rmap.groups.indexOf(group), l ]
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderLayer(e: ReorderLayer) {
-    const [ g, l ] = selectedLayer
-    const layer = rmap.groups[g].layers[l]
     rmap.reorderLayer(e)
-    const newGroup = rmap.groups.find(g => g.layers.includes(layer))
-    selectedLayer = [ rmap.groups.indexOf(newGroup), newGroup.layers.indexOf(layer) ]
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {
@@ -121,14 +108,13 @@
   }
 
   function updateOutlines() {
-    const layer = map.groups[selectedLayer[0]].layers[selectedLayer[1]]
     const { scale, pos } = viewport
     let { x, y } = viewport.mousePos
     x = Math.floor(x)
     y = Math.floor(y)
 
     let color = 'black'
-    if (layer instanceof TileLayer && (x < 0 || y < 0 || x > layer.width || y > layer.height)) {
+    if (activeLayer instanceof AnyTilesLayer && (x < 0 || y < 0 || x > activeLayer.width || y > activeLayer.height)) {
       color = 'red'
     }
 
@@ -141,10 +127,10 @@
       border-color: ${color};
     `
 
-    if (layer instanceof TileLayer) {
+    if (activeLayer instanceof AnyTilesLayer) {
       layerOutlineStyle = `
-        width: ${layer.width * scale}px;
-        height: ${layer.height * scale}px;
+        width: ${activeLayer.width * scale}px;
+        height: ${activeLayer.height * scale}px;
         top: ${-pos.y * scale}px;
         left: ${-pos.x * scale}px;
       `
@@ -233,7 +219,7 @@
   function onMouseMove(e: MouseEvent) {
     // left button pressed
     if (e.buttons === 1 && !e.ctrlKey) {
-      Editor.placeTile(rmap, ...selectedLayer, selectedID)
+      Editor.placeTile(rmap, g, l, selectedTile)
     }
   }
 
@@ -259,6 +245,6 @@
     </div>
   </div>
   <Statusbar />
-  <TreeView visible={treeViewVisible} {rmap} bind:selected={selectedLayer} />
-  <TileSelector image={tileSelectorImg} bind:selected={selectedID} bind:visible={tileSelectorVisible} />
+  <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
+  <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
 </div>

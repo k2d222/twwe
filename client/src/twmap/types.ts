@@ -1,4 +1,5 @@
-export enum TileFlag {
+export enum TileFlags {
+  NONE   = 0,
   VFLIP  = 1,
   HFLIP  = 2,
   OPAQUE = 4,
@@ -11,7 +12,7 @@ export enum LayerType {
   QUADS   = 3,
 }
 
-export enum TileLayerFlags {
+export enum TilesLayerFlags {
   TILES = 0,
   GAME = 1,
   TELE = 2,
@@ -21,7 +22,7 @@ export enum TileLayerFlags {
   TUNE = 32,
 }
 
-export enum MapItemType {
+export enum ItemType {
   VERSION   = 0,
   INFO      = 1,
   IMAGE     = 2,
@@ -47,7 +48,8 @@ export type MapObj = {
   version: number,
 }
 
-export type MapGroupObj = MapObj & {
+export type Group = MapObj & {
+  version: number,
   offX: number,
   offY: number,
   paraX: number,
@@ -61,28 +63,28 @@ export type MapGroupObj = MapObj & {
   clipH: number,
 
   // version 3 extension
-  name: string,
+  name?: string,
 }
 
-export type MapLayer = MapObj & {
+export type Layer = MapObj & {
   type: LayerType,
   flags: number,
 }
 
-export type MapLayerQuads = MapObj & {
+export type QuadsLayer = MapObj & {
   numQuads: number,
   data: number,
   image: number,
   
   // version 3 extension
-  name: string,
+  name?: string,
 }
 
-export type MapLayerTiles = MapObj & {
+export type TilesLayer = MapObj & {
   version: number,
   width: number,
   height: number,
-  flags: TileLayerFlags,
+  flags: TilesLayerFlags,
   color: Color,
   colorEnv: number,
   colorEnvOffset: number,
@@ -90,10 +92,17 @@ export type MapLayerTiles = MapObj & {
   data: number,
   
   // version 3 extension
-  name: string
+  name?: string
+  
+  // ddnet extension
+  dataTele?: number
+  dataSpeedup?: number
+  dataFront?: number
+  dataSwitch?: number
+  dataTune?: number
 }
 
-export type MapImage = MapObj & {
+export type Image = MapObj & {
   width: number,
   height: number,
   external: number,
@@ -101,7 +110,7 @@ export type MapImage = MapObj & {
   data: number,
 }
 
-export type LayerQuad = {
+export type Quad = {
   points: Coord[],
   colors: Color[],
   texCoords: Coord[],
@@ -111,7 +120,33 @@ export type LayerQuad = {
   colorEnvOffset: number,
 }
 
-export type LayerTile = {
-  index: number,
+export type Tile = {
+  id: number,
   flags: number,
 }
+
+export type Tele = {
+  number: number,
+  id: number,
+}
+
+export type Speedup = {
+  force: number,
+  maxSpeed: number,
+  id: number,
+  angle: number,
+}
+
+export type Switch = {
+  number: number,
+  id: number,
+  flags: number,
+  delay: number,
+}
+
+export type Tune = {
+  number: number,
+  id: number,
+}
+
+export type AnyTile = Tile | Tele | Speedup | Switch | Tune

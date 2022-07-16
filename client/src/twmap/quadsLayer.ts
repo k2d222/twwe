@@ -2,25 +2,26 @@ import type { DataFile } from './datafile'
 import type { Map } from './map'
 import type { Image } from './image'
 import { Layer } from './layer'
-import { LayerType, LayerQuad, MapLayerQuads } from './types'
-import { parseLayerQuads } from './parser'
+import * as Info from './types'
+import { parseQuads } from './parser'
 
 
-export class QuadLayer extends Layer {
-  quads: LayerQuad[]
+export class QuadsLayer extends Layer {
+  quads: Info.Quad[]
   image: Image | null
 
   constructor() {
-    super(LayerType.QUADS)
+    super(Info.LayerType.QUADS)
     this.quads = []
     this.image = null
   }
 
-  load(map: Map, df: DataFile, info: MapLayerQuads) {
-    this.name = info.name
+  load(map: Map, df: DataFile, info: Info.QuadsLayer) {
+    if ('name' in info)
+      this.name = info.name
 
     const quadData = df.getData(info.data)
-    this.quads = parseLayerQuads(quadData, info.numQuads)
+    this.quads = parseQuads(quadData, info.numQuads)
 
     this.image = null
     if (info.image !== -1) {

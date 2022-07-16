@@ -17,7 +17,7 @@ use tungstenite::protocol::Message;
 use twmap::{
     constants, map_checks::CheckData, CompressedData, EmbeddedImage, ExternalImage, FrontLayer,
     GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer,
-    TileMapLayer, TilesLayer, TuneLayer, TwMap,
+    TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
 };
 
 use crate::{
@@ -208,26 +208,72 @@ impl Room {
         // because all the tilemap layers share the same fields, but cannot
         // be mutated with the TileMapLayer trait, the easyest is to copy-paste
         // the code with a macro.
-        macro_rules! change_layer_tile {
+        macro_rules! tile {
             ($layer: ident) => {{
                 let tiles = $layer.tiles_mut().unwrap_mut(); // map must be loaded
-                let mut tile = tiles
+                let tile = tiles
                     .get_mut((edit_tile.y as usize, edit_tile.x as usize))
                     .ok_or("tile change outside layer")?;
-                tile.id = edit_tile.id;
+                tile
             }};
         }
 
-        match layer {
-            Layer::Game(layer) => change_layer_tile!(layer),
-            Layer::Tiles(layer) => change_layer_tile!(layer),
-            Layer::Front(layer) => change_layer_tile!(layer),
-            Layer::Tele(layer) => change_layer_tile!(layer),
-            Layer::Speedup(layer) => change_layer_tile!(layer),
-            Layer::Switch(layer) => change_layer_tile!(layer),
-            Layer::Tune(layer) => change_layer_tile!(layer),
-            Layer::Quads(_) | Layer::Sounds(_) | Layer::Invalid(_) => {
+        use EditTileContent::*;
+
+        match (layer, edit_tile.content.clone()) {
+            (Layer::Game(layer), Tile(edit)) => {
+                let mut tile = tile!(layer);
+                tile.id = edit.id;
+                tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
+                if tile.flags.contains(TileFlags::OPAQUE) {
+                    return Err("game layer cannot have the opaque flag");
+                }
+            }
+            (Layer::Tiles(layer), Tile(edit)) => {
+                let mut tile = tile!(layer);
+                tile.id = edit.id;
+                tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
+            }
+            (Layer::Front(layer), Tile(edit)) => {
+                let mut tile = tile!(layer);
+                tile.id = edit.id;
+                tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
+            }
+            (Layer::Tele(layer), Tele(edit)) => {
+                let mut tile = tile!(layer);
+                tile.number = edit.number;
+                tile.id = edit.id;
+            }
+            (Layer::Speedup(layer), Speedup(edit)) => {
+                if !(0..360).contains(&edit.angle) {
+                    return Err("speedup angle must be in range (0..360)");
+                }
+                let mut tile = tile!(layer);
+                tile.force = edit.force;
+                tile.max_speed = edit.max_speed;
+                tile.id = edit.id;
+                tile.angle = edit.angle.into();
+            }
+            (Layer::Switch(layer), Switch(edit)) => {
+                let mut tile = tile!(layer);
+                tile.number = edit.number;
+                tile.id = edit.id;
+                tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
+                tile.delay = edit.delay;
+                if tile.flags.contains(TileFlags::OPAQUE) {
+                    return Err("switch layer cannot have the opaque flag");
+                }
+            }
+            (Layer::Tune(layer), Tune(edit)) => {
+                let mut tile = tile!(layer);
+                tile.number = edit.number;
+                tile.id = edit.id;
+            }
+            (Layer::Quads(_) | Layer::Sounds(_) | Layer::Invalid(_), _) => {
                 return Err("layer is not a tile layer");
+            }
+            (_, _) => {
+                return Err("tile type incompatible with layer type");
             }
         };
 

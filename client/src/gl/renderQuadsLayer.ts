@@ -1,13 +1,12 @@
-import type { QuadLayer } from '../twmap/quadLayer'
-import type { LayerQuad } from '../twmap/types'
+import type { QuadsLayer } from '../twmap/quadsLayer'
+import type * as Info from '../twmap/types'
 import type { Texture } from './texture'
 import type { RenderMap } from './renderMap'
 import { RenderLayer } from './renderLayer'
 import { gl, shader } from './global'
 
-export class RenderQuadLayer extends RenderLayer {
-  layer: QuadLayer
-  visible: boolean
+export class RenderQuadsLayer extends RenderLayer {
+  layer: QuadsLayer
   texture: Texture
 
   colorArr: Float32Array
@@ -20,10 +19,9 @@ export class RenderQuadLayer extends RenderLayer {
   texCoordBuf: WebGLBuffer
   indexBuf: WebGLBuffer
 
-  constructor(rmap: RenderMap, layer: QuadLayer) {
+  constructor(rmap: RenderMap, layer: QuadsLayer) {
     super()
     this.layer = layer
-    this.visible = true
     
     this.texture = null
 
@@ -117,7 +115,7 @@ export class RenderQuadLayer extends RenderLayer {
   }
 }
 
-function makeVertices(q: LayerQuad) {
+function makeVertices(q: Info.Quad) {
   return [
     q.points[0].x / 512 / 64, q.points[0].y / 512 / 64,
     q.points[2].x / 512 / 64, q.points[2].y / 512 / 64,
@@ -126,7 +124,7 @@ function makeVertices(q: LayerQuad) {
   ]
 }
 
-function makeColors(q: LayerQuad) {
+function makeColors(q: Info.Quad) {
   const comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
   return [
     ...comp(q.colors[0]),
@@ -136,7 +134,7 @@ function makeColors(q: LayerQuad) {
   ]
 }
 
-function makeTexCoords(q: LayerQuad) {
+function makeTexCoords(q: Info.Quad) {
   return [
     q.texCoords[0].x / 1024, q.texCoords[0].y / 1024,
     q.texCoords[2].x / 1024, q.texCoords[2].y / 1024,

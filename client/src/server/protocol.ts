@@ -1,4 +1,4 @@
-import type { Color } from '../twmap/types'
+import type { Color, Tile, Tele, Speedup, Switch, Tune } from '../twmap/types'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
@@ -84,7 +84,7 @@ export interface CommonLayerChange {
   name?: string
 }
 
-export interface EditTileLayer extends CommonLayerChange {
+export interface EditTilesLayer extends CommonLayerChange {
   width?: number,
   height?: number,
   // flags?: number,
@@ -94,12 +94,12 @@ export interface EditTileLayer extends CommonLayerChange {
   image?: number | null,
 }
 
-export interface EditQuadLayer extends CommonLayerChange {
+export interface EditQuadsLayer extends CommonLayerChange {
   // TODO
   image?: number,
 }
 
-export type EditLayer = EditTileLayer | EditQuadLayer
+export type EditLayer = EditTilesLayer | EditQuadsLayer
 
 export interface ReorderLayer {
   group: number,
@@ -113,13 +113,18 @@ export interface DeleteLayer {
   layer: number,
 }
 
-// TODO: for now, can only edit tile id of tile layers.
-export interface EditTile {
+export type EditTileParams = 
+  Tile & { type: 'tile' } |
+  Tele & { type: 'tele' } |
+  Speedup & { type: 'speedup' } |
+  Switch & { type: 'switch' } |
+  Tune & { type: 'tune' }
+
+export type EditTile = EditTileParams & {
   group: number,
   layer: number,
   x: number,
   y: number,
-  id: number,
 }
 
 // MISC
