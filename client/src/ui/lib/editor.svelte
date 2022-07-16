@@ -114,7 +114,7 @@
     y = Math.floor(y)
 
     let color = 'black'
-    if (activeLayer instanceof TilesLayer && (x < 0 || y < 0 || x > activeLayer.width || y > activeLayer.height)) {
+    if (activeLayer instanceof AnyTilesLayer && (x < 0 || y < 0 || x > activeLayer.width || y > activeLayer.height)) {
       color = 'red'
     }
 
