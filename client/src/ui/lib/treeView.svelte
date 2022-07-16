@@ -31,28 +31,29 @@
   $: select(...fromStr(strSelected))
 
   function select(new_g: number, new_l: number) {
-    if (rlayer)
-      rlayer.active = false
+    for (const rgroup of rmap.groups)
+      for (const rlayer of rgroup.layers)
+        rlayer.active = false
 
     if (new_g !== -1 && new_l !== -1) {
       const rlayer = rmap.groups[new_g].layers[new_l] // new_g and new_l are supposed to be valid
       rlayer.active = true
     }
 
-    strSelected = toStr(new_g, new_l)
     g = new_g
     l = new_l
+    strSelected = toStr(new_g, new_l)
   }
   
   // ContextMenu
   let cm_g = -1
   let cm_l = -1
   $: cm_rgroup = cm_g !== -1 ? rmap.groups[cm_g] : null
-  $: cm_rlayer = cm_rgroup && cm_l !== -1 ? rgroup.layers[cm_l] : null
+  $: cm_rlayer = cm_rgroup && cm_l !== -1 ? cm_rgroup.layers[cm_l] : null
   let cm_x = 0
   let cm_y = 0
 
-  function showCM(e: MouseEvent, g: number, l: number = null) {
+  function showCM(e: MouseEvent, g: number, l: number = -1) {
     cm_x = e.clientX
     cm_y = e.clientY
     cm_g = g
@@ -70,6 +71,7 @@
       showInfo('Please wait…')
       await server.query('creategroup', change)
       rmap.createGroup(change)
+      rmap = rmap // hack to redraw the treeview
       clearDialog()
     } catch (e) {
       showError('Failed to create group: ' + e)
@@ -126,17 +128,13 @@
           <span class="fold"
             on:click={() => folded[g] = !folded[g]}></span>
           <b>#{g} {group.name}</b>
-          <span class="eye"
-            on:click={() => rgroup.visible = !rgroup.visible}></span>
-          <span class="options"
-              on:click={(e) => showCM(e, g)}></span>
-
+          <span class="eye" on:click={() => rgroup.visible = !rgroup.visible}></span>
+          <span class="options" on:click={(e) => showCM(e, g)}></span>
           {#if cm_g === g && cm_l === -1}
             <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
               <GroupEditor {rmap} {g} on:change={onChange} />
             </ContextMenu>
           {/if}
-
         </div>
     
         {#each rgroup.layers as rlayer, l}
@@ -146,17 +144,13 @@
               <input name="layer" type="radio" bind:group={strSelected} value={toStr(g, l)} disabled={layer instanceof QuadsLayer} />
               {layer.name || '<no name>'}
             </label>
-            <span class="eye"
-              on:click={() => rlayer.visible = !rlayer.visible}></span>
-            <span class="options"
-              on:click={(e) => showCM(e, g, l)}></span>
-
+            <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}></span>
+            <span class="options" on:click={(e) => showCM(e, g, l)}></span>
             {#if cm_g === g && cm_l === l}
               <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
                 <LayerEditor {rmap} {g} {l} on:change={onChange} />
               </ContextMenu>
             {/if}
-
           </div>
         {/each}
 

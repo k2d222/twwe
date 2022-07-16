@@ -205,7 +205,7 @@ export class SpeedupLayer extends AnyTilesLayer<Info.Speedup> {
   }
   
   static defaultTile(): Info.Speedup {
-    return { force: 0, maxSpeed: 0, id: 0, angle: 0 }
+    return { force: 50, maxSpeed: 0, id: 0, angle: 0 }
   }
   defaultTile() { return SpeedupLayer.defaultTile() }
 

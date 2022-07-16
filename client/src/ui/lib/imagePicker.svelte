@@ -133,7 +133,6 @@
     <h3>Upload</h3>
     <label>Select a file:&nbsp;
       <input type="file" placeholder="upload png file…" accept=".png,image/png" on:change={onFileChange}/>
-      (The image must be png of 1024&times;1024 pixels)
     </label>
     <h3>Embedded images</h3>
     <div class="images">

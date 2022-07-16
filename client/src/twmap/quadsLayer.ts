@@ -17,7 +17,8 @@ export class QuadsLayer extends Layer {
   }
 
   load(map: Map, df: DataFile, info: Info.QuadsLayer) {
-    this.name = info.name
+    if ('name' in info)
+      this.name = info.name
 
     const quadData = df.getData(info.data)
     this.quads = parseQuads(quadData, info.numQuads)
