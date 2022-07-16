@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
-  import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
+  import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
@@ -11,7 +11,7 @@
   import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl } from './util'
+  import { queryImage, externalImageUrl, layerIndex } from './util'
 
   export let map: Map
 
@@ -24,12 +24,19 @@
   canvas.addEventListener('keydown', onKeyDown)
 
   let treeViewVisible = true
-  const gameLayer = map.physicsLayerIndex(GameLayer)
-  let g = gameLayer[0]
-  let l = gameLayer[1]
+  let activeLayer = rmap.gameLayer.layer
+  $: [ g, l ] = layerIndex(rmap.map, activeLayer)
+  $: activeRlayer = rmap.groups[g].layers[l]
   let selectedTile: EditTileParams
   let peerCount = 0
   let tileSelectorVisible = false
+
+  $: {
+    for (const rgroup of rmap.groups)
+      for (const rlayer of rgroup.layers)
+        rlayer.active = false
+    activeRlayer.active = true
+  }
 
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
@@ -56,43 +63,23 @@
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteGroup(e: DeleteGroup) {
-    const group = rmap.groups[g]
-    rmap.deleteGroup(e)
-    if (e.group === g) {
-      g = -1
-      l = -1
-    }
-    else {
-      g = rmap.groups.indexOf(group)
-    }
+    const deleted = rmap.deleteGroup(e)
+    if (deleted.layers.includes(activeRlayer))
+      activeLayer = rmap.gameLayer.layer
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteLayer(e: DeleteLayer) {
-    const layer = rmap.groups[g].layers[l]
-    rmap.deleteLayer(e)
-    if (e.group === g && e.layer === l) {
-      g = -1
-      l = -1
-    }
-    else {
-      const newGroup = rmap.groups.find(g => g.layers.includes(layer))
-      g = rmap.groups.indexOf(newGroup)
-      l = newGroup.layers.indexOf(layer)
-    }
+    const deleted = rmap.deleteLayer(e)
+    if (deleted === activeRlayer)
+      activeLayer = rmap.gameLayer.layer
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderGroup(e: ReorderGroup) {
-    const group = rmap.groups[g]
     rmap.reorderGroup(e)
-    g = rmap.groups.indexOf(group)
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderLayer(e: ReorderLayer) {
-    const layer = rmap.groups[g].layers[l]
     rmap.reorderLayer(e)
-    const newGroup = rmap.groups.find(g => g.layers.includes(layer))
-    g = rmap.groups.indexOf(newGroup)
-    l = newGroup.layers.indexOf(layer)
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {
@@ -121,14 +108,13 @@
   }
 
   function updateOutlines() {
-    const layer = map.groups[g].layers[l]
     const { scale, pos } = viewport
     let { x, y } = viewport.mousePos
     x = Math.floor(x)
     y = Math.floor(y)
 
     let color = 'black'
-    if (layer instanceof TilesLayer && (x < 0 || y < 0 || x > layer.width || y > layer.height)) {
+    if (activeLayer instanceof TilesLayer && (x < 0 || y < 0 || x > activeLayer.width || y > activeLayer.height)) {
       color = 'red'
     }
 
@@ -141,10 +127,10 @@
       border-color: ${color};
     `
 
-    if (layer instanceof AnyTilesLayer) {
+    if (activeLayer instanceof AnyTilesLayer) {
       layerOutlineStyle = `
-        width: ${layer.width * scale}px;
-        height: ${layer.height * scale}px;
+        width: ${activeLayer.width * scale}px;
+        height: ${activeLayer.height * scale}px;
         top: ${-pos.y * scale}px;
         left: ${-pos.x * scale}px;
       `
@@ -259,6 +245,6 @@
     </div>
   </div>
   <Statusbar />
-  <TreeView visible={treeViewVisible} {rmap} bind:g={g} bind:l={l} />
-  <TileSelector {rmap} {g} {l} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
+  <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
+  <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
 </div>

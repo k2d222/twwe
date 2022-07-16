@@ -1,13 +1,11 @@
 <script lang="ts">
 import type { Image } from '../../twmap/image'
-import type { RenderMap } from '../../gl/renderMap'
+import type { RenderLayer } from '../../gl/renderLayer'
 import type { EditTileParams } from 'src/server/protocol'
 import { TileFlags, Tile, Tele, Switch, Speedup, Tune } from '../../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer, TuneLayer } from '../../twmap/tilesLayer'
 
-export let rmap: RenderMap
-export let g: number
-export let l: number
+export let rlayer: RenderLayer
 
 // this is a bit monolithic but hey typescript
 let selectedTile:    { type: 'tile'    } & Tile    = { type: 'tile',    ...TilesLayer.defaultTile()   }
@@ -27,7 +25,6 @@ $: {
     tilesVisible = false
 }
 
-$: rlayer = rmap.groups[g].layers[l]
 $: url = getImgURL(rlayer.texture.image)
 
 export let selected: EditTileParams

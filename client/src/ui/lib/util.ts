@@ -71,3 +71,17 @@ export const PhysicsLayers = [
 export function isPhysicsLayer(layer: Layer): layer is PhysicsLayer {
   return layer instanceof AnyTilesLayer && PhysicsLayers.includes(layer.flags)
 }
+
+export function layerIndex(map: Map, layer: Layer): [number, number] {
+  for (let g = 0; g < map.groups.length; g++) {
+    const rgroup = map.groups[g]
+    for (let l = 0; l < rgroup.layers.length; l++) {
+      if (rgroup.layers[l] === layer) {
+        return [ g, l ]
+      }
+    }
+  }
+
+  return [ -1, -1 ]
+}
+
