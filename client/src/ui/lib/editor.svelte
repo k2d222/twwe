@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
-  import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
+  import { AnyTilesLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
