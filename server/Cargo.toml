@@ -8,8 +8,10 @@ edition = "2021"
 [dependencies]
 
 tokio = { version = "1.18", features = ["full"] }
-tungstenite = "0.17"
-tokio-tungstenite = "0.17"
+tokio-tungstenite = { version = "0.17", features = ["rustls-tls-webpki-roots"] }
+tokio-rustls = "0.23"
+rustls-pemfile = "0.2"
+webpki-roots = "0.22"
 futures = "0.3"
 futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
@@ -20,3 +22,4 @@ pretty_env_logger = "0.4"
 log = "0.4"
 glob = "0.3"
 parking_lot = "0.12"
+clap = { version = "3.0", features = ["derive"] }
