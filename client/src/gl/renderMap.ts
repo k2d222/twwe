@@ -12,6 +12,7 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
 
+export type RenderPhysicsLayer = RenderGameLayer | RenderFrontLayer | RenderTeleLayer | RenderSpeedupLayer | RenderSwitchLayer | RenderTuneLayer
 
 export function isPhysicsRenderLayer(rlayer: RenderLayer): rlayer is RenderTilesLayer {
   return isPhysicsLayer(rlayer.layer)
@@ -184,8 +185,8 @@ export class RenderMap {
     const group = this.map.groups[create.group]
     const rgroup = this.groups[create.group]
     
-    let rlayer: RenderTilesLayer | RenderGameLayer | RenderFrontLayer | RenderQuadsLayer
-
+    let rlayer: RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer
+    
     if (create.kind === 'tiles') {
       const { width, height } = this.gameLayer.layer
       const layer = new TilesLayer()
@@ -208,29 +209,25 @@ export class RenderMap {
       const { width, height } = this.gameLayer.layer
       const layer = new TeleLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Tele', 'tele')
+      rlayer = new RenderTeleLayer(this, layer)
     }
     else if (create.kind === 'speedup') {
       const { width, height } = this.gameLayer.layer
       const layer = new SpeedupLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Speedup', 'speedup')
+      rlayer = new RenderSpeedupLayer(this, layer)
     }
     else if (create.kind === 'switch') {
       const { width, height } = this.gameLayer.layer
       const layer = new SwitchLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Switch', 'switch')
+      rlayer = new RenderSwitchLayer(this, layer)
     }
     else if (create.kind === 'tune') {
       const { width, height } = this.gameLayer.layer
       const layer = new TuneLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Tune', 'tune')
+      rlayer = new RenderTuneLayer(this, layer)
     }
     else {
       throw 'cannot create layer kind ' + create.kind
