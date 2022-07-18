@@ -2,12 +2,19 @@
 
 Teeworlds / DDraceNetwork map editor. Online and collaborative, just like the game.
 
-A server is (or will be) hosted at [tw.thissma.fr](http://tw.thissma.fr). Please don't DDos me. Note: try http if https is not working.
+A server is (or will be) hosted at [tw.thissma.fr](https://tw.thissma.fr). Please don't DDos me. Note: try http if https is not working.
 
 
 ## Status
 
-Currently in a early Proof-of-Concept stage. Quick development.
+Able to preview and edit tiles layer just like the original editor. It primarly focuses on the ddnet flavour of teeworlds and supports the physics layers (switch, front, tune, speedup, tele).
+
+Able to render quads layers, but not edit them yet.
+
+No support for envelopes and sound layers.
+
+Bugs are expected. It is advised to save regularly and if a bug happens, log out and back in to roll back to the previous save.
+Maps corruptions are very unlikely to happen though thanks to @patiga's [twmap library](https://gitlab.com/Patiga/twmap)
 
 ## Usage
 
@@ -23,19 +30,18 @@ The Save button saves the map on the disk on the server side. If a teeworlds ser
 
 ### Server
 
-Have rust and cargo installed. And create a maps/ directory with Sunny Side Up in it.
+Have rust and cargo installed. And create a server/maps/ directory with your .map files in it.
 
-    cd server
-    mkdir -p maps
-    wget -O maps/"Sunny Side Up.map" https://github.com/ddnet/ddnet/raw/master/data/maps/Sunny%20Side%20Up.map
-    RUST_LOG=debug cargo run
+run with `RUST_LOG=debug cargo run --release` to run in release mode with debugging info printed to stdout.
 
 Use the first command-line argument to change port e.g. `cargo run localhost:3333` to run locally on port 3333.
 
+Use the `--cert` and `--key` flags to enable TLS support for websocket. They must point to your PEM certificate and private key.
 
 ### Client
 
-Copy the `env.example` file to `.env.production` and configure the values.
+Copy the `env.example` file to `.env.production` and configure the websocket server url. For a TLS-encrypted websocket, the url scheme is `wss://`. Otherwise, use `ws://`.
+
 Have npm installed and run `npm install` in the client directory to install dependencies, `npm run dev` to run a dev server and `npm run build` to produce a release in the `dist` directory.
 
 Note: the client is written in non-strict Typescript. Typescript is only used for IDE hints and documentation, but ignored by the [Vite](https://vitejs.dev/guide/features.html#typescript) bundler.
@@ -45,8 +51,8 @@ Use `npm run check` to run Typescript checks on the project.
 
 Future short-term goals are as follows:
 
- - [x] Improve **concurrency** on the server. Currently, the whole server state is protected by a single mutex which means there cannot be any simultaneous requests.
- - [x] Allow editing multiple maps on a single server. The server will advertise which maps are available and add restrictions on which users can connect to (maybe a password per map?)
+ - [x] Improve **concurrency** on the server. ~Currently, the whole server state is protected by a single mutex which means there cannot be any simultaneous requests.~
+ - [x] Allow editing multiple maps on a single server. The server will advertise which maps are available.
  - [x] Allow users to create, upload and download maps
  - [ ] Setup access permissions.
  - [ ] Plugin to update a real Teeworlds or DDNet server (a simple /reload command sent should be enough)
