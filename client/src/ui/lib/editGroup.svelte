@@ -83,7 +83,7 @@
     on:change={(e) => onEditGroup({ group: g, paraX: intVal(e.target) })}></label>
   <label>Para Y <input type="number" value={group.paraY}
     on:change={(e) => onEditGroup({ group: g, paraY: intVal(e.target) })}></label>
-  <label>Name <input type="text" value={group.name}
+  <label>Name <input type="text" value={group.name} maxlength={11}
     on:change={(e) => onEditGroup({ group: g, name: strVal(e.target) })}></label>
   <button
     on:click={() => onCreateLayer({ kind: 'tiles', group: g, name: "" })}>

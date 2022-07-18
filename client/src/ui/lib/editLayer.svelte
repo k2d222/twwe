@@ -245,7 +245,7 @@
     {@const img = layer.image ? layer.image.name : "<none>" }
     <label>Image <input type="button" value={img}
       on:click={openFilePicker}></label>
-    <label>Name <input type="text" value={layer.name}
+    <label>Name <input type="text" value={layer.name} maxlength={11}
       on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
   {/if}
   {#if !(layer instanceof GameLayer)}

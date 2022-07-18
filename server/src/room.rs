@@ -313,6 +313,9 @@ impl Room {
                 if group.is_physics_group() {
                     return Err("cannot rename the physics group");
                 }
+                if name.len() > Group::MAX_NAME_LENGTH {
+                    return Err("group name too long");
+                }
                 group.name = name
             }
         }
@@ -449,7 +452,12 @@ impl Room {
             .ok_or("invalid layer index")?;
 
         match edit_layer.change.clone() {
-            Name(name) => *layer.name_mut().ok_or("cannot change layer name")? = name,
+            Name(name) => {
+                if name.len() > Layer::MAX_NAME_LENGTH {
+                    return Err("layer name too long");
+                }
+                *layer.name_mut().ok_or("cannot change layer name")? = name
+            }
             Color(color) => match layer {
                 Layer::Tiles(layer) => layer.color = color,
                 _ => return Err("cannot change layer color"),
