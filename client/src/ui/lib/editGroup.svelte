@@ -96,31 +96,31 @@
   {#if rgroup === rmap.physicsGroup}
     {#if !rmap.map.physicsLayer(SwitchLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "Switch" })}>
         Add switch layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(FrontLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'front', group: g, name: "Front" })}>
         Add front layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(TuneLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "Tune" })}>
         Add tune layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(SpeedupLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "Speedup" })}>
         Add speedup layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(TeleLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "Tele" })}>
         Add tele layer
       </button>
     {/if}

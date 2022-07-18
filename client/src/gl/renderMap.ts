@@ -232,7 +232,8 @@ export class RenderMap {
     else {
       throw 'cannot create layer kind ' + create.kind
     }
-
+  
+    rlayer.layer.name = create.name
     group.layers.push(rlayer.layer)
     rgroup.layers.push(rlayer)
     return rlayer
