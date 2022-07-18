@@ -221,6 +221,9 @@
     if (e.buttons === 1 && !e.ctrlKey) {
       Editor.placeTile(rmap, g, l, selectedTile)
     }
+    else if (e.buttons === 0) {
+      Editor.release()
+    }
   }
 
 

@@ -1,4 +1,4 @@
-type Vec2 = { x: number, y: number  }
+type Vec2 = { x: number, y: number }
 
 export class Viewport {
   gl: WebGL2RenderingContext

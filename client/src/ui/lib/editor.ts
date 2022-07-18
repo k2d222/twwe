@@ -34,26 +34,66 @@ export function getLayerImage(rmap: RenderMap, g: number, l: number) {
   return rmap.groups[g].layers[l].texture.image
 }
 
-export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {
-  let { x, y } = viewport.mousePos
-  x = Math.floor(x)
-  y = Math.floor(y)
-  
-  let change: EditTile = {
-    group: g,
-    layer: l,
-    x,
-    y,
-    ...tile
-  }
+let pressed = false
+let lastPos = { x: 0, y: 0 }
 
-  const res = rmap.editTile(change)
-
-  // only send change if succeeded e.g. not redundant
-  if(res)
-    server.send('edittile', change)
+export function release() {
+  pressed = false
 }
 
-// export function setupCanvasEvents(canvas: HTMLCanvasElement) {
+export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {
+  if (!pressed) {
+    lastPos = { ...viewport.mousePos }
+    pressed = true
+  }
   
-// }
+  let p1: [number, number] = [ lastPos.x, lastPos.y ]
+  let p2: [number, number] = [ viewport.mousePos.x, viewport.mousePos.y ]
+  p1 = p1.map(Math.floor) as [number, number]
+  p2 = p2.map(Math.floor) as [number, number]
+  
+  lastPos = { ...viewport.mousePos }
+  
+  const points = bresenham(p1, p2)
+
+  for (const point of points) {
+    const change: EditTile = {
+      group: g,
+      layer: l,
+      x: point[0],
+      y: point[1],
+      ...tile
+    }
+
+    const res = rmap.editTile(change)
+
+    // only send change if succeeded e.g. not redundant
+    if(res)
+      server.send('edittile', change)
+  }
+}
+
+// taken from https://github.com/thejonwithnoh/bresenham-js/blob/master/bresenham-js.js
+export function bresenham(p1: [number, number], p2: [number, number]) {
+  const delta = p2.map((val, index) => val - p1[index]);
+  const increment = delta.map(Math.sign);
+  const absDelta = delta.map(Math.abs);
+  const absDelta2 = absDelta.map(val => 2 * val);
+  const maxIndex = absDelta.reduce((acc, val, index) => val > absDelta[acc] ? index : acc, 0);
+  const error = absDelta2.map(val => val - absDelta[maxIndex]);
+
+  var res = [];
+  var current = p1.slice();
+  for (var j = 0; j < absDelta[maxIndex]; j++) {
+    res.push(current.slice());
+    for (var i = 0; i < error.length; i++) {
+      if (error[i] > 0) {
+        current[i] += increment[i];
+        error[i] -= absDelta2[maxIndex];
+      }
+      error[i] += absDelta2[i];
+    }
+  }
+  res.push(current.slice());
+  return res;
+}
