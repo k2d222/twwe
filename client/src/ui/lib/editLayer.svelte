@@ -4,7 +4,7 @@
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
   import { TilesLayerFlags } from '../../twmap/types'
-  import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
+  import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { server } from '../global'
@@ -248,8 +248,10 @@
     <label>Name <input type="text" value={layer.name}
       on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
   {/if}
-  <button
-    on:click={() => onDeleteLayer({ group: g, layer: l })}>
-    Delete layer
-  </button>
+  {#if !(layer instanceof GameLayer)}
+    <button
+      on:click={() => onDeleteLayer({ group: g, layer: l })}>
+      Delete layer
+    </button>
+  {/if}
 </div>
