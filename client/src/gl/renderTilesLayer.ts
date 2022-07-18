@@ -1,7 +1,7 @@
 import type { AnyTilesLayer, TilesLayer, FrontLayer, GameLayer, TeleLayer, TuneLayer, SpeedupLayer, SwitchLayer } from '../twmap/tilesLayer'
 import type { RenderMap } from './renderMap'
-import { RenderLayer } from './renderLayer'
-import { gl, shader, viewport } from './global'
+import { RenderLayer, ViewBox } from './renderLayer'
+import { gl, shader } from './global'
 import { TileFlags } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
@@ -61,7 +61,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
   }
 
-  render() {
+  render(viewBox: ViewBox) {
     if (!this.visible)
       return
 
@@ -73,7 +73,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     
     this.preRender()
 
-    const { x1, x2, y1, y2 } = viewport.screen()
+    const { x1, x2, y1, y2 } = viewBox
     const minX = Math.max(0, Math.floor(x1 / this.chunkSize))
     const minY = Math.max(0, Math.floor(y1 / this.chunkSize))
     const maxX = Math.min(this.buffers[0].length, Math.ceil(x2 / this.chunkSize))
@@ -352,8 +352,8 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
     textBufferInit(this.textBuffer, this.layer)
   }
 
-  render() {
-    super.render()
+  render(viewBox: ViewBox) {
+    super.render(viewBox)
 
     if (!fontTexture.loaded) {
       fontTexture.load()
@@ -424,8 +424,8 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
     gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
   }
 
-  render() {
-    super.render()
+  render(viewBox: ViewBox) {
+    super.render(viewBox)
 
     if (!fontTexture.loaded) {
       fontTexture.load()
@@ -463,8 +463,8 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
     textBufferInit(this.textBuffer, this.layer)
   }
 
-  render() {
-    super.render()
+  render(viewBox: ViewBox) {
+    super.render(viewBox)
 
     if (!fontTexture.loaded) {
       fontTexture.load()
@@ -502,8 +502,8 @@ export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
     textBufferInit(this.textBuffer, this.layer)
   }
 
-  render() {
-    super.render()
+  render(viewBox: ViewBox) {
+    super.render(viewBox)
 
     if (!fontTexture.loaded) {
       fontTexture.load()

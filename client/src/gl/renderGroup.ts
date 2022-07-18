@@ -47,23 +47,34 @@ export class RenderGroup {
     const w = x2 - x1
     const h = y2 - y1
     
-    const cx = (x1 + w / 2) * (1 - paraX / 100)
-    const cy = (y1 + h / 2) * (1 - paraY / 100)
+    // parallax
+    let cx = (x1 + w / 2) * (1 - paraX / 100)
+    let cy = (y1 + h / 2) * (1 - paraY / 100)
+    
+    // offset
+    cx -= offX / 32
+    cy -= offY / 32
     
     const mv = mat4.create()
     mat4.translate(mv, mv, [cx, cy, 0])
-    mat4.translate(mv, mv, [-offX / 32, -offY / 32, 0])
     gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
+
+    return {
+      x1: x1 - cx,
+      x2: x2 - cx,
+      y1: y1 - cy,
+      y2: y2 - cy,
+    }
   }
   
   renderLayers(layers: RenderLayer[]) {
     if (!this.visible)
       return
     
-    this.preRender()
+    const viewBox = this.preRender()
 
     for(const layer of layers)
-      layer.render()
+      layer.render(viewBox)
   }
 
   render() {
@@ -75,9 +86,9 @@ export class RenderGroup {
     if (!this.visible)
       return
     
-    this.preRender()
+    const viewBox = this.preRender()
     
-    layer.render()
+    layer.render(viewBox)
   }
 }
 
