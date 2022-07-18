@@ -47,7 +47,8 @@
   }
 
   function onChange() {
-    rmap = rmap
+    activeLayer = activeLayer // hack to redraw the tileSelector
+    rmap = rmap // hack to redraw the treeview
   }
 
 </script>
