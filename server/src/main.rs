@@ -599,7 +599,7 @@ async fn main() {
 
     loop {
         tokio::select! {
-            _ = connections.next() => (),
+            _ = connections.next(), if connections.len() != 0 => (),
             Ok((stream, addr)) = listener.accept() => {
                 let tls_acceptor = tls_acceptor.clone();
                 let (state1, state2) = (state.clone(), state.clone());
