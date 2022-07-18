@@ -1,5 +1,5 @@
 <script lang='ts'>
-  const { VITE_BACKEND_HOST, VITE_BACKEND_PORT } = import.meta.env
+  const { VITE_WEBSOCKET_URL } = import.meta.env
   import { Router, Route } from 'svelte-routing'
   import Lobby from './routes/lobby.svelte'
   import Edit from './routes/edit.svelte'
@@ -22,5 +22,5 @@
   </Router>
 {:catch e}
   {console.error(e)}
-  <Dialog type="error">Failed to connect to the server {VITE_BACKEND_HOST}:{VITE_BACKEND_PORT}.</Dialog>
+  <Dialog type="error">Failed to connect to the server {VITE_WEBSOCKET_URL}.</Dialog>
 {/await}

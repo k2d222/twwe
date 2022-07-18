@@ -2,8 +2,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly BACKEND_HOST: string
-  readonly BACKEND_PORT: string
+  readonly WEBSOCKET_URL: string
 }
 
 interface ImportMeta {

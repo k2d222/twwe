@@ -1,15 +1,16 @@
 use std::{
     collections::HashMap,
-    env,
     fs::File,
+    io,
     net::SocketAddr,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex, MutexGuard},
     time::SystemTime,
 };
 
 use std::io::prelude::*;
 
+use clap::Parser;
 use glob::glob;
 
 use futures::{
@@ -18,7 +19,10 @@ use futures::{
     stream::FuturesUnordered,
     StreamExt, TryStreamExt,
 };
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    net::TcpListener,
+};
 
 mod room;
 use room::Room;
@@ -28,7 +32,8 @@ use protocol::*;
 
 mod twmap_map_edit;
 
-use tungstenite::Message;
+use tokio_rustls::{rustls, TlsAcceptor};
+use tokio_tungstenite::tungstenite::Message;
 use twmap::TwMap;
 
 type Tx = UnboundedSender<Message>;
@@ -43,7 +48,7 @@ pub struct Peer {
     // name: String, // TODO add more information about users
     addr: SocketAddr,
     tx: Tx,
-    room: Option<Arc<Room>>, // stream: WebSocketStream<TcpStream>,
+    room: Option<Arc<Room>>,
 }
 
 impl Peer {
@@ -418,7 +423,10 @@ impl Server {
         self.respond_and_broadcast(peer, req.id, res);
     }
 
-    async fn handle_connection(&self, raw_stream: TcpStream, addr: SocketAddr) {
+    async fn handle_connection<S>(&self, raw_stream: S, addr: SocketAddr)
+    where
+        S: AsyncRead + AsyncWrite + Unpin,
+    {
         log::debug!("Incoming TCP connection from: {}", addr);
 
         // accept
@@ -524,45 +532,106 @@ fn create_server() -> Server {
     server
 }
 
+fn load_certs(path: &Path) -> io::Result<Vec<rustls::Certificate>> {
+    rustls_pemfile::certs(&mut io::BufReader::new(File::open(path)?))
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
+        .map(|mut certs| certs.drain(..).map(rustls::Certificate).collect())
+}
+
+fn load_keys(path: &Path) -> io::Result<Vec<rustls::PrivateKey>> {
+    rustls_pemfile::pkcs8_private_keys(&mut io::BufReader::new(File::open(path)?))
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
+        .map(|mut keys| keys.drain(..).map(rustls::PrivateKey).collect())
+}
+
+#[derive(Parser)]
+#[clap(name = "TWWE Server")]
+#[clap(author = "Mathis Brossier <mathis.brossier@gmail.com>")]
+#[clap(version = "0.1")]
+#[clap(about = "TeeWorlds Web Editor server", long_about = None)]
+struct Cli {
+    /// Address and port to listen to (addr:port)
+    #[clap(value_parser, default_value = "127.0.0.1:16800")]
+    addr: String,
+
+    // Path to the TLS certificate
+    #[clap(value_parser, short, long, requires = "key")]
+    cert: Option<PathBuf>,
+
+    /// Path to the TLS certificate private key
+    #[clap(value_parser, short, long, requires = "cert")]
+    key: Option<PathBuf>,
+}
+
 #[tokio::main]
 async fn main() {
+    let args = Cli::parse();
+
     std::fs::remove_dir_all("uploads").ok();
     std::fs::create_dir("uploads").ok();
 
     pretty_env_logger::init();
-    let addr = env::args()
-        .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:16800".to_string());
 
     let state = Arc::new(create_server());
 
+    // Setup TLS
+    let tls_acceptor = match (&args.cert, &args.key) {
+        (Some(cert), Some(key)) => {
+            let certs = load_certs(cert).expect("certificate file not found");
+            let mut keys = load_keys(key).expect("private key file not found");
+            let config = rustls::ServerConfig::builder()
+                .with_safe_defaults()
+                .with_no_client_auth()
+                .with_single_cert(certs, keys.remove(0))
+                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))
+                .unwrap();
+            Some(TlsAcceptor::from(Arc::new(config)))
+        }
+        _ => None,
+    };
+
     // Create the event loop and TCP listener we'll accept connections on.
-    let try_socket = TcpListener::bind(&addr).await;
+    let try_socket = TcpListener::bind(&args.addr).await;
     let listener = try_socket.expect("Failed to bind");
-    log::info!("Listening on: {}", addr);
+    log::info!("Listening on: {}", args.addr);
 
     let mut connections = FuturesUnordered::new();
 
     loop {
         tokio::select! {
-            _ = connections.next() => (),
-            res = listener.accept() => {
-                match res {
-                    Ok((stream, addr)) => {
-                        let state = state.clone();
-                        let state2 = state.clone();
-                        let handle = async move {
-                            let res = tokio::spawn(async move { state.handle_connection(stream, addr).await }).await;
-                            if let Err(e) = res {
-                                log::error!("task for peer {} panicked: {}", addr, e);
-                                state2.recover_after_panic(addr);
+            _ = connections.next(), if connections.len() != 0 => (),
+            Ok((stream, addr)) = listener.accept() => {
+                let tls_acceptor = tls_acceptor.clone();
+                let (state1, state2) = (state.clone(), state.clone());
+                let handle = async move {
+                    // TLS Case
+                    if let Some(acceptor) = tls_acceptor {
+                        match acceptor.accept(stream).await {
+                            Ok(stream) => {
+                                let res = tokio::spawn(async move { state1.handle_connection(stream, addr).await }).await;
+                                if let Err(e) = res {
+                                    log::error!("task for peer {} panicked: {}", addr, e);
+                                    state2.recover_after_panic(addr);
+                                }
                             }
-                        };
-                        connections.push(handle);
-                    },
-                    Err(e) => log::error!("accept() failed: {}", e)
-                }
+                            Err(e) => {
+                                log::error!("tcp connection with peer {} failed: {}", addr, e);
+                            }
+                        }
+                    }
+
+                    // no TLS case
+                    else {
+                        let res = tokio::spawn(async move { state1.handle_connection(stream, addr).await }).await;
+                        if let Err(e) = res {
+                            log::error!("task for peer {} panicked: {}", addr, e);
+                            state2.recover_after_panic(addr);
+                        }
+                    }
+                };
+                connections.push(handle);
             },
+            else => log::error!("accept() failed")
         }
     }
 }

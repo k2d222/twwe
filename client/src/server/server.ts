@@ -18,8 +18,8 @@ export class Server {
   broadcastListeners: { [K in keyof ResponseContent]: BroadcastListener<K>[] }
   binaryListeners: BinaryListener[]
     
-  private constructor(address: string, port: number) {
-    this.socket = new WebSocket(`ws://${address}:${port}/`)
+  private constructor(wsUrl: string) {
+    this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = (e) => this.onMessage(e)
     this.queryListeners = {}
@@ -59,9 +59,9 @@ export class Server {
     return Math.floor(Math.random() * Math.pow(2, 16))
   }
   
-  static create(address: string, port: number): Promise<Server> {
+  static create(wsUrl: string): Promise<Server> {
     return new Promise((resolve, reject) => {
-      const server = new Server(address, port)
+      const server = new Server(wsUrl)
       
       const onopen = () => {
         server.socket.removeEventListener('error', onerror)

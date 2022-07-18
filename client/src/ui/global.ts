@@ -1,6 +1,6 @@
 import { Server } from "../server/server"
-const { VITE_BACKEND_HOST, VITE_BACKEND_PORT } = import.meta.env
+const { VITE_WEBSOCKET_URL } = import.meta.env
 
-export const pServer = Server.create(VITE_BACKEND_HOST, parseInt(VITE_BACKEND_PORT, 10))
+export const pServer = Server.create(VITE_WEBSOCKET_URL)
 export let server: Server
 pServer.then(s => server = s)

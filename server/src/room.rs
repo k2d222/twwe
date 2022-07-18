@@ -12,7 +12,7 @@ use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
-use tungstenite::protocol::Message;
+use tokio_tungstenite::tungstenite::protocol::Message;
 
 use twmap::{
     constants, map_checks::CheckData, CompressedData, EmbeddedImage, ExternalImage, FrontLayer,
