@@ -42,7 +42,6 @@ export class RenderGroup {
   }
   
   private preRender() {
-    // TODO: offset
     const { offX, offY, paraX, paraY } = this.group
     const { x1, x2, y1, y2 } = viewport.screen()
     const w = x2 - x1
@@ -51,11 +50,9 @@ export class RenderGroup {
     const cx = (x1 + w / 2) * (1 - paraX / 100)
     const cy = (y1 + h / 2) * (1 - paraY / 100)
     
-    // console.log(this.group.name, offX, offY, paraX, paraY)
-    
     const mv = mat4.create()
     mat4.translate(mv, mv, [cx, cy, 0])
-    // mat4.translate(mv, mv, [offX, offY, 0])
+    mat4.translate(mv, mv, [-offX / 32, -offY / 32, 0])
     gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
   }
   
