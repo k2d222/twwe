@@ -47,10 +47,13 @@ export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileP
     pressed = true
   }
   
+  const rgroup = rmap.groups[g]
+  let off = rgroup.offset()
+
   let p1: [number, number] = [ lastPos.x, lastPos.y ]
   let p2: [number, number] = [ viewport.mousePos.x, viewport.mousePos.y ]
-  p1 = p1.map(Math.floor) as [number, number]
-  p2 = p2.map(Math.floor) as [number, number]
+  p1 = p1.map((v, i) => Math.floor(v - off[i])) as [number, number]
+  p2 = p2.map((v, i) => Math.floor(v - off[i])) as [number, number]
   
   lastPos = { ...viewport.mousePos }
   
