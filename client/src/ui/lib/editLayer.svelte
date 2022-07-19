@@ -3,8 +3,8 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
-  import { TilesLayerFlags } from '../../twmap/types'
-  import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
+  import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
+  import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { server } from '../global'
@@ -222,11 +222,17 @@
   {/if}
   <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
     on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
-  {#if layer instanceof TilesLayer}
+  {#if layer instanceof AnyTilesLayer}
     <label>Width <input type="number" min={2} max={10000} value={layer.width}
       on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
     <label>Height <input type="number" min={2} max={10000} value={layer.height}
       on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
+  {/if}
+  {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
+    <label>Detail <input type="checkbox" checked={layer.detail}
+      on:change={() => onEditLayer({ group: g, layer: l, flags: layer.detail ? LayerFlags.NONE : LayerFlags.DETAIL })}></label>
+  {/if}
+  {#if layer instanceof TilesLayer}
     {#if layer instanceof TilesLayer}
       {@const img = layer.image ? layer.image.name : "<none>" }
       <label>Image <input type="button" value={img}
@@ -245,11 +251,13 @@
     {@const img = layer.image ? layer.image.name : "<none>" }
     <label>Image <input type="button" value={img}
       on:click={openFilePicker}></label>
-    <label>Name <input type="text" value={layer.name}
+    <label>Name <input type="text" value={layer.name} maxlength={11}
       on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
   {/if}
-  <button
-    on:click={() => onDeleteLayer({ group: g, layer: l })}>
-    Delete layer
-  </button>
+  {#if !(layer instanceof GameLayer)}
+    <button
+      on:click={() => onDeleteLayer({ group: g, layer: l })}>
+      Delete layer
+    </button>
+  {/if}
 </div>

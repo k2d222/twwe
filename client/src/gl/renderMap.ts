@@ -1,6 +1,7 @@
 import type { Map, PhysicsLayer } from '../twmap/map'
 import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
+import { LayerFlags } from '../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
 import { RenderAnyTilesLayer, RenderGameLayer, RenderTilesLayer, RenderFrontLayer, RenderSwitchLayer, RenderSpeedupLayer, RenderTeleLayer, RenderTuneLayer } from './renderTilesLayer'
 import { QuadsLayer } from '../twmap/quadsLayer'
@@ -12,6 +13,7 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
 
+export type RenderPhysicsLayer = RenderGameLayer | RenderFrontLayer | RenderTeleLayer | RenderSpeedupLayer | RenderSwitchLayer | RenderTuneLayer
 
 export function isPhysicsRenderLayer(rlayer: RenderLayer): rlayer is RenderTilesLayer {
   return isPhysicsLayer(rlayer.layer)
@@ -126,9 +128,10 @@ export class RenderMap {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer]
 
-    if (change.name) rlayer.layer.name = change.name
+    if ('flags' in change) rlayer.layer.detail = (change.flags & LayerFlags.DETAIL) === 1
+    if ('name' in change) rlayer.layer.name = change.name
 
-    if (rlayer instanceof RenderTilesLayer) {
+    if (rlayer instanceof RenderAnyTilesLayer) {
       if ('color' in change) rlayer.layer.color = change.color
       if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
       if ('height' in change) this.setLayerHeight(rgroup, rlayer, change.height)
@@ -184,8 +187,8 @@ export class RenderMap {
     const group = this.map.groups[create.group]
     const rgroup = this.groups[create.group]
     
-    let rlayer: RenderTilesLayer | RenderGameLayer | RenderFrontLayer | RenderQuadsLayer
-
+    let rlayer: RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer
+    
     if (create.kind === 'tiles') {
       const { width, height } = this.gameLayer.layer
       const layer = new TilesLayer()
@@ -208,34 +211,31 @@ export class RenderMap {
       const { width, height } = this.gameLayer.layer
       const layer = new TeleLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Tele', 'tele')
+      rlayer = new RenderTeleLayer(this, layer)
     }
     else if (create.kind === 'speedup') {
       const { width, height } = this.gameLayer.layer
       const layer = new SpeedupLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Speedup', 'speedup')
+      rlayer = new RenderSpeedupLayer(this, layer)
     }
     else if (create.kind === 'switch') {
       const { width, height } = this.gameLayer.layer
       const layer = new SwitchLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Switch', 'switch')
+      rlayer = new RenderSwitchLayer(this, layer)
     }
     else if (create.kind === 'tune') {
       const { width, height } = this.gameLayer.layer
       const layer = new TuneLayer()
       layer.init(width, height, layer.defaultTile)
-      // rlayer = new RenderTilesLayer(this, layer)
-      // rlayer.texture = createEditorTexture('Tune', 'tune')
+      rlayer = new RenderTuneLayer(this, layer)
     }
     else {
       throw 'cannot create layer kind ' + create.kind
     }
-
+  
+    rlayer.layer.name = create.name
     group.layers.push(rlayer.layer)
     rgroup.layers.push(rlayer)
     return rlayer
@@ -262,7 +262,7 @@ export class RenderMap {
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
   
-  private setLayerWidth(rgroup: RenderGroup, rlayer: RenderTilesLayer, width: number) {
+  private setLayerWidth(rgroup: RenderGroup, rlayer: RenderAnyTilesLayer<any>, width: number) {
     // changing the size of any physics layer applies to all physics layers
     if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
@@ -273,12 +273,12 @@ export class RenderMap {
       }
     }
     else {
-      this.setLayerWidth(rgroup, rlayer, width)
+      rlayer.layer.setWidth(width, rlayer.layer.defaultTile)
       rlayer.recompute()
     }
   }
 
-  private setLayerHeight(rgroup: RenderGroup, rlayer: RenderTilesLayer, height: number) {
+  private setLayerHeight(rgroup: RenderGroup, rlayer: RenderAnyTilesLayer<any>, height: number) {
     // changing the size of any physics layer applies to all physics layers
     if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
@@ -289,7 +289,7 @@ export class RenderMap {
       }
     }
     else {
-      this.setLayerHeight(rgroup, rlayer, height)
+      rlayer.layer.setHeight(height, rlayer.layer.defaultTile)
       rlayer.recompute()
     }
   }

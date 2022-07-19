@@ -111,6 +111,7 @@ pub struct DeleteGroup {
 #[serde(rename_all = "camelCase")]
 pub enum OneLayerChange {
     Name(String),
+    Flags(i32),
     Color(Color),
     Width(u32),
     Height(u32),

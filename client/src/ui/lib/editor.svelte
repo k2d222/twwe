@@ -27,6 +27,7 @@
   let activeLayer = rmap.gameLayer.layer
   $: [ g, l ] = layerIndex(rmap.map, activeLayer)
   $: activeRlayer = rmap.groups[g].layers[l]
+  $: activeRgroup = rmap.groups[g]
   let selectedTile: EditTileParams
   let peerCount = 0
   let tileSelectorVisible = false
@@ -110,19 +111,20 @@
   function updateOutlines() {
     const { scale, pos } = viewport
     let { x, y } = viewport.mousePos
-    x = Math.floor(x)
-    y = Math.floor(y)
+    let [ offX, offY ] = activeRgroup.offset()
+    x = Math.floor(x - offX)
+    y = Math.floor(y - offY)
 
     let color = 'black'
-    if (activeLayer instanceof AnyTilesLayer && (x < 0 || y < 0 || x > activeLayer.width || y > activeLayer.height)) {
+    if (activeLayer instanceof AnyTilesLayer && (x < 0 || y < 0 || x >= activeLayer.width || y >= activeLayer.height)) {
       color = 'red'
     }
 
     hoverTileStyle = `
       width: ${scale}px;
       height: ${scale}px;
-      top: ${(y - pos.y) * scale}px;
-      left: ${(x - pos.x) * scale}px;
+      top: ${(y + offY - pos.y) * scale}px;
+      left: ${(x + offX - pos.x) * scale}px;
       border-width: ${scale / 16}px;
       border-color: ${color};
     `
@@ -131,8 +133,8 @@
       layerOutlineStyle = `
         width: ${activeLayer.width * scale}px;
         height: ${activeLayer.height * scale}px;
-        top: ${-pos.y * scale}px;
-        left: ${-pos.x * scale}px;
+        top: ${(-pos.y + offY) * scale}px;
+        left: ${-(pos.x - offX) * scale}px;
       `
     }
     else {

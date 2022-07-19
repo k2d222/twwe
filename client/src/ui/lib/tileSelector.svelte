@@ -59,12 +59,22 @@ function getImgURL(image: Image) {
 }
 
 function buttonStyle(url: string, id: number) {
+  if (id === 0) {
+    return `
+      background-image: url('/editor/checker.png');
+      background-size: 16px;
+      background-repeat: repeat;
+    `
+  }
+
   const row = Math.floor(id / tileCount)
   const col = id % tileCount
+  const c = rlayer.layer instanceof TilesLayer ? rlayer.layer.color : { r: 255, g: 255, b: 255, a:255 }
   return `
     background-image: url('${url}');
     background-position-x: -${col}00%;
-    background-position-y: -${row}00%
+    background-position-y: -${row}00%;
+    background-color: rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255});
   `
 }
 

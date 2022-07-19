@@ -83,8 +83,10 @@
     on:change={(e) => onEditGroup({ group: g, paraX: intVal(e.target) })}></label>
   <label>Para Y <input type="number" value={group.paraY}
     on:change={(e) => onEditGroup({ group: g, paraY: intVal(e.target) })}></label>
-  <label>Name <input type="text" value={group.name}
-    on:change={(e) => onEditGroup({ group: g, name: strVal(e.target) })}></label>
+  {#if group !== rmap.physicsGroup.group}
+    <label>Name <input type="text" value={group.name} maxlength={11}
+      on:change={(e) => onEditGroup({ group: g, name: strVal(e.target) })}></label>
+  {/if}
   <button
     on:click={() => onCreateLayer({ kind: 'tiles', group: g, name: "" })}>
     Add tile layer
@@ -96,31 +98,31 @@
   {#if rgroup === rmap.physicsGroup}
     {#if !rmap.map.physicsLayer(SwitchLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'switch', group: g, name: "Switch" })}>
         Add switch layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(FrontLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'front', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'front', group: g, name: "Front" })}>
         Add front layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(TuneLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'tune', group: g, name: "Tune" })}>
         Add tune layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(SpeedupLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'speedup', group: g, name: "Speedup" })}>
         Add speedup layer
       </button>
     {/if}
     {#if !rmap.map.physicsLayer(TeleLayer)}
       <button
-        on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "" })}>
+        on:click={() => onCreateLayer({ kind: 'tele', group: g, name: "Tele" })}>
         Add tele layer
       </button>
     {/if}
