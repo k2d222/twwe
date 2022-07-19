@@ -15,9 +15,9 @@ use futures::channel::mpsc::UnboundedSender;
 use tokio_tungstenite::tungstenite::protocol::Message;
 
 use twmap::{
-    constants, map_checks::CheckData, CompressedData, EmbeddedImage, ExternalImage, FrontLayer,
-    GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer,
-    TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
+    constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage,
+    ExternalImage, FrontLayer, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, SpeedupLayer,
+    SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
 };
 
 use crate::{
@@ -457,6 +457,21 @@ impl Room {
                     return Err("layer name too long");
                 }
                 *layer.name_mut().ok_or("cannot change layer name")? = name
+            }
+            Flags(flags) => {
+                let flags = LayerFlags::from_bits(flags).ok_or("invalid layer flags")?;
+                match layer {
+                    Layer::Front(_)
+                    | Layer::Tele(_)
+                    | Layer::Speedup(_)
+                    | Layer::Switch(_)
+                    | Layer::Tune(_)
+                    | Layer::Invalid(_)
+                    | Layer::Game(_) => (),
+                    Layer::Tiles(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
+                    Layer::Quads(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
+                    Layer::Sounds(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
+                }
             }
             Color(color) => match layer {
                 Layer::Tiles(layer) => layer.color = color,

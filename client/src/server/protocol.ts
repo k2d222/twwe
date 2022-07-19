@@ -81,13 +81,13 @@ export type CreateLayer = {
 export interface CommonLayerChange {
   group: number,
   layer: number,
-  name?: string
+  flags?: number,
+  name?: string,
 }
 
 export interface EditTilesLayer extends CommonLayerChange {
   width?: number,
   height?: number,
-  // flags?: number,
   color?: Color,
   // colorEnv?: number, // TODO
   // colorEnvOffset?: number, // TODO

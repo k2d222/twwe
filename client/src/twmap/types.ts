@@ -6,6 +6,11 @@ export enum TileFlags {
   ROTATE = 8,
 }
 
+export enum LayerFlags {
+  NONE = 0,
+  DETAIL = 1,
+}
+
 export enum LayerType {
   INVALID = 0,
   TILES   = 2,

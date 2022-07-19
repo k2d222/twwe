@@ -3,7 +3,7 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
-  import { TilesLayerFlags } from '../../twmap/types'
+  import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
@@ -227,6 +227,10 @@
       on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
     <label>Height <input type="number" min={2} max={10000} value={layer.height}
       on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
+  {/if}
+  {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
+    <label>Detail <input type="checkbox" checked={layer.detail}
+      on:change={() => onEditLayer({ group: g, layer: l, flags: layer.detail ? LayerFlags.NONE : LayerFlags.DETAIL })}></label>
   {/if}
   {#if layer instanceof TilesLayer}
     {#if layer instanceof TilesLayer}

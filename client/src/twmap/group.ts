@@ -48,12 +48,14 @@ export class Group {
         const tilesLayerInfo = parseTilesLayer(layerItem.data)
         const layer = createLayer(tilesLayerInfo.flags)
         layer.load(map, df, tilesLayerInfo)
+        layer.detail = (layerInfo.flags & Info.LayerFlags.DETAIL) === 1
         layers.push(layer)
       }
       else if (layerInfo.type === Info.LayerType.QUADS) {
         const quadsLayerInfo = parseQuadsLayer(layerItem.data)
         const layer = new QuadsLayer()
         layer.load(map, df, quadsLayerInfo)
+        layer.detail = (layerInfo.flags & Info.LayerFlags.DETAIL) === 1
         layers.push(layer)
       }
       else {

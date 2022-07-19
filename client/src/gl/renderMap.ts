@@ -1,6 +1,7 @@
 import type { Map, PhysicsLayer } from '../twmap/map'
 import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
+import { LayerFlags } from '../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
 import { RenderAnyTilesLayer, RenderGameLayer, RenderTilesLayer, RenderFrontLayer, RenderSwitchLayer, RenderSpeedupLayer, RenderTeleLayer, RenderTuneLayer } from './renderTilesLayer'
 import { QuadsLayer } from '../twmap/quadsLayer'
@@ -127,7 +128,8 @@ export class RenderMap {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer]
 
-    if (change.name) rlayer.layer.name = change.name
+    if ('flags' in change) rlayer.layer.detail = (change.flags & LayerFlags.DETAIL) === 1
+    if ('name' in change) rlayer.layer.name = change.name
 
     if (rlayer instanceof RenderAnyTilesLayer) {
       if ('color' in change) rlayer.layer.color = change.color
