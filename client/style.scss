@@ -224,6 +224,13 @@ nav {
     margin: 0;
     border: 0;
     outline: 0;
+    
+    .color {
+      width: 100%;
+      height: 100%;
+      background: red;
+      mask-size: $tile-size * 16;
+    }
   }
 
   .tile.selected {
@@ -473,7 +480,9 @@ nav.hidden .context {
 
 #layer-outline {
   position: fixed;
-  outline: 4px solid white;
+  border: 2px solid white;
+  outline: 2px solid black;
+  box-shadow: 0 0 10px 1px;
   pointer-events: none;
 }
 
