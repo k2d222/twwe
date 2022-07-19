@@ -20,12 +20,12 @@ export class Renderer {
     this.shader = new Shader(this.gl, TW_VERT, TW_FRAG)
 
     this.gl.enable(this.gl.BLEND)
-    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
+    this.gl.blendFunc(this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA)
     this.gl.clearColor(0.0, 0.0, 0.0, 0.0)
   }
 
   render(map: RenderMap) {
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
 
     this.gl.activeTexture(this.gl.TEXTURE0)
     this.gl.uniform1i(this.shader.locs.unifs.uSampler, 0)

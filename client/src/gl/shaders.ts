@@ -38,6 +38,9 @@ export const TW_FRAG = `
       gl_FragColor *= texture2D(uSampler, vec2(vTexCoord.s, vTexCoord.t));
     if (uVertexColor)
       gl_FragColor *= vColor;
+
+    // premultiplied alpha
+    gl_FragColor.rgb *= gl_FragColor.a;
   }
 ` as const
 
