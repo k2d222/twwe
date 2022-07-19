@@ -129,7 +129,7 @@ export class RenderMap {
 
     if (change.name) rlayer.layer.name = change.name
 
-    if (rlayer instanceof RenderTilesLayer) {
+    if (rlayer instanceof RenderAnyTilesLayer) {
       if ('color' in change) rlayer.layer.color = change.color
       if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
       if ('height' in change) this.setLayerHeight(rgroup, rlayer, change.height)
@@ -260,7 +260,7 @@ export class RenderMap {
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
   
-  private setLayerWidth(rgroup: RenderGroup, rlayer: RenderTilesLayer, width: number) {
+  private setLayerWidth(rgroup: RenderGroup, rlayer: RenderAnyTilesLayer<any>, width: number) {
     // changing the size of any physics layer applies to all physics layers
     if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
@@ -271,12 +271,12 @@ export class RenderMap {
       }
     }
     else {
-      this.setLayerWidth(rgroup, rlayer, width)
+      rlayer.layer.setWidth(width, rlayer.layer.defaultTile)
       rlayer.recompute()
     }
   }
 
-  private setLayerHeight(rgroup: RenderGroup, rlayer: RenderTilesLayer, height: number) {
+  private setLayerHeight(rgroup: RenderGroup, rlayer: RenderAnyTilesLayer<any>, height: number) {
     // changing the size of any physics layer applies to all physics layers
     if (isPhysicsLayer(rlayer.layer)) {
       for (let rlayer of rgroup.layers) {
@@ -287,7 +287,7 @@ export class RenderMap {
       }
     }
     else {
-      this.setLayerHeight(rgroup, rlayer, height)
+      rlayer.layer.setHeight(height, rlayer.layer.defaultTile)
       rlayer.recompute()
     }
   }
