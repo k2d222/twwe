@@ -75,7 +75,6 @@ function buttonStyle(url: string, id: number) {
     background-position-x: -${col}00%;
     background-position-y: -${row}00%;
     background-color: rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255});
-    background-blend-mode: multiply;
   `
 }
 
