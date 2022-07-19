@@ -222,11 +222,13 @@
   {/if}
   <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
     on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
-  {#if layer instanceof TilesLayer}
+  {#if layer instanceof AnyTilesLayer}
     <label>Width <input type="number" min={2} max={10000} value={layer.width}
       on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
     <label>Height <input type="number" min={2} max={10000} value={layer.height}
       on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
+  {/if}
+  {#if layer instanceof TilesLayer}
     {#if layer instanceof TilesLayer}
       {@const img = layer.image ? layer.image.name : "<none>" }
       <label>Image <input type="button" value={img}
