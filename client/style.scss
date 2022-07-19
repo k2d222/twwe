@@ -15,7 +15,8 @@ canvas {
   position: fixed;
   top: 0;
   left:0;
-  background: black;
+  background-image: url('/editor/checker.png');
+  background-repeat: repeat;
 }
 
 #menu {
