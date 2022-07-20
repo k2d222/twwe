@@ -2,7 +2,6 @@ import { ItemType } from './types'
 import { GameLayer, FrontLayer, TeleLayer, SpeedupLayer, SwitchLayer, TuneLayer } from './tilesLayer'
 import { DataFile } from './datafile'
 import { parseGroup, parseImage } from './parser'
-// import { Texture } from './texture'
 import { Group } from './group'
 import { Image } from './image'
 

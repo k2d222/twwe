@@ -33,10 +33,14 @@
   let tileSelectorVisible = false
 
   $: {
-    for (const rgroup of rmap.groups)
-      for (const rlayer of rgroup.layers)
+    for (const rgroup of rmap.groups) {
+      rgroup.active = false
+      for (const rlayer of rgroup.layers) {
         rlayer.active = false
+      }
+    }
     activeRlayer.active = true
+    activeRgroup.active = true
   }
 
   function serverOnUsers(e: ListUsers) {
@@ -128,6 +132,25 @@
       border-width: ${scale / 16}px;
       border-color: ${color};
     `
+    
+    if (activeRgroup.group.clipping) {
+      let { clipX, clipY, clipW, clipH } = activeRgroup.group
+      clipX /= 32
+      clipY /= 32
+      clipW /= 32
+      clipH /= 32
+      clipOutlineStyle = `
+        width: ${clipW * scale}px;
+        height: ${clipH * scale}px;
+        top: ${(clipY - pos.y) * scale}px;
+        left: ${(clipX - pos.x) * scale}px;
+      `
+    }
+    else {
+      clipOutlineStyle = `
+        display: none;
+      `
+    }
 
     if (activeLayer instanceof AnyTilesLayer) {
       layerOutlineStyle = `
@@ -217,6 +240,7 @@
   
   let hoverTileStyle = ''
   let layerOutlineStyle = ''
+  let clipOutlineStyle = ''
 
   function onMouseMove(e: MouseEvent) {
     // left button pressed
@@ -235,6 +259,7 @@
   <div bind:this={cont} on:mousemove={onMouseMove}>
     <div id="hover-tile" style={hoverTileStyle}></div>
     <div id="layer-outline" style={layerOutlineStyle}></div>
+    <div id="clip-outline" style={clipOutlineStyle}></div>
   </div>
   <div id="menu">
     <div class="left">

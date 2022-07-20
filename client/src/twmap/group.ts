@@ -12,6 +12,11 @@ export class Group {
   offY: number
   paraX: number
   paraY: number
+  clipping: boolean
+  clipX: number
+  clipY: number
+  clipW: number
+  clipH: number
   layers: Layer[]
 
   constructor() {
@@ -29,6 +34,11 @@ export class Group {
     this.offY = info.offY
     this.paraX = info.paraX
     this.paraY = info.paraY
+    this.clipping = info.clipping
+    this.clipX = info.clipX
+    this.clipY = info.clipY
+    this.clipW = info.clipW
+    this.clipH = info.clipH
     this.layers = this.loadLayers(map, df, info.startLayer, info.numLayers)
   }
 

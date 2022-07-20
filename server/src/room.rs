@@ -309,6 +309,11 @@ impl Room {
             OffY(off_y) => group.offset_y = off_y,
             ParaX(para_x) => group.parallax_x = para_x,
             ParaY(para_y) => group.parallax_y = para_y,
+            Clipping(clipping) => group.clipping = clipping,
+            ClipX(clip_x) => group.clip_x = clip_x,
+            ClipY(clip_y) => group.clip_y = clip_y,
+            ClipW(clip_w) => group.clip_width = clip_w,
+            ClipH(clip_h) => group.clip_height = clip_h,
             Name(name) => {
                 if group.is_physics_group() {
                     return Err("cannot rename the physics group");

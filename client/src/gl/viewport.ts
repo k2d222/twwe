@@ -81,6 +81,13 @@ export class Viewport {
     ]
   }
 
+  canvasToPixel(x: number, y: number) {
+    return [
+      x / this.canvas.width * this.canvas.clientWidth,
+      y / this.canvas.height * this.canvas.clientHeight,
+    ]
+  }
+
   canvasToWorld(x: number, y: number) {
     return [
       this.pos.x + x / this.scale,
@@ -88,9 +95,21 @@ export class Viewport {
     ]
   }
 
+  worldToCanvas(x: number, y: number) {
+    return [
+      (x - this.pos.x) * this.scale,
+      (y - this.pos.y) * this.scale,
+    ]
+  }
+
   pixelToWorld(x: number, y: number) {
     const [ x2, y2 ] = this.pixelToCanvas(x, y)
     return this.canvasToWorld(x2, y2)
+  }
+  
+  worldToPixel(x: number, y: number) {
+    const [ x2, y2 ] = this.worldToCanvas(x, y)
+    return this.canvasToPixel(x2, y2)
   }
 
   private onresize() {

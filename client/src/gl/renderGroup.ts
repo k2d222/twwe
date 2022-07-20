@@ -34,11 +34,13 @@ export class RenderGroup {
   group: Group
   layers: RenderLayer[]
   visible: boolean
+  active: boolean
   
   constructor(rmap: RenderMap, group: Group) {
     this.group = group
     this.layers = group.layers.map(l => createRenderLayer(rmap, l))
     this.visible = true
+    this.active = false
   }
   
   offset(): [number, number] {
@@ -58,6 +60,18 @@ export class RenderGroup {
     return [ cx, cy ]
   }
   
+  private setClipping() {
+      let { clipX, clipY, clipW, clipH } = this.group
+      clipX /= 32
+      clipY /= 32
+      clipW /= 32
+      clipH /= 32
+      gl.enable(gl.SCISSOR_TEST)
+      const [ cx1, cy1 ] = viewport.worldToCanvas(clipX, clipY)
+      const [ cx2, cy2 ] = viewport.worldToCanvas(clipX + clipW, clipY + clipH)
+      gl.scissor(cx1, viewport.canvas.height - cy2, cx2 - cx1, cy2 - cy1)
+  }
+  
   private preRender() {
     const { x1, x2, y1, y2 } = viewport.screen()
     const [ cx, cy ] = this.offset()
@@ -65,6 +79,9 @@ export class RenderGroup {
     const mv = mat4.create()
     mat4.translate(mv, mv, [cx, cy, 0])
     gl.uniformMatrix4fv(shader.locs.unifs.uMVMatrix, false, mv)
+    
+    if (this.group.clipping)
+      this.setClipping()
 
     return {
       x1: x1 - cx,
@@ -82,6 +99,8 @@ export class RenderGroup {
 
     for(const layer of layers)
       layer.render(viewBox)
+    
+    gl.disable(gl.SCISSOR_TEST)
   }
 
   render() {
@@ -94,8 +113,8 @@ export class RenderGroup {
       return
     
     const viewBox = this.preRender()
-    
     layer.render(viewBox)
+    gl.disable(gl.SCISSOR_TEST)
   }
 }
 

@@ -108,6 +108,11 @@ export class RenderMap {
     if (change.offY) rgroup.group.offY = change.offY
     if (change.paraX) rgroup.group.paraX = change.paraX
     if (change.paraY) rgroup.group.paraY = change.paraY
+    if (change.clipping) rgroup.group.clipping = change.clipping
+    if (change.clipX) rgroup.group.clipX = change.clipX
+    if (change.clipY) rgroup.group.clipY = change.clipY
+    if (change.clipW) rgroup.group.clipW = change.clipW
+    if (change.clipH) rgroup.group.clipH = change.clipH
     if (change.name) rgroup.group.name = change.name
   }
   

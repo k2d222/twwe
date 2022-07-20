@@ -61,7 +61,7 @@ export type Group = MapObj & {
   paraY: number,
   startLayer: number,
   numLayers: number,
-  useClipping: number,
+  clipping: boolean,
   clipX: number,
   clipY: number,
   clipW: number,

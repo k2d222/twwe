@@ -487,6 +487,14 @@ nav.hidden .context {
   pointer-events: none;
 }
 
+#clip-outline {
+  position: fixed;
+  border: 1px solid white;
+  outline: 1px solid red;
+  box-shadow: 0 0 5px 1px;
+  pointer-events: none;
+}
+
 #image-picker {
   position: fixed;
   inset: 0;

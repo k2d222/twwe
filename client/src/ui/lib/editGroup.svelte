@@ -86,6 +86,16 @@
   {#if group !== rmap.physicsGroup.group}
     <label>Name <input type="text" value={group.name} maxlength={11}
       on:change={(e) => onEditGroup({ group: g, name: strVal(e.target) })}></label>
+    <label>Use Clipping <input type="checkbox" checked={group.clipping}
+      on:change={() => onEditGroup({ group: g, clipping: !group.clipping })}></label>
+    <label>Clip X <input type="number" value={group.clipX} disabled={!group.clipping}
+      on:change={(e) => onEditGroup({ group: g, clipX: intVal(e.target) })}></label>
+    <label>Clip Y <input type="number" value={group.clipY} disabled={!group.clipping}
+      on:change={(e) => onEditGroup({ group: g, clipY: intVal(e.target) })}></label>
+    <label>Clip Width <input type="number" value={group.clipW} min={0} disabled={!group.clipping}
+      on:change={(e) => onEditGroup({ group: g, clipW: intVal(e.target) })}></label>
+    <label>Clip Height <input type="number" value={group.clipH} min={0} disabled={!group.clipping}
+      on:change={(e) => onEditGroup({ group: g, clipH: intVal(e.target) })}></label>
   {/if}
   <button
     on:click={() => onCreateLayer({ kind: 'tiles', group: g, name: "" })}>
