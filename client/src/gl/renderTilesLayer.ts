@@ -187,11 +187,11 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
   }
 }
 
-const fontTexture: Texture = (() => {
+const fontImage: Image = (() => {
   const image = new Image()
   image.loadExternal('/editor/font.png')
   image.name = 'Font'
-  return new Texture(image, false)
+  return image
 })()
 
 type TextBuffer = {
@@ -241,7 +241,7 @@ function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ id: number, n
   gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
 }
 
-function textPreRender() {
+function textPreRender(fontTexture: Texture) {
   // Enable texture
   gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
   gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
@@ -258,8 +258,8 @@ function textPostRender() {
   gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
 }
 
-function textRender(buffer: TextBuffer) {
-  textPreRender()
+function textRender(buffer: TextBuffer, texture: Texture) {
+  textPreRender(texture)
 
   // Vertex attribute
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer.vertex)
@@ -299,46 +299,48 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
 }
 
 export class RenderFrontLayer extends RenderTilesLayer {
-  static texture: Texture = (() => {
+  static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/editor/front.png')
     image.name = 'Front'
-    return new Texture(image)
+    return image
   })()
 
   constructor(rmap: RenderMap, layer: FrontLayer) {
     super(rmap, layer)
-    this.texture = RenderFrontLayer.texture
+    this.texture = new Texture(RenderFrontLayer.image)
   }
 }
 
 export class RenderGameLayer extends RenderTilesLayer {
-  static texture: Texture = (() => {
+  static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/entities/DDNet.png')
     image.name = 'Game'
-    return new Texture(image)
+    return image
   })()
 
   constructor(rmap: RenderMap, layer: GameLayer) {
     super(rmap, layer)
-    this.texture = RenderGameLayer.texture
+    this.texture = new Texture(RenderGameLayer.image)
   }
 }
 
 export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
-  static texture: Texture = (() => {
+  static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/editor/tele.png')
     image.name = 'Tele'
-    return new Texture(image)
+    return image
   })()
 
   textBuffer: TextBuffer
+  fontTexture: Texture
 
   constructor(_: RenderMap, layer: TeleLayer) {
-    super(layer, RenderTeleLayer.texture)
+    super(layer, new Texture(RenderTeleLayer.image))
     this.textBuffer = createTextBuffer()
+    this.fontTexture = new Texture(fontImage)
     textBufferInit(this.textBuffer, this.layer)
   }
 
@@ -355,29 +357,31 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
   render(viewBox: ViewBox) {
     super.render(viewBox)
 
-    if (!fontTexture.loaded) {
-      fontTexture.load()
+    if (!this.fontTexture.loaded) {
+      this.fontTexture.load()
       return
     }
 
     if (this.visible && this.active)
-      textRender(this.textBuffer)
+      textRender(this.textBuffer, this.fontTexture)
   }
 }
 
 export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
-  static texture: Texture = (() => {
+  static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/editor/speedup.png')
     image.name = 'Speedup'
-    return new Texture(image)
+    return image
   })()
 
   textBuffer: TextBuffer
+  fontTexture: Texture
 
   constructor(_: RenderMap, layer: SpeedupLayer) {
-    super(layer, RenderSpeedupLayer.texture)
+    super(layer, new Texture(RenderSpeedupLayer.image))
     this.textBuffer = createTextBuffer()
+    this.fontTexture = new Texture(fontImage)
     this.initBuffer()
   }
 
@@ -427,29 +431,31 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
   render(viewBox: ViewBox) {
     super.render(viewBox)
 
-    if (!fontTexture.loaded) {
-      fontTexture.load()
+    if (!this.fontTexture.loaded) {
+      this.fontTexture.load()
       return
     }
 
     if (this.visible && this.active)
-      textRender(this.textBuffer)
+      textRender(this.textBuffer, this.fontTexture)
   }
 }
 
 export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
-  static texture: Texture = (() => {
+  static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/editor/switch.png')
     image.name = 'Switch'
-    return new Texture(image)
+    return image
   })()
 
   textBuffer: TextBuffer
+  fontTexture: Texture
 
   constructor(_: RenderMap, layer: SwitchLayer) {
-    super(layer, RenderSwitchLayer.texture)
+    super(layer, new Texture(RenderSwitchLayer.image))
     this.textBuffer = createTextBuffer()
+    this.fontTexture = new Texture(fontImage)
     textBufferInit(this.textBuffer, this.layer)
   }
 
@@ -466,29 +472,31 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
   render(viewBox: ViewBox) {
     super.render(viewBox)
 
-    if (!fontTexture.loaded) {
-      fontTexture.load()
+    if (!this.fontTexture.loaded) {
+      this.fontTexture.load()
       return
     }
 
     if (this.visible && this.active)
-      textRender(this.textBuffer)
+      textRender(this.textBuffer, this.fontTexture)
   }
 }
 
 export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
-  static texture: Texture = (() => {
+  static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/editor/tune.png')
     image.name = 'Tune'
-    return new Texture(image)
+    return image
   })()
 
   textBuffer: TextBuffer
+  fontTexture: Texture
 
   constructor(_: RenderMap, layer: TuneLayer) {
-    super(layer, RenderTuneLayer.texture)
+    super(layer, new Texture(RenderTuneLayer.image))
     this.textBuffer = createTextBuffer()
+    this.fontTexture = new Texture(fontImage)
     textBufferInit(this.textBuffer, this.layer)
   }
 
@@ -505,13 +513,13 @@ export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
   render(viewBox: ViewBox) {
     super.render(viewBox)
 
-    if (!fontTexture.loaded) {
-      fontTexture.load()
+    if (!this.fontTexture.loaded) {
+      this.fontTexture.load()
       return
     }
 
     if (this.visible && this.active)
-      textRender(this.textBuffer)
+      textRender(this.textBuffer, this.fontTexture)
   }
 }
 
