@@ -53,11 +53,11 @@ export interface EditGroup {
   offY?: number,
   paraX?: number,
   paraY?: number,
-  // useClipping?: number, // TODO
-  // clipX?: number,
-  // clipY?: number,
-  // clipW?: number,
-  // clipH?: number,
+  clipping?: boolean,
+  clipX?: number,
+  clipY?: number,
+  clipW?: number,
+  clipH?: number,
   name?: string,
 }
 

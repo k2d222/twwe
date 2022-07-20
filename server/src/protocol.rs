@@ -83,6 +83,11 @@ pub enum OneGroupChange {
     OffY(i32),
     ParaX(i32),
     ParaY(i32),
+    Clipping(bool),
+    ClipX(i32),
+    ClipY(i32),
+    ClipW(i32),
+    ClipH(i32),
     Name(String),
 }
 

@@ -13,7 +13,7 @@ export function parseGroup(groupData: ArrayBuffer): Info.Group {
     paraY: d.int32(),
     startLayer: d.uint32(),
     numLayers: d.uint32(),
-    useClipping: d.uint32(),
+    clipping: d.uint32() === 1,
 
     // version 2 extension
     clipX: d.int32(),
