@@ -33,10 +33,14 @@
   let tileSelectorVisible = false
 
   $: {
-    for (const rgroup of rmap.groups)
-      for (const rlayer of rgroup.layers)
+    for (const rgroup of rmap.groups) {
+      rgroup.active = false
+      for (const rlayer of rgroup.layers) {
         rlayer.active = false
+      }
+    }
     activeRlayer.active = true
+    activeRgroup.active = true
   }
 
   function serverOnUsers(e: ListUsers) {
