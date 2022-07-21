@@ -512,20 +512,14 @@ fn create_server() -> Server {
     let server = Server::new();
     {
         let mut server_rooms = server.rooms();
-        let rooms = glob("maps/*.map")
+        let rooms = glob("maps/**/*.map")
             .expect("no map found in maps directory")
             .into_iter()
             .filter_map(|e| e.ok())
             .map(|e| Arc::new(Room::new(e)));
         for r in rooms {
-            let name = r
-                .map
-                .path
-                .file_stem()
-                .unwrap()
-                .to_string_lossy()
-                .into_owned();
-            server_rooms.insert(name, r);
+            let name = r.map.path.with_extension("").to_string_lossy().into_owned();
+            server_rooms.insert(name[5..].to_string(), r);
         }
     }
     log::info!("found {} maps.", server.rooms().len());
