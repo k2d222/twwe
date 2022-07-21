@@ -38,6 +38,9 @@
       return
     }
     filterMaps()
+    if (filteredMaps.length > 0) {
+      selected = filteredMaps[0].name
+    }
   }
 
   async function refresh() {
@@ -45,8 +48,10 @@
     const server = await pServer
     let { maps } = await server.query('listmaps', null)
     sortMapInfos(maps)
-    selected = maps[0].name
     filteredMaps = mapList = maps
+    if (filteredMaps.length > 0) {
+      selected = filteredMaps[0].name
+    }
     clearDialog()
   }
 
