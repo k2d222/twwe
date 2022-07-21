@@ -7,7 +7,7 @@ A server is (or will be) hosted at [tw.thissma.fr](https://tw.thissma.fr). Pleas
 
 ## Status
 
-Able to preview and edit tiles layer just like the original editor. It primarly focuses on the ddnet flavour of teeworlds and supports the physics layers (switch, front, tune, speedup, tele).
+Able to preview and edit tiles layer just like the original editor. It primarily focuses on the ddnet flavour of teeworlds and supports the physics layers (switch, front, tune, speedup, tele).
 
 Able to render quads layers, but not edit them yet.
 
@@ -56,5 +56,5 @@ Future short-term goals are as follows:
  - [x] Allow users to create, upload and download maps
  - [ ] Setup access permissions.
  - [ ] Plugin to update a real Teeworlds or DDNet server (a simple /reload command sent should be enough)
- - [ ] Stabilise and securise the server for a production(-ish) use.
+ - [ ] Stabilise and secure the server for a production(-ish) use.
  - [ ] Add more editor tools for quads, envelopes, sounds etc.
