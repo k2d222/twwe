@@ -15,7 +15,7 @@
 {:then}
   <Router url="{url}">
     <div>
-      <Route path="edit/:mapName" let:params><Edit mapName={params.mapName}/></Route>
+      <Route path="edit/*mapName" let:params><Edit mapName={params.mapName}/></Route>
       <Route path="/"><Lobby /></Route>
       <Route path="create/"><CreateMap /></Route>
     </div>
