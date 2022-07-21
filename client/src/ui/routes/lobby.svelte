@@ -6,6 +6,7 @@
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
 
   let selected: string
+  let searchTerm: string = ''
   
   function sortMapInfos(mapInfos: MapInfo[]) {
     mapInfos.sort((a, b) => {
@@ -15,18 +16,40 @@
         return b.users - a.users
     })
   }
-    
+
+  function filterMaps() {
+    if (!mapList) {
+      return
+    }
+    filteredMaps = []
+    mapList.forEach((map) => {
+      if (map.name.includes(searchTerm)) {
+        filteredMaps.push(map)
+      }
+    })
+  }
+
+  function updateSearch(event) {
+    searchTerm = event.currentTarget.value
+    if (!mapList) {
+      return
+    }
+    filterMaps()
+  }
+
   async function refresh() {
     showInfo("Updating maps infos…", 'none')
     const server = await pServer
     let { maps } = await server.query('listmaps', null)
     sortMapInfos(maps)
     selected = maps[0].name
+    filteredMaps = mapList = maps
     clearDialog()
-    return maps
   }
 
-  let pMapInfos = refresh()
+  let mapList = null
+  let filteredMaps = null
+  refresh()
 
   async function onDelete() {
     const server = await pServer
@@ -37,19 +60,18 @@
       try {
         await server.query('deletemap', { name: selected })
           clearDialog()
-          pMapInfos = refresh()
+          refresh()
       }
       catch (e) {
         showError('Map deletion failed: ' + e)
       }
     }
   }
-
 </script>
 
-{#await pMapInfos}
+{#if !filteredMaps}
   <Dialog>Fetching maps infos…</Dialog>
-{:then mapInfos}
+{:else}
   <div id="lobby">
     <div class="content">
       <h2>Join Room</h2>
@@ -60,7 +82,7 @@
       </div>
 
       <div class="list">
-        {#each mapInfos as info}
+        {#each filteredMaps as info}
           <div class="row">
             <input type="radio" name="map" bind:group={selected} value={info.name} />
             <span class="name">{info.name}</span>
@@ -74,10 +96,8 @@
         <button class="create" on:click={() => navigate('/create/')}>New…</button>
         <button class="delete" on:click={onDelete}><img src="/assets/trash.svg" alt="delete"/></button>
         <button class="join" on:click={() => navigate('/edit/' + selected)}>Join</button>
+        <input on:input={updateSearch} value="{searchTerm}" type="text" name="search" id="search" placeholder="search">
       </div>
     </div>
   </div>
-{:catch e}
-  {console.error(e)}
-  <Dialog type="error">Failed to query maps.</Dialog>
-{/await}
+{/if}
