@@ -4,6 +4,7 @@
   import { navigate } from "svelte-routing"
   import { pServer } from '../global'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
+  import Fuse from 'fuse.js/dist/fuse.min.js';
 
   let selected: string
   let searchTerm: string = ''
@@ -21,12 +22,14 @@
     if (!mapList) {
       return
     }
-    filteredMaps = []
-    mapList.forEach((map) => {
-      if (map.name.includes(searchTerm)) {
-        filteredMaps.push(map)
-      }
+    if (searchTerm == '') {
+      filteredMaps = mapList
+      return
+    }
+    const fuse = new Fuse(mapList, {
+      keys: ['name']
     })
+    filteredMaps = fuse.search(searchTerm).map((map) => map.item)
   }
 
   function updateSearch(event) {
@@ -67,6 +70,12 @@
       }
     }
   }
+
+  // auto focus search box on page load
+  function onload(element) {
+    element.focus()
+  }
+
 </script>
 
 {#if !filteredMaps}
@@ -96,7 +105,7 @@
         <button class="create" on:click={() => navigate('/create/')}>New…</button>
         <button class="delete" on:click={onDelete}><img src="/assets/trash.svg" alt="delete"/></button>
         <button class="join" on:click={() => navigate('/edit/' + selected)}>Join</button>
-        <input on:input={updateSearch} value="{searchTerm}" type="text" name="search" id="search" placeholder="search">
+        <input on:input={updateSearch} value="{searchTerm}" type="text" name="search" id="search" placeholder="search" use:onload>
       </div>
     </div>
   </div>
