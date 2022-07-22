@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
+  import type { Layer } from '../../twmap/layer'
   import { AnyTilesLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
+  import { QuadsLayer } from '../../twmap/quadsLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import { viewport } from '../../gl/global'
@@ -10,6 +12,7 @@
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
+  import EditQuads from './editQuads.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
 
@@ -24,7 +27,7 @@
   canvas.addEventListener('keydown', onKeyDown)
 
   let treeViewVisible = true
-  let activeLayer = rmap.gameLayer.layer
+  let activeLayer: Layer = rmap.gameLayer.layer
   $: [ g, l ] = layerIndex(rmap.map, activeLayer)
   $: activeRlayer = rmap.groups[g].layers[l]
   $: activeRgroup = rmap.groups[g]
@@ -167,6 +170,8 @@
     }
   }
 
+  let destroyed = false
+
   onMount(() => {
     cont.prepend(canvas)
     server.on('listusers', serverOnUsers)
@@ -190,7 +195,8 @@
     // change active layer, resize layers...
     const updateForever = () => {
       updateOutlines()
-      requestAnimationFrame(updateForever)
+      if (!destroyed)
+        requestAnimationFrame(updateForever)
     }
     updateForever()
   })
@@ -206,6 +212,7 @@
     server.off('reorderlayer', serverOnReorderLayer)
     server.off('deletegroup', serverOnDeleteGroup)
     server.off('deletelayer', serverOnDeleteLayer)
+    destroyed = true
   })
 
   function onToggleTreeView() {
@@ -256,11 +263,16 @@
 </script>
 
 <div id="editor">
-  <div bind:this={cont} on:mousemove={onMouseMove}>
+  <div bind:this={cont} on:mousemove={onMouseMove}></div>
+  <div id="clip-outline" style={clipOutlineStyle}></div>
+  {#if activeLayer instanceof AnyTilesLayer}
     <div id="hover-tile" style={hoverTileStyle}></div>
     <div id="layer-outline" style={layerOutlineStyle}></div>
-    <div id="clip-outline" style={clipOutlineStyle}></div>
-  </div>
+    <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
+  {:else if activeLayer instanceof QuadsLayer}
+    <EditQuads {rmap} layer={activeLayer} />
+  {/if}
+  <Statusbar />
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
@@ -274,7 +286,5 @@
       <div id="users">Users online: <span>{peerCount}</span></div>
     </div>
   </div>
-  <Statusbar />
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
-  <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
 </div>

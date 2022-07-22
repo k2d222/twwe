@@ -618,3 +618,38 @@ nav.hidden .context {
     }
   }
 }
+
+#edit-quads {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  
+  svg > * {
+    pointer-events: auto;
+  }
+  
+  polygon {
+    fill: transparent;
+    stroke: black;
+    stroke-width: 2;
+    
+    &:hover {
+      stroke-width: 5;
+      fill: rgba(255, 255, 255, 0.2);
+    }
+  }
+  
+  circle {
+    stroke-width: 0;
+    stroke: black;
+
+    &.center {
+      fill: green;
+      stroke: green;
+    }
+
+    &:hover {
+      stroke-width: 5;
+    }
+  }
+}
