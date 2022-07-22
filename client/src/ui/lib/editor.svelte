@@ -2,12 +2,13 @@
   import type { Map } from '../../twmap/map'
   import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
-  import { AnyTilesLayer } from '../../twmap/tilesLayer'
+  import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
-  import { viewport, canvas, renderer } from '../../gl/global'
+  import { canvas, renderer, setViewport } from '../../gl/global'
+  import { Viewport } from '../../gl/viewport'
   import { RenderMap } from '../../gl/renderMap'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
@@ -20,20 +21,17 @@
   export let map: Map
 
   let cont: HTMLElement
-
-  let rmap = new RenderMap(map)
-
-  canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
-  canvas.addEventListener('keydown', onKeyDown)
-
+  let viewport: Viewport
   let treeViewVisible = true
-  let activeLayer: Layer = rmap.gameLayer.layer
-  $: [ g, l ] = layerIndex(rmap.map, activeLayer)
-  $: activeRlayer = rmap.groups[g].layers[l]
-  $: activeRgroup = rmap.groups[g]
   let selectedTile: EditTileParams
   let peerCount = 0
   let tileSelectorVisible = false
+  let activeLayer: Layer = map.physicsLayer(GameLayer)
+  let rmap = new RenderMap(map)
+
+  $: [ g, l ] = layerIndex(map, activeLayer)
+  $: activeRlayer = rmap.groups[g].layers[l]
+  $: activeRgroup = rmap.groups[g]
 
   $: {
     for (const rgroup of rmap.groups) {
@@ -188,10 +186,16 @@
     server.on('deleteimage', serverOnDeleteImage)
     server.on('error', serverOnError)
     server.send('listusers')
+
+    canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
+    canvas.addEventListener('keydown', onKeyDown)
     canvas.focus()
     
+    viewport = new Viewport(cont, canvas)
+    setViewport(viewport)
+
     const renderLoop = () => {
-      renderer.render(rmap)
+      renderer.render(viewport, rmap)
       updateOutlines()
       if (!destroyed)
         requestAnimationFrame(renderLoop)
@@ -210,6 +214,7 @@
     server.off('reorderlayer', serverOnReorderLayer)
     server.off('deletegroup', serverOnDeleteGroup)
     server.off('deletelayer', serverOnDeleteLayer)
+    canvas.removeEventListener('keydown', onKeyDown)
     destroyed = true
   })
 
@@ -257,20 +262,23 @@
     }
   }
 
-
 </script>
 
 <div id="editor">
-  <div bind:this={cont} on:mousemove={onMouseMove}></div>
-  <div id="clip-outline" style={clipOutlineStyle}></div>
-  {#if activeLayer instanceof AnyTilesLayer}
-    <div id="hover-tile" style={hoverTileStyle}></div>
-    <div id="layer-outline" style={layerOutlineStyle}></div>
-    <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
-  {:else if activeLayer instanceof QuadsLayer}
-    <EditQuads {rmap} layer={activeLayer} />
-  {/if}
-  <Statusbar />
+
+  <div bind:this={cont} on:mousemove={onMouseMove}>
+    <!-- Here goes the canvas on mount() -->
+    <div id="clip-outline" style={clipOutlineStyle}></div>
+    {#if activeLayer instanceof AnyTilesLayer}
+      <div id="hover-tile" style={hoverTileStyle}></div>
+      <div id="layer-outline" style={layerOutlineStyle}></div>
+      <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
+    {:else if activeLayer instanceof QuadsLayer}
+      <EditQuads {rmap} layer={activeLayer} />
+    {/if}
+    <Statusbar />
+  </div>
+
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
@@ -284,5 +292,7 @@
       <div id="users">Users online: <span>{peerCount}</span></div>
     </div>
   </div>
+
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
+
 </div>
