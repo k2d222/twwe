@@ -11,8 +11,8 @@ export class Renderer {
 
   proj: mat4
 
-  constructor(viewport: Viewport) {
-    this.gl = viewport.gl
+  constructor(gl: WebGL2RenderingContext, viewport: Viewport) {
+    this.gl = gl
     this.viewport = viewport
 
     this.proj = mat4.create()

@@ -7,7 +7,8 @@
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
-  import { viewport } from '../../gl/global'
+  import { viewport, canvas, renderer } from '../../gl/global'
+  import { RenderMap } from '../../gl/renderMap'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError } from './dialog'
@@ -20,8 +21,7 @@
 
   let cont: HTMLElement
 
-  let canvas = document.createElement('canvas')
-  let rmap = Editor.createRenderMap(canvas, map)
+  let rmap = new RenderMap(map)
 
   canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
   canvas.addEventListener('keydown', onKeyDown)
@@ -190,15 +190,13 @@
     server.send('listusers')
     canvas.focus()
     
-    // this is me being lazy, but really there are many events that should
-    // toggle a redraw of the outlines, such as mouse move, view move, zoom,
-    // change active layer, resize layers...
-    const updateForever = () => {
+    const renderLoop = () => {
+      renderer.render(rmap)
       updateOutlines()
       if (!destroyed)
-        requestAnimationFrame(updateForever)
+        requestAnimationFrame(renderLoop)
     }
-    updateForever()
+    renderLoop()
   })
 
   onDestroy(() => {

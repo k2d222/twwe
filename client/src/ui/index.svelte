@@ -8,6 +8,7 @@
   import { pServer } from './global'
 
   export let url = ""
+
 </script>
 
 {#await pServer}

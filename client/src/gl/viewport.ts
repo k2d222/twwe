@@ -1,7 +1,6 @@
 type Vec2 = { x: number, y: number }
 
 export class Viewport {
-  gl: WebGL2RenderingContext
   canvas: HTMLCanvasElement
   
   
@@ -29,8 +28,7 @@ export class Viewport {
   minScale: number
   maxScale: number
   
-  constructor(gl: WebGL2RenderingContext, canvas: HTMLCanvasElement) {
-    this.gl = gl
+  constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
     
     this.pos = { x: 0, y: 0 }
