@@ -76,9 +76,36 @@
     }
   }
 
-  // auto focus search box on page load
+  function updateSelection(offset: number) {
+    const options = document.querySelectorAll('input')
+    let currentIndex = 0
+    let counter = 0
+    options.forEach((option) => {
+      if (option.checked) {
+        currentIndex = counter
+      }
+      counter++
+    })
+    const nextOption = currentIndex + offset
+    if (nextOption >= 0 && nextOption < options.length) {
+      options[currentIndex].checked = false
+      options[nextOption].checked = true
+      selected = options[nextOption].value
+    }
+  }
+
   function onload(element) {
+    // auto focus search box on page load
     element.focus()
+    element.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'ArrowDown') {
+        updateSelection(1)
+      } else if (event.key === 'ArrowUp') {
+        updateSelection(-1)
+      } else if (event.key === 'Enter') {
+        navigate('/edit/' + selected)
+      }
+    })
   }
 
 </script>
