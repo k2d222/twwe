@@ -28,7 +28,9 @@
 
   function makeViewBox() {
     const { x1, y1, x2, y2 } = viewport.screen()
-    return [x1, y1, x2 - x1, y2 - y1].map(x => x * 32).join(' ')
+    const rgroup = rmap.groups[g]
+    const [ offX, offY ] = rgroup.offset()
+    return [x1 - offX, y1 - offY, x2 - x1, y2 - y1].map(x => x * 32).join(' ')
   }
   
   let destroyed = false
