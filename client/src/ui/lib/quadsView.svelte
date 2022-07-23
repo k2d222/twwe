@@ -139,15 +139,15 @@
         on:mousedown={(e) => onMouseDown(e, q, [3, 2])} />
       <line x1={points[2].x / 1024} y1={points[2].y / 1024} x2={points[0].x / 1024} y2={points[0].y / 1024}
         on:mousedown={(e) => onMouseDown(e, q, [2, 0])} />
-      <circle cx={points[0].x / 1024} cy={points[0].y / 1024} r={4}
+      <circle cx={points[0].x / 1024} cy={points[0].y / 1024}
         on:mousedown={(e) => onMouseDown(e, q, [0])} on:contextmenu={(e) => showCM(e, q, 0)} />
-      <circle cx={points[1].x / 1024} cy={points[1].y / 1024} r={4}
+      <circle cx={points[1].x / 1024} cy={points[1].y / 1024}
         on:mousedown={(e) => onMouseDown(e, q, [1])} on:contextmenu={(e) => showCM(e, q, 1)} />
-      <circle cx={points[2].x / 1024} cy={points[2].y / 1024} r={4}
+      <circle cx={points[2].x / 1024} cy={points[2].y / 1024}
         on:mousedown={(e) => onMouseDown(e, q, [2])} on:contextmenu={(e) => showCM(e, q, 2)} />
-      <circle cx={points[3].x / 1024} cy={points[3].y / 1024} r={4}
+      <circle cx={points[3].x / 1024} cy={points[3].y / 1024}
         on:mousedown={(e) => onMouseDown(e, q, [3])} on:contextmenu={(e) => showCM(e, q, 3)} />
-      <circle cx={points[4].x / 1024} cy={points[4].y / 1024} r={4} class="center"
+      <circle cx={points[4].x / 1024} cy={points[4].y / 1024} class="center"
         on:mousedown={(e) => onMouseDown(e, q, [0, 1, 2, 3, 4])} on:contextmenu={(e) => showCM(e, q, 4)} />
     </svg>
     {#if cm_q === q}

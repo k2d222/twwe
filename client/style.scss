@@ -627,30 +627,31 @@ nav.hidden .context {
   
   svg > * {
     pointer-events: auto;
+    vector-effect: non-scaling-stroke;
   }
   
   polygon {
     fill: transparent;
     
     &:hover {
-      stroke-width: 5;
+      stroke-width: 5px;
       fill: rgba(255, 255, 255, 0.2);
     }
   }
   
   line {
     stroke: black;
-    stroke-width: 2;
+    stroke-width: 2px;
     
     &:hover {
-      stroke-width: 5;
+      stroke-width: 5px;
       fill: rgba(255, 255, 255, 0.2);
     }
   }
   
   circle {
-    stroke-width: 0;
     stroke: black;
+    r: 4px;
 
     &.center {
       fill: green;
@@ -658,7 +659,7 @@ nav.hidden .context {
     }
 
     &:hover {
-      stroke-width: 5;
+      stroke-width: 5px;
     }
   }
 }
