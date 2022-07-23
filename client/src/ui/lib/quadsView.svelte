@@ -83,6 +83,14 @@
     lastPos.y = y
 
     quadPoints = quadPoints // hack to redraw quad
+
+    const change = {
+      group: g,
+      layer: l,
+      quad: q,
+      ...layer.quads[q],
+    }
+    rmap.editQuad(change)
   }
 
   function onMouseUp(e: MouseEvent, q: number) {
