@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
+  import type { ListUsers, EditTile, EditQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
@@ -50,7 +50,11 @@
 
   function serverOnEditTile(e: EditTile) {
     rmap.editTile(e)
-    rmap = rmap // hack to redraw treeview
+    // rmap = rmap // hack to redraw treeview
+  }
+  function serverOnEditQuad(e: EditQuad) {
+    rmap.editQuad(e)
+    activeLayer = activeLayer // hack to redraw quadview
   }
   function serverOnEditGroup(e: EditGroup) {
     rmap.editGroup(e)
@@ -174,6 +178,7 @@
     cont.prepend(canvas)
     server.on('listusers', serverOnUsers)
     server.on('edittile', serverOnEditTile)
+    server.on('editquad', serverOnEditQuad)
     server.on('editlayer', serverOnEditLayer)
     server.on('editgroup', serverOnEditGroup)
     server.on('creategroup', serverOnCreateGroup)
@@ -206,6 +211,7 @@
   onDestroy(() => {
     server.off('listusers', serverOnUsers)
     server.off('edittile', serverOnEditTile)
+    server.off('editquad', serverOnEditQuad)
     server.off('editlayer', serverOnEditLayer)
     server.off('editgroup', serverOnEditGroup)
     server.off('creategroup', serverOnCreateGroup)

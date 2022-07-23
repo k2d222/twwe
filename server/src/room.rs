@@ -280,6 +280,33 @@ impl Room {
         Ok(())
     }
 
+    pub fn set_quad(&self, edit_quad: &EditQuad) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let group = map
+            .groups
+            .get_mut(edit_quad.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(edit_quad.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        match layer {
+            Layer::Quads(layer) => {
+                let quad = layer
+                    .quads
+                    .get_mut(edit_quad.quad as usize)
+                    .ok_or("invalid quad idex")?;
+                quad.corners.copy_from_slice(&edit_quad.content.points[..4]);
+                quad.position = edit_quad.content.points[4];
+                quad.texture_coords = edit_quad.content.tex_coords;
+            }
+            _ => return Err("layer is not a quads layer"),
+        }
+
+        Ok(())
+    }
+
     pub fn create_group(&self, create_group: &CreateGroup) -> Result<(), &'static str> {
         let mut map = self.map.get();
         let mut group = Group::default();

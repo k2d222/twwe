@@ -88,7 +88,7 @@
   function onMouseUp(e: MouseEvent, q: number) {
     if (e.button === 0 && activeQuad === q) {
       layer.quads[activeQuad].points = quadPoints[activeQuad]
-      onChange()
+      onChange(activeQuad)
       activeQuad = -1
     }
   }
@@ -111,12 +111,12 @@
     cm_p = -1
   }
 
-  function onChange() {
+  function onChange(q: number) {
     const change = {
       group: g,
       layer: l,
-      quad: activeQuad,
-      ...layer.quads[activeQuad],
+      quad: q,
+      ...layer.quads[q],
     }
     rmap.editQuad(change)
     server.send('editquad', change)
@@ -152,7 +152,7 @@
     </svg>
     {#if cm_q === q}
       <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-        <QuadEditor {quad} p={cm_p} on:change={onChange} />
+        <QuadEditor {quad} p={cm_p} on:change={() => onChange(q)} />
       </ContextMenu>
     {/if}
   {/each}

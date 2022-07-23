@@ -182,6 +182,7 @@ impl Server {
                 ResponseContent::ReorderLayer(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::DeleteLayer(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::EditTile(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::EditQuad(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::SendMap(_) => (),
                 ResponseContent::ListUsers(_) => (),
                 ResponseContent::ListMaps(_) => (),
@@ -332,6 +333,12 @@ impl Server {
         Ok(ResponseContent::EditTile(edit_tile))
     }
 
+    fn handle_edit_quad(&self, peer: &mut Peer, edit_quad: EditQuad) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.set_quad(&edit_quad)?;
+        Ok(ResponseContent::EditQuad(edit_quad))
+    }
+
     fn handle_send_map(&self, peer: &Peer, send_map: SendMap) -> Res {
         let room = self
             .room(&send_map.name)
@@ -413,6 +420,7 @@ impl Server {
             RequestContent::ReorderLayer(content) => self.handle_reorder_layer(peer, content),
             RequestContent::DeleteLayer(content) => self.handle_delete_layer(peer, content),
             RequestContent::EditTile(content) => self.handle_edit_tile(peer, content),
+            RequestContent::EditQuad(content) => self.handle_edit_quad(peer, content),
             RequestContent::SendMap(content) => self.handle_send_map(peer, content),
             RequestContent::ListUsers => self.handle_list_users(peer),
             RequestContent::ListMaps => self.handle_list_maps(),

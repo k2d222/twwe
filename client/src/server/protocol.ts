@@ -229,6 +229,7 @@ export interface ResponseContent {
   'deletelayer': DeleteLayer
   
   'edittile': EditTile
+  'editquad': EditQuad
 
   'sendmap': ArrayBuffer
   'listusers': ListUsers

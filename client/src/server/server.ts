@@ -41,6 +41,7 @@ export class Server {
       'deletelayer': [],
   
       'edittile': [],
+      'editquad': [],
 
       'sendmap': [],
       'listusers': [],
