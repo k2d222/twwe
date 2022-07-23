@@ -6,13 +6,16 @@
   import { onMount, onDestroy } from 'svelte'
   import ContextMenu from './contextMenu.svelte'
   import QuadEditor from './editQuad.svelte'
+  import { server } from '../global'
+  import { layerIndex } from './util'
 
   export let rmap: RenderMap
   export let layer: QuadsLayer
-  
+
   let viewBox: string
 
-  let quadPoints = layer.quads.map(q => { return [ ...q.points ] })
+  $: quadPoints = layer.quads.map(q => { return [ ...q.points ] })
+  $: [ g, l ] = layerIndex(rmap.map, layer)
 
   function quadPointsStr(points: Info.Coord[]) {
     const toStr = (p: Info.Coord) => p.x / 1024 + ',' + p.y / 1024
@@ -82,6 +85,8 @@
 
   function onMouseUp(e: MouseEvent, q: number) {
     if (e.button === 0 && activeQuad === q) {
+      layer.quads[activeQuad].points = quadPoints[activeQuad]
+      onChange()
       activeQuad = -1
     }
   }
@@ -105,6 +110,14 @@
   }
 
   function onChange() {
+    const change = {
+      group: g,
+      layer: l,
+      quad: activeQuad,
+      ...layer.quads[activeQuad],
+    }
+    rmap.editQuad(change)
+    server.send('editquad', change)
   }
 
 

@@ -42,6 +42,20 @@ export class RenderQuadsLayer extends RenderLayer {
     this.indexBuf = gl.createBuffer()
     this.initBuffers()
   }
+  
+  recompute() {
+    gl.deleteBuffer(this.colorBuf)
+    gl.deleteBuffer(this.vertexBuf)
+    gl.deleteBuffer(this.texCoordBuf)
+    gl.deleteBuffer(this.indexBuf)
+
+    this.colorBuf = gl.createBuffer()
+    this.vertexBuf = gl.createBuffer()
+    this.texCoordBuf = gl.createBuffer()
+    this.indexBuf = gl.createBuffer()
+
+    this.initBuffers()
+  }
 
   render() {
     if (!this.visible)

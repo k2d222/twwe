@@ -1,5 +1,5 @@
 import type { Map, PhysicsLayer } from '../twmap/map'
-import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
+import type { EditTile, EditQuad, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
 import { LayerFlags } from '../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
@@ -99,6 +99,20 @@ export class RenderMap {
     }
 
     return changed
+  }
+
+  editQuad(change: EditQuad) {
+    const rgroup = this.groups[change.group]
+    const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
+    const quad = rlayer.layer.quads[change.quad]
+    
+    for (let key in quad) {
+      if (key in change) {
+        quad[key] = change[key]
+      }
+    }
+
+    rlayer.recompute()
   }
   
   editGroup(change: EditGroup) {

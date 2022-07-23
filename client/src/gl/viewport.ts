@@ -121,14 +121,12 @@ export class Viewport {
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
     this.canvas.focus()
-    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
-    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     const [ worldX, worldY ] = this.canvasToWorld(canvasX, canvasY)
     this.mousePos.x = worldX
