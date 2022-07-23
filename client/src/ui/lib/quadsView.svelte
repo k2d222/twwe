@@ -1,0 +1,144 @@
+<script lang="ts">
+  import type { RenderMap } from '../../gl/renderMap'
+  import type { QuadsLayer } from '../../twmap/quadsLayer'
+  import type * as Info from '../../twmap/types'
+  import { viewport } from '../../gl/global'
+  import { onMount, onDestroy } from 'svelte'
+  import ContextMenu from './contextMenu.svelte'
+  import QuadEditor from './editQuad.svelte'
+
+  export let rmap: RenderMap
+  export let layer: QuadsLayer
+  
+  let viewBox: string
+
+  let quadPoints = layer.quads.map(q => { return [ ...q.points ] })
+
+  function quadPointsStr(points: Info.Coord[]) {
+    const toStr = (p: Info.Coord) => p.x / 1024 + ',' + p.y / 1024
+    const topLeft = points[0]
+    const topRight = points[1]
+    const bottomLeft = points[2]
+    const bottomRight = points[3]
+    return [toStr(topLeft), toStr(topRight), toStr(bottomRight), toStr(bottomLeft)].join(' ')
+  }
+
+  function makeViewBox() {
+    const { x1, y1, x2, y2 } = viewport.screen()
+    return [x1, y1, x2 - x1, y2 - y1].map(x => x * 32).join(' ')
+  }
+  
+  let destroyed = false
+  
+  onMount(() => {
+    const updateForever = () => {
+      viewBox = makeViewBox()
+      if (!destroyed)
+        requestAnimationFrame(updateForever)
+    }
+    updateForever()
+    
+  })
+
+  onDestroy(() => {
+    destroyed = true
+  })
+
+  let activeQuad = -1
+  let lastPos = { x: 0, y: 0 }
+  let selectedPoints: number[] = []
+
+  function onMouseDown(e: MouseEvent, q: number, lp: number[]) {
+    if (e.buttons === 1 && !e.ctrlKey) {
+      activeQuad = q
+      selectedPoints = lp
+      const [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
+      lastPos.x = x
+      lastPos.y = y
+    }
+  }
+
+  function onMouseMove(e: MouseEvent, q: number) {
+    if (activeQuad !== q)
+      return
+
+    const [x, y] = viewport.pixelToWorld(e.clientX, e.clientY)
+
+    const delta = {
+      x: x - lastPos.x,
+      y: y - lastPos.y
+    }
+
+    for (let p of selectedPoints) {
+      quadPoints[q][p].x += Math.floor(delta.x * 32 * 1024)
+      quadPoints[q][p].y += Math.floor(delta.y * 32 * 1024)
+    }
+
+    lastPos.x = x
+    lastPos.y = y
+
+    quadPoints = quadPoints // hack to redraw quad
+  }
+
+  function onMouseUp(e: MouseEvent, q: number) {
+    if (e.button === 0 && activeQuad === q) {
+      activeQuad = -1
+    }
+  }
+
+  let cm_q: number = -1
+  let cm_p: number = -1
+  let cm_x = 0
+  let cm_y = 0
+  
+  function showCM(e: MouseEvent, q: number, p: number) {
+    e.preventDefault()
+    cm_x = e.clientX
+    cm_y = e.clientY
+    cm_q = q
+    cm_p = p
+  }
+
+  function hideCM() {
+    cm_q = -1
+    cm_p = -1
+  }
+
+  function onChange() {
+  }
+
+
+</script>
+
+<div id="edit-quads">
+  {#each layer.quads as quad, q}
+    {@const points = quadPoints[q]}
+    <svg {viewBox} xmlns="http://www.w3.org/2000/svg" style:pointer-events={activeQuad === q ? 'auto' : 'none'}
+        on:mousemove={(e) => onMouseMove(e, q)} on:mouseup={(e) => onMouseUp(e, q)}>
+      <polygon points={quadPointsStr(points)} on:mousedown={(e) => onMouseDown(e, q, [0, 1, 2, 3, 4])} />
+      <line x1={points[0].x / 1024} y1={points[0].y / 1024} x2={points[1].x / 1024} y2={points[1].y / 1024}
+        on:mousedown={(e) => onMouseDown(e, q, [0, 1])} />
+      <line x1={points[1].x / 1024} y1={points[1].y / 1024} x2={points[3].x / 1024} y2={points[3].y / 1024}
+        on:mousedown={(e) => onMouseDown(e, q, [1, 3])} />
+      <line x1={points[3].x / 1024} y1={points[3].y / 1024} x2={points[2].x / 1024} y2={points[2].y / 1024}
+        on:mousedown={(e) => onMouseDown(e, q, [3, 2])} />
+      <line x1={points[2].x / 1024} y1={points[2].y / 1024} x2={points[0].x / 1024} y2={points[0].y / 1024}
+        on:mousedown={(e) => onMouseDown(e, q, [2, 0])} />
+      <circle cx={points[0].x / 1024} cy={points[0].y / 1024} r={4}
+        on:mousedown={(e) => onMouseDown(e, q, [0])} on:contextmenu={(e) => showCM(e, q, 0)} />
+      <circle cx={points[1].x / 1024} cy={points[1].y / 1024} r={4}
+        on:mousedown={(e) => onMouseDown(e, q, [1])} on:contextmenu={(e) => showCM(e, q, 1)} />
+      <circle cx={points[2].x / 1024} cy={points[2].y / 1024} r={4}
+        on:mousedown={(e) => onMouseDown(e, q, [2])} on:contextmenu={(e) => showCM(e, q, 2)} />
+      <circle cx={points[3].x / 1024} cy={points[3].y / 1024} r={4}
+        on:mousedown={(e) => onMouseDown(e, q, [3])} on:contextmenu={(e) => showCM(e, q, 3)} />
+      <circle cx={points[4].x / 1024} cy={points[4].y / 1024} r={4} class="center"
+        on:mousedown={(e) => onMouseDown(e, q, [0, 1, 2, 3, 4])} on:contextmenu={(e) => showCM(e, q, 4)} />
+    </svg>
+    {#if cm_q === q}
+      <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
+        <QuadEditor {quad} p={cm_p} on:change={onChange} />
+      </ContextMenu>
+    {/if}
+  {/each}
+</div>

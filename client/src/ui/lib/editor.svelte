@@ -14,7 +14,7 @@
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
-  import EditQuads from './editQuads.svelte'
+  import QuadsView from './quadsView.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
 
@@ -253,12 +253,14 @@
   let clipOutlineStyle = ''
 
   function onMouseMove(e: MouseEvent) {
-    // left button pressed
-    if (e.buttons === 1 && !e.ctrlKey) {
-      Editor.placeTile(rmap, g, l, selectedTile)
-    }
-    else if (e.buttons === 0) {
-      Editor.release()
+    if (activeLayer instanceof AnyTilesLayer) {
+      // left button pressed
+      if (e.buttons === 1 && !e.ctrlKey) {
+        Editor.placeTile(rmap, g, l, selectedTile)
+      }
+      else if (e.buttons === 0) {
+        Editor.release()
+      }
     }
   }
 
@@ -274,7 +276,7 @@
       <div id="layer-outline" style={layerOutlineStyle}></div>
       <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
     {:else if activeLayer instanceof QuadsLayer}
-      <EditQuads {rmap} layer={activeLayer} />
+      <QuadsView {rmap} layer={activeLayer} />
     {/if}
     <Statusbar />
   </div>

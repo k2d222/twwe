@@ -134,7 +134,7 @@ export class Viewport {
     this.mousePos.x = worldX
     this.mousePos.y = worldY
 
-    if (e.buttons === 4 || e.ctrlKey && e.buttons == 1) // wheel button or ctrl + left click
+    if (e.buttons === 4 || e.ctrlKey && e.buttons === 1) // wheel button or ctrl + left click
       this.onDrag(canvasX, canvasY)
   }
   

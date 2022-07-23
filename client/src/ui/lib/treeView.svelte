@@ -3,7 +3,6 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
-  import { QuadsLayer } from '../../twmap/quadsLayer'
   import ContextMenu from './contextMenu.svelte'
   import GroupEditor from './editGroup.svelte'
   import LayerEditor from './editLayer.svelte'

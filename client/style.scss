@@ -426,6 +426,7 @@ nav {
 }
 
 .context {
+    pointer-events: auto;
     position: fixed;
     inset: 0;
     z-index: 10;
@@ -440,7 +441,7 @@ nav {
   }
 }
  
-.edit-layer, .edit-group {
+.edit-layer, .edit-group, .edit-quad {
     display: flex;
     flex-direction: column;
     gap: .5rem;
@@ -630,6 +631,14 @@ nav.hidden .context {
   
   polygon {
     fill: transparent;
+    
+    &:hover {
+      stroke-width: 5;
+      fill: rgba(255, 255, 255, 0.2);
+    }
+  }
+  
+  line {
     stroke: black;
     stroke-width: 2;
     
