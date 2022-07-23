@@ -149,8 +149,8 @@
     const { x1, y1, x2, y2 } = viewport.screen()
     const mx = Math.floor((x1 + x2) / 2 * 32 * 1024)
     const my = Math.floor((y1 + y2) / 2 * 32 * 1024)
-    const w = (layer.image.width || 2) * 1024
-    const h = (layer.image.height || 2) * 1024
+    const w = (layer.image ? layer.image.width : 64) * 1024
+    const h = (layer.image ? layer.image.height : 64) * 1024
 
     const quad: Info.Quad = {
       points: [
