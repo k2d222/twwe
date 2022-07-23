@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
+  import type { ListUsers, EditTile, CreateQuad, EditQuad, DeleteQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
@@ -52,8 +52,16 @@
     rmap.editTile(e)
     // rmap = rmap // hack to redraw treeview
   }
+  function serverOnCreateQuad(e: CreateQuad) {
+    rmap.createQuad(e)
+    activeLayer = activeLayer // hack to redraw quadview
+  }
   function serverOnEditQuad(e: EditQuad) {
     rmap.editQuad(e)
+    activeLayer = activeLayer // hack to redraw quadview
+  }
+  function serverOnDeleteQuad(e: DeleteQuad) {
+    rmap.deleteQuad(e)
     activeLayer = activeLayer // hack to redraw quadview
   }
   function serverOnEditGroup(e: EditGroup) {
@@ -178,7 +186,9 @@
     cont.prepend(canvas)
     server.on('listusers', serverOnUsers)
     server.on('edittile', serverOnEditTile)
+    server.on('createquad', serverOnCreateQuad)
     server.on('editquad', serverOnEditQuad)
+    server.on('deletequad', serverOnDeleteQuad)
     server.on('editlayer', serverOnEditLayer)
     server.on('editgroup', serverOnEditGroup)
     server.on('creategroup', serverOnCreateGroup)
@@ -212,6 +222,7 @@
     server.off('listusers', serverOnUsers)
     server.off('edittile', serverOnEditTile)
     server.off('editquad', serverOnEditQuad)
+    server.off('deletequad', serverOnDeleteQuad)
     server.off('editlayer', serverOnEditLayer)
     server.off('editgroup', serverOnEditGroup)
     server.off('creategroup', serverOnCreateGroup)

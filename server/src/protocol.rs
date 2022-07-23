@@ -249,12 +249,27 @@ pub struct Quad {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateQuad {
+    pub group: u32,
+    pub layer: u32,
+    #[serde(flatten)]
+    pub content: Quad,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EditQuad {
     pub group: u32,
     pub layer: u32,
     pub quad: u32,
     #[serde(flatten)]
     pub content: Quad,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteQuad {
+    pub group: u32,
+    pub layer: u32,
+    pub quad: u32,
 }
 
 // MISC
@@ -334,9 +349,10 @@ pub enum RequestContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
-    // CreateQuad(CreateQuad),
+    CreateQuad(CreateQuad),
     EditQuad(EditQuad),
-    // DeleteQuad(DeleteQuad),
+    DeleteQuad(DeleteQuad),
+
     SendMap(SendMap),
     ListUsers,
     ListMaps,
@@ -366,9 +382,10 @@ pub enum ResponseContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
-    // CreateQuad(CreateQuad),
+    CreateQuad(CreateQuad),
     EditQuad(EditQuad),
-    // DeleteQuad(DeleteQuad),
+    DeleteQuad(DeleteQuad),
+
     SendMap(SendMap),
     ListUsers(ListUsers),
     ListMaps(ListMaps),

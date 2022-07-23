@@ -623,7 +623,10 @@ nav.hidden .context {
 #edit-quads {
   position: fixed;
   inset: 0;
-  pointer-events: none;
+  
+  svg {
+    position: absolute;
+  }
   
   svg > * {
     pointer-events: auto;
@@ -660,6 +663,22 @@ nav.hidden .context {
 
     &:hover {
       stroke-width: 5px;
+    }
+  }
+
+  > button {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3rem;
+    height: 3rem;
+    outline: 3px solid black;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    > img {
+      width: 100%;
     }
   }
 }

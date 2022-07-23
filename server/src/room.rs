@@ -280,6 +280,32 @@ impl Room {
         Ok(())
     }
 
+    pub fn create_quad(&self, create_quad: &CreateQuad) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let group = map
+            .groups
+            .get_mut(create_quad.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(create_quad.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        match layer {
+            Layer::Quads(layer) => {
+                let mut quad = twmap::Quad::default();
+                quad.corners
+                    .copy_from_slice(&create_quad.content.points[..4]);
+                quad.position = create_quad.content.points[4];
+                quad.texture_coords = create_quad.content.tex_coords;
+                layer.quads.push(quad);
+            }
+            _ => return Err("layer is not a quads layer"),
+        }
+
+        Ok(())
+    }
+
     pub fn set_quad(&self, edit_quad: &EditQuad) -> Result<(), &'static str> {
         let mut map = self.map.get();
         let group = map
@@ -296,10 +322,35 @@ impl Room {
                 let quad = layer
                     .quads
                     .get_mut(edit_quad.quad as usize)
-                    .ok_or("invalid quad idex")?;
+                    .ok_or("invalid quad index")?;
                 quad.corners.copy_from_slice(&edit_quad.content.points[..4]);
                 quad.position = edit_quad.content.points[4];
                 quad.texture_coords = edit_quad.content.tex_coords;
+            }
+            _ => return Err("layer is not a quads layer"),
+        }
+
+        Ok(())
+    }
+
+    pub fn delete_quad(&self, delete_quad: &DeleteQuad) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let group = map
+            .groups
+            .get_mut(delete_quad.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(delete_quad.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        match layer {
+            Layer::Quads(layer) => {
+                if delete_quad.quad as usize >= layer.quads.len() {
+                    return Err("invalid quad index");
+                }
+
+                layer.quads.remove(delete_quad.quad as usize);
             }
             _ => return Err("layer is not a quads layer"),
         }

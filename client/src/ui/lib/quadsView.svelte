@@ -8,6 +8,7 @@
   import QuadEditor from './editQuad.svelte'
   import { server } from '../global'
   import { layerIndex } from './util'
+  import { showInfo, showError, clearDialog } from './dialog'
 
   export let rmap: RenderMap
   export let layer: QuadsLayer
@@ -130,6 +131,62 @@
     server.send('editquad', change)
   }
 
+  function onDelete(q: number) {
+    try {
+      showInfo('Please wait…')
+      const change = { group: g, layer: l, quad: q }
+      server.query('deletequad', change)
+      rmap.deleteQuad(change)
+      hideCM()
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to delete quad: ' + e)
+    }
+  }
+
+  function onCreateQuad() {
+    const { x1, y1, x2, y2 } = viewport.screen()
+    const mx = Math.floor((x1 + x2) / 2 * 32 * 1024)
+    const my = Math.floor((y1 + y2) / 2 * 32 * 1024)
+    const w = (layer.image.width || 2) * 1024
+    const h = (layer.image.height || 2) * 1024
+
+    const quad: Info.Quad = {
+      points: [
+        { x: -w / 2 + mx, y: -h / 2 + my }, // top left
+        { x:  w / 2 + mx, y: -h / 2 + my }, // top right
+        { x: -w / 2 + mx, y:  h / 2 + my }, // bottom left
+        { x:  w / 2 + mx, y:  h / 2 + my }, // bottom right
+        { x: mx, y: my }, // center
+      ],
+      colors: [
+        { r: 255, g: 255, b: 255, a: 255 },
+        { r: 255, g: 255, b: 255, a: 255 },
+        { r: 255, g: 255, b: 255, a: 255 },
+        { r: 255, g: 255, b: 255, a: 255 },
+      ],
+      texCoords: [
+        { x: 0,    y: 0    },
+        { x: 1024, y: 0    },
+        { x: 0,    y: 1024 },
+        { x: 1024, y: 1024 },
+      ]
+    }
+
+    try {
+      showInfo('Please wait…')
+      const change = { group: g, layer: l, ...quad }
+      server.query('createquad', change)
+      rmap.createQuad(change)
+      layer = layer
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to create quad: ' + e)
+    }
+  }
+
 
 </script>
 
@@ -160,8 +217,9 @@
     </svg>
     {#if cm_q === q}
       <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-        <QuadEditor {quad} p={cm_p} on:change={() => onChange(q)} />
+        <QuadEditor {quad} p={cm_p} on:change={() => onChange(q)} on:delete={() => onDelete(q)} />
       </ContextMenu>
     {/if}
   {/each}
+  <button on:click={onCreateQuad}><img src="/assets/plus.svg" alt='add quad' /></button>
 </div>

@@ -58,6 +58,10 @@
     dispatch('change')
   }
 
+  function onDelete() {
+    dispatch('delete')
+  }
+
 </script>
 
 <div class="edit-quad">
@@ -72,5 +76,7 @@
       on:change={(e) => onEditColor(strVal(e.target))}></label>
     <label>Opacity <input type="range" min={0} max={255} value={col.a}
       on:change={(e) => onEditOpacity(intVal(e.target))}></label>
+  {:else}
+    <button on:click={onDelete}>Delete Quad</button>
   {/if}
 </div>

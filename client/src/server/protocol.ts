@@ -127,7 +127,18 @@ export type EditTile = EditTileParams & {
   y: number,
 }
 
+export type CreateQuad = Quad & {
+  group: number,
+  layer: number,
+}
+
 export type EditQuad = Quad & {
+  group: number,
+  layer: number,
+  quad: number,
+}
+
+export interface DeleteQuad {
   group: number,
   layer: number,
   quad: number,
@@ -199,7 +210,9 @@ export interface RequestContent {
   'deletelayer': DeleteLayer
   
   'edittile': EditTile
+  'createquad': CreateQuad
   'editquad': EditQuad
+  'deletequad': DeleteQuad
 
   'sendmap': SendMap
   'listusers': null
@@ -229,7 +242,9 @@ export interface ResponseContent {
   'deletelayer': DeleteLayer
   
   'edittile': EditTile
+  'createquad': CreateQuad
   'editquad': EditQuad
+  'deletequad': DeleteQuad
 
   'sendmap': ArrayBuffer
   'listusers': ListUsers
