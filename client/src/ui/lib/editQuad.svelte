@@ -62,6 +62,10 @@
     dispatch('delete')
   }
 
+  function onDuplicate() {
+    dispatch('duplicate')
+  }
+
 </script>
 
 <div class="edit-quad">
@@ -77,6 +81,7 @@
     <label>Opacity <input type="range" min={0} max={255} value={col.a}
       on:change={(e) => onEditOpacity(intVal(e.target))}></label>
   {:else}
-    <button on:click={onDelete}>Delete Quad</button>
+    <button on:click={onDuplicate}>Duplicate</button>
+    <button on:click={onDelete}>Delete</button>
   {/if}
 </div>

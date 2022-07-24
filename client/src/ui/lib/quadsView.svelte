@@ -140,6 +140,7 @@
       server.query('deletequad', change)
       rmap.deleteQuad(change)
       hideCM()
+      layer = layer
       clearDialog()
     }
     catch (e) {
@@ -189,6 +190,34 @@
     }
   }
 
+  function cloneQuad(quad: Info.Quad) {
+    const copy: Info.Quad = {
+      points: quad.points.map(p => { return { x: p.x, y: p.y } }),
+      colors: quad.colors.map(c => { return { r: c.r, g: c.g, b: c.b, a: c.a } }),
+      texCoords: quad.texCoords.map(p => { return { x: p.x, y: p.y } }),
+    }
+
+    return copy
+  }
+
+  function onDuplicate(q: number) {
+    const quad = cloneQuad(layer.quads[q])
+    quad.points = quad.points.map(p => { return { x: p.x + 10 * 1024, y: p.y + 10 * 1024 } })
+
+    try {
+      showInfo('Please wait…')
+      const change = { group: g, layer: l, ...quad }
+      server.query('createquad', change)
+      rmap.createQuad(change)
+      hideCM()
+      layer = layer
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to duplicate quad: ' + e)
+    }
+  }
+
 
 </script>
 
@@ -219,7 +248,7 @@
     </svg>
     {#if cm_q === q}
       <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-        <QuadEditor {quad} p={cm_p} on:change={() => onChange(q)} on:delete={() => onDelete(q)} />
+        <QuadEditor {quad} p={cm_p} on:change={() => onChange(q)} on:delete={() => onDelete(q)}  on:duplicate={() => onDuplicate(q)}/>
       </ContextMenu>
     {/if}
   {/each}
