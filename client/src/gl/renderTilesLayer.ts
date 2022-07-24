@@ -42,7 +42,6 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
   recompute() {
     this.deleteBuffers()
     this.createBuffers()
-    this.initialized = false
 
     if (this.texture.loaded)
       this.initBuffers()
@@ -117,6 +116,8 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
         }
       }
     }
+    
+    this.initialized = false
   }
   
   private deleteBuffers() {
@@ -126,7 +127,9 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
         gl.deleteBuffer(buf.texCoord)
       }
     }
+
     this.buffers = []
+    this.initialized = false
   }
 
   private chunkTileCount(chunkX: number, chunkY: number) {
