@@ -57,7 +57,7 @@ export function parseQuadsLayer(layerData: ArrayBuffer): Info.QuadsLayer {
   }
 
   // version 3 extension
-  if (data.version >= 3) {
+  if (data.version >= 2) {
     data.name = d.int32Str(3)
   }
   
