@@ -3,6 +3,8 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
+  import { QuadsLayer } from '../../twmap/quadsLayer'
+  import { TilesLayer } from '../../twmap/tilesLayer'
   import ContextMenu from './contextMenu.svelte'
   import GroupEditor from './editGroup.svelte'
   import LayerEditor from './editLayer.svelte'
@@ -50,6 +52,18 @@
     rmap = rmap // hack to redraw the treeview
   }
 
+  function layerName(layer: Layer) {
+    if (layer.name) {
+      return layer.name
+    }
+    else if ((layer instanceof QuadsLayer || layer instanceof TilesLayer) && layer.image) {
+      return '(' + layer.image.name + ')'
+    }
+    else {
+      return '…'
+    }
+  }
+
 </script>
 
 <nav class:hidden={!visible}>
@@ -75,7 +89,7 @@
           <div class="layer" class:visible={rlayer.visible}>
             <label>
               <input name="layer" type="radio" on:change={() => activeLayer = layer} checked={layer === activeLayer} />
-              {layer.name || '<no name>'}
+              {layerName(layer)}
             </label>
             <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}></span>
             <span class="options" on:click={(e) => showCM(e, null, layer)}></span>
