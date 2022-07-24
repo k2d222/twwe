@@ -120,7 +120,6 @@ export class Viewport {
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
-    this.canvas.focus()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     
     this.onDragStart(canvasX, canvasY)
@@ -137,7 +136,6 @@ export class Viewport {
   }
   
   private onmouseup(e: MouseEvent) {
-    // e.preventDefault()
   }
 
   private onwheel(e: WheelEvent) {

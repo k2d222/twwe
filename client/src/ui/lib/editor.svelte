@@ -202,9 +202,9 @@
     server.on('error', serverOnError)
     server.send('listusers')
 
-    canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
-    canvas.addEventListener('keydown', onKeyDown)
-    canvas.focus()
+    // canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
+    // canvas.addEventListener('keydown', onKeyDown)
+    // canvas.focus()
     
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
@@ -285,7 +285,7 @@
 
 <div id="editor">
 
-  <div bind:this={cont} on:mousemove={onMouseMove}>
+  <div bind:this={cont} tabindex={1} on:keydown={onKeyDown} on:mousemove={onMouseMove}>
     <!-- Here goes the canvas on mount() -->
     <div id="clip-outline" style={clipOutlineStyle}></div>
     {#if activeLayer instanceof AnyTilesLayer}
