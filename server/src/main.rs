@@ -250,8 +250,10 @@ impl Server {
                 let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
                 std::fs::rename(&upload_path, &path).map_err(|_| "upload a map first")?;
-                let mut map = TwMap::parse_file(upload_path).map_err(|_| "not a valid map file")?;
-                map.save_file(&path).map_err(|_| "not a valid map file")?;
+                TwMap::parse_file(&path).map_err(|_| {
+                    std::fs::remove_file(&path).unwrap();
+                    "not a valid map file"
+                })?;
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
         }

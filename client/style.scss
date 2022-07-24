@@ -262,6 +262,7 @@ nav {
   }
   
   .tiles {
+    z-index: 1;
     background: black;
     display: grid;
     grid-template-rows: repeat(16, $tile-size);

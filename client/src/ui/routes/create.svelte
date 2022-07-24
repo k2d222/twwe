@@ -30,7 +30,7 @@
       showInfo('Uploading map...', 'none')
       await server.uploadFile(await file.arrayBuffer())
       mapUploaded = true
-      showInfo('Map upload complete.')
+      showInfo('Map upload complete. Enter a name and hit "Create".')
     }
     catch (e) {
       showError('Failed to upload map: ' + e)
