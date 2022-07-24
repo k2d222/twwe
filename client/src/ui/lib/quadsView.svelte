@@ -244,7 +244,7 @@
       <circle cx={points[3].x / 1024} cy={points[3].y / 1024} r={circleRadius}
         on:mousedown={(e) => onMouseDown(e, q, [3])} on:contextmenu={(e) => showCM(e, q, 3)} />
       <circle cx={points[4].x / 1024} cy={points[4].y / 1024} r={circleRadius} class="center"
-        on:mousedown={(e) => onMouseDown(e, q, [0, 1, 2, 3, 4])} on:contextmenu={(e) => showCM(e, q, 4)} />
+        on:mousedown={(e) => onMouseDown(e, q, [4])} on:contextmenu={(e) => showCM(e, q, 4)} />
     </svg>
     {#if cm_q === q}
       <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
