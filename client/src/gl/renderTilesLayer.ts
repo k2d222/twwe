@@ -350,7 +350,7 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
   constructor(_: RenderMap, layer: TeleLayer) {
     super(layer, new Texture(RenderTeleLayer.image))
     this.textBuffer = createTextBuffer()
-    this.fontTexture = new Texture(fontImage)
+    this.fontTexture = new Texture(fontImage, false)
     textBufferInit(this.textBuffer, this.layer)
   }
 
@@ -366,7 +366,7 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
 
   render(viewBox: ViewBox) {
     super.render(viewBox)
-
+    
     if (!this.fontTexture.loaded) {
       this.fontTexture.load()
       return
@@ -391,7 +391,7 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
   constructor(_: RenderMap, layer: SpeedupLayer) {
     super(layer, new Texture(RenderSpeedupLayer.image))
     this.textBuffer = createTextBuffer()
-    this.fontTexture = new Texture(fontImage)
+    this.fontTexture = new Texture(fontImage, false)
     this.initBuffer()
   }
 
@@ -465,7 +465,7 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
   constructor(_: RenderMap, layer: SwitchLayer) {
     super(layer, new Texture(RenderSwitchLayer.image))
     this.textBuffer = createTextBuffer()
-    this.fontTexture = new Texture(fontImage)
+    this.fontTexture = new Texture(fontImage, false)
     textBufferInit(this.textBuffer, this.layer)
   }
 
@@ -506,7 +506,7 @@ export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
   constructor(_: RenderMap, layer: TuneLayer) {
     super(layer, new Texture(RenderTuneLayer.image))
     this.textBuffer = createTextBuffer()
-    this.fontTexture = new Texture(fontImage)
+    this.fontTexture = new Texture(fontImage, false)
     textBufferInit(this.textBuffer, this.layer)
   }
 

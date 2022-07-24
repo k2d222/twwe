@@ -216,6 +216,7 @@ nav {
 
 #tile-selector {
   $tile-size: 3rem;
+  z-index: 10;
   
   button {
     width: 100%;

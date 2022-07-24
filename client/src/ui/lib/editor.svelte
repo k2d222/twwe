@@ -42,6 +42,7 @@
     }
     activeRlayer.active = true
     activeRgroup.active = true
+    activeRlayer = activeRlayer // WTF
   }
 
   function serverOnUsers(e: ListUsers) {
