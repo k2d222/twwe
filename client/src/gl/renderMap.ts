@@ -1,7 +1,7 @@
 import type { Map, PhysicsLayer } from '../twmap/map'
-import type { EditTile, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
+import type { EditTile, CreateQuad, EditQuad, DeleteQuad, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
-import { LayerFlags } from '../twmap/types'
+import { Quad, LayerFlags } from '../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
 import { RenderAnyTilesLayer, RenderGameLayer, RenderTilesLayer, RenderFrontLayer, RenderSwitchLayer, RenderSpeedupLayer, RenderTeleLayer, RenderTuneLayer } from './renderTilesLayer'
 import { QuadsLayer } from '../twmap/quadsLayer'
@@ -99,6 +99,41 @@ export class RenderMap {
     }
 
     return changed
+  }
+
+  createQuad(change: CreateQuad) {
+    const rgroup = this.groups[change.group]
+    const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
+
+    const quad: Quad = {
+      points: change.points,
+      colors: change.colors,
+      texCoords: change.texCoords,
+    }
+    
+    rlayer.layer.quads.push(quad)
+    rlayer.recompute()
+  }
+  
+  editQuad(change: EditQuad) {
+    const rgroup = this.groups[change.group]
+    const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
+    const quad = rlayer.layer.quads[change.quad]
+    
+    for (let key in quad) {
+      if (key in change) {
+        quad[key] = change[key]
+      }
+    }
+
+    rlayer.recompute()
+  }
+  
+  deleteQuad(change: DeleteQuad) {
+    const rgroup = this.groups[change.group]
+    const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
+    rlayer.layer.quads.splice(change.quad, 1)
+    rlayer.recompute()
   }
   
   editGroup(change: EditGroup) {

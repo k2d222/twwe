@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use twmap::{Color, InvalidLayerKind, LayerKind};
+use twmap::{Color, InvalidLayerKind, LayerKind, Point};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -236,6 +236,42 @@ pub struct EditTile {
     pub content: EditTileContent,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Quad {
+    pub points: [Point; 5],
+    pub colors: [Color; 4],
+    pub tex_coords: [Point; 4],
+    // posEnv: number, // TODO
+    // posEnvOffset: number,
+    // colorEnv: number,
+    // colorEnvOffset: number,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateQuad {
+    pub group: u32,
+    pub layer: u32,
+    #[serde(flatten)]
+    pub content: Quad,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EditQuad {
+    pub group: u32,
+    pub layer: u32,
+    pub quad: u32,
+    #[serde(flatten)]
+    pub content: Quad,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteQuad {
+    pub group: u32,
+    pub layer: u32,
+    pub quad: u32,
+}
+
 // MISC
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -313,9 +349,10 @@ pub enum RequestContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
-    // CreateQuad(CreateQuad),
-    // EditQuad(EditQuad),
-    // DeleteQuad(DeleteQuad),
+    CreateQuad(CreateQuad),
+    EditQuad(EditQuad),
+    DeleteQuad(DeleteQuad),
+
     SendMap(SendMap),
     ListUsers,
     ListMaps,
@@ -345,9 +382,10 @@ pub enum ResponseContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
-    // CreateQuad(CreateQuad),
-    // EditQuad(EditQuad),
-    // DeleteQuad(DeleteQuad),
+    CreateQuad(CreateQuad),
+    EditQuad(EditQuad),
+    DeleteQuad(DeleteQuad),
+
     SendMap(SendMap),
     ListUsers(ListUsers),
     ListMaps(ListMaps),

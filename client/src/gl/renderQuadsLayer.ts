@@ -9,11 +9,6 @@ export class RenderQuadsLayer extends RenderLayer {
   layer: QuadsLayer
   texture: Texture
 
-  colorArr: Float32Array
-  vertexArr: Float32Array
-  texCoordArr: Float32Array
-  indexArr: Uint16Array
-
   colorBuf: WebGLBuffer
   vertexBuf: WebGLBuffer
   texCoordBuf: WebGLBuffer
@@ -30,16 +25,24 @@ export class RenderQuadsLayer extends RenderLayer {
       this.texture = rmap.textures[index]
     }
 
-    const quadCount = this.layer.quads.length
-    this.colorArr = new Float32Array(quadCount * 4 * 4)
-    this.vertexArr = new Float32Array(quadCount * 4 * 2)
-    this.texCoordArr = new Float32Array(quadCount * 4 * 2)
-    this.indexArr = new Uint16Array(quadCount * 6)
+    this.colorBuf = gl.createBuffer()
+    this.vertexBuf = gl.createBuffer()
+    this.texCoordBuf = gl.createBuffer()
+    this.indexBuf = gl.createBuffer()
+    this.initBuffers()
+  }
+  
+  recompute() {
+    gl.deleteBuffer(this.colorBuf)
+    gl.deleteBuffer(this.vertexBuf)
+    gl.deleteBuffer(this.texCoordBuf)
+    gl.deleteBuffer(this.indexBuf)
 
     this.colorBuf = gl.createBuffer()
     this.vertexBuf = gl.createBuffer()
     this.texCoordBuf = gl.createBuffer()
     this.indexBuf = gl.createBuffer()
+
     this.initBuffers()
   }
 
@@ -86,6 +89,12 @@ export class RenderQuadsLayer extends RenderLayer {
   }
 
   private initBuffers() {
+    const quadCount = this.layer.quads.length
+    const colorArr = new Float32Array(quadCount * 4 * 4)
+    const vertexArr = new Float32Array(quadCount * 4 * 2)
+    const texCoordArr = new Float32Array(quadCount * 4 * 2)
+    const indexArr = new Uint16Array(quadCount * 6)
+
     let t = 0
 
     for (const quad of this.layer.quads) {
@@ -94,24 +103,24 @@ export class RenderQuadsLayer extends RenderLayer {
       const texCoords = makeTexCoords(quad)
       const indices = makeIndices(t)
 
-      this.vertexArr.set(vertices, t * 4 * 2)
-      this.colorArr.set(colors, t * 4 * 4)
-      this.texCoordArr.set(texCoords, t * 4 * 2)
-      this.indexArr.set(indices, t * 6)
+      vertexArr.set(vertices, t * 4 * 2)
+      colorArr.set(colors, t * 4 * 4)
+      texCoordArr.set(texCoords, t * 4 * 2)
+      indexArr.set(indices, t * 6)
       t++
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf)
-    gl.bufferData(gl.ARRAY_BUFFER, this.vertexArr, gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf)
-    gl.bufferData(gl.ARRAY_BUFFER, this.colorArr, gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, colorArr, gl.STATIC_DRAW)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuf)
-    gl.bufferData(gl.ARRAY_BUFFER, this.texCoordArr, gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuf)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indexArr, gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexArr, gl.STATIC_DRAW)
   }
 }
 

@@ -426,6 +426,7 @@ nav {
 }
 
 .context {
+    pointer-events: auto;
     position: fixed;
     inset: 0;
     z-index: 10;
@@ -440,7 +441,7 @@ nav {
   }
 }
  
-.edit-layer, .edit-group {
+.edit-layer, .edit-group, .edit-quad {
     display: flex;
     flex-direction: column;
     gap: .5rem;
@@ -615,6 +616,68 @@ nav.hidden .context {
             drop-shadow( 0px -1px 0px rgba(0, 0, 0, .4));
         }
       }
+    }
+  }
+}
+
+#edit-quads {
+  position: fixed;
+  inset: 0;
+  
+  svg {
+    position: absolute;
+  }
+  
+  svg > * {
+    pointer-events: auto;
+    vector-effect: non-scaling-stroke;
+  }
+  
+  polygon {
+    fill: transparent;
+    
+    &:hover {
+      stroke-width: 5px;
+      fill: rgba(255, 255, 255, 0.2);
+    }
+  }
+  
+  line {
+    stroke: black;
+    stroke-width: 2px;
+    
+    &:hover {
+      stroke-width: 5px;
+      fill: rgba(255, 255, 255, 0.2);
+    }
+  }
+  
+  circle {
+    stroke: black;
+
+    &.center {
+      fill: green;
+      stroke: green;
+    }
+
+    &:hover {
+      stroke-width: 5px;
+    }
+  }
+
+  > button {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3rem;
+    height: 3rem;
+    outline: 3px solid black;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    > img {
+      width: 100%;
     }
   }
 }

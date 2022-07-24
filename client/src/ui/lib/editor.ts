@@ -1,20 +1,7 @@
 import type { EditTile, EditTileParams } from '../../server/protocol'
-import type { Map } from '../../twmap/map'
+import type { RenderMap } from '../../gl/renderMap'
 import { server } from '../global'
-import { viewport, renderer, init as glInit } from '../../gl/global'
-import { RenderMap } from '../../gl/renderMap'
-
-export function createRenderMap(canvas: HTMLCanvasElement, map: Map) {
-  glInit(canvas)
-  const rmap = new RenderMap(map)
-
-  function loop() {
-    renderer.render(rmap)
-    requestAnimationFrame(loop)
-  }
-  requestAnimationFrame(loop)
-  return rmap
-}
+import { viewport } from '../../gl/global'
 
 export async function downloadMap(mapName: string) {
   const buf = await server.query('sendmap', { name: mapName })

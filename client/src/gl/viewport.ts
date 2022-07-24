@@ -1,8 +1,8 @@
 type Vec2 = { x: number, y: number }
 
 export class Viewport {
-  gl: WebGL2RenderingContext
   canvas: HTMLCanvasElement
+  cont: HTMLElement
   
   
   // note on the coordinates systems:
@@ -29,9 +29,9 @@ export class Viewport {
   minScale: number
   maxScale: number
   
-  constructor(gl: WebGL2RenderingContext, canvas: HTMLCanvasElement) {
-    this.gl = gl
+  constructor(cont: HTMLElement, canvas: HTMLCanvasElement) {
     this.canvas = canvas
+    this.cont = cont
     
     this.pos = { x: 0, y: 0 }
     this.posDragStart = { x: 0, y: 0 }
@@ -59,14 +59,14 @@ export class Viewport {
   }
   
   private createListeners() {
-    this.canvas.addEventListener('touchstart', this.ontouchstart.bind(this))
-    this.canvas.addEventListener('touchmove', this.ontouchmove.bind(this))
-    this.canvas.addEventListener('mousedown', this.onmousedown.bind(this))
-    this.canvas.addEventListener('mousemove', this.onmousemove.bind(this))
-    this.canvas.addEventListener('mouseup', this.onmouseup.bind(this))
-    this.canvas.addEventListener('wheel', this.onwheel.bind(this))
+    this.cont.addEventListener('touchstart', this.ontouchstart.bind(this))
+    this.cont.addEventListener('touchmove', this.ontouchmove.bind(this))
+    this.cont.addEventListener('mousedown', this.onmousedown.bind(this))
+    this.cont.addEventListener('mousemove', this.onmousemove.bind(this))
+    this.cont.addEventListener('mouseup', this.onmouseup.bind(this))
+    this.cont.addEventListener('wheel', this.onwheel.bind(this))
     window.addEventListener('resize', this.onresize.bind(this))
-    this.canvas.addEventListener('keydown', this.onkeydown.bind(this))
+    this.cont.addEventListener('keydown', this.onkeydown.bind(this))
 
     // TODO
     // this.canvas.addEventListener('mouseenter', () => this.mouseHover = true)
@@ -120,26 +120,22 @@ export class Viewport {
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
-    this.canvas.focus()
-    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
-    e.preventDefault()
     const [ canvasX, canvasY ] = this.pixelToCanvas(e.clientX, e.clientY)
     const [ worldX, worldY ] = this.canvasToWorld(canvasX, canvasY)
     this.mousePos.x = worldX
     this.mousePos.y = worldY
 
-    if (e.buttons === 4 || e.ctrlKey && e.buttons == 1) // wheel button or ctrl + left click
+    if (e.buttons === 4 || e.ctrlKey && e.buttons === 1) // wheel button or ctrl + left click
       this.onDrag(canvasX, canvasY)
   }
   
   private onmouseup(e: MouseEvent) {
-    e.preventDefault()
   }
 
   private onwheel(e: WheelEvent) {

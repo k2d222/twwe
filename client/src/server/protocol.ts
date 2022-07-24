@@ -1,4 +1,4 @@
-import type { Color, Tile, Tele, Speedup, Switch, Tune } from '../twmap/types'
+import type { Quad, Color, Tile, Tele, Speedup, Switch, Tune } from '../twmap/types'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
@@ -127,6 +127,23 @@ export type EditTile = EditTileParams & {
   y: number,
 }
 
+export type CreateQuad = Quad & {
+  group: number,
+  layer: number,
+}
+
+export type EditQuad = Quad & {
+  group: number,
+  layer: number,
+  quad: number,
+}
+
+export interface DeleteQuad {
+  group: number,
+  layer: number,
+  quad: number,
+}
+
 // MISC
 
 export interface SendMap {
@@ -193,6 +210,9 @@ export interface RequestContent {
   'deletelayer': DeleteLayer
   
   'edittile': EditTile
+  'createquad': CreateQuad
+  'editquad': EditQuad
+  'deletequad': DeleteQuad
 
   'sendmap': SendMap
   'listusers': null
@@ -222,6 +242,9 @@ export interface ResponseContent {
   'deletelayer': DeleteLayer
   
   'edittile': EditTile
+  'createquad': CreateQuad
+  'editquad': EditQuad
+  'deletequad': DeleteQuad
 
   'sendmap': ArrayBuffer
   'listusers': ListUsers

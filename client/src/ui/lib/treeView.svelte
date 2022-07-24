@@ -3,7 +3,6 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
-  import { QuadsLayer } from '../../twmap/quadsLayer'
   import ContextMenu from './contextMenu.svelte'
   import GroupEditor from './editGroup.svelte'
   import LayerEditor from './editLayer.svelte'
@@ -75,7 +74,7 @@
           {@const layer = rlayer.layer}
           <div class="layer" class:visible={rlayer.visible}>
             <label>
-              <input name="layer" type="radio" on:change={() => activeLayer = layer} checked={layer === activeLayer} disabled={layer instanceof QuadsLayer} />
+              <input name="layer" type="radio" on:change={() => activeLayer = layer} checked={layer === activeLayer} />
               {layer.name || '<no name>'}
             </label>
             <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}></span>

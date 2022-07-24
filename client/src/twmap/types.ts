@@ -119,10 +119,10 @@ export type Quad = {
   points: Coord[],
   colors: Color[],
   texCoords: Coord[],
-  posEnv: number,
-  posEnvOffset: number,
-  colorEnv: number,
-  colorEnvOffset: number,
+  // posEnv: number, // TODO
+  // posEnvOffset: number,
+  // colorEnv: number,
+  // colorEnvOffset: number,
 }
 
 export type Tile = {

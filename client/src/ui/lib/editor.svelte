@@ -1,36 +1,37 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
-  import { AnyTilesLayer } from '../../twmap/tilesLayer'
+  import type { ListUsers, EditTile, CreateQuad, EditQuad, DeleteQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
+  import type { Layer } from '../../twmap/layer'
+  import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
+  import { QuadsLayer } from '../../twmap/quadsLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
-  import { viewport } from '../../gl/global'
+  import { canvas, renderer, setViewport } from '../../gl/global'
+  import { Viewport } from '../../gl/viewport'
+  import { RenderMap } from '../../gl/renderMap'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
+  import QuadsView from './quadsView.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
 
   export let map: Map
 
   let cont: HTMLElement
-
-  let canvas = document.createElement('canvas')
-  let rmap = Editor.createRenderMap(canvas, map)
-
-  canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
-  canvas.addEventListener('keydown', onKeyDown)
-
+  let viewport: Viewport
   let treeViewVisible = true
-  let activeLayer = rmap.gameLayer.layer
-  $: [ g, l ] = layerIndex(rmap.map, activeLayer)
-  $: activeRlayer = rmap.groups[g].layers[l]
-  $: activeRgroup = rmap.groups[g]
   let selectedTile: EditTileParams
   let peerCount = 0
   let tileSelectorVisible = false
+  let activeLayer: Layer = map.physicsLayer(GameLayer)
+  let rmap = new RenderMap(map)
+
+  $: [ g, l ] = layerIndex(map, activeLayer)
+  $: activeRlayer = rmap.groups[g].layers[l]
+  $: activeRgroup = rmap.groups[g]
 
   $: {
     for (const rgroup of rmap.groups) {
@@ -49,7 +50,19 @@
 
   function serverOnEditTile(e: EditTile) {
     rmap.editTile(e)
-    rmap = rmap // hack to redraw treeview
+    // rmap = rmap // hack to redraw treeview
+  }
+  function serverOnCreateQuad(e: CreateQuad) {
+    rmap.createQuad(e)
+    activeLayer = activeLayer // hack to redraw quadview
+  }
+  function serverOnEditQuad(e: EditQuad) {
+    rmap.editQuad(e)
+    activeLayer = activeLayer // hack to redraw quadview
+  }
+  function serverOnDeleteQuad(e: DeleteQuad) {
+    rmap.deleteQuad(e)
+    activeLayer = activeLayer // hack to redraw quadview
   }
   function serverOnEditGroup(e: EditGroup) {
     rmap.editGroup(e)
@@ -167,10 +180,15 @@
     }
   }
 
+  let destroyed = false
+
   onMount(() => {
     cont.prepend(canvas)
     server.on('listusers', serverOnUsers)
     server.on('edittile', serverOnEditTile)
+    server.on('createquad', serverOnCreateQuad)
+    server.on('editquad', serverOnEditQuad)
+    server.on('deletequad', serverOnDeleteQuad)
     server.on('editlayer', serverOnEditLayer)
     server.on('editgroup', serverOnEditGroup)
     server.on('creategroup', serverOnCreateGroup)
@@ -183,21 +201,28 @@
     server.on('deleteimage', serverOnDeleteImage)
     server.on('error', serverOnError)
     server.send('listusers')
-    canvas.focus()
+
+    // canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
+    // canvas.addEventListener('keydown', onKeyDown)
+    // canvas.focus()
     
-    // this is me being lazy, but really there are many events that should
-    // toggle a redraw of the outlines, such as mouse move, view move, zoom,
-    // change active layer, resize layers...
-    const updateForever = () => {
+    viewport = new Viewport(cont, canvas)
+    setViewport(viewport)
+
+    const renderLoop = () => {
+      renderer.render(viewport, rmap)
       updateOutlines()
-      requestAnimationFrame(updateForever)
+      if (!destroyed)
+        requestAnimationFrame(renderLoop)
     }
-    updateForever()
+    renderLoop()
   })
 
   onDestroy(() => {
     server.off('listusers', serverOnUsers)
     server.off('edittile', serverOnEditTile)
+    server.off('editquad', serverOnEditQuad)
+    server.off('deletequad', serverOnDeleteQuad)
     server.off('editlayer', serverOnEditLayer)
     server.off('editgroup', serverOnEditGroup)
     server.off('creategroup', serverOnCreateGroup)
@@ -206,6 +231,8 @@
     server.off('reorderlayer', serverOnReorderLayer)
     server.off('deletegroup', serverOnDeleteGroup)
     server.off('deletelayer', serverOnDeleteLayer)
+    canvas.removeEventListener('keydown', onKeyDown)
+    destroyed = true
   })
 
   function onToggleTreeView() {
@@ -243,24 +270,34 @@
   let clipOutlineStyle = ''
 
   function onMouseMove(e: MouseEvent) {
-    // left button pressed
-    if (e.buttons === 1 && !e.ctrlKey) {
-      Editor.placeTile(rmap, g, l, selectedTile)
-    }
-    else if (e.buttons === 0) {
-      Editor.release()
+    if (activeLayer instanceof AnyTilesLayer) {
+      // left button pressed
+      if (e.buttons === 1 && !e.ctrlKey) {
+        Editor.placeTile(rmap, g, l, selectedTile)
+      }
+      else if (e.buttons === 0) {
+        Editor.release()
+      }
     }
   }
-
 
 </script>
 
 <div id="editor">
-  <div bind:this={cont} on:mousemove={onMouseMove}>
-    <div id="hover-tile" style={hoverTileStyle}></div>
-    <div id="layer-outline" style={layerOutlineStyle}></div>
+
+  <div bind:this={cont} tabindex={1} on:keydown={onKeyDown} on:mousemove={onMouseMove}>
+    <!-- Here goes the canvas on mount() -->
     <div id="clip-outline" style={clipOutlineStyle}></div>
+    {#if activeLayer instanceof AnyTilesLayer}
+      <div id="hover-tile" style={hoverTileStyle}></div>
+      <div id="layer-outline" style={layerOutlineStyle}></div>
+      <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
+    {:else if activeLayer instanceof QuadsLayer}
+      <QuadsView {rmap} layer={activeLayer} />
+    {/if}
+    <Statusbar />
   </div>
+
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
@@ -274,7 +311,7 @@
       <div id="users">Users online: <span>{peerCount}</span></div>
     </div>
   </div>
-  <Statusbar />
+
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
-  <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
+
 </div>

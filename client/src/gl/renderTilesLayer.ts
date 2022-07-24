@@ -9,6 +9,7 @@ import { Texture } from './texture'
 export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: number }>> extends RenderLayer {
   layer: T
   texture: Texture
+  initialized: boolean
 
   buffers: {
     tileCount: number,
@@ -24,6 +25,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     this.texture = texture
     this.chunkSize = 64
     this.buffers = []
+    this.initialized = false
 
     this.createBuffers()
     
@@ -40,6 +42,8 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
   recompute() {
     this.deleteBuffers()
     this.createBuffers()
+    this.initialized = false
+
     if (this.texture.loaded)
       this.initBuffers()
   }
@@ -64,10 +68,12 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
   render(viewBox: ViewBox) {
     if (!this.visible)
       return
-
-    if (!this.texture.loaded) {
-      this.texture.load()
-      this.initBuffers()
+    
+    if(!this.initialized) {
+      if (this.texture.loaded)
+        this.initBuffers()
+      else
+        this.texture.load()
       return
     }
     
@@ -178,6 +184,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer.texCoord)
     gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
+    this.initialized = true
   }
 
   private initBuffers() {
