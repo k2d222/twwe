@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     io,
     net::SocketAddr,
     path::{Path, PathBuf},
@@ -12,6 +12,7 @@ use std::io::prelude::*;
 
 use clap::Parser;
 use glob::glob;
+use regex::Regex;
 
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
@@ -194,9 +195,20 @@ impl Server {
         }
     }
 
+    fn check_map_path(&self, fname: &str) -> bool {
+        // COMBAK: this is too restrictive, but proper sanitization is hard.
+        // TODO: add tests
+        let c1 = r"[:alnum:]\(\)\[\]_,\-"; // safe 1st char in word
+        let cn = r"[:alnum:]\(\)\[\]_,\-\s\."; // safe non-first char in word
+        let max_len = 40; // max file name or dir name
+        let word = format!(r"[{}][{}]{{0,{}}}", c1, cn, max_len - 1);
+        let re = Regex::new(&format!(r"^({}/)*({})$", word, word)).unwrap();
+        re.is_match(fname)
+    }
+
     fn handle_create_map(&self, peer: &Peer, create_map: CreateMap) -> Res {
-        if create_map.name == "" {
-            return Err("empty name");
+        if !self.check_map_path(&create_map.name) {
+            return Err("invalid map name");
         }
         if self.room(&create_map.name).is_some() {
             return Err("name already taken");
@@ -217,7 +229,8 @@ impl Server {
                 map.groups.push(group);
                 map.check().map_err(server_error)?;
                 let path: PathBuf = format!("maps/{}.map", create_map.name).into();
-                map.save_file(&path).unwrap();
+                path.parent().map(fs::create_dir_all);
+                map.save_file(&path).map_err(server_error)?;
                 rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
             CreateParams::Clone(ref params) => {
