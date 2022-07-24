@@ -137,7 +137,7 @@ export class Viewport {
   }
   
   private onmouseup(e: MouseEvent) {
-    e.preventDefault()
+    // e.preventDefault()
   }
 
   private onwheel(e: WheelEvent) {
