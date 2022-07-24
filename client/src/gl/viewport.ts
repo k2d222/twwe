@@ -135,7 +135,7 @@ export class Viewport {
       this.onDrag(canvasX, canvasY)
   }
   
-  private onmouseup(e: MouseEvent) {
+  private onmouseup(_e: MouseEvent) {
   }
 
   private onwheel(e: WheelEvent) {

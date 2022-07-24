@@ -4,7 +4,7 @@
   import { navigate } from "svelte-routing"
   import { pServer } from '../global'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
-  import Fuse from 'fuse.js/dist/fuse.min.js';
+  import Fuse from 'fuse.js';
 
   let selected: string
   let searchTerm: string = ''
@@ -29,11 +29,11 @@
     const fuse = new Fuse(mapList, {
       keys: ['name']
     })
-    filteredMaps = fuse.search(searchTerm).map((map) => map.item)
+    filteredMaps = fuse.search(searchTerm).map(map => map.item)
   }
 
-  function updateSearch(event) {
-    searchTerm = event.currentTarget.value
+  function updateSearch(e: Event & { currentTarget: HTMLInputElement }) {
+    searchTerm = e.currentTarget.value
     if (!mapList) {
       return
     }
@@ -94,7 +94,7 @@
     }
   }
 
-  function onload(element) {
+  function onload(element: HTMLElement) {
     // auto focus search box on page load
     element.focus()
     element.addEventListener('keydown', (event: KeyboardEvent) => {
