@@ -307,10 +307,10 @@ export function parseColorEnvPoint(envPointData: ArrayBuffer): Info.ColorEnvPoin
     time: d.uint32(),
     curve: d.uint32(),
     color: {
-      r: d.uint32(),
-      g: d.uint32(),
-      b: d.uint32(),
-      a: d.uint32(),
+      r: d.int32(),
+      g: d.int32(),
+      b: d.int32(),
+      a: d.int32(),
     },
   }
 }
