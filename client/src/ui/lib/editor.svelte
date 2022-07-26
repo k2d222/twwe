@@ -16,6 +16,7 @@
   import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
   import QuadsView from './quadsView.svelte'
+  import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
 
@@ -24,6 +25,7 @@
   let cont: HTMLElement
   let viewport: Viewport
   let treeViewVisible = true
+  let envEditorVisible = false
   let animEnabled = false
   let selectedTile: EditTileParams
   let peerCount = 0
@@ -257,6 +259,10 @@
     treeViewVisible = !treeViewVisible
   }
 
+  function onToggleEnvEditor() {
+    envEditorVisible = !envEditorVisible
+  }
+
   function onToggleAnim() {
     animEnabled = !animEnabled
     if (!animEnabled)
@@ -325,6 +331,7 @@
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
+      <button id="env-toggle" on:click={onToggleEnvEditor}><img src="/assets/envelope.svg" alt="" title="Show envelope editor"></button>
       <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
       <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
       {#if animEnabled}
@@ -342,5 +349,7 @@
   </div>
 
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
+
+  <EnvelopeEditor visible={envEditorVisible} {rmap} />
 
 </div>
