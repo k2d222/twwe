@@ -51,11 +51,27 @@ export abstract class Envelope<T> {
       const p2 = this.points[i + 1]
       if (p2.time > time) {
         const factor = (time - p1.time) / (p2.time - p1.time)
-        return this.interpolate(p1.content, p2.content, factor)
+        return this.interpolate(p1.content, p2.content, this.applyCurve(factor, p1.curve))
       }
     }
     
     return this.points[0].content
+  }
+  
+  applyCurve(t: number, curve: Info.CurveType) {
+    switch (curve) {
+      case Info.CurveType.LINEAR:
+        return t;
+      case Info.CurveType.SLOW:
+        return Math.pow(t, 3);
+      case Info.CurveType.FAST:
+        return 1 - Math.pow(1 - t, 3);
+      case Info.CurveType.SMOOTH:
+        return t * t * (3 - 2 * t)
+      case Info.CurveType.BEZIER:
+      case Info.CurveType.INVALID:
+        return t; // TODO
+    }
   }
   
   update(time: number) {
@@ -89,7 +105,6 @@ export class ColorEnvelope extends Envelope<Info.Color> {
     }
     
     this.update(this.current.time)
-    console.log(this.points)
   }
   
   protected default(): Info.Color {
