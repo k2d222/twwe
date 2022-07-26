@@ -47,14 +47,22 @@ export class RenderQuadsLayer extends RenderLayer {
   
   recomputeEnvelope() {
     const quadCount = this.layer.quads.length
+    const vertexArr = new Float32Array(quadCount * 4 * 2)
     const colorArr = new Float32Array(quadCount * 4 * 4)
     let t = 0
 
     for (const quad of this.layer.quads) {
+      const vertices = makeVertices(quad)
       const colors = makeColors(quad)
+
+      vertexArr.set(vertices, t * 4 * 2)
       colorArr.set(colors, t * 4 * 4)
+      
       t++
     }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuf)
+    gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf)
     gl.bufferData(gl.ARRAY_BUFFER, colorArr, gl.STATIC_DRAW)
@@ -139,21 +147,51 @@ export class RenderQuadsLayer extends RenderLayer {
 }
 
 function makeVertices(q: Quad) {
-  return [
-    q.points[0].x / 512 / 64, q.points[0].y / 512 / 64,
-    q.points[2].x / 512 / 64, q.points[2].y / 512 / 64,
-    q.points[3].x / 512 / 64, q.points[3].y / 512 / 64,
-    q.points[1].x / 512 / 64, q.points[1].y / 512 / 64,
-  ]
+  if (q.posEnv) {
+    let env = q.posEnv.current.point
+    if (q.posEnvOffset)
+      env = q.posEnv.computePoint(q.posEnv.current.time + q.posEnvOffset)
+    
+    let cos_r = Math.cos(env.r / 1024 / 180 * Math.PI)
+    let sin_r = Math.sin(env.r / 1024 / 180 * Math.PI)
+    
+    const points = [q.points[0], q.points[2], q.points[3], q.points[1]]
+      .map(({ x, y }) => [ // translate quad center to origin for rotation
+        x - q.points[4].x,
+        y - q.points[4].y,
+      ])
+      .map(([ x, y ]) => [ // rotate
+        (x * cos_r - y * sin_r),
+        (x * sin_r + y * cos_r),
+      ])
+      .map(([ x, y ]) => [ // translate center back in place + env translate
+        x + q.points[4].x + env.x,
+        y + q.points[4].y + env.y,
+      ])
+        
+    return points.flat().map(x => x / 1024 / 32)
+  }
+  else {
+    return [
+      q.points[0].x / 1024 / 32, q.points[0].y / 1024 / 32,
+      q.points[2].x / 1024 / 32, q.points[2].y / 1024 / 32,
+      q.points[3].x / 1024 / 32, q.points[3].y / 1024 / 32,
+      q.points[1].x / 1024 / 32, q.points[1].y / 1024 / 32,
+    ]
+  }
 }
 
 function makeColors(q: Quad) {
   let comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
 
   if (q.colorEnv) {
-    const { r, g, b, a } = q.colorEnv.current.point
-    const env = [ r, g, b, a ].map(x => x / 1024)
-    comp = ({ r, g, b, a }) => [r, g, b, a].map((x, i) => x / 255 * env[i])
+    let env = q.colorEnv.current.point
+    if (q.colorEnvOffset)
+      env = q.colorEnv.computePoint(q.colorEnv.current.time + q.colorEnvOffset)
+
+    const { r, g, b, a } = env
+    const compEnv = [ r, g, b, a ].map(x => x / 1024)
+    comp = ({ r, g, b, a }) => [r, g, b, a].map((x, i) => x / 255 * compEnv[i])
   }
 
   return [

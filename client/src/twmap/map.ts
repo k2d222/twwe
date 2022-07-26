@@ -100,6 +100,12 @@ export class Map {
         envelopes.push(env)
       }
       
+      else if (envInfo.type === Info.EnvType.POSITION) {
+        const env = new PositionEnvelope()
+        env.load(this, df, envInfo)
+        envelopes.push(env)
+      }
+      
       else {
         console.warn('unsupported envelope type: ', envInfo.type, envInfo)
       }
