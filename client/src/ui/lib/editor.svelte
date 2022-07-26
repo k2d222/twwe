@@ -24,6 +24,7 @@
   let cont: HTMLElement
   let viewport: Viewport
   let treeViewVisible = true
+  let animEnabled = false
   let selectedTile: EditTileParams
   let peerCount = 0
   let tileSelectorVisible = false
@@ -225,7 +226,8 @@
     setViewport(viewport)
 
     const renderLoop = (t: number) => {
-      updateEnvelopes(t)
+      if (animEnabled)
+        updateEnvelopes(t)
       renderer.render(viewport, rmap)
       updateOutlines()
       if (!destroyed)
@@ -253,6 +255,12 @@
 
   function onToggleTreeView() {
     treeViewVisible = !treeViewVisible
+  }
+
+  function onToggleAnim() {
+    animEnabled = !animEnabled
+    if (!animEnabled)
+      updateEnvelopes(0)
   }
 
   async function onSaveMap() {
@@ -319,6 +327,11 @@
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
       <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
       <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
+      {#if animEnabled}
+        <button id="anim-toggle" on:click={onToggleAnim}><img src="/assets/pause.svg" alt="pause" title="Pause envelope animations"></button>
+      {:else}
+        <button id="anim-toggle" on:click={onToggleAnim}><img src="/assets/play.svg" alt="play" title="Play envelope animations"></button>
+      {/if}
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
