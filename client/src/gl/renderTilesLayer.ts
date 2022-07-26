@@ -305,8 +305,8 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
     const { r, g, b, a } = this.layer.color
     let col = [r, g, b, a].map(x => x / 255)
     if (this.layer.colorEnv) {
-      const { r, g, b, a } = this.layer.colorEnv.points[0].content
-      const envCol = [r, g, b, a].map(x => x / 255)
+      const { r, g, b, a } = this.layer.colorEnv.current.point
+      const envCol = [r, g, b, a].map(x => x / 1024)
       col = col.map((c, i) => c * envCol[i])
     }
     gl.uniform4fv(shader.locs.unifs.uColorMask, col)

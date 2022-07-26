@@ -44,6 +44,21 @@ export class RenderQuadsLayer extends RenderLayer {
 
     this.initBuffers()
   }
+  
+  recomputeEnvelope() {
+    const quadCount = this.layer.quads.length
+    const colorArr = new Float32Array(quadCount * 4 * 4)
+    let t = 0
+
+    for (const quad of this.layer.quads) {
+      const colors = makeColors(quad)
+      colorArr.set(colors, t * 4 * 4)
+      t++
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf)
+    gl.bufferData(gl.ARRAY_BUFFER, colorArr, gl.STATIC_DRAW)
+  }
 
   render() {
     if (!this.visible)
@@ -136,7 +151,7 @@ function makeColors(q: Quad) {
   let comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
 
   if (q.colorEnv) {
-    const { r, g, b, a } = q.colorEnv.points[0].content
+    const { r, g, b, a } = q.colorEnv.current.point
     const env = [ r, g, b, a ].map(x => x / 1024)
     comp = ({ r, g, b, a }) => [r, g, b, a].map((x, i) => x / 255 * env[i])
   }
