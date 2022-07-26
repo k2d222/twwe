@@ -303,12 +303,17 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
     super.preRender()
     // Set color mask
     const { r, g, b, a } = this.layer.color
-    const col = [r, g, b, a].map(x => x / 255)
+    let col = [r, g, b, a].map(x => x / 255)
+    if (this.layer.colorEnv) {
+      const { r, g, b, a } = this.layer.colorEnv.points[0].content
+      const envCol = [r, g, b, a].map(x => x / 255)
+      col = col.map((c, i) => c * envCol[i])
+    }
     gl.uniform4fv(shader.locs.unifs.uColorMask, col)
   }
 }
 
-export class RenderFrontLayer extends RenderTilesLayer {
+export class RenderFrontLayer extends RenderAnyTilesLayer<FrontLayer> {
   static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/editor/front.png')
@@ -316,13 +321,13 @@ export class RenderFrontLayer extends RenderTilesLayer {
     return image
   })()
 
-  constructor(rmap: RenderMap, layer: FrontLayer) {
-    super(rmap, layer)
-    this.texture = new Texture(RenderFrontLayer.image)
+  constructor(_: RenderMap, layer: FrontLayer) {
+    const texture = new Texture(RenderFrontLayer.image)
+    super(layer, texture)
   }
 }
 
-export class RenderGameLayer extends RenderTilesLayer {
+export class RenderGameLayer extends RenderAnyTilesLayer<GameLayer> {
   static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/entities/DDNet.png')
@@ -330,9 +335,8 @@ export class RenderGameLayer extends RenderTilesLayer {
     return image
   })()
 
-  constructor(rmap: RenderMap, layer: GameLayer) {
-    super(rmap, layer)
-    this.texture = new Texture(RenderGameLayer.image)
+  constructor(_: RenderMap, layer: GameLayer) {
+    super(layer, new Texture(RenderGameLayer.image))
   }
 }
 

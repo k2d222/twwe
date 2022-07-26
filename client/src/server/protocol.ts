@@ -89,8 +89,8 @@ export interface EditTilesLayer extends CommonLayerChange {
   width?: number,
   height?: number,
   color?: Color,
-  // colorEnv?: number, // TODO
-  // colorEnvOffset?: number, // TODO
+  colorEnv?: number,
+  colorEnvOffset?: number,
   image?: number | null,
 }
 

@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type * as Info from '../../twmap/types'
   import type { Color } from '../../twmap/types'
+  import type { Quad } from '../../twmap/quadsLayer'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
 
-  export let quad: Info.Quad
+  export let quad: Quad
   export let p: number
 
   $: point = quad.points[p]

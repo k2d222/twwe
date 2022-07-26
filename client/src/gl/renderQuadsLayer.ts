@@ -1,5 +1,4 @@
-import type { QuadsLayer } from '../twmap/quadsLayer'
-import type * as Info from '../twmap/types'
+import type { QuadsLayer, Quad } from '../twmap/quadsLayer'
 import type { Texture } from './texture'
 import type { RenderMap } from './renderMap'
 import { RenderLayer } from './renderLayer'
@@ -124,7 +123,7 @@ export class RenderQuadsLayer extends RenderLayer {
   }
 }
 
-function makeVertices(q: Info.Quad) {
+function makeVertices(q: Quad) {
   return [
     q.points[0].x / 512 / 64, q.points[0].y / 512 / 64,
     q.points[2].x / 512 / 64, q.points[2].y / 512 / 64,
@@ -133,8 +132,15 @@ function makeVertices(q: Info.Quad) {
   ]
 }
 
-function makeColors(q: Info.Quad) {
-  const comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
+function makeColors(q: Quad) {
+  let comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
+
+  if (q.colorEnv) {
+    const { r, g, b, a } = q.colorEnv.points[0].content
+    const env = [ r, g, b, a ].map(x => x / 1024)
+    comp = ({ r, g, b, a }) => [r, g, b, a].map((x, i) => x / 255 * env[i])
+  }
+
   return [
     ...comp(q.colors[0]),
     ...comp(q.colors[2]),
@@ -143,7 +149,7 @@ function makeColors(q: Info.Quad) {
   ]
 }
 
-function makeTexCoords(q: Info.Quad) {
+function makeTexCoords(q: Quad) {
   return [
     q.texCoords[0].x / 1024, q.texCoords[0].y / 1024,
     q.texCoords[2].x / 1024, q.texCoords[2].y / 1024,

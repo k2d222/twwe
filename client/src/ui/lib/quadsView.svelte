@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { RenderMap } from '../../gl/renderMap'
-  import type { QuadsLayer } from '../../twmap/quadsLayer'
+  import type { QuadsLayer, Quad } from '../../twmap/quadsLayer'
   import type * as Info from '../../twmap/types'
   import { viewport } from '../../gl/global'
   import { onMount, onDestroy } from 'svelte'
@@ -86,12 +86,12 @@
     lastPos.y = y
 
     quadPoints = quadPoints // hack to redraw quad
-
+    
     const change = {
       group: g,
       layer: l,
       quad: q,
-      ...layer.quads[q],
+      ...quadToInfo(layer.quads[q])
     }
     rmap.editQuad(change)
   }
@@ -127,7 +127,7 @@
       group: g,
       layer: l,
       quad: q,
-      ...layer.quads[q],
+      ...quadToInfo(layer.quads[q])
     }
     rmap.editQuad(change)
     server.send('editquad', change)
@@ -174,7 +174,11 @@
         { x: 1024, y: 0    },
         { x: 0,    y: 1024 },
         { x: 1024, y: 1024 },
-      ]
+      ],
+      posEnv: -1,
+      posEnvOffset: 0,
+      colorEnv: -1,
+      colorEnvOffset: 0
     }
 
     try {
@@ -190,14 +194,29 @@
     }
   }
 
-  function cloneQuad(quad: Info.Quad) {
-    const copy: Info.Quad = {
+  function cloneQuad(quad: Quad) {
+    const copy: Quad = {
       points: quad.points.map(p => { return { x: p.x, y: p.y } }),
       colors: quad.colors.map(c => { return { r: c.r, g: c.g, b: c.b, a: c.a } }),
       texCoords: quad.texCoords.map(p => { return { x: p.x, y: p.y } }),
+      ...quad
     }
 
     return copy
+  }
+  
+  function quadToInfo(quad: Quad): Info.Quad {
+    const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
+
+    return {
+      points,
+      colors,
+      texCoords,
+      posEnv: rmap.map.envelopes.indexOf(posEnv),
+      posEnvOffset,
+      colorEnv: rmap.map.envelopes.indexOf(colorEnv),
+      colorEnvOffset,
+    }
   }
 
   function onDuplicate(q: number) {
@@ -206,7 +225,13 @@
 
     try {
       showInfo('Please wait…')
-      const change = { group: g, layer: l, ...quad }
+
+      const change = {
+        group: g,
+        layer: l,
+        quad: q,
+        ...quadToInfo(layer.quads[q])
+      }
       server.query('createquad', change)
       rmap.createQuad(change)
       hideCM()

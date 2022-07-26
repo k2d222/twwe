@@ -3,7 +3,6 @@ import { DataReader } from './dataReader'
 
 export function parseGroup(groupData: ArrayBuffer): Info.Group {
   const d = new DataReader(groupData)
-  d.reset()
 
   const data: Info.Group = {
     version: d.uint32(),
@@ -32,7 +31,6 @@ export function parseGroup(groupData: ArrayBuffer): Info.Group {
 
 export function parseLayer(layerData: ArrayBuffer): Info.Layer {
   const d = new DataReader(layerData)
-  d.reset()
 
   return {
     version: d.uint32(),
@@ -43,7 +41,6 @@ export function parseLayer(layerData: ArrayBuffer): Info.Layer {
 
 export function parseQuadsLayer(layerData: ArrayBuffer): Info.QuadsLayer {
   const d = new DataReader(layerData)
-  d.reset()
 
   /*obj.version =*/ d.uint32()
   /*obj.type =*/ d.uint32()
@@ -66,7 +63,6 @@ export function parseQuadsLayer(layerData: ArrayBuffer): Info.QuadsLayer {
 
 export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
   const d = new DataReader(layerData)
-  d.reset()
 
   /*obj.version =*/ d.uint32()
   /*obj.type =*/ d.uint32()
@@ -111,7 +107,6 @@ export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
 
 export function parseImage(layerData: ArrayBuffer): Info.Image {
   const d = new DataReader(layerData)
-  d.reset()
 
   return {
     version: d.uint32(),
@@ -127,7 +122,6 @@ export function parseQuads(layerData: ArrayBuffer, num: number): Info.Quad[] {
   const quads: Info.Quad[] = []
 
   const d = new DataReader(layerData)
-  d.reset()
 
   for (let q = 0; q < num; q++) {
 
@@ -154,7 +148,7 @@ export function parseQuads(layerData: ArrayBuffer, num: number): Info.Quad[] {
       texCoords.push({ x: d.int32(), y: d.int32() })
     }
 
-    const quad = {
+    const quad: Info.Quad = {
       points,
       colors,
       texCoords,
@@ -173,7 +167,6 @@ export function parseQuads(layerData: ArrayBuffer, num: number): Info.Quad[] {
 export function parseTiles(tileData: ArrayBuffer, num: number): Info.Tile[] {
   const tiles: Info.Tile[] = []
   const d = new DataReader(tileData)
-  d.reset()
 
   for (let i = 0; i < num; i++) {
     tiles.push({
@@ -192,7 +185,6 @@ export function parseTiles(tileData: ArrayBuffer, num: number): Info.Tile[] {
 export function parseTeleTiles(tileData: ArrayBuffer, num: number): Info.Tele[] {
   const tiles: Info.Tele[] = []
   const d = new DataReader(tileData)
-  d.reset()
 
   for (let i = 0; i < num; i++) {
     tiles.push({
@@ -207,7 +199,6 @@ export function parseTeleTiles(tileData: ArrayBuffer, num: number): Info.Tele[] 
 export function parseSpeedupTiles(tileData: ArrayBuffer, num: number): Info.Speedup[] {
   const tiles: Info.Speedup[] = []
   const d = new DataReader(tileData)
-  d.reset()
 
   for (let i = 0; i < num; i++) {
     const tile = {
@@ -227,7 +218,6 @@ export function parseSpeedupTiles(tileData: ArrayBuffer, num: number): Info.Spee
 export function parseSwitchTiles(tileData: ArrayBuffer, num: number): Info.Switch[] {
   const tiles: Info.Switch[] = []
   const d = new DataReader(tileData)
-  d.reset()
 
   for (let i = 0; i < num; i++) {
     tiles.push({
@@ -244,7 +234,6 @@ export function parseSwitchTiles(tileData: ArrayBuffer, num: number): Info.Switc
 export function parseTuneTiles(tileData: ArrayBuffer, num: number): Info.Tune[] {
   const tiles: Info.Tune[] = []
   const d = new DataReader(tileData)
-  d.reset()
 
   for (let i = 0; i < num; i++) {
     tiles.push({
@@ -254,6 +243,76 @@ export function parseTuneTiles(tileData: ArrayBuffer, num: number): Info.Tune[] 
   }
 
   return tiles
+}
+
+export function parseEnvelope(envelopeData: ArrayBuffer): Info.Envelope {
+  const d = new DataReader(envelopeData)
+
+  const data: Info.Envelope = {
+    version: d.uint32(),
+    type: d.uint32(),
+    startPoint: d.uint32(),
+    numPoints: d.uint32(),
+  }
+  
+  // extension without version change
+  if (d.bytesLeft() >= 8) {
+    data.name = d.int32Str(8)
+  }
+  
+  // version 2 extension
+  if (data.version >= 2) {
+    data.synchronized = d.int32() === 1
+  }
+  
+  return data
+}
+
+export function parseSoundEnvPoint(envPointData: ArrayBuffer): Info.SoundEnvPoint {
+  const d = new DataReader(envPointData)
+
+  const data = {
+    time: d.uint32(),
+    curve: d.uint32(),
+    volume: d.int32(),
+  }
+
+  d.int32() // skip reserved
+  
+  return data
+}
+
+export function parsePositionEnvPoint(envPointData: ArrayBuffer): Info.PositionEnvPoint {
+  const d = new DataReader(envPointData)
+
+  const data = {
+    time: d.uint32(),
+    curve: d.uint32(),
+    pos: {
+      x: d.int32(),
+      y: d.int32(),
+    },
+    rotation: d.int32(),
+  }
+
+  d.int32() // skip reserved
+  
+  return data
+}
+
+export function parseColorEnvPoint(envPointData: ArrayBuffer): Info.ColorEnvPoint {
+  const d = new DataReader(envPointData)
+
+  return {
+    time: d.uint32(),
+    curve: d.uint32(),
+    color: {
+      r: d.uint32(),
+      g: d.uint32(),
+      b: d.uint32(),
+      a: d.uint32(),
+    },
+  }
 }
 
 export function parseString(data: ArrayBuffer) {
