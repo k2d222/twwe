@@ -121,6 +121,8 @@ pub enum OneLayerChange {
     Width(u32),
     Height(u32),
     Image(Option<u16>),
+    ColorEnv(Option<u16>),
+    ColorEnvOffset(i32),
 }
 
 // see https://serde.rs/remote-derive.html
@@ -242,10 +244,10 @@ pub struct Quad {
     pub points: [Point; 5],
     pub colors: [Color; 4],
     pub tex_coords: [Point; 4],
-    // posEnv: number, // TODO
-    // posEnvOffset: number,
-    // colorEnv: number,
-    // colorEnvOffset: number,
+    pub pos_env: Option<u16>,
+    pub pos_env_offset: i32,
+    pub color_env: Option<u16>,
+    pub color_env_offset: i32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

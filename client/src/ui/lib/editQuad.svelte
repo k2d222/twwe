@@ -1,14 +1,19 @@
 <script lang="ts">
   import type { Color } from '../../twmap/types'
   import type { Quad } from '../../twmap/quadsLayer'
+  import { ColorEnvelope, PositionEnvelope } from '../../twmap/envelope'
+  import { RenderMap } from '../../gl/renderMap'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
 
+  export let rmap: RenderMap
   export let quad: Quad
   export let p: number
 
   $: point = quad.points[p]
+  $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
+  $: positionEnvelopes = rmap.map.envelopes.filter(e => e instanceof PositionEnvelope)
 
   function pointName(p: number) {
     if (p === 0) return 'Top Left'
@@ -65,6 +70,26 @@
   function onDuplicate() {
     dispatch('duplicate')
   }
+  
+  function onEditColEnv(env: number) {
+    quad.colorEnv = rmap.map.envelopes[env] as ColorEnvelope
+    dispatch('change')
+  }
+
+  function onEditColEnvOff(off: number) {
+    quad.colorEnvOffset = off
+    dispatch('change')
+  }
+  
+  function onEditPosEnv(env: number) {
+    quad.posEnv = rmap.map.envelopes[env] as PositionEnvelope
+    dispatch('change')
+  }
+
+  function onEditPosEnvOff(off: number) {
+    quad.posEnvOffset = off
+    dispatch('change')
+  }
 
 </script>
 
@@ -81,6 +106,24 @@
     <label>Opacity <input type="range" min={0} max={255} value={col.a}
       on:change={(e) => onEditOpacity(intVal(e.target))}></label>
   {:else}
+    <label>Position Envelope <select on:change={(e) => onEditPosEnv(intVal(e.target))}>
+      <option selected={quad.posEnv === null} value={-1}>None</option>
+      {#each positionEnvelopes as env}
+        {@const i = rmap.map.envelopes.indexOf(env)}
+        <option selected={quad.posEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
+      {/each}
+    </select></label>
+    <label>Position Envelope  Offset <input type="number" value={quad.posEnvOffset}
+      on:change={(e) => onEditPosEnvOff(intVal(e.target))}></label>
+    <label>Color Env. <select on:change={(e) => onEditColEnv(intVal(e.target))}>
+      <option selected={quad.colorEnv === null} value={-1}>None</option>
+      {#each colorEnvelopes as env}
+        {@const i = rmap.map.envelopes.indexOf(env)}
+        <option selected={quad.colorEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
+      {/each}
+    </select></label>
+    <label>Color Env. Offset <input type="number" value={quad.colorEnvOffset}
+      on:change={(e) => onEditColEnvOff(intVal(e.target))}></label>
     <button on:click={onDuplicate}>Duplicate</button>
     <button on:click={onDelete}>Delete</button>
   {/if}

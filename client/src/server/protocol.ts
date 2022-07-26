@@ -1,4 +1,4 @@
-import type { Quad, Color, Tile, Tele, Speedup, Switch, Tune } from '../twmap/types'
+import type { Quad, Coord, Color, Tile, Tele, Speedup, Switch, Tune } from '../twmap/types'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
@@ -89,7 +89,7 @@ export interface EditTilesLayer extends CommonLayerChange {
   width?: number,
   height?: number,
   color?: Color,
-  colorEnv?: number,
+  colorEnv?: number | null,
   colorEnvOffset?: number,
   image?: number | null,
 }
@@ -127,15 +127,29 @@ export type EditTile = EditTileParams & {
   y: number,
 }
 
-export type CreateQuad = Quad & {
+export type CreateQuad = {
   group: number,
   layer: number,
+  points: Coord[],
+  colors: Color[],
+  texCoords: Coord[],
+  posEnv: number | null,
+  posEnvOffset: number,
+  colorEnv: number | null,
+  colorEnvOffset: number,
 }
 
-export type EditQuad = Quad & {
+export type EditQuad = {
   group: number,
   layer: number,
   quad: number,
+  points: Coord[],
+  colors: Color[],
+  texCoords: Coord[],
+  posEnv: number | null,
+  posEnvOffset: number,
+  colorEnv: number | null,
+  colorEnvOffset: number,
 }
 
 export interface DeleteQuad {

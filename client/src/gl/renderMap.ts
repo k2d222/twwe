@@ -2,7 +2,7 @@ import type { Map, PhysicsLayer } from '../twmap/map'
 import type { EditTile, CreateQuad, EditQuad, DeleteQuad, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
 import type { Quad } from '../twmap/quadsLayer'
-import type { PositionEnvelope, ColorEnvelope } from 'src/twmap/envelope'
+import type { PositionEnvelope, ColorEnvelope } from '../twmap/envelope'
 import * as Info from '../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
 import { RenderAnyTilesLayer, RenderGameLayer, RenderTilesLayer, RenderFrontLayer, RenderSwitchLayer, RenderSpeedupLayer, RenderTeleLayer, RenderTuneLayer } from './renderTilesLayer'
@@ -111,9 +111,9 @@ export class RenderMap {
       points: change.points,
       colors: change.colors,
       texCoords: change.texCoords,
-      posEnv: change.posEnv === -1 ? null : this.map.envelopes[change.posEnv] as PositionEnvelope,
+      posEnv: change.posEnv === null ? null : this.map.envelopes[change.posEnv] as PositionEnvelope,
       posEnvOffset: change.posEnvOffset,
-      colorEnv: change.colorEnv === -1 ? null : this.map.envelopes[change.colorEnv] as ColorEnvelope,
+      colorEnv: change.colorEnv === null ? null : this.map.envelopes[change.colorEnv] as ColorEnvelope,
       colorEnvOffset: change.colorEnvOffset,
     }
     
@@ -126,13 +126,13 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
     const quad = rlayer.layer.quads[change.quad]
     
-    if (change.points) quad.points = change.points
-    if (change.colors) quad.colors = change.colors
-    if (change.texCoords) quad.texCoords = change.texCoords
-    if (change.posEnv) quad.posEnv = change.posEnv === -1 ? null : this.map.envelopes[change.posEnv] as PositionEnvelope
-    if (change.posEnvOffset) quad.posEnvOffset = change.posEnvOffset
-    if (change.colorEnv) quad.colorEnv = change.colorEnv === -1 ? null : this.map.envelopes[change.colorEnv] as ColorEnvelope
-    if (change.colorEnvOffset) quad.colorEnvOffset = change.colorEnvOffset
+    if ('points' in change) quad.points = change.points
+    if ('colors' in change) quad.colors = change.colors
+    if ('texCoords' in change) quad.texCoords = change.texCoords
+    if ('posEnv' in change) quad.posEnv = change.posEnv === null ? null : this.map.envelopes[change.posEnv] as PositionEnvelope
+    if ('posEnvOffset' in change) quad.posEnvOffset = change.posEnvOffset
+    if ('colorEnv' in change) quad.colorEnv = change.colorEnv === null ? null : this.map.envelopes[change.colorEnv] as ColorEnvelope
+    if ('colorEnvOffset' in change) quad.colorEnvOffset = change.colorEnvOffset
 
     rlayer.recompute()
   }
@@ -183,6 +183,8 @@ export class RenderMap {
       if ('color' in change) rlayer.layer.color = change.color
       if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
       if ('height' in change) this.setLayerHeight(rgroup, rlayer, change.height)
+      if ('colorEnv' in change) rlayer.layer.colorEnv = change.colorEnv === null ? null : this.map.envelopes[change.colorEnv]
+      if ('colorEnvOffset' in change) rlayer.layer.colorEnvOffset = change.colorEnvOffset
       if ('image' in change) {
         if (change.image === null) {
           rlayer.layer.image = null
