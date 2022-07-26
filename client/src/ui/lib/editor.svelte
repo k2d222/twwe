@@ -10,6 +10,7 @@
   import { canvas, renderer, setViewport } from '../../gl/global'
   import { Viewport } from '../../gl/viewport'
   import { RenderMap } from '../../gl/renderMap'
+  import { RenderQuadsLayer } from '../../gl/renderQuadsLayer'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError } from './dialog'
@@ -180,6 +181,19 @@
       `
     }
   }
+  
+  function updateEnvelopes(t: number) {
+    for(let env of map.envelopes) {
+      env.update(t)
+    }
+    for (const rgroup of rmap.groups) {
+      for (const rlayer of rgroup.layers) {
+        if (rlayer instanceof RenderQuadsLayer) {
+          rlayer.recomputeEnvelope() // COMBAK: maybe better perfs?
+        }
+      }
+    }
+  }
 
   let destroyed = false
 
@@ -210,13 +224,14 @@
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
 
-    const renderLoop = () => {
+    const renderLoop = (t: number) => {
+      updateEnvelopes(t)
       renderer.render(viewport, rmap)
       updateOutlines()
       if (!destroyed)
         requestAnimationFrame(renderLoop)
     }
-    renderLoop()
+    renderLoop(0)
   })
 
   onDestroy(() => {
