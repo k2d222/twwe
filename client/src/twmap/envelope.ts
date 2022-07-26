@@ -89,6 +89,7 @@ export class ColorEnvelope extends Envelope<Info.Color> {
     }
     
     this.update(this.current.time)
+    console.log(this.points)
   }
   
   protected default(): Info.Color {

@@ -56,6 +56,9 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     // Vertex colors are not needed
     gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
     gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
+
+    // white color
+    gl.uniform4fv(shader.locs.unifs.uColorMask, [ 1.0, 1.0, 1.0, 1.0 ])
   }
   
   protected postRender() {
@@ -307,7 +310,8 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
     if (this.layer.colorEnv) {
       const { r, g, b, a } = this.layer.colorEnv.current.point
       const envCol = [r, g, b, a].map(x => x / 1024)
-      col = col.map((c, i) => c * envCol[i])
+      // col = col.map((c, i) => c * envCol[i])
+      col = col.map((c, i) => Math.min(Math.max(0, c * envCol[i]), 1))
     }
     gl.uniform4fv(shader.locs.unifs.uColorMask, col)
   }
