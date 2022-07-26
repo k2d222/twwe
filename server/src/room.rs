@@ -16,8 +16,8 @@ use tokio_tungstenite::tungstenite::protocol::Message;
 
 use twmap::{
     constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage,
-    ExternalImage, FrontLayer, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, SpeedupLayer,
-    SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
+    Envelope, ExternalImage, FrontLayer, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer,
+    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
 };
 
 use crate::{
@@ -308,6 +308,21 @@ impl Room {
 
     pub fn set_quad(&self, edit_quad: &EditQuad) -> Result<(), &'static str> {
         let mut map = self.map.get();
+
+        if let Some(pos_env) = edit_quad.content.pos_env {
+            match map.envelopes.get(pos_env as usize) {
+                Some(Envelope::Position(_)) => (),
+                _ => return Err("invalid envelope index or type"),
+            }
+        }
+
+        if let Some(color_env) = edit_quad.content.color_env {
+            match map.envelopes.get(color_env as usize) {
+                Some(Envelope::Color(_)) => (),
+                _ => return Err("invalid envelope index or type"),
+            }
+        }
+
         let group = map
             .groups
             .get_mut(edit_quad.group as usize)
@@ -323,9 +338,14 @@ impl Room {
                     .quads
                     .get_mut(edit_quad.quad as usize)
                     .ok_or("invalid quad index")?;
+
                 quad.corners.copy_from_slice(&edit_quad.content.points[..4]);
                 quad.position = edit_quad.content.points[4];
                 quad.texture_coords = edit_quad.content.tex_coords;
+                quad.position_env = edit_quad.content.pos_env;
+                quad.position_env_offset = edit_quad.content.pos_env_offset;
+                quad.color_env = edit_quad.content.color_env;
+                quad.color_env_offset = edit_quad.content.color_env_offset;
             }
             _ => return Err("layer is not a quads layer"),
         }
@@ -525,6 +545,13 @@ impl Room {
             }
         }
 
+        if let ColorEnv(Some(i)) = edit_layer.change {
+            match map.envelopes.get(i as usize) {
+                Some(Envelope::Color(_)) => (),
+                _ => return Err("invalid envelope index or type"),
+            }
+        }
+
         let group = map
             .groups
             .get_mut(edit_layer.group as usize)
@@ -619,6 +646,14 @@ impl Room {
                 Layer::Tiles(layer) => layer.image = None,
                 Layer::Quads(layer) => layer.image = None,
                 _ => return Err("cannot change layer image"),
+            },
+            ColorEnv(color_env) => match layer {
+                Layer::Tiles(layer) => layer.color_env = color_env, // envelope check performed earlier
+                _ => return Err("cannot change layer color envelope"),
+            },
+            ColorEnvOffset(color_env_off) => match layer {
+                Layer::Tiles(layer) => layer.color_env_offset = color_env_off,
+                _ => return Err("cannot change layer color envelope offset"),
             },
         }
 

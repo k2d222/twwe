@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { RenderMap } from '../../gl/renderMap'
   import type { QuadsLayer, Quad } from '../../twmap/quadsLayer'
+  import type { EditQuad } from 'src/server/protocol'
   import type * as Info from '../../twmap/types'
   import { viewport } from '../../gl/global'
   import { onMount, onDestroy } from 'svelte'
@@ -87,12 +88,7 @@
 
     quadPoints = quadPoints // hack to redraw quad
     
-    const change = {
-      group: g,
-      layer: l,
-      quad: q,
-      ...quadToInfo(layer.quads[q])
-    }
+    const change = editQuad(q)
     rmap.editQuad(change)
   }
 
@@ -123,12 +119,7 @@
   }
 
   function onChange(q: number) {
-    const change = {
-      group: g,
-      layer: l,
-      quad: q,
-      ...quadToInfo(layer.quads[q])
-    }
+    const change = editQuad(q)
     rmap.editQuad(change)
     server.send('editquad', change)
   }
@@ -205,16 +196,22 @@
     return copy
   }
   
-  function quadToInfo(quad: Quad): Info.Quad {
+  function editQuad(q: number): EditQuad {
+    const quad = layer.quads[q]
     const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
+    const posEnv_ = rmap.map.envelopes.indexOf(posEnv)
+    const colorEnv_ = rmap.map.envelopes.indexOf(colorEnv)
 
     return {
+      group: g,
+      layer: l,
+      quad: q,
       points,
       colors,
       texCoords,
-      posEnv: rmap.map.envelopes.indexOf(posEnv),
+      posEnv: posEnv_ === -1 ? null : posEnv_,
       posEnvOffset,
-      colorEnv: rmap.map.envelopes.indexOf(colorEnv),
+      colorEnv: colorEnv_ === -1 ? null : colorEnv_,
       colorEnvOffset,
     }
   }
@@ -226,12 +223,7 @@
     try {
       showInfo('Please wait…')
 
-      const change = {
-        group: g,
-        layer: l,
-        quad: q,
-        ...quadToInfo(layer.quads[q])
-      }
+      const change = editQuad(q)
       server.query('createquad', change)
       rmap.createQuad(change)
       hideCM()
@@ -273,7 +265,7 @@
     </svg>
     {#if cm_q === q}
       <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-        <QuadEditor {quad} p={cm_p} on:change={() => onChange(q)} on:delete={() => onDelete(q)}  on:duplicate={() => onDuplicate(q)}/>
+        <QuadEditor {rmap} {quad} p={cm_p} on:change={() => onChange(q)} on:delete={() => onDelete(q)}  on:duplicate={() => onDuplicate(q)}/>
       </ContextMenu>
     {/if}
   {/each}
