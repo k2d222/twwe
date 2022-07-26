@@ -77,7 +77,7 @@ export class ColorEnvelope extends Envelope<Info.Color> {
     const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)
     const pointsItem = df.getItem(pointsInfo.start)
 
-    for (let p = info.startPoint; p < info.numPoints; p++) {
+    for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {
       const data = pointsItem.data.slice(p * itemSize, (p + 1) * itemSize)
       const pointInfo = parseColorEnvPoint(data)
       const point: EnvPoint<Info.Color> = {
@@ -107,15 +107,17 @@ export class ColorEnvelope extends Envelope<Info.Color> {
   }
 }
 
-export class PositionEnvelope extends Envelope<Info.Coord> {
+type Pos = { x: number, y: number, r: number }
+
+export class PositionEnvelope extends Envelope<Pos> {
   
   constructor() {
     super(Info.EnvType.POSITION)
   }
 
-  protected default(): Info.Coord {
+  protected default(): Pos {
     return {
-      x: 0, y: 0
+      x: 0, y: 0, r: 0
     }
   }
   
@@ -127,13 +129,13 @@ export class PositionEnvelope extends Envelope<Info.Coord> {
     const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)
     const pointsItem = df.getItem(pointsInfo.start)
 
-    for (let p = info.startPoint; p < info.numPoints; p++) {
+    for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {
       const data = pointsItem.data.slice(p * itemSize, (p + 1) * itemSize)
       const pointInfo = parsePositionEnvPoint(data)
-      const point: EnvPoint<Info.Coord> = {
+      const point: EnvPoint<Pos> = {
         time: pointInfo.time,
         curve: pointInfo.curve,
-        content: pointInfo.pos,
+        content: { ...pointInfo.pos, r: pointInfo.rotation },
       }
       this.points.push(point)
     }
@@ -141,10 +143,11 @@ export class PositionEnvelope extends Envelope<Info.Coord> {
     this.update(this.current.time)
   }
 
-  protected interpolate(from: Info.Coord, to: Info.Coord, factor: number) {
+  protected interpolate(from: Pos, to: Pos, factor: number) {
     return {
       x: from.x * (1 - factor) + to.x * factor,
       y: from.y * (1 - factor) + to.y * factor,
+      r: from.r * (1 - factor) + to.r * factor,
     }
   }
 }
@@ -163,7 +166,7 @@ export class SoundEnvelope extends Envelope<number> {
     const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)
     const pointsItem = df.getItem(pointsInfo.start)
 
-    for (let p = info.startPoint; p < info.numPoints; p++) {
+    for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {
       const data = pointsItem.data.slice(p * itemSize, (p + 1) * itemSize)
       const pointInfo = parseSoundEnvPoint(data)
       const point: EnvPoint<number> = {
