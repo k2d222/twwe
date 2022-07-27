@@ -283,6 +283,9 @@
   function onDownloadMap() {
     Editor.downloadMap(map.name)
   }
+  
+  let lastTreeViewVisible = treeViewVisible
+  let lastEnvEditorVisible = envEditorVisible
 
   function onKeyDown(e: KeyboardEvent) {
     if ([' ', 'Tab'].includes(e.key)) {
@@ -290,8 +293,18 @@
 
       if (e.key === ' ')
         tileSelectorVisible = !tileSelectorVisible
-      else if (e.key === 'Tab')
-        onToggleTreeView()
+      else if (e.key === 'Tab') {
+        if (treeViewVisible || envEditorVisible) {
+          lastTreeViewVisible = treeViewVisible
+          lastEnvEditorVisible = envEditorVisible
+          treeViewVisible = false
+          envEditorVisible = false
+        }
+        else {
+          treeViewVisible = lastTreeViewVisible
+          envEditorVisible = lastEnvEditorVisible
+        }
+      }
     }
   }
   
@@ -331,7 +344,7 @@
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
-      <button id="env-toggle" on:click={onToggleEnvEditor}><img src="/assets/envelope.svg" alt="" title="Show envelope editor"></button>
+      <button id="env-toggle" on:click={onToggleEnvEditor}><img src="/assets/envelope.svg" alt="" title="Show envelopes"></button>
       <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
       <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
       {#if animEnabled}
