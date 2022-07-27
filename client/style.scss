@@ -689,13 +689,46 @@ nav.hidden .context {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 30%;
   background: white;
   transition: transform .3s;
   border-top: 1px solid lightgrey;
-  box-shadow: 0 10px 10px -5px black;
+  box-shadow: 0 0 10px -5px black;
+  display: flex;
+  flex-direction: column;
 
   &.hidden {
     transform: translateY(100%);
+  }
+
+  .header {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid lightgrey;
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+  }
+  
+  .graph {
+    flex-grow: 1;
+  }
+  
+  svg {
+    width: 100%;
+    height: 30vh;
+  }
+
+  path {
+    vector-effect: non-scaling-stroke;
+    stroke-width: 2px;
+    stroke: black;
+    fill: none;
+  }
+
+  path.point {
+    stroke-width: 5px;
+    stroke-linecap: round;
+    &:hover {
+      stroke-width: 10px;
+    }
   }
 }
