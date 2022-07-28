@@ -2,6 +2,7 @@
   import { ColorEnvelope, PositionEnvelope, SoundEnvelope, EnvPoint } from '../../twmap/envelope'
   import type { Envelope } from '../../twmap/map'
   import type { RenderMap } from '../../gl/renderMap'
+  import ContextMenu from './contextMenu.svelte'
   import { onMount } from 'svelte'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
@@ -23,8 +24,8 @@
   
   let viewBox: ViewBox = { x: 0, y: 0, w: 0, h: 0 }
   let paths: Point[][] = []
+  let colors: string[] = []
   let svg: SVGSVGElement
-  let colors = [ 'red', 'green', 'blue', 'orange' ]
   
   type Chan = 
     'color_r' | 'color_g' | 'color_b' | 'color_a' |
@@ -71,7 +72,9 @@
   $: if (selected && channelEnabled) {
     viewBox = makeViewBox(selected)
     paths = makePaths(selected)
+    colors = makeColors(selected)
   }
+
 
   function envChannels(env: Envelope) {
     if (env instanceof ColorEnvelope)
@@ -107,6 +110,18 @@
     return envChannels(env)
       .filter(c => channelEnabled[c])
       .map(c => makePath(env, c))
+  }
+  
+  function makeColors(env: Envelope) {
+    const colors = [ 'red', 'green', 'blue', 'orange' ]
+    const channels = envChannels(env)
+    const res = []
+
+    for (const i in channels)
+      if (channelEnabled[channels[i]])
+        res.push(colors[i])
+
+    return res
   }
 
   function pixelToSvg(x: number, y: number) {
@@ -180,6 +195,9 @@
       if (point !== prev)
         px = Math.max(px, prev.time)
 
+      px = Math.floor(px)
+      py = Math.floor(py)
+
       point.time = px
       setChannelVal[chan](point, py)
 
@@ -188,6 +206,24 @@
   }
   
   function onResize() {
+  }
+  
+  let cm_i: number = -1
+  let cm_j: number = -1
+  let cm_x = 0
+  let cm_y = 0
+  
+  function showCM(e: MouseEvent, i: number, j: number) {
+    e.preventDefault()
+    cm_x = e.clientX
+    cm_y = e.clientY
+    cm_i = i
+    cm_j = j
+  }
+  
+  function hideCM() {
+    cm_i = -1
+    cm_j = -1
   }
   
 </script>
@@ -206,14 +242,14 @@
       <label><input type="text" value={selected.name} placeholder="(unnamed)" on:change={onRename}/></label>
       <div class="channels">
         {#if selected instanceof ColorEnvelope}
-          <label><b style:color={colors[0]}>R</b><input type="checkbox" bind:checked={channelEnabled.color_r} /></label>
-          <label><b style:color={colors[1]}>G</b><input type="checkbox" bind:checked={channelEnabled.color_g} /></label>
-          <label><b style:color={colors[2]}>B</b><input type="checkbox" bind:checked={channelEnabled.color_b} /></label>
-          <label><b style:color={colors[3]}>A</b><input type="checkbox" bind:checked={channelEnabled.color_a} /></label>
+          <label><b style:color="red">R</b><input type="checkbox" bind:checked={channelEnabled.color_r} /></label>
+          <label><b style:color="green">G</b><input type="checkbox" bind:checked={channelEnabled.color_g} /></label>
+          <label><b style:color="blue">B</b><input type="checkbox" bind:checked={channelEnabled.color_b} /></label>
+          <label><b style:color="orange">A</b><input type="checkbox" bind:checked={channelEnabled.color_a} /></label>
         {:else if selected instanceof PositionEnvelope}
-          <label><b style:color={colors[0]}>X</b><input type="checkbox" bind:checked={channelEnabled.pos_x} /></label>
-          <label><b style:color={colors[1]}>Y</b><input type="checkbox" bind:checked={channelEnabled.pos_y} /></label>
-          <label><b style:color={colors[2]}>R</b><input type="checkbox" bind:checked={channelEnabled.pos_r} /></label>
+          <label><b style:color="red">X</b><input type="checkbox" bind:checked={channelEnabled.pos_x} /></label>
+          <label><b style:color="green">Y</b><input type="checkbox" bind:checked={channelEnabled.pos_y} /></label>
+          <label><b style:color="blue">R</b><input type="checkbox" bind:checked={channelEnabled.pos_r} /></label>
         {:else if selected instanceof SoundEnvelope}
           Sound envelope not supported yet.
         {/if}
@@ -238,9 +274,19 @@
         {#each path as p, j}
           <!-- not using the circle becausePointthe path stroke can be screen-space sized but not the circle fill. -->
           <path class="point" d={pointStr(p.x, p.y)} style:stroke={col}
-            on:mousedown={() => onMouseDown(i, j)}></path>
+            on:mousedown={() => onMouseDown(i, j)} on:contextmenu={(e) => showCM(e, i, j)}></path>
         {/each}
       {/each}
     </svg>
   </div>
 </div>
+          
+{#if cm_i !== -1 && cm_j !== -1}
+  {@const p = paths[cm_i][cm_j]}
+  <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
+    <div class="edit-env-point">
+      <label>Time <input type="number" value={p.x} /></label>
+      <label>Value <input type="number" value={p.y} /></label>
+    </div>
+  </ContextMenu>
+{/if}
