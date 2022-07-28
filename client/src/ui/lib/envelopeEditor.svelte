@@ -3,16 +3,27 @@
   import type { Envelope } from '../../twmap/map'
   import type { RenderMap } from '../../gl/renderMap'
   import { onMount } from 'svelte'
+
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
   type InputEvent = FormEvent<HTMLInputElement>
+  
+  type Point = {
+    x: number, y: number
+  }
+  type ViewBox = {
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  }
 
   export let rmap: RenderMap
   export let visible: boolean = false
   export let selected: Envelope | null = null
   
-  let viewBox = ""
-  let paths: string[] = []
-  let points: string[][] = []
+  let viewBox: ViewBox = { x: 0, y: 0, w: 0, h: 0 }
+  let paths: Point[][] = []
+  let svg: SVGSVGElement
   let colors = [ 'red', 'green', 'blue', 'orange' ]
   
   type Chan = 
@@ -45,11 +56,21 @@
     pos_r: (x: EnvPoint<any>) => x.content.r,
     sound_v: (x: EnvPoint<any>) => x.content,
   }
+
+  let setChannelVal: { [k in Chan]: (x: EnvPoint<any>, val: number) => void } = {
+    color_r: (x: EnvPoint<any>, val: number) => x.content.r = val,
+    color_g: (x: EnvPoint<any>, val: number) => x.content.g = val,
+    color_b: (x: EnvPoint<any>, val: number) => x.content.b = val,
+    color_a: (x: EnvPoint<any>, val: number) => x.content.a = val,
+    pos_x: (x: EnvPoint<any>, val: number) => x.content.x = val,
+    pos_y: (x: EnvPoint<any>, val: number) => x.content.y = val,
+    pos_r: (x: EnvPoint<any>, val: number) => x.content.r = val,
+    sound_v: (x: EnvPoint<any>, val: number) => x.content = val,
+  }
   
   $: if (selected && channelEnabled) {
     viewBox = makeViewBox(selected)
     paths = makePaths(selected)
-    points = makeAllPoints(selected)
   }
 
   function envChannels(env: Envelope) {
@@ -61,27 +82,25 @@
       return soundChannels
   }
 
-  function makeViewBox(env: Envelope) {
-    const minX = env.points[0].time
-    const maxX = env.points[env.points.length - 1].time
+  function makeViewBox(env: Envelope): ViewBox {
+    let minX = env.points[0].time
+    let maxX = env.points[env.points.length - 1].time
+    const paddingX = (maxX - minX) * .01
+    minX -= paddingX
+    maxX += paddingX
     const allPoints = envChannels(env).map(c =>
         env.points.map((p: EnvPoint<any>) => channelVal[c](p))
     ).flat()
     const maxY = Math.max.apply(null, allPoints.map(p => Math.abs(p))) + 100
     const minY = -maxY
-    return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
   }
-  
+
   function makePath(env: Envelope, chan: Chan) {
     const x = env.points.map((p: EnvPoint<any>) => p.time)
     const y = env.points.map((p: EnvPoint<any>) => channelVal[chan](p))
-    let path = `M${x[0]},${y[0]}`
-    
-    for (let i = 1; i < x.length; i++) {
-      path += ` L${x[i]},${y[i]}`
-    }
-    
-    return path
+
+    return x.map((_, i) => { return { x: x[i], y: y[i] } })
   }
   
   function makePaths(env: Envelope) {
@@ -90,22 +109,36 @@
       .map(c => makePath(env, c))
   }
 
-  function pathPoint(x: number, y: number) {
+  function pixelToSvg(x: number, y: number) {
+    const rect = svg.getBoundingClientRect()
+    const px = (x - rect.left) / rect.width * viewBox.w + viewBox.x
+    const py = (y - rect.top) / rect.height * viewBox.h + viewBox.y
+    return [ px, py ]
+  }
+
+  function viewBoxStr(viewBox: ViewBox) {
+    const { x, y, w, h} = viewBox
+    return `${x} ${y} ${w} ${h}`
+  }
+  
+  function pathStr(path: Point[]) {
+    let str = `M${path[0].x},${path[0].y}`
+    
+    for (let i = 1; i < path.length; i++) {
+      str += ` L${path[i].x},${path[i].y}`
+    }
+    
+    return str
+  }
+  
+  function pointStr(x: number, y: number) {
     return `M${x},${y} M${x},${y} Z`
   }
   
-  function makePoints(env: Envelope, chan: Chan) {
-    const x = env.points.map((p: EnvPoint<any>) => p.time)
-    const y = env.points.map((p: EnvPoint<any>) => channelVal[chan](p))
-    
-    return x.map((_, i) => pathPoint(x[i], y[i]))
-  }
-
-  function makeAllPoints(env: Envelope) {
-    return envChannels(env)
-      .filter(c => channelEnabled[c])
-      .map(c => makePoints(env, c))
-  }
+  onMount(() => {
+    if (selected === null && rmap.map.envelopes.length)
+      selected = rmap.map.envelopes[0]
+  })
 
   function onRename(e: InputEvent) {
     console.log("rename", e.currentTarget.value)
@@ -121,12 +154,45 @@
     }
   }
   
-  onMount(() => {
-    if (selected === null && rmap.map.envelopes.length)
-      selected = rmap.map.envelopes[0]
-  })
+  let activePath = -1
+  let activePoint = -1
+  
+  function onMouseDown(i: number, j: number) {
+    activePath = i
+    activePoint = j
+  }
+  
+  function onMouseUp() {
+    activePath = -1
+    activePoint = -1
+  }
+  
+  function onMouseMove(e: MouseEvent) {
+    if (activePath !== -1 && activePoint !== -1) {
+      const chan = envChannels(selected)[activePath]
+      const point = selected.points[activePoint]
+      const prev = selected.points[Math.max(0, activePoint - 1)] 
+      const next = selected.points[Math.min(selected.points.length - 1, activePoint + 1)] 
+      let [ px, py ] = pixelToSvg(e.clientX, e.clientY)
+      
+      if (point !== next)
+        px = Math.min(px, next.time)
+      if (point !== prev)
+        px = Math.max(px, prev.time)
+
+      point.time = px
+      setChannelVal[chan](point, py)
+
+      selected = selected // hack to redraw
+    }
+  }
+  
+  function onResize() {
+  }
   
 </script>
+
+<svelte:window on:resize={onResize} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
 <div id="envelope-editor" class:hidden={!visible}>
   <div class="header">
@@ -165,13 +231,14 @@
   </div>
   
   <div class="graph">
-    <svg viewBox={viewBox} preserveAspectRatio="none">
-      {#each paths as d, i}
+    <svg viewBox={viewBoxStr(viewBox)} preserveAspectRatio="none" bind:this={svg}>
+      {#each paths as path, i}
         {@const col = colors[i]}
-        <path {d} style:stroke={col}></path>
-        {#each points[i] as d}
-          <!-- not using the circle because the path stroke can be screen-space sized but not the circle fill. -->
-          <path class="point" {d} style:stroke={col}></path>
+        <path d={pathStr(path)} style:stroke={col}></path>
+        {#each path as p, j}
+          <!-- not using the circle becausePointthe path stroke can be screen-space sized but not the circle fill. -->
+          <path class="point" d={pointStr(p.x, p.y)} style:stroke={col}
+            on:mousedown={() => onMouseDown(i, j)}></path>
         {/each}
       {/each}
     </svg>
