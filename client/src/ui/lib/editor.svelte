@@ -23,7 +23,7 @@
   let cont: HTMLElement
   let viewport: Viewport
   let treeViewVisible = true
-  let selectedTile: EditTileParams
+  let selectedTiles: EditTileParams[][]
   let peerCount = 0
   let tileSelectorVisible = false
   let activeLayer: Layer = map.physicsLayer(GameLayer)
@@ -274,7 +274,7 @@
     if (activeLayer instanceof AnyTilesLayer) {
       // left button pressed
       if (e.buttons === 1 && !e.ctrlKey) {
-        Editor.placeTile(rmap, g, l, selectedTile)
+        Editor.placeTiles(rmap, g, l, selectedTiles)
       }
       else if (e.buttons === 0) {
         Editor.release()
@@ -292,7 +292,7 @@
     {#if activeLayer instanceof AnyTilesLayer}
       <div id="hover-tile" style={hoverTileStyle}></div>
       <div id="layer-outline" style={layerOutlineStyle}></div>
-      <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
+      <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} bind:tilesVisible={tileSelectorVisible} />
     {:else if activeLayer instanceof QuadsLayer}
       <QuadsView {rmap} layer={activeLayer} />
     {/if}

@@ -63,6 +63,48 @@ export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileP
   }
 }
 
+export function placeTiles(rmap: RenderMap, g: number, l: number, tiles: EditTileParams[][]) {
+  if (!pressed) {
+    lastPos = { ...viewport.mousePos }
+    pressed = true
+  }
+  
+  const rgroup = rmap.groups[g]
+  let off = rgroup.offset()
+
+  let p: [number, number] = [ viewport.mousePos.x, viewport.mousePos.y ]
+  p = p.map((v, i) => Math.floor(v - off[i])) as [number, number]
+
+  lastPos = { ...viewport.mousePos }
+  
+  let [ i, j ] = [ 0, 0 ]
+  let changes: EditTile[] = []
+
+  for (const row of tiles) {
+    for (const tile of row) {
+      const change: EditTile = {
+        group: g,
+        layer: l,
+        x: p[0] + i,
+        y: p[1] + j,
+        ...tile
+      }
+      changes.push(change)
+      i++
+    }
+    j++
+    i = 0
+  }
+  
+  for (const change of changes) {
+    const res = rmap.editTile(change)
+
+    // only send change if succeeded e.g. not redundant
+    if(res)
+      server.send('edittile', change)
+  }
+}
+
 // taken from https://github.com/thejonwithnoh/bresenham-js/blob/master/bresenham-js.js
 export function bresenham(p1: [number, number], p2: [number, number]) {
   const delta = p2.map((val, index) => val - p1[index]);
