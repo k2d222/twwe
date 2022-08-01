@@ -270,15 +270,32 @@
   let layerOutlineStyle = ''
   let clipOutlineStyle = ''
 
+  let boxSelect = false
+
   function onMouseMove(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
       // left button pressed
-      if (e.buttons === 1 && !e.ctrlKey) {
+      if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
         Editor.placeTiles(rmap, g, l, selectedTiles)
       }
-      else if (e.buttons === 0) {
-        Editor.release()
+    }
+  }
+  
+  function onMouseDown(e: MouseEvent) {
+    if (activeLayer instanceof AnyTilesLayer) {
+      if (e.buttons === 1 && e.shiftKey) {
+        Editor.startBoxSelect(activeRgroup)
+        boxSelect = true
       }
+    }
+  }
+  
+  function onMouseUp() {
+    Editor.release()
+    if (boxSelect && activeLayer instanceof AnyTilesLayer) {
+      const range = Editor.endBoxSelect(activeRgroup)
+      selectedTiles = Editor.makeBoxSelection(activeLayer, range)
+      boxSelect = false
     }
   }
 
@@ -286,7 +303,7 @@
 
 <div id="editor">
 
-  <div bind:this={cont} tabindex={1} on:keydown={onKeyDown} on:mousemove={onMouseMove}>
+  <div bind:this={cont} tabindex={1} on:keydown={onKeyDown} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove}>
     <!-- Here goes the canvas on mount() -->
     <div id="clip-outline" style={clipOutlineStyle}></div>
     {#if activeLayer instanceof AnyTilesLayer}

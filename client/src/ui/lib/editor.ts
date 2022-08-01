@@ -1,7 +1,17 @@
 import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { RenderMap } from '../../gl/renderMap'
+import type { RenderGroup } from '../../gl/renderGroup'
+import type { AnyTilesLayer } from '../../twmap/tilesLayer'
+import type { RenderTilesLayer, RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
+import type { Coord } from '../../twmap/types'
+import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer, TuneLayer } from '../../twmap/tilesLayer'
 import { server } from '../global'
 import { viewport } from '../../gl/global'
+
+type Range = {
+  start: Coord,
+  end: Coord,
+}
 
 export async function downloadMap(mapName: string) {
   const buf = await server.query('sendmap', { name: mapName })
@@ -23,9 +33,56 @@ export function getLayerImage(rmap: RenderMap, g: number, l: number) {
 
 let pressed = false
 let lastPos = { x: 0, y: 0 }
+let selection: Range = {
+  start: { x: 0, y: 0 },
+  end: { x: 0, y: 0 },
+}
 
 export function release() {
   pressed = false
+}
+
+export function startBoxSelect(activeRgroup: RenderGroup) {
+  let off = activeRgroup.offset()
+  const x = Math.floor(viewport.mousePos.x - off[0])
+  const y = Math.floor(viewport.mousePos.y - off[1])
+
+  selection.start = { x, y }
+}
+
+export function endBoxSelect(activeRgroup: RenderGroup) {
+  let off = activeRgroup.offset()
+  const x = Math.floor(viewport.mousePos.x - off[0])
+  const y = Math.floor(viewport.mousePos.y - off[1])
+
+  selection.end = { x, y }
+  
+  return selection
+}
+
+function makeTileParams(layer: AnyTilesLayer<any>, x: number, y: number): EditTileParams {
+  return layer instanceof TilesLayer ? { type: 'tile', ...layer.getTile(x, y) } :
+         layer instanceof GameLayer ? { type: 'tile', ...layer.getTile(x, y) } :
+         layer instanceof FrontLayer ? { type: 'tile', ...layer.getTile(x, y) } :
+         layer instanceof TeleLayer ? { type: 'tele', ...layer.getTile(x, y) } :
+         layer instanceof SwitchLayer ? { type: 'switch', ...layer.getTile(x, y) } :
+         layer instanceof SpeedupLayer ? { type: 'speedup', ...layer.getTile(x, y) } :
+         layer instanceof TuneLayer ? { type: 'tune', ...layer.getTile(x, y) } :
+         null
+}
+
+export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): EditTileParams[][] {
+  const res: EditTileParams[][] = []
+
+  for (let j = sel.start.y; j <= sel.end.y; j++) {
+    const row  = []
+    for (let i = sel.start.x; i <= sel.end.x; i++) {
+      row.push(makeTileParams(layer, i, j))
+    }
+    res.push(row)
+  }
+  
+  return res
 }
 
 export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {

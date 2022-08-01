@@ -53,11 +53,11 @@ $: current =
   rlayer.layer instanceof SpeedupLayer ? currentSpeedup :
   rlayer.layer instanceof TuneLayer ? currentTune : null
 
-$: selected = makeSelection(current, selection)
+$: selected = makeBoxSelection(current, selection)
 
 
 
-function makeSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
+function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
   const res: EditTileParams[][] = []
 
   for (let j = sel.start.y; j <= sel.end.y; j++) {
