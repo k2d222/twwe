@@ -255,7 +255,7 @@
         {/if}
       </div>
     {/if}
-    <div>
+    <div class="buttons">
       <select on:change={onNewEnv}>
         <option selected disabled>New…</option>
         <option>Color</option>

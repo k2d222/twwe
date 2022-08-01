@@ -706,6 +706,10 @@ nav.hidden .context {
     display: flex;
     flex-direction: row;
     gap: 1rem;
+    
+    :nth-child(3) {
+      flex-grow: 1;
+    }
   }
   
   .graph {
