@@ -129,36 +129,42 @@ export function placeTiles(rmap: RenderMap, g: number, l: number, tiles: EditTil
   const rgroup = rmap.groups[g]
   let off = rgroup.offset()
 
-  let p: [number, number] = [ viewport.mousePos.x, viewport.mousePos.y ]
-  p = p.map((v, i) => Math.floor(v - off[i])) as [number, number]
-
+  let p1: [number, number] = [ lastPos.x, lastPos.y ]
+  let p2: [number, number] = [ viewport.mousePos.x, viewport.mousePos.y ]
+  p1 = p1.map((v, i) => Math.floor(v - off[i])) as [number, number]
+  p2 = p2.map((v, i) => Math.floor(v - off[i])) as [number, number]
+  
   lastPos = { ...viewport.mousePos }
   
-  let [ i, j ] = [ 0, 0 ]
-  let changes: EditTile[] = []
-
-  for (const row of tiles) {
-    for (const tile of row) {
-      const change: EditTile = {
-        group: g,
-        layer: l,
-        x: p[0] + i,
-        y: p[1] + j,
-        ...tile
-      }
-      changes.push(change)
-      i++
-    }
-    j++
-    i = 0
-  }
+  const points = bresenham(p1, p2)
   
-  for (const change of changes) {
-    const res = rmap.editTile(change)
+  for (const point of points) {
+    let [ i, j ] = [ 0, 0 ]
+    let changes: EditTile[] = []
 
-    // only send change if succeeded e.g. not redundant
-    if(res)
-      server.send('edittile', change)
+    for (const row of tiles) {
+      for (const tile of row) {
+        const change: EditTile = {
+          group: g,
+          layer: l,
+          x: point[0] + i,
+          y: point[1] + j,
+          ...tile
+        }
+        changes.push(change)
+        i++
+      }
+      j++
+      i = 0
+    }
+
+    for (const change of changes) {
+      const res = rmap.editTile(change)
+
+      // only send change if succeeded e.g. not redundant
+      if(res)
+        server.send('edittile', change)
+    }
   }
 }
 
