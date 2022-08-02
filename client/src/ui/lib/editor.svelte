@@ -314,6 +314,7 @@
   }
   
   function onMouseDown(e: MouseEvent) {
+    Editor.press()
     if (activeLayer instanceof AnyTilesLayer) {
       if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
         Editor.placeTiles(rmap, g, l, selectedTiles)

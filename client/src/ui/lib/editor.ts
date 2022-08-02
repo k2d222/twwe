@@ -39,6 +39,11 @@ let selection: Range = {
   end: { x: 0, y: 0 },
 }
 
+export function press() {
+  lastPos = { ...viewport.mousePos }
+  pressed = true
+}
+
 export function release() {
   pressed = false
 }
@@ -99,11 +104,9 @@ export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): EditTil
 }
 
 export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {
-  if (!pressed) {
-    lastPos = { ...viewport.mousePos }
-    pressed = true
-  }
-  
+  if (!pressed)
+    return
+
   const rgroup = rmap.groups[g]
   let off = rgroup.offset()
 
@@ -134,10 +137,8 @@ export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileP
 }
 
 export function placeTiles(rmap: RenderMap, g: number, l: number, tiles: EditTileParams[][]) {
-  if (!pressed) {
-    lastPos = { ...viewport.mousePos }
-    pressed = true
-  }
+  if (!pressed)
+    return
   
   const rgroup = rmap.groups[g]
   let off = rgroup.offset()
