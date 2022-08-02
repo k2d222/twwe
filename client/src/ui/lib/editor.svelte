@@ -323,7 +323,10 @@
   
   function onMouseDown(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
-      if (e.buttons === 1 && e.shiftKey) {
+      if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
+        Editor.placeTiles(rmap, g, l, selectedTiles)
+      }
+      else if (e.buttons === 1 && e.shiftKey) {
         Editor.startBoxSelect(activeRgroup)
         boxSelect = true
         const [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
