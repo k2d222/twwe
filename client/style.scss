@@ -683,3 +683,10 @@ nav.hidden .context {
     }
   }
 }
+
+.box-select {
+  position: fixed;
+  background: blue;
+  opacity: .5;
+  pointer-events: none;
+}

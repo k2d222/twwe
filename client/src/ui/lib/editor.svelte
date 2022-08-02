@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
+  import type { Coord } from '../../twmap/types'
   import type { ListUsers, EditTile, CreateQuad, EditQuad, DeleteQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
@@ -32,7 +33,7 @@
   $: [ g, l ] = layerIndex(map, activeLayer)
   $: activeRlayer = rmap.groups[g].layers[l]
   $: activeRgroup = rmap.groups[g]
-
+  
   $: {
     for (const rgroup of rmap.groups) {
       rgroup.active = false
@@ -44,7 +45,7 @@
     activeRgroup.active = true
     activeRlayer = activeRlayer // WTF
   }
-
+  
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
   }
@@ -139,8 +140,8 @@
     }
 
     hoverTileStyle = `
-      width: ${scale}px;
-      height: ${scale}px;
+      width: ${scale * selectedTiles[0].length}px;
+      height: ${scale * selectedTiles.length}px;
       top: ${(y + offY - pos.y) * scale}px;
       left: ${(x + offX - pos.x) * scale}px;
       border-width: ${scale / 16}px;
@@ -271,12 +272,34 @@
   let clipOutlineStyle = ''
 
   let boxSelect = false
+  let boxStartPos: Coord = { x: 0, y: 0 }
+  let boxEndPos: Coord = { x: 0, y: 0 }
+  let boxStyle = ''
+  
+  $: {
+    if (boxSelect) {
+      boxStyle = `
+        width: ${boxEndPos.x - boxStartPos.x}px;
+        height: ${boxEndPos.y - boxStartPos.y}px;
+        left: ${boxStartPos.x}px;
+        top: ${boxStartPos.y}px;
+      `
+    }
+    else {
+      boxStyle = `
+        display: none;
+      `
+    }
+  }
 
   function onMouseMove(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
       // left button pressed
       if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
         Editor.placeTiles(rmap, g, l, selectedTiles)
+      }
+      else if (e.buttons === 1 && e.shiftKey) {
+        boxEndPos = { x: e.clientX, y: e.clientY }
       }
     }
   }
@@ -286,6 +309,8 @@
       if (e.buttons === 1 && e.shiftKey) {
         Editor.startBoxSelect(activeRgroup)
         boxSelect = true
+        boxStartPos = { x: e.clientX, y: e.clientY }
+        boxEndPos = { x: e.clientX, y: e.clientY }
       }
     }
   }
@@ -309,10 +334,10 @@
     {#if activeLayer instanceof AnyTilesLayer}
       <div id="hover-tile" style={hoverTileStyle}></div>
       <div id="layer-outline" style={layerOutlineStyle}></div>
-      <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} bind:tilesVisible={tileSelectorVisible} />
     {:else if activeLayer instanceof QuadsLayer}
       <QuadsView {rmap} layer={activeLayer} />
     {/if}
+    <div class="box-select" style={boxStyle}></div>
     <Statusbar />
   </div>
 
@@ -329,6 +354,10 @@
       <div id="users">Users online: <span>{peerCount}</span></div>
     </div>
   </div>
+
+  {#if activeLayer instanceof AnyTilesLayer}
+    <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} bind:tilesVisible={tileSelectorVisible} />
+  {/if}
 
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
 

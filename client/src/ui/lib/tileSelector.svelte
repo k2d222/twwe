@@ -61,12 +61,13 @@ function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
   const res: EditTileParams[][] = []
 
   for (let j = sel.start.y; j <= sel.end.y; j++) {
-    res[j] = []
+    const row = []
     for (let i = sel.start.x; i <= sel.end.x; i++) {
-      res[j].push({
+      row.push({
         ...cur, id: j * tileCount + i
       })
     }
+    res.push(row)
   }
   
   return res
