@@ -138,15 +138,27 @@
     if (activeLayer instanceof AnyTilesLayer && (x < 0 || y < 0 || x >= activeLayer.width || y >= activeLayer.height)) {
       color = 'red'
     }
-
-    hoverTileStyle = `
-      width: ${scale * selectedTiles[0].length}px;
-      height: ${scale * selectedTiles.length}px;
-      top: ${(y + offY - pos.y) * scale}px;
-      left: ${(x + offX - pos.x) * scale}px;
-      border-width: ${scale / 16}px;
-      border-color: ${color};
-    `
+    
+    if (boxSelect) {
+      hoverTileStyle = `
+        width: ${scale * selectedTiles[0].length}px;
+        height: ${scale * selectedTiles.length}px;
+        top: ${(y + offY - pos.y - selectedTiles.length + 1) * scale}px;
+        left: ${(x + offX - pos.x - selectedTiles[0].length + 1) * scale}px;
+        border-width: ${scale / 16}px;
+        border-color: ${color};
+      `
+    }
+    else {
+      hoverTileStyle = `
+        width: ${scale * selectedTiles[0].length}px;
+        height: ${scale * selectedTiles.length}px;
+        top: ${(y + offY - pos.y) * scale}px;
+        left: ${(x + offX - pos.x) * scale}px;
+        border-width: ${scale / 16}px;
+        border-color: ${color};
+      `
+    }
     
     if (activeRgroup.group.clipping) {
       let { clipX, clipY, clipW, clipH } = activeRgroup.group
@@ -278,11 +290,13 @@
   
   $: {
     if (boxSelect) {
+      const [ x1, y1 ] = viewport.worldToPixel(boxStartPos.x, boxStartPos.y)
+      const [ x2, y2 ] = viewport.worldToPixel(boxEndPos.x, boxEndPos.y)
       boxStyle = `
-        width: ${boxEndPos.x - boxStartPos.x}px;
-        height: ${boxEndPos.y - boxStartPos.y}px;
-        left: ${boxStartPos.x}px;
-        top: ${boxStartPos.y}px;
+        width: ${x2 - x1}px;
+        height: ${y2 - y1}px;
+        left: ${x1}px;
+        top: ${y1}px;
       `
     }
     else {
@@ -299,7 +313,10 @@
         Editor.placeTiles(rmap, g, l, selectedTiles)
       }
       else if (e.buttons === 1 && e.shiftKey) {
-        boxEndPos = { x: e.clientX, y: e.clientY }
+        const [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
+        boxEndPos = { x, y }
+        const range = Editor.endBoxSelect(activeRgroup)
+        selectedTiles = Editor.makeBoxSelection(activeLayer, range)
       }
     }
   }
@@ -309,8 +326,9 @@
       if (e.buttons === 1 && e.shiftKey) {
         Editor.startBoxSelect(activeRgroup)
         boxSelect = true
-        boxStartPos = { x: e.clientX, y: e.clientY }
-        boxEndPos = { x: e.clientX, y: e.clientY }
+        const [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
+        boxStartPos = { x, y }
+        boxEndPos = { x, y }
       }
     }
   }
