@@ -2,9 +2,10 @@ import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { RenderMap } from '../../gl/renderMap'
 import { server } from '../global'
 import { viewport } from '../../gl/global'
+import { queryMapBinary } from '../lib/util'
 
 export async function downloadMap(mapName: string) {
-  const buf = await server.query('sendmap', { name: mapName })
+  const buf = await queryMapBinary({ name: mapName })
   const blob = new Blob([buf], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
 

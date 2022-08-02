@@ -33,13 +33,18 @@ export function externalImageUrl(name: string) {
   return '/mapres/' + name + '.png'
 }
 
-export async function queryMap(sendMap: SendMap): Promise<Map> {
+export async function queryMapBinary(sendMap: SendMap): Promise<ArrayBuffer> {
   let data: ArrayBuffer
   const listener = (d: ArrayBuffer) => data = d
   server.binaryListeners.push(listener)
   await server.query('sendmap', sendMap)
   let index = server.binaryListeners.indexOf(listener)
   server.binaryListeners.splice(index, 1)
+  return data
+}
+
+export async function queryMap(sendMap: SendMap): Promise<Map> {
+  const data = await queryMapBinary(sendMap)
   const map = new Map(sendMap.name, data)
   return map
 }
