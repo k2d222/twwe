@@ -33,7 +33,7 @@ let currentSpeedup: { type: 'speedup' } & Speedup = { type: 'speedup', ...Speedu
 let currentTune:    { type: 'tune'    } & Tune    = { type: 'tune',    ...TuneLayer.defaultTile()    }
 
 let current: EditTileParams
-let shiftPressed = false
+let boxSelect = false
 
 $: {
   if (tilesVisible)
@@ -54,7 +54,6 @@ $: current =
   rlayer.layer instanceof TuneLayer ? currentTune : null
 
 $: selected = makeBoxSelection(current, selection)
-
 
 
 function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
@@ -113,6 +112,26 @@ function buttonStyle(url: string, id: number) {
 
 $: buttonStyles = Array.from({length: tileCount * tileCount}, (_, i) => buttonStyle(url, i))
 
+let boxStyle = ''
+
+$: {
+  if (boxSelect) {
+    const [ x1, y1 ] = [ selection.start.x, selection.start.y ]
+    const [ x2, y2 ] = [ selection.end.x, selection.end.y ]
+    boxStyle = `
+      width: ${(x2 - x1 + 1) * 100 / tileCount}%;
+      height: ${(y2 - y1 + 1) * 100 / tileCount}%;
+      left: ${x1 * 100 / tileCount}%;
+      top: ${y1 * 100 / tileCount}%;
+    `
+  }
+  else {
+    boxStyle = `
+      display: none;
+    `
+  }
+}
+
 function onMouseDown(e: MouseEvent, id: number) {
   const x = id % tileCount
   const y = Math.floor(id / tileCount)
@@ -122,13 +141,13 @@ function onMouseDown(e: MouseEvent, id: number) {
   }
   
   if (e.shiftKey)
-    shiftPressed = true
+    boxSelect = true
   else
     tilesVisible = false
 }
 
 function onMouseOver(id: number) {
-  if (shiftPressed) {
+  if (boxSelect) {
     const x = id % tileCount
     const y = Math.floor(id / tileCount)
     selection.end = { x, y }
@@ -136,8 +155,8 @@ function onMouseOver(id: number) {
 }
 
 function onMouseUp() {
-  if (shiftPressed) {
-    shiftPressed = false
+  if (boxSelect) {
+    boxSelect = false
     tilesVisible = false
   }
 }
@@ -153,6 +172,7 @@ function onMouseUp() {
     {#each buttonStyles as style, i}
       <button style={style} on:mousedown={(e) => onMouseDown(e, i)} on:mouseup={onMouseUp} on:mouseover={() => onMouseOver(i)} on:focus={() => {}}></button>
     {/each}
+    <div class="box-select" style={boxStyle}></div>
   </div>
   <div class="settings" class:hidden = {!settingsVisible}>
     {#if rlayer.layer instanceof TilesLayer}
