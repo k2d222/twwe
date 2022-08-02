@@ -2,22 +2,39 @@
 import type { Image } from '../../twmap/image'
 import type { RenderLayer } from '../../gl/renderLayer'
 import type { EditTileParams } from 'src/server/protocol'
-import { TileFlags, Tile, Tele, Switch, Speedup, Tune } from '../../twmap/types'
+import { TileFlags, Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer, TuneLayer } from '../../twmap/tilesLayer'
 
+type Range = {
+  start: Coord,
+  end: Coord,
+}
+
+const tileCount = 16
+
 export let rlayer: RenderLayer
-
-// this is a bit monolithic but hey typescript
-let selectedTile:    { type: 'tile'    } & Tile    = { type: 'tile',    ...TilesLayer.defaultTile()   }
-let selectedGame:    { type: 'tile'    } & Tile    = { type: 'tile',    ...GameLayer.defaultTile()    }
-let selectedFront:   { type: 'tile'    } & Tile    = { type: 'tile',    ...FrontLayer.defaultTile()   }
-let selectedTele:    { type: 'tele'    } & Tele    = { type: 'tele',    ...TeleLayer.defaultTile()    }
-let selectedSwitch:  { type: 'switch'  } & Switch  = { type: 'switch',  ...SwitchLayer.defaultTile()  }
-let selectedSpeedup: { type: 'speedup' } & Speedup = { type: 'speedup', ...SpeedupLayer.defaultTile() }
-let selectedTune:    { type: 'tune'    } & Tune    = { type: 'tune',    ...TuneLayer.defaultTile()    }
-
 export let tilesVisible = false
 export let settingsVisible = false
+export let selected: EditTileParams[][]
+
+// inclusive range
+let selection: Range = {
+  start: { x: 0, y: 0 },
+  end: { x: 0, y: 0 },
+}
+
+// this is a bit monolithic but hey typescript
+let currentTile:    { type: 'tile'    } & Tile    = { type: 'tile',    ...TilesLayer.defaultTile()   }
+let currentGame:    { type: 'tile'    } & Tile    = { type: 'tile',    ...GameLayer.defaultTile()    }
+let currentFront:   { type: 'tile'    } & Tile    = { type: 'tile',    ...FrontLayer.defaultTile()   }
+let currentTele:    { type: 'tele'    } & Tele    = { type: 'tele',    ...TeleLayer.defaultTile()    }
+let currentSwitch:  { type: 'switch'  } & Switch  = { type: 'switch',  ...SwitchLayer.defaultTile()  }
+let currentSpeedup: { type: 'speedup' } & Speedup = { type: 'speedup', ...SpeedupLayer.defaultTile() }
+let currentTune:    { type: 'tune'    } & Tune    = { type: 'tune',    ...TuneLayer.defaultTile()    }
+
+let current: EditTileParams
+let boxSelect = false
+
 $: {
   if (tilesVisible)
     settingsVisible = false
@@ -27,18 +44,46 @@ $: {
 
 $: url = getImgURL(rlayer.texture.image)
 
-export let selected: EditTileParams
-$: selected =
-  rlayer.layer instanceof TilesLayer ? selectedTile :
-  rlayer.layer instanceof GameLayer ? selectedGame :
-  rlayer.layer instanceof FrontLayer ? selectedFront :
-  rlayer.layer instanceof TeleLayer ? selectedTele :
-  rlayer.layer instanceof SwitchLayer ? selectedSwitch :
-  rlayer.layer instanceof SpeedupLayer ? selectedSpeedup :
-  rlayer.layer instanceof TuneLayer ? selectedTune : null
+$: current =
+  rlayer.layer instanceof TilesLayer ? currentTile :
+  rlayer.layer instanceof GameLayer ? currentGame :
+  rlayer.layer instanceof FrontLayer ? currentFront :
+  rlayer.layer instanceof TeleLayer ? currentTele :
+  rlayer.layer instanceof SwitchLayer ? currentSwitch :
+  rlayer.layer instanceof SpeedupLayer ? currentSpeedup :
+  rlayer.layer instanceof TuneLayer ? currentTune : null
+
+$: normSelection = normalizeRange(selection)
+$: selected = makeBoxSelection(current, normSelection)
+
+function normalizeRange(range: Range): Range {
+  const minX = Math.min(range.start.x, range.end.x)
+  const maxX = Math.max(range.start.x, range.end.x)
+  const minY = Math.min(range.start.y, range.end.y)
+  const maxY = Math.max(range.start.y, range.end.y)
+
+  return {
+    start: { x: minX, y: minY },
+    end: { x: maxX, y: maxY },
+  }
+}
 
 
-const tileCount = 16
+function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
+  const res: EditTileParams[][] = []
+
+  for (let j = sel.start.y; j <= sel.end.y; j++) {
+    const row = []
+    for (let i = sel.start.x; i <= sel.end.x; i++) {
+      row.push({
+        ...cur, id: j * tileCount + i
+      })
+    }
+    res.push(row)
+  }
+  
+  return res
+}
 
 function getImgURL(image: Image) {
   if (image.img !== null) {
@@ -80,45 +125,90 @@ function buttonStyle(url: string, id: number) {
 
 $: buttonStyles = Array.from({length: tileCount * tileCount}, (_, i) => buttonStyle(url, i))
 
-function onTileClick(id: number) {
-  selected.id = id
-  tilesVisible = false
+let boxStyle = ''
+
+$: {
+  if (boxSelect) {
+    const [ x1, y1 ] = [ normSelection.start.x, normSelection.start.y ]
+    const [ x2, y2 ] = [ normSelection.end.x, normSelection.end.y ]
+    boxStyle = `
+      width: ${(x2 - x1 + 1) * 100 / tileCount}%;
+      height: ${(y2 - y1 + 1) * 100 / tileCount}%;
+      left: ${x1 * 100 / tileCount}%;
+      top: ${y1 * 100 / tileCount}%;
+    `
+  }
+  else {
+    boxStyle = `
+      display: none;
+    `
+  }
+}
+
+function onMouseDown(e: MouseEvent, id: number) {
+  const x = id % tileCount
+  const y = Math.floor(id / tileCount)
+  selection = {
+    start: { x, y },
+    end: { x, y },
+  }
+  
+  if (e.shiftKey)
+    boxSelect = true
+  else
+    tilesVisible = false
+}
+
+function onMouseOver(id: number) {
+  if (boxSelect) {
+    const x = id % tileCount
+    const y = Math.floor(id / tileCount)
+    selection.end = { x, y }
+  }
+}
+
+function onMouseUp() {
+  if (boxSelect) {
+    boxSelect = false
+    tilesVisible = false
+  }
 }
 
 </script>
 
 <div id="tile-selector">
   <div class="tile selected">
-    <button on:click={() => tilesVisible = !tilesVisible} style={buttonStyles[selected.id]}></button>
+    <button on:click={() => tilesVisible = !tilesVisible} style={buttonStyles[selected[0][0].id]}></button>
     <button on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>
     {#each buttonStyles as style, i}
-      <button on:click={() => onTileClick(i)} style={style}></button>
+      <button style={style} on:mousedown={(e) => onMouseDown(e, i)} on:mouseup={onMouseUp} on:mouseover={() => onMouseOver(i)} on:focus={() => {}}></button>
     {/each}
+    <div class="box-select" style={boxStyle}></div>
   </div>
   <div class="settings" class:hidden = {!settingsVisible}>
     {#if rlayer.layer instanceof TilesLayer}
-      <label>Tile flip Vertical <input type="checkbox" value={selectedTile.flags & TileFlags.VFLIP}
-        on:change={() => selectedTile.flags ^= TileFlags.VFLIP}></label>
-      <label>Tile flip Horizontal <input type="checkbox" value={selectedTile.flags & TileFlags.HFLIP}
-        on:change={() => selectedTile.flags ^= TileFlags.HFLIP}></label>
-      <label>Tile rotate <input type="checkbox" value={selectedTile.flags & TileFlags.ROTATE}
-        on:change={() => selectedTile.flags ^= TileFlags.ROTATE}></label>
+      <label>Tile flip Vertical <input type="checkbox" value={currentTile.flags & TileFlags.VFLIP}
+        on:change={() => currentTile.flags ^= TileFlags.VFLIP}></label>
+      <label>Tile flip Horizontal <input type="checkbox" value={currentTile.flags & TileFlags.HFLIP}
+        on:change={() => currentTile.flags ^= TileFlags.HFLIP}></label>
+      <label>Tile rotate <input type="checkbox" value={currentTile.flags & TileFlags.ROTATE}
+        on:change={() => currentTile.flags ^= TileFlags.ROTATE}></label>
     {:else if rlayer.layer instanceof GameLayer}
       Nothing to set for the game layer.
     {:else if rlayer.layer instanceof FrontLayer}
       Nothing to set for the front layer.
     {:else if rlayer.layer instanceof TeleLayer}
-      <label>Teleport target <input type="number" min={0} max={255} bind:value={selectedTele.number}></label>
+      <label>Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number}></label>
     {:else if rlayer.layer instanceof SwitchLayer}
-      <label>Switch delay <input type="number" min={0} max={255} bind:value={selectedSwitch.delay}></label>
+      <label>Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay}></label>
     {:else if rlayer.layer instanceof SpeedupLayer}
-      <label>Speedup force <input type="number" min={0} max={255} bind:value={selectedSpeedup.force}></label>
-      <label>Speedup max speed <input type="number" min={0} max={255} bind:value={selectedSpeedup.maxSpeed}></label>
-      <label>Speedup angle <input type="number" min={0} max={359} bind:value={selectedSpeedup.angle}></label>
+      <label>Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force}></label>
+      <label>Speedup max speed <input type="number" min={0} max={255} bind:value={currentSpeedup.maxSpeed}></label>
+      <label>Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle}></label>
     {:else if rlayer.layer instanceof TuneLayer}
-      <label>Tune zone <input type="number" min={0} max={255} bind:value={selectedTune.number}></label>
+      <label>Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number}></label>
     {/if}
   </div>
 </div>

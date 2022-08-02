@@ -23,7 +23,7 @@
   let cont: HTMLElement
   let viewport: Viewport
   let treeViewVisible = true
-  let selectedTile: EditTileParams
+  let selectedTiles: EditTileParams[][]
   let peerCount = 0
   let tileSelectorVisible = false
   let activeLayer: Layer = map.physicsLayer(GameLayer)
@@ -32,7 +32,7 @@
   $: [ g, l ] = layerIndex(map, activeLayer)
   $: activeRlayer = rmap.groups[g].layers[l]
   $: activeRgroup = rmap.groups[g]
-
+  
   $: {
     for (const rgroup of rmap.groups) {
       rgroup.active = false
@@ -44,7 +44,7 @@
     activeRgroup.active = true
     activeRlayer = activeRlayer // WTF
   }
-
+  
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
   }
@@ -137,15 +137,38 @@
     if (activeLayer instanceof AnyTilesLayer && (x < 0 || y < 0 || x >= activeLayer.width || y >= activeLayer.height)) {
       color = 'red'
     }
-
-    hoverTileStyle = `
-      width: ${scale}px;
-      height: ${scale}px;
-      top: ${(y + offY - pos.y) * scale}px;
-      left: ${(x + offX - pos.x) * scale}px;
-      border-width: ${scale / 16}px;
-      border-color: ${color};
-    `
+    
+      if (boxSelect) {
+        let [ x1, y1 ] = viewport.worldToPixel(boxRange.start.x - offX, boxRange.start.y)
+        let [ x2, y2 ] = viewport.worldToPixel(boxRange.end.x + 1 - offX, boxRange.end.y + 1)
+        hoverTileStyle = `
+          width: ${x2 - x1}px;
+          height: ${y2 - y1}px;
+          top: ${y1}px;
+          left: ${x1}px;
+          border-width: ${scale / 16}px;
+          border-color: ${color};
+        `
+        boxStyle = `
+          width: ${x2 - x1}px;
+          height: ${y2 - y1}px;
+          top: ${y1}px;
+          left: ${x1}px;
+        `
+      }
+      else {
+        hoverTileStyle = `
+          width: ${scale * selectedTiles[0].length}px;
+          height: ${scale * selectedTiles.length}px;
+          top: ${(y + offY - pos.y) * scale}px;
+          left: ${(x + offX - pos.x) * scale}px;
+          border-width: ${scale / 16}px;
+          border-color: ${color};
+        `
+        boxStyle = `
+          display: none;
+        `
+      }
     
     if (activeRgroup.group.clipping) {
       let { clipX, clipY, clipW, clipH } = activeRgroup.group
@@ -270,15 +293,45 @@
   let layerOutlineStyle = ''
   let clipOutlineStyle = ''
 
+  let boxSelect = false
+  let boxRange: Editor.Range = {
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 0 },
+  }
+  let boxStyle = ''
+  
   function onMouseMove(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
       // left button pressed
-      if (e.buttons === 1 && !e.ctrlKey) {
-        Editor.placeTile(rmap, g, l, selectedTile)
+      if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
+        Editor.placeTiles(rmap, g, l, selectedTiles)
       }
-      else if (e.buttons === 0) {
-        Editor.release()
+      else if (e.buttons === 1 && e.shiftKey) {
+        boxRange = Editor.endBoxSelect(activeRgroup)
+        selectedTiles = Editor.makeBoxSelection(activeLayer, boxRange)
       }
+    }
+  }
+  
+  function onMouseDown(e: MouseEvent) {
+    if (activeLayer instanceof AnyTilesLayer) {
+      if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
+        Editor.placeTiles(rmap, g, l, selectedTiles)
+      }
+      else if (e.buttons === 1 && e.shiftKey) {
+        Editor.startBoxSelect(activeRgroup)
+        boxSelect = true
+        boxRange = Editor.endBoxSelect(activeRgroup)
+      }
+    }
+  }
+  
+  function onMouseUp() {
+    Editor.release()
+    if (boxSelect && activeLayer instanceof AnyTilesLayer) {
+      const range = Editor.endBoxSelect(activeRgroup)
+      selectedTiles = Editor.makeBoxSelection(activeLayer, range)
+      boxSelect = false
     }
   }
 
@@ -286,16 +339,16 @@
 
 <div id="editor">
 
-  <div bind:this={cont} tabindex={1} on:keydown={onKeyDown} on:mousemove={onMouseMove}>
+  <div bind:this={cont} tabindex={1} on:keydown={onKeyDown} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove}>
     <!-- Here goes the canvas on mount() -->
     <div id="clip-outline" style={clipOutlineStyle}></div>
     {#if activeLayer instanceof AnyTilesLayer}
       <div id="hover-tile" style={hoverTileStyle}></div>
       <div id="layer-outline" style={layerOutlineStyle}></div>
-      <TileSelector rlayer={activeRlayer} bind:selected={selectedTile} bind:tilesVisible={tileSelectorVisible} />
     {:else if activeLayer instanceof QuadsLayer}
       <QuadsView {rmap} layer={activeLayer} />
     {/if}
+    <div class="box-select" style={boxStyle}></div>
     <Statusbar />
   </div>
 
@@ -312,6 +365,10 @@
       <div id="users">Users online: <span>{peerCount}</span></div>
     </div>
   </div>
+
+  {#if activeLayer instanceof AnyTilesLayer}
+    <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} bind:tilesVisible={tileSelectorVisible} />
+  {/if}
 
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
 
