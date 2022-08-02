@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { ColorEnvelope, PositionEnvelope, SoundEnvelope, EnvPoint } from '../../twmap/envelope'
   import type { Envelope } from '../../twmap/map'
   import type { RenderMap } from '../../gl/renderMap'
+  import { CurveType } from '../../twmap/types'
+  import { ColorEnvelope, PositionEnvelope, SoundEnvelope, EnvPoint } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
   import { onMount } from 'svelte'
 
@@ -9,7 +10,7 @@
   type InputEvent = FormEvent<HTMLInputElement>
   
   type Point = {
-    x: number, y: number
+    x: number, y: number, curve: CurveType
   }
   type ViewBox = {
     x: number,
@@ -86,24 +87,30 @@
   }
 
   function makeViewBox(env: Envelope): ViewBox {
-    let minX = env.points[0].time
-    let maxX = env.points[env.points.length - 1].time
-    const paddingX = (maxX - minX) * .01
-    minX -= paddingX
-    maxX += paddingX
     const allPoints = envChannels(env).map(c =>
         env.points.map((p: EnvPoint<any>) => channelVal[c](p))
     ).flat()
-    const maxY = Math.max.apply(null, allPoints.map(p => Math.abs(p))) + 100
-    const minY = -maxY
+
+    let minX = env.points[0].time
+    let maxX = env.points[env.points.length - 1].time
+    let maxY = Math.max.apply(null, allPoints.map(p => Math.abs(p)))
+    let minY = -maxY
+
+    const paddingX = (maxX - minX) * .01
+    const paddingY = (maxY - minY) * .01
+    minX -= paddingX
+    maxX += paddingX
+    minY -= paddingY
+    maxY += paddingY
+
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
   }
 
   function makePath(env: Envelope, chan: Chan) {
     const x = env.points.map((p: EnvPoint<any>) => p.time)
-    const y = env.points.map((p: EnvPoint<any>) => channelVal[chan](p))
+    const y = env.points.map((p: EnvPoint<any>) => -channelVal[chan](p)) // notice the minus sign to flip the y axis
 
-    return x.map((_, i) => { return { x: x[i], y: y[i] } })
+    return x.map((_, i) => { return { x: x[i], y: y[i], curve: env.points[i].curve } })
   }
   
   function makePaths(env: Envelope) {
@@ -128,12 +135,48 @@
     const rect = svg.getBoundingClientRect()
     const px = (x - rect.left) / rect.width * viewBox.w + viewBox.x
     const py = (y - rect.top) / rect.height * viewBox.h + viewBox.y
-    return [ px, py ]
+    return [ px, -py ] // notice the minus sign to flip the y axis
   }
 
   function viewBoxStr(viewBox: ViewBox) {
     const { x, y, w, h} = viewBox
     return `${x} ${y} ${w} ${h}`
+  }
+  
+  function curveStr(p1: Point, p2: Point) {
+    if (p1.curve === CurveType.STEP) {
+      return `M${p1.x},${p1.y} H${p2.x} V${p2.y}`
+    }
+    if (p1.curve === CurveType.LINEAR) {
+      return `M${p1.x},${p1.y} L${p2.x},${p2.y}`
+    }
+    else if (p1.curve === CurveType.SLOW) {
+      // x^3, bezier approx. solved by bruteforce with steps of 0.1
+      let cp1 = { x: 0.6, y: 0.0 }
+      let cp2 = { x: 0.8, y: 0.4 }
+      cp1 = { x: p1.x + cp1.x * (p2.x - p1.x), y: p1.y + cp1.y * (p2.y - p1.y) }
+      cp2 = { x: p1.x + cp2.x * (p2.x - p1.x), y: p1.y + cp2.y * (p2.y - p1.y) }
+      return `M${p1.x},${p1.y} C${cp1.x},${cp1.y},${cp2.x},${cp2.y},${p2.x},${p2.y}`
+    }
+    else if (p1.curve === CurveType.FAST) {
+      // 1 - (1 - x)^3, bezier approx. solved by bruteforce with steps of 0.1
+      let cp1 = { x: 0.2, y: 0.6 }
+      let cp2 = { x: 0.4, y: 1.0 }
+      cp1 = { x: p1.x + cp1.x * (p2.x - p1.x), y: p1.y + cp1.y * (p2.y - p1.y) }
+      cp2 = { x: p1.x + cp2.x * (p2.x - p1.x), y: p1.y + cp2.y * (p2.y - p1.y) }
+      return `M${p1.x},${p1.y} C${cp1.x},${cp1.y},${cp2.x},${cp2.y},${p2.x},${p2.y}`
+    }
+    else if (p1.curve === CurveType.SMOOTH) {
+      // 3x^2 - 2x^3, bezier approx. solved by bruteforce with steps of 0.1
+      let cp1 = { x: 0.3, y: 0.0 }
+      let cp2 = { x: 0.7, y: 1.0 }
+      cp1 = { x: p1.x + cp1.x * (p2.x - p1.x), y: p1.y + cp1.y * (p2.y - p1.y) }
+      cp2 = { x: p1.x + cp2.x * (p2.x - p1.x), y: p1.y + cp2.y * (p2.y - p1.y) }
+      return `M${p1.x},${p1.y} C${cp1.x},${cp1.y},${cp2.x},${cp2.y},${p2.x},${p2.y}`
+    }
+    else { // default to linear
+      return `M${p1.x},${p1.y} L${p2.x},${p2.y}`
+    }
   }
   
   function pathStr(path: Point[]) {
@@ -270,13 +313,24 @@
     <svg viewBox={viewBoxStr(viewBox)} preserveAspectRatio="none" bind:this={svg}>
       {#each paths as path, i}
         {@const col = colors[i]}
-        <path d={pathStr(path)} style:stroke={col}></path>
+        {#each path as p, j}
+          {#if j !== 0}
+            {@const p2 = path[j - 1]}
+            <path d={curveStr(p2, p)} style:stroke={col}></path>
+          {/if}
+        {/each}
         {#each path as p, j}
           <!-- not using the circle becausePointthe path stroke can be screen-space sized but not the circle fill. -->
           <path class="point" d={pointStr(p.x, p.y)} style:stroke={col}
             on:mousedown={() => onMouseDown(i, j)} on:contextmenu={(e) => showCM(e, i, j)}></path>
         {/each}
       {/each}
+      <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis"></line> <!-- the x=0 line -->
+      <line x1={viewBox.x} y1={1024} x2={viewBox.x + viewBox.w} y2={1024} class="axis"></line> <!-- the x=1 line -->
+      <line x1={viewBox.x} y1={-1024} x2={viewBox.x + viewBox.w} y2={-1024} class="axis"></line> <!-- the x=-1 line -->
+      <line x1={0} y1={viewBox.y} x2={0} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=0 line -->
+      <line x1={1000} y1={viewBox.y} x2={1000} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=1 line -->
+      <line x1={-1000} y1={viewBox.y} x2={-1000} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=-1 line -->
     </svg>
   </div>
 </div>
@@ -285,8 +339,8 @@
   {@const p = paths[cm_i][cm_j]}
   <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
     <div class="edit-env-point">
-      <label>Time <input type="number" value={p.x} /></label>
-      <label>Value <input type="number" value={p.y} /></label>
+      <label>Time <input type="number" value={p.x / 1000} /></label>
+      <label>Value <input type="number" value={-p.y / 1024} /></label>
     </div>
   </ContextMenu>
 {/if}

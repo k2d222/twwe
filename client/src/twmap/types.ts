@@ -25,7 +25,7 @@ export enum EnvType {
 }
 
 export enum CurveType {
-  INVALID = 0,
+  STEP    = 0,
   LINEAR  = 1,
   SLOW    = 2,
   FAST    = 3,

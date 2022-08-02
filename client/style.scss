@@ -726,11 +726,24 @@ nav.hidden .context {
     stroke-width: 2px;
     stroke: black;
     fill: none;
+
+    &:hover {
+      stroke-width: 5px;
+    }
+  }
+  
+  .axis {
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+    stroke-width: 1px;
+    stroke: black;
+    stroke-dasharray: 2px;
   }
 
   path.point {
     stroke-width: 5px;
     stroke-linecap: round;
+
     &:hover {
       stroke-width: 10px;
     }

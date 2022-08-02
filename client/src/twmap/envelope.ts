@@ -60,17 +60,18 @@ export abstract class Envelope<T> {
   
   applyCurve(t: number, curve: Info.CurveType) {
     switch (curve) {
+      case Info.CurveType.STEP:
+        return 0
       case Info.CurveType.LINEAR:
-        return t;
+        return t
       case Info.CurveType.SLOW:
-        return Math.pow(t, 3);
+        return Math.pow(t, 3)
       case Info.CurveType.FAST:
-        return 1 - Math.pow(1 - t, 3);
+        return 1 - Math.pow(1 - t, 3)
       case Info.CurveType.SMOOTH:
         return t * t * (3 - 2 * t)
       case Info.CurveType.BEZIER:
-      case Info.CurveType.INVALID:
-        return t; // TODO
+        return t // TODO
     }
   }
   
