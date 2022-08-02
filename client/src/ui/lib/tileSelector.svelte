@@ -53,7 +53,20 @@ $: current =
   rlayer.layer instanceof SpeedupLayer ? currentSpeedup :
   rlayer.layer instanceof TuneLayer ? currentTune : null
 
-$: selected = makeBoxSelection(current, selection)
+$: normSelection = normalizeRange(selection)
+$: selected = makeBoxSelection(current, normSelection)
+
+function normalizeRange(range: Range): Range {
+  const minX = Math.min(range.start.x, range.end.x)
+  const maxX = Math.max(range.start.x, range.end.x)
+  const minY = Math.min(range.start.y, range.end.y)
+  const maxY = Math.max(range.start.y, range.end.y)
+
+  return {
+    start: { x: minX, y: minY },
+    end: { x: maxX, y: maxY },
+  }
+}
 
 
 function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
@@ -116,8 +129,8 @@ let boxStyle = ''
 
 $: {
   if (boxSelect) {
-    const [ x1, y1 ] = [ selection.start.x, selection.start.y ]
-    const [ x2, y2 ] = [ selection.end.x, selection.end.y ]
+    const [ x1, y1 ] = [ normSelection.start.x, normSelection.start.y ]
+    const [ x2, y2 ] = [ normSelection.end.x, normSelection.end.y ]
     boxStyle = `
       width: ${(x2 - x1 + 1) * 100 / tileCount}%;
       height: ${(y2 - y1 + 1) * 100 / tileCount}%;

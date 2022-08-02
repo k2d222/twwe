@@ -8,7 +8,7 @@ import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer
 import { server } from '../global'
 import { viewport } from '../../gl/global'
 
-type Range = {
+export type Range = {
   start: Coord,
   end: Coord,
 }
@@ -50,6 +50,18 @@ export function startBoxSelect(activeRgroup: RenderGroup) {
   selection.start = { x, y }
 }
 
+function normalizeRange(range: Range): Range {
+  const minX = Math.min(range.start.x, range.end.x)
+  const maxX = Math.max(range.start.x, range.end.x)
+  const minY = Math.min(range.start.y, range.end.y)
+  const maxY = Math.max(range.start.y, range.end.y)
+
+  return {
+    start: { x: minX, y: minY },
+    end: { x: maxX, y: maxY },
+  }
+}
+
 export function endBoxSelect(activeRgroup: RenderGroup) {
   let off = activeRgroup.offset()
   const x = Math.floor(viewport.mousePos.x - off[0])
@@ -57,7 +69,7 @@ export function endBoxSelect(activeRgroup: RenderGroup) {
 
   selection.end = { x, y }
   
-  return selection
+  return normalizeRange(selection)
 }
 
 function makeTileParams(layer: AnyTilesLayer<any>, x: number, y: number): EditTileParams {

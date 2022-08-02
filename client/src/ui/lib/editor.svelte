@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { Coord } from '../../twmap/types'
   import type { ListUsers, EditTile, CreateQuad, EditQuad, DeleteQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
@@ -139,26 +138,37 @@
       color = 'red'
     }
     
-    if (boxSelect) {
-      hoverTileStyle = `
-        width: ${scale * selectedTiles[0].length}px;
-        height: ${scale * selectedTiles.length}px;
-        top: ${(y + offY - pos.y - selectedTiles.length + 1) * scale}px;
-        left: ${(x + offX - pos.x - selectedTiles[0].length + 1) * scale}px;
-        border-width: ${scale / 16}px;
-        border-color: ${color};
-      `
-    }
-    else {
-      hoverTileStyle = `
-        width: ${scale * selectedTiles[0].length}px;
-        height: ${scale * selectedTiles.length}px;
-        top: ${(y + offY - pos.y) * scale}px;
-        left: ${(x + offX - pos.x) * scale}px;
-        border-width: ${scale / 16}px;
-        border-color: ${color};
-      `
-    }
+      if (boxSelect) {
+        let [ x1, y1 ] = viewport.worldToPixel(boxRange.start.x - offX, boxRange.start.y)
+        let [ x2, y2 ] = viewport.worldToPixel(boxRange.end.x + 1 - offX, boxRange.end.y + 1)
+        hoverTileStyle = `
+          width: ${x2 - x1}px;
+          height: ${y2 - y1}px;
+          top: ${y1}px;
+          left: ${x1}px;
+          border-width: ${scale / 16}px;
+          border-color: ${color};
+        `
+        boxStyle = `
+          width: ${x2 - x1}px;
+          height: ${y2 - y1}px;
+          top: ${y1}px;
+          left: ${x1}px;
+        `
+      }
+      else {
+        hoverTileStyle = `
+          width: ${scale * selectedTiles[0].length}px;
+          height: ${scale * selectedTiles.length}px;
+          top: ${(y + offY - pos.y) * scale}px;
+          left: ${(x + offX - pos.x) * scale}px;
+          border-width: ${scale / 16}px;
+          border-color: ${color};
+        `
+        boxStyle = `
+          display: none;
+        `
+      }
     
     if (activeRgroup.group.clipping) {
       let { clipX, clipY, clipW, clipH } = activeRgroup.group
@@ -284,28 +294,12 @@
   let clipOutlineStyle = ''
 
   let boxSelect = false
-  let boxStartPos: Coord = { x: 0, y: 0 }
-  let boxEndPos: Coord = { x: 0, y: 0 }
+  let boxRange: Editor.Range = {
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 0 },
+  }
   let boxStyle = ''
   
-  $: {
-    if (boxSelect) {
-      const [ x1, y1 ] = viewport.worldToPixel(boxStartPos.x, boxStartPos.y)
-      const [ x2, y2 ] = viewport.worldToPixel(boxEndPos.x, boxEndPos.y)
-      boxStyle = `
-        width: ${x2 - x1}px;
-        height: ${y2 - y1}px;
-        left: ${x1}px;
-        top: ${y1}px;
-      `
-    }
-    else {
-      boxStyle = `
-        display: none;
-      `
-    }
-  }
-
   function onMouseMove(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
       // left button pressed
@@ -313,10 +307,8 @@
         Editor.placeTiles(rmap, g, l, selectedTiles)
       }
       else if (e.buttons === 1 && e.shiftKey) {
-        const [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
-        boxEndPos = { x, y }
-        const range = Editor.endBoxSelect(activeRgroup)
-        selectedTiles = Editor.makeBoxSelection(activeLayer, range)
+        boxRange = Editor.endBoxSelect(activeRgroup)
+        selectedTiles = Editor.makeBoxSelection(activeLayer, boxRange)
       }
     }
   }
@@ -329,9 +321,7 @@
       else if (e.buttons === 1 && e.shiftKey) {
         Editor.startBoxSelect(activeRgroup)
         boxSelect = true
-        const [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
-        boxStartPos = { x, y }
-        boxEndPos = { x, y }
+        boxRange = Editor.endBoxSelect(activeRgroup)
       }
     }
   }
