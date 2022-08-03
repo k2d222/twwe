@@ -18,7 +18,7 @@
     w: number,
     h: number,
   }
-
+  
   export let rmap: RenderMap
   export let visible: boolean = false
   export let selected: Envelope | null = null
@@ -32,6 +32,26 @@
     'color_r' | 'color_g' | 'color_b' | 'color_a' |
     'pos_x' | 'pos_y' | 'pos_r' |
     'sound_v'
+
+  const curves = [
+    {
+      type: CurveType.STEP,
+      name: 'step'
+    }, {
+      type: CurveType.LINEAR,
+      name: 'linear'
+    }, {
+      type: CurveType.SLOW,
+      name: 'slow'
+    }, {
+      type: CurveType.FAST,
+      name: 'fast'
+    }, {
+      type: CurveType.SMOOTH,
+      name: 'smooth'
+    }
+  ]
+
 
   let colorChannels: Chan[] = ['color_r', 'color_g', 'color_b', 'color_a']
   let posChannels: Chan[] = ['pos_x', 'pos_y', 'pos_r']
@@ -251,22 +271,25 @@
   function onResize() {
   }
   
-  let cm_i: number = -1
-  let cm_j: number = -1
+  let cm_i: number = -1 // which channel is selected
+  let cm_j: number = -1 // which point is selected
+  let cm_k: number = -1 // which point (curve) is selected
   let cm_x = 0
   let cm_y = 0
   
-  function showCM(e: MouseEvent, i: number, j: number) {
+  function showCM(e: MouseEvent, i: number, j: number, k: number) {
     e.preventDefault()
     cm_x = e.clientX
     cm_y = e.clientY
     cm_i = i
     cm_j = j
+    cm_k = k
   }
   
   function hideCM() {
     cm_i = -1
     cm_j = -1
+    cm_k = -1
   }
   
 </script>
@@ -313,16 +336,17 @@
     <svg viewBox={viewBoxStr(viewBox)} preserveAspectRatio="none" bind:this={svg}>
       {#each paths as path, i}
         {@const col = colors[i]}
-        {#each path as p, j}
-          {#if j !== 0}
-            {@const p2 = path[j - 1]}
-            <path d={curveStr(p2, p)} style:stroke={col}></path>
+        {#each path as p, k}
+          {#if k !== 0}
+            {@const p2 = path[k - 1]}
+            <path d={curveStr(p2, p)} style:stroke={col}
+              on:contextmenu={(e) => showCM(e, i, -1, k - 1)}></path>
           {/if}
         {/each}
         {#each path as p, j}
           <!-- not using the circle becausePointthe path stroke can be screen-space sized but not the circle fill. -->
           <path class="point" d={pointStr(p.x, p.y)} style:stroke={col}
-            on:mousedown={() => onMouseDown(i, j)} on:contextmenu={(e) => showCM(e, i, j)}></path>
+            on:mousedown={() => onMouseDown(i, j)} on:contextmenu={(e) => showCM(e, i, j, -1)}></path>
         {/each}
       {/each}
       <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis"></line> <!-- the x=0 line -->
@@ -341,6 +365,17 @@
     <div class="edit-env-point">
       <label>Time <input type="number" value={p.x / 1000} /></label>
       <label>Value <input type="number" value={-p.y / 1024} /></label>
+    </div>
+  </ContextMenu>
+{:else if cm_i !== -1 && cm_k !== -1}
+  {@const p = paths[cm_i][cm_k]}
+  <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
+    <div class="edit-env-point">
+      <label>Curve <select>
+        {#each curves as c}
+          <option selected={c.type === p.curve}>{c.name}</option>
+        {/each}
+      </select></label>
     </div>
   </ContextMenu>
 {/if}
