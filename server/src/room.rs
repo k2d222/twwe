@@ -15,7 +15,7 @@ use futures::channel::mpsc::UnboundedSender;
 use tokio_tungstenite::tungstenite::protocol::Message;
 
 use twmap::{
-    constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage,
+    constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage, Env,
     Envelope, ExternalImage, FrontLayer, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer,
     SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
 };
@@ -374,6 +374,77 @@ impl Room {
             }
             _ => return Err("layer is not a quads layer"),
         }
+
+        Ok(())
+    }
+
+    pub fn create_envelope(&self, create_envelope: &CreateEnvelope) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if create_envelope.name.len() > Envelope::MAX_NAME_LENGTH {
+            return Err("envelope name too long");
+        }
+        if map.envelopes.len() == u16::MAX as usize {
+            return Err("max number of envelopes reached");
+        }
+
+        let mut env = match create_envelope.kind {
+            EnvelopeKind::Color => Envelope::Color(Env::default()),
+            EnvelopeKind::Position => Envelope::Position(Env::default()),
+            EnvelopeKind::Sound => Envelope::Sound(Env::default()),
+        };
+
+        *env.name_mut() = create_envelope.name.to_owned();
+
+        map.envelopes.push(env);
+
+        Ok(())
+    }
+
+    pub fn edit_envelope(&self, edit_envelope: &EditEnvelope) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let envelope = map
+            .envelopes
+            .get_mut(edit_envelope.index as usize)
+            .ok_or("invalid envelope index")?;
+
+        match edit_envelope.change.clone() {
+            OneEnvelopeChange::Name(name) => {
+                if name.len() > Envelope::MAX_NAME_LENGTH {
+                    return Err("envelope name too long");
+                } else {
+                    *envelope.name_mut() = name;
+                }
+            }
+            OneEnvelopeChange::Synchronized(synchronized) => match envelope {
+                Envelope::Color(env) => env.synchronized = synchronized,
+                Envelope::Position(env) => env.synchronized = synchronized,
+                Envelope::Sound(env) => env.synchronized = synchronized,
+            },
+            OneEnvelopeChange::Points(points) => match (envelope, points) {
+                (Envelope::Color(env), EnvPoints::Color(points)) => env.points = points,
+                (Envelope::Position(env), EnvPoints::Position(points)) => env.points = points,
+                (Envelope::Sound(env), EnvPoints::Sound(points)) => env.points = points,
+                _ => return Err("invalid envelope points type"),
+            },
+        }
+
+        Ok(())
+    }
+
+    pub fn remove_envelope(&self, index: u16) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if index as usize >= map.envelopes.len() {
+            return Err("invalid envelope index");
+        }
+
+        if map.is_env_in_use(index) {
+            return Err("envelope in use");
+        }
+
+        map.envelopes.remove(index as usize);
+        map.edit_env_indices(|i| i.map(|i| if i > index { i - 1 } else { i }));
 
         Ok(())
     }

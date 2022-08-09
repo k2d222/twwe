@@ -1,10 +1,19 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, CreateQuad, EditQuad, DeleteQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
+  import type {
+    ListUsers, ServerError,
+    EditTile, EditTileParams,
+    CreateQuad, EditQuad, DeleteQuad,
+    CreateEnvelope, EditEnvelope, DeleteEnvelope,
+    CreateGroup,  EditGroup, DeleteGroup, ReorderGroup,
+    CreateLayer, EditLayer, DeleteLayer, ReorderLayer,
+    CreateImage, DeleteImage,
+  } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { QuadsLayer } from '../../twmap/quadsLayer'
+  import { ColorEnvelope, PositionEnvelope, SoundEnvelope } from '../../twmap/envelope'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import { canvas, renderer, setViewport } from '../../gl/global'
@@ -68,6 +77,18 @@
   function serverOnDeleteQuad(e: DeleteQuad) {
     rmap.deleteQuad(e)
     activeLayer = activeLayer // hack to redraw quadview
+  }
+  function serverOnCreateEnvelope(e: CreateEnvelope) {
+    rmap.createEnvelope(e)
+    rmap = rmap // hack to redraw env editor
+  }
+  function serverOnEditEnvelope(e: EditEnvelope) {
+    rmap.editEnvelope(e)
+    rmap = rmap // hack to redraw env editor
+  }
+  function serverOnDeleteEnvelope(e: DeleteEnvelope) {
+    rmap.removeEnvelope(e.index)
+    rmap = rmap // hack to redraw env editor
   }
   function serverOnEditGroup(e: EditGroup) {
     rmap.editGroup(e)
@@ -207,6 +228,9 @@
     server.on('createquad', serverOnCreateQuad)
     server.on('editquad', serverOnEditQuad)
     server.on('deletequad', serverOnDeleteQuad)
+    server.on('createenvelope', serverOnCreateEnvelope)
+    server.on('editenvelope', serverOnEditEnvelope)
+    server.on('deleteenvelope', serverOnDeleteEnvelope)
     server.on('editlayer', serverOnEditLayer)
     server.on('editgroup', serverOnEditGroup)
     server.on('creategroup', serverOnCreateGroup)
@@ -241,8 +265,12 @@
   onDestroy(() => {
     server.off('listusers', serverOnUsers)
     server.off('edittile', serverOnEditTile)
+    server.off('createquad', serverOnCreateQuad)
     server.off('editquad', serverOnEditQuad)
     server.off('deletequad', serverOnDeleteQuad)
+    server.off('createenvelope', serverOnCreateEnvelope)
+    server.off('editenvelope', serverOnEditEnvelope)
+    server.off('deleteenvelope', serverOnDeleteEnvelope)
     server.off('editlayer', serverOnEditLayer)
     server.off('editgroup', serverOnEditGroup)
     server.off('creategroup', serverOnCreateGroup)
@@ -251,6 +279,9 @@
     server.off('reorderlayer', serverOnReorderLayer)
     server.off('deletegroup', serverOnDeleteGroup)
     server.off('deletelayer', serverOnDeleteLayer)
+    server.off('createimage', serverOnCreateImage)
+    server.off('deleteimage', serverOnDeleteImage)
+    server.off('error', serverOnError)
     canvas.removeEventListener('keydown', onKeyDown)
     destroyed = true
   })

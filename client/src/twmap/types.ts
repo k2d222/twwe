@@ -195,7 +195,8 @@ export type SoundEnvPoint = EnvPoint & {
 }
 
 export type PositionEnvPoint = EnvPoint & {
-  pos: Coord,
+  x: number,
+  y: number,
   rotation: number,
 }
 

@@ -288,10 +288,8 @@ export function parsePositionEnvPoint(envPointData: ArrayBuffer): Info.PositionE
   const data = {
     time: d.uint32(),
     curve: d.uint32(),
-    pos: {
-      x: d.int32(),
-      y: d.int32(),
-    },
+    x: d.int32(),
+    y: d.int32(),
     rotation: d.int32(),
   }
 

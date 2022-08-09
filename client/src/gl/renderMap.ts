@@ -1,9 +1,9 @@
-import type { Map, PhysicsLayer } from '../twmap/map'
-import type { EditTile, CreateQuad, EditQuad, DeleteQuad, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
+import type { Map, PhysicsLayer, Envelope } from '../twmap/map'
+import type { EditTile, CreateQuad, EditQuad, DeleteQuad, CreateEnvelope, EditEnvelope, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
 import type { Quad } from '../twmap/quadsLayer'
-import type { PositionEnvelope, ColorEnvelope } from '../twmap/envelope'
 import * as Info from '../twmap/types'
+import { PositionEnvelope, ColorEnvelope, SoundEnvelope } from '../twmap/envelope'
 import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
 import { RenderAnyTilesLayer, RenderGameLayer, RenderTilesLayer, RenderFrontLayer, RenderSwitchLayer, RenderSpeedupLayer, RenderTeleLayer, RenderTuneLayer } from './renderTilesLayer'
 import { QuadsLayer } from '../twmap/quadsLayer'
@@ -14,6 +14,7 @@ import { gl } from './global'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
+import { envPointFromJson } from '../server/convert'
 
 export type RenderPhysicsLayer = RenderGameLayer | RenderFrontLayer | RenderTeleLayer | RenderSpeedupLayer | RenderSwitchLayer | RenderTuneLayer
 
@@ -72,6 +73,38 @@ export class RenderMap {
   removeImage(id: number) {
     this.map.images.splice(id, 1)
     this.textures.splice(id, 1)
+  }
+  
+  addEnvelope(env: Envelope) {
+    this.map.envelopes.push(env)
+    return this.map.envelopes.length - 1
+  }
+  
+  createEnvelope(change: CreateEnvelope) {
+    const env =
+      change.kind === 'color' ? new ColorEnvelope() : 
+      change.kind === 'position' ? new PositionEnvelope() : 
+      change.kind === 'sound' ? new SoundEnvelope() : null
+    env.name = change.name
+    this.addEnvelope(env)
+  }
+  
+  editEnvelope(change: EditEnvelope) {
+    const env = this.map.envelopes[change.index]
+    if ('name' in change) env.name = change.name
+    if ('synchronized' in change) env.synchronized = change.synchronized
+    if ('points' in change) {
+      if (change.points.type === 'color')
+        env.points = change.points.content.map(envPointFromJson)
+      else if (change.points.type === 'position')
+        env.points = change.points.content.map(envPointFromJson)
+      else if (change.points.type === 'sound')
+        env.points = change.points.content.map(envPointFromJson)
+    }
+  }
+  
+  removeEnvelope(id: number) {
+    this.map.envelopes.splice(id, 1)
   }
   
   editTile(change: EditTile) {

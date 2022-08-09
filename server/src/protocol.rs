@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use twmap::{Color, InvalidLayerKind, LayerKind, Point};
+use twmap::{Color, EnvPoint, I32Color, InvalidLayerKind, LayerKind, Point, Position};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -274,6 +274,57 @@ pub struct DeleteQuad {
     pub quad: u32,
 }
 
+// ENVELOPES
+
+// #[derive(Clone, Debug, Serialize, Deserialize)]
+// pub struct EnvPoint<T> {
+//     time: i32,
+//     content: T,
+//     curve:
+// }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase", tag = "type", content = "content")]
+pub enum EnvPoints {
+    Color(Vec<EnvPoint<I32Color>>),
+    Position(Vec<EnvPoint<Position>>),
+    Sound(Vec<EnvPoint<i32>>),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EnvelopeKind {
+    Color,
+    Position,
+    Sound,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateEnvelope {
+    pub name: String,
+    pub kind: EnvelopeKind,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OneEnvelopeChange {
+    Name(String),
+    Synchronized(bool),
+    Points(EnvPoints),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EditEnvelope {
+    pub index: u16,
+    #[serde(flatten)]
+    pub change: OneEnvelopeChange,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteEnvelope {
+    pub index: u16,
+}
+
 // MISC
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -351,9 +402,14 @@ pub enum RequestContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
     DeleteQuad(DeleteQuad),
+
+    CreateEnvelope(CreateEnvelope),
+    EditEnvelope(EditEnvelope),
+    DeleteEnvelope(DeleteEnvelope),
 
     SendMap(SendMap),
     ListUsers,
@@ -384,9 +440,14 @@ pub enum ResponseContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
     DeleteQuad(DeleteQuad),
+
+    CreateEnvelope(CreateEnvelope),
+    EditEnvelope(EditEnvelope),
+    DeleteEnvelope(DeleteEnvelope),
 
     SendMap(SendMap),
     ListUsers(ListUsers),

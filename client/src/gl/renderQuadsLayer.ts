@@ -152,8 +152,8 @@ function makeVertices(q: Quad) {
     if (q.posEnvOffset)
       env = q.posEnv.computePoint(q.posEnv.current.time + q.posEnvOffset)
     
-    let cos_r = Math.cos(env.r / 1024 / 180 * Math.PI)
-    let sin_r = Math.sin(env.r / 1024 / 180 * Math.PI)
+    let cos_r = Math.cos(env.rotation / 1024 / 180 * Math.PI)
+    let sin_r = Math.sin(env.rotation / 1024 / 180 * Math.PI)
     
     const points = [q.points[0], q.points[2], q.points[3], q.points[1]]
       .map(({ x, y }) => [ // translate quad center to origin for rotation

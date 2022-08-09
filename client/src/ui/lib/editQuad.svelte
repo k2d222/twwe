@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Color } from '../../twmap/types'
   import type { Quad } from '../../twmap/quadsLayer'
+  import type { RenderMap } from '../../gl/renderMap'
   import { ColorEnvelope, PositionEnvelope } from '../../twmap/envelope'
-  import { RenderMap } from '../../gl/renderMap'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()

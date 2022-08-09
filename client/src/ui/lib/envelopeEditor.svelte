@@ -1,16 +1,20 @@
 <script lang="ts">
   import type { Envelope } from '../../twmap/map'
   import type { RenderMap } from '../../gl/renderMap'
-  import { CurveType } from '../../twmap/types'
+  import type { CreateEnvelope, EditEnvelope, DeleteEnvelope, CurveTypeStr } from '../../server/protocol'
+  import { envPointToJson } from '../../server/convert';
+  import { server } from '../global'
+  import * as Info from '../../twmap/types'
   import { ColorEnvelope, PositionEnvelope, SoundEnvelope, EnvPoint } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
   import { onMount } from 'svelte'
+  import { showInfo, showError, clearDialog } from './dialog'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
   type InputEvent = FormEvent<HTMLInputElement>
   
   type Point = {
-    x: number, y: number, curve: CurveType
+    x: number, y: number, curve: Info.CurveType
   }
   type ViewBox = {
     x: number,
@@ -32,26 +36,19 @@
     'color_r' | 'color_g' | 'color_b' | 'color_a' |
     'pos_x' | 'pos_y' | 'pos_r' |
     'sound_v'
+    
+  // const envTypes: EnvType[] = [
+  //   'invalid', 'sound', 'position', 'color'
+  // ]
 
-  const curves = [
-    {
-      type: CurveType.STEP,
-      name: 'step'
-    }, {
-      type: CurveType.LINEAR,
-      name: 'linear'
-    }, {
-      type: CurveType.SLOW,
-      name: 'slow'
-    }, {
-      type: CurveType.FAST,
-      name: 'fast'
-    }, {
-      type: CurveType.SMOOTH,
-      name: 'smooth'
-    }
+  const curves: CurveTypeStr[] = [
+    'step',
+    'linear',
+    'slow',
+    'fast',
+    'smooth',
+    // 'bezier', TODO
   ]
-
 
   let colorChannels: Chan[] = ['color_r', 'color_g', 'color_b', 'color_a']
   let posChannels: Chan[] = ['pos_x', 'pos_y', 'pos_r']
@@ -75,7 +72,7 @@
     color_a: (x: EnvPoint<any>) => x.content.a,
     pos_x: (x: EnvPoint<any>) => x.content.x,
     pos_y: (x: EnvPoint<any>) => x.content.y,
-    pos_r: (x: EnvPoint<any>) => x.content.r,
+    pos_r: (x: EnvPoint<any>) => x.content.rotation,
     sound_v: (x: EnvPoint<any>) => x.content,
   }
 
@@ -86,7 +83,7 @@
     color_a: (x: EnvPoint<any>, val: number) => x.content.a = val,
     pos_x: (x: EnvPoint<any>, val: number) => x.content.x = val,
     pos_y: (x: EnvPoint<any>, val: number) => x.content.y = val,
-    pos_r: (x: EnvPoint<any>, val: number) => x.content.r = val,
+    pos_r: (x: EnvPoint<any>, val: number) => x.content.rotation = val,
     sound_v: (x: EnvPoint<any>, val: number) => x.content = val,
   }
   
@@ -116,8 +113,8 @@
     let maxY = Math.max.apply(null, allPoints.map(p => Math.abs(p)))
     let minY = -maxY
 
-    const paddingX = (maxX - minX) * .01
-    const paddingY = (maxY - minY) * .01
+    const paddingX = Math.max(100, (maxX - minX) * .01)
+    const paddingY = Math.max(100, (maxY - minY) * .01)
     minX -= paddingX
     maxX += paddingX
     minY -= paddingY
@@ -130,7 +127,7 @@
     const x = env.points.map((p: EnvPoint<any>) => p.time)
     const y = env.points.map((p: EnvPoint<any>) => -channelVal[chan](p)) // notice the minus sign to flip the y axis
 
-    return x.map((_, i) => { return { x: x[i], y: y[i], curve: env.points[i].curve } })
+    return x.map((_, i) => { return { x: x[i], y: y[i], curve: env.points[i].type } })
   }
   
   function makePaths(env: Envelope) {
@@ -164,13 +161,13 @@
   }
   
   function curveStr(p1: Point, p2: Point) {
-    if (p1.curve === CurveType.STEP) {
+    if (p1.curve === Info.CurveType.STEP) {
       return `M${p1.x},${p1.y} H${p2.x} V${p2.y}`
     }
-    if (p1.curve === CurveType.LINEAR) {
+    if (p1.curve === Info.CurveType.LINEAR) {
       return `M${p1.x},${p1.y} L${p2.x},${p2.y}`
     }
-    else if (p1.curve === CurveType.SLOW) {
+    else if (p1.curve === Info.CurveType.SLOW) {
       // x^3, bezier approx. solved by bruteforce with steps of 0.1
       let cp1 = { x: 0.6, y: 0.0 }
       let cp2 = { x: 0.8, y: 0.4 }
@@ -178,7 +175,7 @@
       cp2 = { x: p1.x + cp2.x * (p2.x - p1.x), y: p1.y + cp2.y * (p2.y - p1.y) }
       return `M${p1.x},${p1.y} C${cp1.x},${cp1.y},${cp2.x},${cp2.y},${p2.x},${p2.y}`
     }
-    else if (p1.curve === CurveType.FAST) {
+    else if (p1.curve === Info.CurveType.FAST) {
       // 1 - (1 - x)^3, bezier approx. solved by bruteforce with steps of 0.1
       let cp1 = { x: 0.2, y: 0.6 }
       let cp2 = { x: 0.4, y: 1.0 }
@@ -186,7 +183,7 @@
       cp2 = { x: p1.x + cp2.x * (p2.x - p1.x), y: p1.y + cp2.y * (p2.y - p1.y) }
       return `M${p1.x},${p1.y} C${cp1.x},${cp1.y},${cp2.x},${cp2.y},${p2.x},${p2.y}`
     }
-    else if (p1.curve === CurveType.SMOOTH) {
+    else if (p1.curve === Info.CurveType.SMOOTH) {
       // 3x^2 - 2x^3, bezier approx. solved by bruteforce with steps of 0.1
       let cp1 = { x: 0.3, y: 0.0 }
       let cp2 = { x: 0.7, y: 1.0 }
@@ -199,16 +196,6 @@
     }
   }
   
-  function pathStr(path: Point[]) {
-    let str = `M${path[0].x},${path[0].y}`
-    
-    for (let i = 1; i < path.length; i++) {
-      str += ` L${path[i].x},${path[i].y}`
-    }
-    
-    return str
-  }
-  
   function pointStr(x: number, y: number) {
     return `M${x},${y} M${x},${y} Z`
   }
@@ -218,31 +205,78 @@
       selected = rmap.map.envelopes[0]
   })
 
-  function onRename(e: InputEvent) {
-    console.log("rename", e.currentTarget.value)
+  async function onRename(e: InputEvent) {
+    const change: EditEnvelope = {
+      index: rmap.map.envelopes.indexOf(selected),
+      name: e.currentTarget.value,
+    }
+    try {
+      showInfo('Please wait…')
+      await server.query('editenvelope', change)
+      rmap.editEnvelope(change)
+      rmap = rmap // hack to redraw
+      clearDialog()
+    } catch (e) {
+      showError('Failed to rename envelope: ' + e)
+    }
   }
   
-  function onNewEnv(e: FormEvent<HTMLSelectElement>) {
-    e.currentTarget.selectedIndex = 0
+  async function onNewEnv(e: FormEvent<HTMLSelectElement>) {
+    const kind: 'position' | 'color' | 'sound' = e.currentTarget.value as any
+    e.currentTarget.selectedIndex = 0 // reset the select to the default value
+    const change: CreateEnvelope = {
+      kind, name: '',
+    }
+    try {
+      showInfo('Please wait…')
+      await server.query('createenvelope', change)
+      rmap.createEnvelope(change)
+      selected = rmap.map.envelopes[rmap.map.envelopes.length - 1]
+      rmap = rmap // hack to redraw
+      clearDialog()
+    } catch (e) {
+      showError('Failed to create envelope: ' + e)
+    }
   }
   
-  function onDelete() {
-    if (selected) {
-      console.log("delete")
+  async function onDelete() {
+    const change: DeleteEnvelope = {
+      index: rmap.map.envelopes.indexOf(selected)
+    }
+    try {
+      showInfo('Please wait…')
+      await server.query('deleteenvelope', change)
+      rmap.removeEnvelope(change.index)
+      selected = rmap.map.envelopes[change.index - 1] || null
+      rmap = rmap // hack to redraw
+      clearDialog()
+    } catch (e) {
+      showError('Failed to delete envelope: ' + e)
     }
   }
   
   let activePath = -1
   let activePoint = -1
   
-  function onMouseDown(i: number, j: number) {
-    activePath = i
-    activePoint = j
+  function onMouseDown(e: MouseEvent, i: number, j: number) {
+    if (e.button === 0) {
+      activePath = i
+      activePoint = j
+    }
+    else {
+      activePath = -1
+      activePoint = -1
+    }
   }
   
   function onMouseUp() {
-    activePath = -1
-    activePoint = -1
+    if (activePath !== -1 && activePoint !== -1) {
+      const change = makeEnvEdit()
+      server.send('editenvelope', change)
+
+      activePath = -1
+      activePoint = -1
+    }
   }
   
   function onMouseMove(e: MouseEvent) {
@@ -292,6 +326,81 @@
     cm_k = -1
   }
   
+  function makeEnvEdit(): EditEnvelope {
+    const index = rmap.map.envelopes.indexOf(selected)
+
+    if (selected instanceof ColorEnvelope) {
+      return {
+        index,
+        points: {
+          type: 'color',
+          content: selected.points.map(envPointToJson)
+        }
+      }
+    }
+    else if (selected instanceof PositionEnvelope) {
+      return {
+        index,
+        points: {
+          type: 'position',
+          content: selected.points.map(envPointToJson)
+        }
+      }
+    }
+    else if (selected instanceof SoundEnvelope) {
+      return {
+        index,
+        points: {
+          type: 'sound',
+          content: selected.points.map(envPointToJson)
+        }
+      }
+    }
+    else {
+      console.warn('unsupported envelope type', selected)
+      return null
+    }
+  }
+  
+  function onEditValue(e: InputEvent) {
+    const point = selected.points[cm_j]
+    const chan = envChannels(selected)[cm_i]
+    const val = Math.floor(parseFloat(e.currentTarget.value) * 1024)
+    setChannelVal[chan](point, val)
+    selected = selected // hack to redraw
+    
+    const change = makeEnvEdit()
+    server.send('editenvelope', change)
+  }
+  
+  function onEditTime(e: InputEvent) {
+    const point = selected.points[cm_j]
+    const prev = selected.points[Math.max(0, cm_j - 1)] 
+    const next = selected.points[Math.min(selected.points.length - 1, cm_j + 1)] 
+    let val = Math.floor(parseFloat(e.currentTarget.value) * 1000)
+
+    if (point !== next)
+      val = Math.min(val, next.time)
+    if (point !== prev)
+      val = Math.max(val, prev.time)
+
+    point.time = val
+    selected = selected // hack to redraw
+    
+    const change = makeEnvEdit()
+    server.send('editenvelope', change)
+  }
+  
+  function onEditCurve(e: FormEvent<HTMLSelectElement>) {
+    const point = selected.points[cm_k]
+    const val: Info.CurveType = parseInt(e.currentTarget.value)
+    point.type = val
+    selected = selected // hack to redraw
+    
+    const change = makeEnvEdit()
+    server.send('editenvelope', change)
+  }
+  
 </script>
 
 <svelte:window on:resize={onResize} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
@@ -301,7 +410,7 @@
     <select on:change={(e) => selected = rmap.map.envelopes[e.currentTarget.value]}>
      {#each rmap.map.envelopes as env}
        {@const i = rmap.map.envelopes.indexOf(env)}
-       <option value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
+       <option selected={env === selected} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
      {/each}
     </select>
     {#if selected}
@@ -323,10 +432,10 @@
     {/if}
     <div class="buttons">
       <select on:change={onNewEnv}>
-        <option selected disabled>New…</option>
-        <option>Color</option>
-        <option>Position</option>
-        <option>Sound</option>
+        <option selected disabled>New envelope…</option>
+        <option value='color'>Color</option>
+        <option value='position'>Position</option>
+        <option value='sound'>Sound</option>
       </select>
       <button on:click={onDelete} disabled={selected === null}>Delete</button>
     </div>
@@ -346,7 +455,7 @@
         {#each path as p, j}
           <!-- not using the circle becausePointthe path stroke can be screen-space sized but not the circle fill. -->
           <path class="point" d={pointStr(p.x, p.y)} style:stroke={col}
-            on:mousedown={() => onMouseDown(i, j)} on:contextmenu={(e) => showCM(e, i, j, -1)}></path>
+            on:mousedown={(e) => onMouseDown(e, i, j)} on:contextmenu={(e) => showCM(e, i, j, -1)}></path>
         {/each}
       {/each}
       <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis"></line> <!-- the x=0 line -->
@@ -363,17 +472,17 @@
   {@const p = paths[cm_i][cm_j]}
   <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
     <div class="edit-env-point">
-      <label>Time <input type="number" value={p.x / 1000} /></label>
-      <label>Value <input type="number" value={-p.y / 1024} /></label>
+      <label>Time <input type="number" value={p.x / 1000} on:change={onEditTime} /></label>
+      <label>Value <input type="number" value={-p.y / 1024} on:change={onEditValue} /></label>
     </div>
   </ContextMenu>
 {:else if cm_i !== -1 && cm_k !== -1}
   {@const p = paths[cm_i][cm_k]}
   <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
     <div class="edit-env-point">
-      <label>Curve <select>
-        {#each curves as c}
-          <option selected={c.type === p.curve}>{c.name}</option>
+      <label>Curve <select on:change={onEditCurve}>
+        {#each curves as c, i}
+          <option value={i} selected={i === p.curve}>{c}</option>
         {/each}
       </select></label>
     </div>

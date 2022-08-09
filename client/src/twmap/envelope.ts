@@ -3,10 +3,14 @@ import type { DataFile } from './datafile'
 import type { Map } from './map'
 import {  parseColorEnvPoint, parsePositionEnvPoint, parseSoundEnvPoint } from './parser'
 
+export type EnvPos = { x: number, y: number, rotation: number }
+export type EnvColor = Info.Color
+export type EnvSound = number
+
 export interface EnvPoint<T> {
   time: number,
   content: T,
-  curve: Info.CurveType,
+  type: Info.CurveType,
 }
 
 export abstract class Envelope<T> {
@@ -51,7 +55,7 @@ export abstract class Envelope<T> {
       const p2 = this.points[i + 1]
       if (p2.time > time) {
         const factor = (time - p1.time) / (p2.time - p1.time)
-        return this.interpolate(p1.content, p2.content, this.applyCurve(factor, p1.curve))
+        return this.interpolate(p1.content, p2.content, this.applyCurve(factor, p1.type))
       }
     }
     
@@ -80,7 +84,7 @@ export abstract class Envelope<T> {
   }
 }
 
-export class ColorEnvelope extends Envelope<Info.Color> {
+export class ColorEnvelope extends Envelope<EnvColor> {
   
   constructor() {
     super(Info.EnvType.COLOR)
@@ -97,9 +101,9 @@ export class ColorEnvelope extends Envelope<Info.Color> {
     for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {
       const data = pointsItem.data.slice(p * itemSize, (p + 1) * itemSize)
       const pointInfo = parseColorEnvPoint(data)
-      const point: EnvPoint<Info.Color> = {
+      const point: EnvPoint<EnvColor> = {
         time: pointInfo.time,
-        curve: pointInfo.curve,
+        type: pointInfo.curve,
         content: pointInfo.color,
       }
       this.points.push(point)
@@ -108,13 +112,13 @@ export class ColorEnvelope extends Envelope<Info.Color> {
     this.update(this.current.time)
   }
   
-  protected default(): Info.Color {
+  protected default(): EnvColor {
     return {
       r: 0, g: 0, b: 0, a: 0
     }
   }
   
-  protected interpolate(from: Info.Color, to: Info.Color, factor: number) {
+  protected interpolate(from: EnvColor, to: EnvColor, factor: number) {
     return {
       r: from.r * (1 - factor) + to.r * factor,
       g: from.g * (1 - factor) + to.g * factor,
@@ -124,17 +128,15 @@ export class ColorEnvelope extends Envelope<Info.Color> {
   }
 }
 
-type Pos = { x: number, y: number, r: number }
-
-export class PositionEnvelope extends Envelope<Pos> {
+export class PositionEnvelope extends Envelope<EnvPos> {
   
   constructor() {
     super(Info.EnvType.POSITION)
   }
 
-  protected default(): Pos {
+  protected default(): EnvPos {
     return {
-      x: 0, y: 0, r: 0
+      x: 0, y: 0, rotation: 0
     }
   }
   
@@ -149,10 +151,10 @@ export class PositionEnvelope extends Envelope<Pos> {
     for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {
       const data = pointsItem.data.slice(p * itemSize, (p + 1) * itemSize)
       const pointInfo = parsePositionEnvPoint(data)
-      const point: EnvPoint<Pos> = {
+      const point: EnvPoint<EnvPos> = {
         time: pointInfo.time,
-        curve: pointInfo.curve,
-        content: { ...pointInfo.pos, r: pointInfo.rotation },
+        type: pointInfo.curve,
+        content: { x: pointInfo.x, y: pointInfo.y, rotation: pointInfo.rotation },
       }
       this.points.push(point)
     }
@@ -160,16 +162,16 @@ export class PositionEnvelope extends Envelope<Pos> {
     this.update(this.current.time)
   }
 
-  protected interpolate(from: Pos, to: Pos, factor: number) {
+  protected interpolate(from: EnvPos, to: EnvPos, factor: number): EnvPos {
     return {
       x: from.x * (1 - factor) + to.x * factor,
       y: from.y * (1 - factor) + to.y * factor,
-      r: from.r * (1 - factor) + to.r * factor,
+      rotation: from.rotation * (1 - factor) + to.rotation * factor,
     }
   }
 }
 
-export class SoundEnvelope extends Envelope<number> {
+export class SoundEnvelope extends Envelope<EnvSound> {
   
   constructor() {
     super(Info.EnvType.SOUND)
@@ -188,7 +190,7 @@ export class SoundEnvelope extends Envelope<number> {
       const pointInfo = parseSoundEnvPoint(data)
       const point: EnvPoint<number> = {
         time: pointInfo.time,
-        curve: pointInfo.curve,
+        type: pointInfo.curve,
         content: pointInfo.volume,
       }
       this.points.push(point)
@@ -197,11 +199,11 @@ export class SoundEnvelope extends Envelope<number> {
     this.update(this.current.time)
   }
 
-  protected default(): number {
+  protected default(): EnvSound {
     return 0
   }
 
-  protected interpolate(from: number, to: number, factor: number) {
+  protected interpolate(from: EnvSound, to: EnvSound, factor: number) {
     return from * (1 - factor) + to * factor
   }
 }

@@ -1,4 +1,4 @@
-import type { Quad, Coord, Color, Tile, Tele, Speedup, Switch, Tune } from '../twmap/types'
+import type * as Info from '../twmap/types'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
@@ -88,7 +88,7 @@ export interface CommonLayerChange {
 export interface EditTilesLayer extends CommonLayerChange {
   width?: number,
   height?: number,
-  color?: Color,
+  color?: Info.Color,
   colorEnv?: number | null,
   colorEnvOffset?: number,
   image?: number | null,
@@ -114,11 +114,11 @@ export interface DeleteLayer {
 }
 
 export type EditTileParams = 
-  Tile & { type: 'tile' } |
-  Tele & { type: 'tele' } |
-  Speedup & { type: 'speedup' } |
-  Switch & { type: 'switch' } |
-  Tune & { type: 'tune' }
+  Info.Tile & { type: 'tile' } |
+  Info.Tele & { type: 'tele' } |
+  Info.Speedup & { type: 'speedup' } |
+  Info.Switch & { type: 'switch' } |
+  Info.Tune & { type: 'tune' }
 
 export type EditTile = EditTileParams & {
   group: number,
@@ -130,9 +130,9 @@ export type EditTile = EditTileParams & {
 export type CreateQuad = {
   group: number,
   layer: number,
-  points: Coord[],
-  colors: Color[],
-  texCoords: Coord[],
+  points: Info.Coord[],
+  colors: Info.Color[],
+  texCoords: Info.Coord[],
   posEnv: number | null,
   posEnvOffset: number,
   colorEnv: number | null,
@@ -143,9 +143,9 @@ export type EditQuad = {
   group: number,
   layer: number,
   quad: number,
-  points: Coord[],
-  colors: Color[],
-  texCoords: Coord[],
+  points: Info.Coord[],
+  colors: Info.Color[],
+  texCoords: Info.Coord[],
   posEnv: number | null,
   posEnvOffset: number,
   colorEnv: number | null,
@@ -156,6 +156,45 @@ export interface DeleteQuad {
   group: number,
   layer: number,
   quad: number,
+}
+
+
+// ENVELOPES
+
+export type EnvType = 'invalid' | 'sound' | 'position' | 'color'
+
+export interface CreateEnvelope {
+  name: string,
+  kind: 'color' | 'position' | 'sound',
+}
+
+export type CurveTypeStr = 'step' | 'linear' | 'slow' | 'fast' | 'smooth' | 'bezier'
+export const curveTypes: CurveTypeStr[] = [ 'step', 'linear', 'slow', 'fast', 'smooth', 'bezier' ]
+
+export interface EnvPoint<T> {
+  time: number,
+  content: T,
+  type: CurveTypeStr,
+}
+
+export interface EditEnvelope {
+  index: number,
+  name?: string,
+  synchronized?: boolean,
+  points?: {
+    type: 'color',
+    content: EnvPoint<Info.Color>[],
+  } | {
+    type: 'position',
+    content: EnvPoint<{ x: number, y: number, rotation: number }>[],
+  } | {
+    type: 'sound',
+    content: EnvPoint<number>[],
+  }
+}
+
+export interface DeleteEnvelope {
+  index: number
 }
 
 // MISC
@@ -224,9 +263,14 @@ export interface RequestContent {
   'deletelayer': DeleteLayer
   
   'edittile': EditTile
+
   'createquad': CreateQuad
   'editquad': EditQuad
   'deletequad': DeleteQuad
+
+  'createenvelope': CreateEnvelope
+  'editenvelope': EditEnvelope
+  'deleteenvelope': DeleteEnvelope
 
   'sendmap': SendMap
   'listusers': null
@@ -256,9 +300,14 @@ export interface ResponseContent {
   'deletelayer': DeleteLayer
   
   'edittile': EditTile
+
   'createquad': CreateQuad
   'editquad': EditQuad
   'deletequad': DeleteQuad
+
+  'createenvelope': CreateEnvelope
+  'editenvelope': EditEnvelope
+  'deleteenvelope': DeleteEnvelope
 
   'sendmap': ArrayBuffer
   'listusers': ListUsers
