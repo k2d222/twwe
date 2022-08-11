@@ -15,6 +15,7 @@
   import { showInfo, showError } from './dialog'
   import Statusbar from './statusbar.svelte'
   import QuadsView from './quadsView.svelte'
+  import InfoEditor from './editInfo.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
 
@@ -26,6 +27,7 @@
   let selectedTiles: EditTileParams[][]
   let peerCount = 0
   let tileSelectorVisible = false
+  let infoEditorVisible = false
   let activeLayer: Layer = map.physicsLayer(GameLayer)
   let rmap = new RenderMap(map)
 
@@ -335,6 +337,14 @@
       boxSelect = false
     }
   }
+  
+  function onEditInfo() {
+    infoEditorVisible = !infoEditorVisible
+  }
+  
+  function onInfoChange() {
+    console.log("change")
+  }
 
 </script>
 
@@ -361,6 +371,7 @@
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
+      <button id="edit-info" on:click={onEditInfo}><img src="/assets/edit.svg" alt="" title="Edit map properties"></button>
     </div>
     <div class="right">
       <div id="users">Users online: <span>{peerCount}</span></div>
@@ -372,5 +383,9 @@
   {/if}
 
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
-
+  
+  {#if infoEditorVisible}
+    <InfoEditor info={rmap.map.info}
+      on:close={() => infoEditorVisible = false} on:change={onInfoChange} />
+  {/if}
 </div>

@@ -8,16 +8,32 @@ import { Image } from './image'
 export type Ctor<T> = new(...args: any[]) => T
 export type PhysicsLayer = GameLayer | FrontLayer | TeleLayer | SpeedupLayer | SwitchLayer | TuneLayer
 
+export interface Info {
+  author: string,
+  version: string,
+  credits: string,
+  license: string,
+  settings: string[],
+}
+
 export class Map {
   name: string
   images: Image[]
   groups: Group[]
+  info: Info
   
   constructor(name: string, data: ArrayBuffer)  {
     this.name = name
     const df = new DataFile(name, data)
     this.images = this.loadImages(df)
     this.groups = this.loadGroups(df)
+    this.info = {
+      author: '',
+      version: '',
+      credits: '',
+      license: '',
+      settings: [],
+    }
   }
   
   physicsGroupIndex(): number {
