@@ -87,8 +87,13 @@
     sound_v: (x: EnvPoint<any>, val: number) => x.content = val,
   }
   
+  let lastSelected: Envelope | null = null
+  
   $: if (selected && channelEnabled) {
-    viewBox = makeViewBox(selected)
+    if (selected !== lastSelected) { // we only reset the viewbox when changing active envelope
+      viewBox = makeViewBox(selected)
+      lastSelected = selected
+    }
     paths = makePaths(selected)
     colors = makeColors(selected)
   }
@@ -113,16 +118,21 @@
     let maxY = Math.max.apply(null, allPoints.map(p => Math.abs(p)))
     let minY = -maxY
 
-    const paddingX = Math.max(100, (maxX - minX) * .01)
-    const paddingY = Math.max(100, (maxY - minY) * .01)
-    minX -= paddingX
-    maxX += paddingX
-    minY -= paddingY
-    maxY += paddingY
-
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
   }
+  
+  function scaleViewBox(vb: ViewBox, scale: number) {
+    let { x, y, w, h } = vb
+    const middleX = x + w / 2
+    const middleY = y + h / 2
+    x = (x - middleX) * scale + middleX
+    y = (y - middleY) * scale + middleY
+    w *= scale
+    h *= scale
 
+    return { x, y, w, h }
+  }
+  
   function makePath(env: Envelope, chan: Chan) {
     const x = env.points.map((p: EnvPoint<any>) => p.time)
     const y = env.points.map((p: EnvPoint<any>) => -channelVal[chan](p)) // notice the minus sign to flip the y axis
@@ -287,6 +297,9 @@
       const next = selected.points[Math.min(selected.points.length - 1, activePoint + 1)] 
       let [ px, py ] = pixelToSvg(e.clientX, e.clientY)
       
+      px = Math.min(Math.max(viewBox.x, px), viewBox.x + viewBox.w)
+      py = Math.min(Math.max(viewBox.y, py), viewBox.y + viewBox.h)
+      
       if (point !== next)
         px = Math.min(px, next.time)
       if (point !== prev)
@@ -401,6 +414,11 @@
     server.send('editenvelope', change)
   }
   
+  function onMouseWheel(e: WheelEvent) {
+    const direction = e.deltaY < 0 ? -1 : 1
+    viewBox = scaleViewBox(viewBox, 1 + direction * 0.1)
+  }
+  
 </script>
 
 <svelte:window on:resize={onResize} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
@@ -441,7 +459,7 @@
     </div>
   </div>
   
-  <div class="graph">
+  <div class="graph" on:wheel={onMouseWheel}>
     <svg viewBox={viewBoxStr(viewBox)} preserveAspectRatio="none" bind:this={svg}>
       {#each paths as path, i}
         {@const col = colors[i]}
