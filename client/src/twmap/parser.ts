@@ -1,6 +1,23 @@
 import * as Info from './types'
 import { DataReader } from './dataReader'
 
+export function parseInfo(infoData: ArrayBuffer): Info.MapInfo {
+  const d = new DataReader(infoData)
+  d.reset()
+  
+  /* version */ d.uint32()
+
+  const data: Info.MapInfo = {
+    author: d.int32(),
+    version: d.int32(),
+    credits: d.int32(),
+    license: d.int32(),
+    settings: d.int32(),
+  }
+
+  return data
+}
+
 export function parseGroup(groupData: ArrayBuffer): Info.Group {
   const d = new DataReader(groupData)
   d.reset()

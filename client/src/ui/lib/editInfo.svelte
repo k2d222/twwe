@@ -9,6 +9,11 @@
   function onChange() {
     dispatch('change')
   }
+  
+  function onChangeSettings(e: Event & { currentTarget: HTMLTextAreaElement }) {
+    info.settings = e.currentTarget.value.split('\n').filter(s => s !== "")
+    onChange()
+  }
 
   function onClose() {
     dispatch('close')
@@ -40,7 +45,7 @@
         <input type="text" bind:value={info.license} maxlength="31" on:change={onChange} />
       </label>
       <label>Server Settings
-        <textarea bind:value={info.settings} on:change={onChange} title="Server settings allow running commands on the server when the map is loaded."></textarea>
+        <textarea rows="5" cols="50" value={info.settings.join('\n')} on:change={onChangeSettings} title="Server settings allow running commands on the server when the map is loaded."></textarea>
       </label>
       <button on:click={onClose}>Close</button>
     </div>
