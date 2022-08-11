@@ -16,8 +16,8 @@ use tokio_tungstenite::tungstenite::protocol::Message;
 
 use twmap::{
     constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage,
-    ExternalImage, FrontLayer, GameLayer, Group, Image, Layer, LayerKind, QuadsLayer, SpeedupLayer,
-    SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
+    ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, QuadsLayer,
+    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
 };
 
 use crate::{
@@ -785,5 +785,29 @@ impl Room {
         map.edit_image_indices(|i| i.map(|i| if i > index { i - 1 } else { i }));
 
         Ok(())
+    }
+
+    pub fn set_map_info(&self, info: Info) -> Result<(), &'static str> {
+        if info.author.len() > Info::MAX_AUTHOR_LENGTH {
+            Err("author field too long")
+        } else if info.version.len() > Info::MAX_VERSION_LENGTH {
+            Err("version field too long")
+        } else if info.credits.len() > Info::MAX_CREDITS_LENGTH {
+            Err("credits field too long")
+        } else if info.license.len() > Info::MAX_LICENSE_LENGTH {
+            Err("license field too long")
+        } else if info
+            .settings
+            .iter()
+            .filter(|s| s.len() > Info::MAX_SETTING_LENGTH)
+            .next()
+            .is_some()
+        {
+            Err("settings line too long")
+        } else {
+            let mut map = self.map.get();
+            map.info = info;
+            Ok(())
+        }
     }
 }

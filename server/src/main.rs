@@ -178,6 +178,7 @@ impl Server {
                     self.broadcast_users(peer);
                 }
                 ResponseContent::SaveMap(_) => (),
+                ResponseContent::EditMap(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::DeleteMap(_) => (),
                 ResponseContent::CreateGroup(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::EditGroup(_) => self.broadcast_to_others(peer, content),
@@ -264,6 +265,12 @@ impl Server {
         }
 
         Ok(ResponseContent::CreateMap(create_map))
+    }
+
+    fn handle_edit_map(&self, peer: &Peer, edit_map: EditMap) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.set_map_info(edit_map.info.clone())?;
+        Ok(ResponseContent::EditMap(edit_map))
     }
 
     fn handle_join_map(&self, peer: &mut Peer, join_map: JoinMap) -> Res {
@@ -442,6 +449,7 @@ impl Server {
     fn handle_request(&self, peer: &mut Peer, req: Request) {
         let res = match req.content {
             RequestContent::CreateMap(content) => self.handle_create_map(peer, content),
+            RequestContent::EditMap(content) => self.handle_edit_map(peer, content),
             RequestContent::JoinMap(content) => self.handle_join_map(peer, content),
             RequestContent::SaveMap(content) => self.handle_save_map(peer, content),
             RequestContent::DeleteMap(content) => self.handle_delete_map(peer, content),

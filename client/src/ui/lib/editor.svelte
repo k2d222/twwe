@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
-  import type { ListUsers, EditTile, CreateQuad, EditQuad, DeleteQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
+  import type { ListUsers, EditMap, EditTile, CreateQuad, EditQuad, DeleteQuad, EditGroup, EditLayer, CreateLayer, CreateGroup, DeleteLayer, DeleteGroup, ReorderLayer, ReorderGroup, CreateImage, DeleteImage, ServerError, EditTileParams } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
@@ -12,7 +12,7 @@
   import { RenderMap } from '../../gl/renderMap'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
-  import { showInfo, showError } from './dialog'
+  import { showInfo, showError, clearDialog } from './dialog'
   import Statusbar from './statusbar.svelte'
   import QuadsView from './quadsView.svelte'
   import InfoEditor from './editInfo.svelte'
@@ -115,8 +115,11 @@
       rmap.addImage(image)
     }
   }
-  async function serverOnDeleteImage(e: DeleteImage) {
+  function serverOnDeleteImage(e: DeleteImage) {
     rmap.removeImage(e.index)
+  }
+  async function serverOnEditMap(e: EditMap) {
+    map.info = e.info
   }
   function serverOnError(e: ServerError) {
     if ('serverError' in e) {
@@ -225,6 +228,7 @@
     server.on('deletelayer', serverOnDeleteLayer)
     server.on('createimage', serverOnCreateImage)
     server.on('deleteimage', serverOnDeleteImage)
+    server.on('editmap', serverOnEditMap)
     server.on('error', serverOnError)
     server.send('listusers')
 
@@ -247,6 +251,7 @@
   onDestroy(() => {
     server.off('listusers', serverOnUsers)
     server.off('edittile', serverOnEditTile)
+    server.off('createquad', serverOnCreateQuad)
     server.off('editquad', serverOnEditQuad)
     server.off('deletequad', serverOnDeleteQuad)
     server.off('editlayer', serverOnEditLayer)
@@ -257,6 +262,10 @@
     server.off('reorderlayer', serverOnReorderLayer)
     server.off('deletegroup', serverOnDeleteGroup)
     server.off('deletelayer', serverOnDeleteLayer)
+    server.off('createimage', serverOnCreateImage)
+    server.off('deleteimage', serverOnDeleteImage)
+    server.off('editmap', serverOnEditMap)
+    server.off('error', serverOnError)
     canvas.removeEventListener('keydown', onKeyDown)
     destroyed = true
   })
@@ -342,8 +351,22 @@
     infoEditorVisible = !infoEditorVisible
   }
   
-  function onInfoChange() {
-    console.log("change")
+  async function onInfoChange() {
+    try {
+      showInfo('Please wait…')
+      const change: EditMap = {
+        info: map.info
+      }
+      const res = await server.query('editmap', change)
+      map.info = res.info
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit map info: ' + e)
+    }
+  }
+  
+  function onInfoClose() {
+    infoEditorVisible = false
   }
 
 </script>
@@ -368,10 +391,10 @@
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
       <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
       <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
+      <button id="edit-info" on:click={onEditInfo}><img src="/assets/edit.svg" alt="" title="Edit map properties"></button>
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
-      <button id="edit-info" on:click={onEditInfo}><img src="/assets/edit.svg" alt="" title="Edit map properties"></button>
     </div>
     <div class="right">
       <div id="users">Users online: <span>{peerCount}</span></div>
@@ -385,7 +408,7 @@
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
   
   {#if infoEditorVisible}
-    <InfoEditor info={rmap.map.info}
-      on:close={() => infoEditorVisible = false} on:change={onInfoChange} />
+    <InfoEditor info={map.info}
+      on:close={onInfoClose} on:change={onInfoChange} />
   {/if}
 </div>

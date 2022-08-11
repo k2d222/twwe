@@ -31,7 +31,7 @@
 <div id="info-editor">
   <div class="content">
     <div class="edit-info">
-      <h3>Edit map info</h3>
+      <h3>Edit map properties</h3>
       <label>Author(s)
         <input type="text" bind:value={info.author} maxlength="31" on:change={onChange} />
       </label>

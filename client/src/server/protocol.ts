@@ -32,12 +32,25 @@ export interface JoinMap {
   name: string,
 }
 
+export interface Info {
+  author: string,
+  version: string,
+  credits: string,
+  license: string,
+  settings: string[],
+}
+
+export interface EditMap {
+  // name: string, // TODO
+  info: Info
+}
+
 export interface SaveMap {
-  name: string
+  name: string,
 }
 
 export interface DeleteMap {
-  name: string
+  name: string,
 }
 
 // GROUPS
@@ -195,7 +208,7 @@ export type ServerError = {
 export interface RequestContent {
   'createmap': CreateMap
   'joinmap': JoinMap
-  // 'editmap': EditMap
+  'editmap': EditMap
   'savemap': SaveMap
   'deletemap': DeleteMap
   
@@ -227,7 +240,7 @@ export interface RequestContent {
 export interface ResponseContent {
   'createmap': CreateMap
   'joinmap': JoinMap
-  // 'editmap': EditMap
+  'editmap': EditMap
   'savemap': SaveMap
   'deletemap': DeleteMap
   
