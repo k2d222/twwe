@@ -97,7 +97,13 @@
     paths = makePaths(selected)
     colors = makeColors(selected)
   }
-
+  
+  $: if (!selected) {
+    viewBox = { x: 0, y: 0, w: 0, h: 0 }
+    paths = []
+    colors = []
+    lastSelected = selected
+  }
 
   function envChannels(env: Envelope) {
     if (env instanceof ColorEnvelope)
@@ -108,8 +114,8 @@
       return soundChannels
   }
 
-  function makeViewBox(env: Envelope): ViewBox {
-    if (env.points.length === 0) {
+  function makeViewBox(env: Envelope | null): ViewBox {
+    if (env === null || env.points.length === 0) {
       return { x: -1000, y: -1024, w: 2000, h: 2048 }
     }
   
@@ -121,6 +127,16 @@
     let maxX = env.points[env.points.length - 1].time
     let maxY = Math.max.apply(null, allPoints.map(p => Math.abs(p)))
     let minY = -maxY
+    
+    if (maxX - minX === 0) {
+      minX = -1000
+      maxX = 1000
+    }
+
+    if (maxY - minY === 0) {
+      minY = -1024
+      maxY = 1024
+    }
 
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
   }
@@ -449,10 +465,14 @@
 
     const newPoint: EnvPoint<any> = {
       type: Info.CurveType.LINEAR,
-      time: px,
+      time: Math.floor(px),
       content: selected.computePoint(px),
     }
     
+    // floor channel values
+    for (const chan of envChannels(selected))
+      setChannelVal[chan](newPoint, Math.floor(channelVal[chan](newPoint)))
+
     selected.points.splice(nextIndex, 0, newPoint)
     selected = selected // hack to redraw
     
@@ -466,13 +486,13 @@
 
 <div id="envelope-editor" class:hidden={!visible}>
   <div class="header">
-    <select on:change={(e) => selected = rmap.map.envelopes[e.currentTarget.value]}>
-     {#each rmap.map.envelopes as env}
-       {@const i = rmap.map.envelopes.indexOf(env)}
-       <option selected={env === selected} value={i}>{`#${i} ${env.name || ''} (${envTypes[env.type]})`}</option>
-     {/each}
-    </select>
     {#if selected}
+      <select on:change={(e) => selected = rmap.map.envelopes[e.currentTarget.value]}>
+       {#each rmap.map.envelopes as env}
+         {@const i = rmap.map.envelopes.indexOf(env)}
+         <option selected={env === selected} value={i}>{`#${i} ${env.name || ''} (${envTypes[env.type]})`}</option>
+       {/each}
+      </select>
       <label><input type="text" value={selected.name} placeholder="(unnamed)" on:change={onRename}/></label>
       <div class="channels">
         {#if selected instanceof ColorEnvelope}
@@ -485,7 +505,7 @@
           <label><b style:color="green">Y</b><input type="checkbox" bind:checked={channelEnabled.pos_y} /></label>
           <label><b style:color="blue">R</b><input type="checkbox" bind:checked={channelEnabled.pos_r} /></label>
         {:else if selected instanceof SoundEnvelope}
-          Sound envelope not supported yet.
+          <label><b style:color="red">V</b><input type="checkbox" bind:checked={channelEnabled.sound_v} /></label>
         {/if}
       </div>
       <button on:click={onRescale}>Rescale</button>
