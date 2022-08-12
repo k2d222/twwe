@@ -29,7 +29,7 @@ export abstract class Envelope<T> {
   }
   
   abstract load(map: Map, df: DataFile, info: Info.Envelope): void
-  protected abstract default(): T
+  abstract default(): T
   protected abstract interpolate(from: T, to: T, factor: number): T
   
   computePoint(time: number) {
@@ -112,7 +112,7 @@ export class ColorEnvelope extends Envelope<EnvColor> {
     this.update(this.current.time)
   }
   
-  protected default(): EnvColor {
+  default(): EnvColor {
     return {
       r: 0, g: 0, b: 0, a: 0
     }
@@ -134,7 +134,7 @@ export class PositionEnvelope extends Envelope<EnvPos> {
     super(Info.EnvType.POSITION)
   }
 
-  protected default(): EnvPos {
+  default(): EnvPos {
     return {
       x: 0, y: 0, rotation: 0
     }
@@ -199,7 +199,7 @@ export class SoundEnvelope extends Envelope<EnvSound> {
     this.update(this.current.time)
   }
 
-  protected default(): EnvSound {
+  default(): EnvSound {
     return 0
   }
 

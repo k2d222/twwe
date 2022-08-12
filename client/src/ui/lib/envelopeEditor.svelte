@@ -433,6 +433,29 @@
     viewBox = makeViewBox(selected)
   }
   
+  function addPoint(e: MouseEvent) {
+    if (!(e.target instanceof SVGSVGElement))
+      return
+  
+    const [ px, _ ] = pixelToSvg(e.clientX, e.clientY)
+
+    let nextIndex = selected.points.findIndex((p: EnvPoint<any>) => p.time > px)
+    if (nextIndex === -1)
+      nextIndex = selected.points.length
+
+    const newPoint: EnvPoint<any> = {
+      type: Info.CurveType.LINEAR,
+      time: px,
+      content: selected.computePoint(px),
+    }
+    
+    selected.points.splice(nextIndex, 0, newPoint)
+    selected = selected // hack to redraw
+    
+    const change = makeEnvEdit()
+    server.send('editenvelope', change)
+  }
+  
 </script>
 
 <svelte:window on:resize={onResize} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
@@ -475,7 +498,7 @@
   </div>
   
   <div class="graph" on:wheel={onMouseWheel}>
-    <svg viewBox={viewBoxStr(viewBox)} preserveAspectRatio="none" bind:this={svg}>
+  <svg viewBox={viewBoxStr(viewBox)} preserveAspectRatio="none" bind:this={svg} on:mousedown={addPoint}>
       {#each paths as path, i}
         {@const col = colors[i]}
         {#each path as p, k}
