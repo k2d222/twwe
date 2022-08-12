@@ -408,7 +408,7 @@
     server.send('editenvelope', change)
   }
   
-  function onDeletePoint(e: FormEvent<HTMLButtonElement>) {
+  function onDeletePoint() {
     selected.points.splice(cm_j, 1)
     cm_j = -1
 

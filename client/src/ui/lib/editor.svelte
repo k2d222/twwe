@@ -13,7 +13,6 @@
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { QuadsLayer } from '../../twmap/quadsLayer'
-  import { ColorEnvelope, PositionEnvelope, SoundEnvelope } from '../../twmap/envelope'
   import { onMount, onDestroy } from 'svelte'
   import { server } from '../global'
   import { canvas, renderer, setViewport } from '../../gl/global'
