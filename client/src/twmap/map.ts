@@ -1,22 +1,26 @@
-import { ItemType } from './types'
+import * as Info from './types'
 import { GameLayer, FrontLayer, TeleLayer, SpeedupLayer, SwitchLayer, TuneLayer } from './tilesLayer'
 import { DataFile } from './datafile'
-import { parseGroup, parseImage } from './parser'
+import { parseGroup, parseImage, parseEnvelope } from './parser'
 import { Group } from './group'
 import { Image } from './image'
+import { ColorEnvelope, PositionEnvelope, SoundEnvelope } from './envelope'
 
 export type Ctor<T> = new(...args: any[]) => T
 export type PhysicsLayer = GameLayer | FrontLayer | TeleLayer | SpeedupLayer | SwitchLayer | TuneLayer
+export type Envelope = ColorEnvelope | PositionEnvelope | SoundEnvelope
 
 export class Map {
   name: string
   images: Image[]
   groups: Group[]
+  envelopes: Envelope[]
   
   constructor(name: string, data: ArrayBuffer)  {
     this.name = name
     const df = new DataFile(name, data)
     this.images = this.loadImages(df)
+    this.envelopes = this.loadEnvelopes(df)
     this.groups = this.loadGroups(df)
   }
   
@@ -39,7 +43,7 @@ export class Map {
   }
   
   private loadImages(df: DataFile) {
-    const imagesInfo = df.getType(ItemType.IMAGE)
+    const imagesInfo = df.getType(Info.ItemType.IMAGE)
 
     if (!imagesInfo)
       return []
@@ -59,7 +63,7 @@ export class Map {
   }
   
   private loadGroups(df: DataFile) {
-    const groupsInfo = df.getType(ItemType.GROUP)
+    const groupsInfo = df.getType(Info.ItemType.GROUP)
     
     if (!groupsInfo)
       return []
@@ -76,5 +80,37 @@ export class Map {
     }
 
     return groups
+  }
+  
+  loadEnvelopes(df: DataFile) {
+    const envsInfo = df.getType(Info.ItemType.ENVELOPE)
+    
+    if (!envsInfo)
+      return []
+    
+    const envelopes = []
+    
+    for (let e = 0; e < envsInfo.num; e++) {
+      const envItem = df.getItem(envsInfo.start + e)
+      const envInfo = parseEnvelope(envItem.data)
+      
+      if (envInfo.type == Info.EnvType.COLOR) {
+        const env = new ColorEnvelope()
+        env.load(this, df, envInfo)
+        envelopes.push(env)
+      }
+      
+      else if (envInfo.type === Info.EnvType.POSITION) {
+        const env = new PositionEnvelope()
+        env.load(this, df, envInfo)
+        envelopes.push(env)
+      }
+      
+      else {
+        console.warn('unsupported envelope type: ', envInfo.type, envInfo)
+      }
+    }
+    
+    return envelopes
   }
 }

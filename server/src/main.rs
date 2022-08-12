@@ -191,6 +191,9 @@ impl Server {
                 ResponseContent::CreateQuad(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::EditQuad(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::DeleteQuad(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::CreateEnvelope(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::EditEnvelope(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::DeleteEnvelope(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::SendMap(_) => (),
                 ResponseContent::ListUsers(_) => (),
                 ResponseContent::ListMaps(_) => (),
@@ -373,6 +376,24 @@ impl Server {
         Ok(ResponseContent::DeleteQuad(delete_quad))
     }
 
+    fn handle_create_envelope(&self, peer: &mut Peer, create_envelope: CreateEnvelope) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.create_envelope(&create_envelope)?;
+        Ok(ResponseContent::CreateEnvelope(create_envelope))
+    }
+
+    fn handle_edit_envelope(&self, peer: &mut Peer, edit_envelope: EditEnvelope) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.edit_envelope(&edit_envelope)?;
+        Ok(ResponseContent::EditEnvelope(edit_envelope))
+    }
+
+    fn handle_delete_envelope(&self, peer: &mut Peer, delete_envelope: DeleteEnvelope) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.remove_envelope(delete_envelope.index)?;
+        Ok(ResponseContent::DeleteEnvelope(delete_envelope))
+    }
+
     fn handle_send_map(&self, peer: &Peer, send_map: SendMap) -> Res {
         let room = self
             .room(&send_map.name)
@@ -457,6 +478,9 @@ impl Server {
             RequestContent::CreateQuad(content) => self.handle_create_quad(peer, content),
             RequestContent::EditQuad(content) => self.handle_edit_quad(peer, content),
             RequestContent::DeleteQuad(content) => self.handle_delete_quad(peer, content),
+            RequestContent::CreateEnvelope(content) => self.handle_create_envelope(peer, content),
+            RequestContent::EditEnvelope(content) => self.handle_edit_envelope(peer, content),
+            RequestContent::DeleteEnvelope(content) => self.handle_delete_envelope(peer, content),
             RequestContent::SendMap(content) => self.handle_send_map(peer, content),
             RequestContent::ListUsers => self.handle_list_users(peer),
             RequestContent::ListMaps => self.handle_list_maps(),

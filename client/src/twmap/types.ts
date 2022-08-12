@@ -17,6 +17,22 @@ export enum LayerType {
   QUADS   = 3,
 }
 
+export enum EnvType {
+  INVALID  = 0,
+  SOUND    = 1,
+  POSITION = 3,
+  COLOR    = 4,
+}
+
+export enum CurveType {
+  STEP    = 0,
+  LINEAR  = 1,
+  SLOW    = 2,
+  FAST    = 3,
+  SMOOTH  = 4,
+  BEZIER  = 5,
+}
+
 export enum TilesLayerFlags {
   TILES = 0,
   GAME = 1,
@@ -119,10 +135,10 @@ export type Quad = {
   points: Coord[],
   colors: Color[],
   texCoords: Coord[],
-  // posEnv: number, // TODO
-  // posEnvOffset: number,
-  // colorEnv: number,
-  // colorEnvOffset: number,
+  posEnv: number,
+  posEnvOffset: number,
+  colorEnv: number,
+  colorEnvOffset: number,
 }
 
 export type Tile = {
@@ -155,3 +171,35 @@ export type Tune = {
 }
 
 export type AnyTile = Tile | Tele | Speedup | Switch | Tune
+
+export type Envelope = {
+    version: number,
+    type: EnvType,
+    startPoint: number,
+    numPoints: number,
+    
+    // extension without version change
+    name?: string,
+    
+    // version 2 extension
+    synchronized?: boolean,
+}
+
+export type EnvPoint = {
+  time: number,
+  curve: CurveType,
+}
+
+export type SoundEnvPoint = EnvPoint & {
+  volume: number,
+}
+
+export type PositionEnvPoint = EnvPoint & {
+  x: number,
+  y: number,
+  rotation: number,
+}
+
+export type ColorEnvPoint = EnvPoint & {
+  color: Color,
+}

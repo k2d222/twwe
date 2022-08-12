@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use twmap::{Color, InvalidLayerKind, LayerKind, Point};
+use twmap::{Color, EnvPoint, I32Color, InvalidLayerKind, LayerKind, Point, Position};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -121,6 +121,8 @@ pub enum OneLayerChange {
     Width(u32),
     Height(u32),
     Image(Option<u16>),
+    ColorEnv(Option<u16>),
+    ColorEnvOffset(i32),
 }
 
 // see https://serde.rs/remote-derive.html
@@ -242,10 +244,10 @@ pub struct Quad {
     pub points: [Point; 5],
     pub colors: [Color; 4],
     pub tex_coords: [Point; 4],
-    // posEnv: number, // TODO
-    // posEnvOffset: number,
-    // colorEnv: number,
-    // colorEnvOffset: number,
+    pub pos_env: Option<u16>,
+    pub pos_env_offset: i32,
+    pub color_env: Option<u16>,
+    pub color_env_offset: i32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -270,6 +272,57 @@ pub struct DeleteQuad {
     pub group: u32,
     pub layer: u32,
     pub quad: u32,
+}
+
+// ENVELOPES
+
+// #[derive(Clone, Debug, Serialize, Deserialize)]
+// pub struct EnvPoint<T> {
+//     time: i32,
+//     content: T,
+//     curve:
+// }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase", tag = "type", content = "content")]
+pub enum EnvPoints {
+    Color(Vec<EnvPoint<I32Color>>),
+    Position(Vec<EnvPoint<Position>>),
+    Sound(Vec<EnvPoint<i32>>),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EnvelopeKind {
+    Color,
+    Position,
+    Sound,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CreateEnvelope {
+    pub name: String,
+    pub kind: EnvelopeKind,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OneEnvelopeChange {
+    Name(String),
+    Synchronized(bool),
+    Points(EnvPoints),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EditEnvelope {
+    pub index: u16,
+    #[serde(flatten)]
+    pub change: OneEnvelopeChange,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeleteEnvelope {
+    pub index: u16,
 }
 
 // MISC
@@ -349,9 +402,14 @@ pub enum RequestContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
     DeleteQuad(DeleteQuad),
+
+    CreateEnvelope(CreateEnvelope),
+    EditEnvelope(EditEnvelope),
+    DeleteEnvelope(DeleteEnvelope),
 
     SendMap(SendMap),
     ListUsers,
@@ -382,9 +440,14 @@ pub enum ResponseContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
     DeleteQuad(DeleteQuad),
+
+    CreateEnvelope(CreateEnvelope),
+    EditEnvelope(EditEnvelope),
+    DeleteEnvelope(DeleteEnvelope),
 
     SendMap(SendMap),
     ListUsers(ListUsers),
