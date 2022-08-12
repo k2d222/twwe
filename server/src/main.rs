@@ -92,6 +92,7 @@ impl Server {
             content,
         };
         let str = serde_json::to_string(&msg).unwrap(); // this must not fail
+        log::debug!("text message sent to {}: {}", peer.addr, str);
         peer.tx.unbounded_send(Message::Text(str)).ok(); // this is ok to fail (peer logout)
     }
 
@@ -163,7 +164,11 @@ impl Server {
     }
 
     fn respond_and_broadcast(&self, peer: &Peer, id: u32, content: Res) {
-        self.respond(peer, id, content.clone());
+        match content {
+            // don't send ack for editLayer or editQuad
+            Ok(ResponseContent::EditTile(_)) | Ok(ResponseContent::EditQuad(_)) => (),
+            _ => self.respond(peer, id, content.clone()),
+        }
 
         if let Ok(content) = content {
             match content {
