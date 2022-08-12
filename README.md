@@ -1,8 +1,10 @@
 # Teeworlds Web Editor (TWWE)
 
+![TWWE on Sunny Side Up by Ravie.](screenshots/sunny.png)
+
 Teeworlds / DDraceNetwork map editor. Online and collaborative, just like the game.
 
-A server is (or will be) hosted at [tw.thissma.fr](https://tw.thissma.fr).
+A demo server is hosted at [tw.thissma.fr](https://tw.thissma.fr).
 
 
 ## Status
