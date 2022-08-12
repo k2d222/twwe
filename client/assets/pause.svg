@@ -5,7 +5,7 @@
    height="24"
    viewBox="0 0 24 24"
    id="svg4"
-   sodipodi:docname="save.svg"
+   sodipodi:docname="pause.svg"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -34,8 +34,11 @@
      inkscape:window-x="0"
      inkscape:window-y="35"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg4" />
+     inkscape:current-layer="svg4"
+     showguides="true"
+     inkscape:guide-bbox="true" />
   <path
-     d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"
-     id="path2" />
+     d="M 14.000001,19 H 18 V 5 H 14.000001 M 5.9999998,19 H 10 V 5 H 5.9999998 Z"
+     id="path2"
+     style="stroke-width:1" />
 </svg>

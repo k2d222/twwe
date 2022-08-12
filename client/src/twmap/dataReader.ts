@@ -57,5 +57,9 @@ export class DataReader extends DataView {
     buf = buf.slice(0, nullterm)
     return String.fromCharCode.apply(null, buf)
   }
+  
+  bytesLeft() {
+    return this.byteLength - this.off
+  }
 }
 

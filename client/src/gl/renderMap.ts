@@ -1,7 +1,9 @@
-import type { Map, PhysicsLayer } from '../twmap/map'
-import type { EditTile, CreateQuad, EditQuad, DeleteQuad, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
+import type { Map, PhysicsLayer, Envelope } from '../twmap/map'
+import type { EditTile, CreateQuad, EditQuad, DeleteQuad, CreateEnvelope, EditEnvelope, EditLayer, EditGroup, ReorderGroup, ReorderLayer, DeleteGroup, DeleteLayer, CreateGroup, CreateLayer } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
-import { Quad, LayerFlags } from '../twmap/types'
+import type { Quad } from '../twmap/quadsLayer'
+import * as Info from '../twmap/types'
+import { PositionEnvelope, ColorEnvelope, SoundEnvelope } from '../twmap/envelope'
 import { TilesLayer, GameLayer, FrontLayer, SwitchLayer, SpeedupLayer, TeleLayer, TuneLayer } from '../twmap/tilesLayer'
 import { RenderAnyTilesLayer, RenderGameLayer, RenderTilesLayer, RenderFrontLayer, RenderSwitchLayer, RenderSpeedupLayer, RenderTeleLayer, RenderTuneLayer } from './renderTilesLayer'
 import { QuadsLayer } from '../twmap/quadsLayer'
@@ -12,6 +14,7 @@ import { gl } from './global'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
+import { envPointFromJson } from '../server/convert'
 
 export type RenderPhysicsLayer = RenderGameLayer | RenderFrontLayer | RenderTeleLayer | RenderSpeedupLayer | RenderSwitchLayer | RenderTuneLayer
 
@@ -72,6 +75,38 @@ export class RenderMap {
     this.textures.splice(id, 1)
   }
   
+  addEnvelope(env: Envelope) {
+    this.map.envelopes.push(env)
+    return this.map.envelopes.length - 1
+  }
+  
+  createEnvelope(change: CreateEnvelope) {
+    const env =
+      change.kind === 'color' ? new ColorEnvelope() : 
+      change.kind === 'position' ? new PositionEnvelope() : 
+      change.kind === 'sound' ? new SoundEnvelope() : null
+    env.name = change.name
+    this.addEnvelope(env)
+  }
+  
+  editEnvelope(change: EditEnvelope) {
+    const env = this.map.envelopes[change.index]
+    if ('name' in change) env.name = change.name
+    if ('synchronized' in change) env.synchronized = change.synchronized
+    if ('points' in change) {
+      if (change.points.type === 'color')
+        env.points = change.points.content.map(envPointFromJson)
+      else if (change.points.type === 'position')
+        env.points = change.points.content.map(envPointFromJson)
+      else if (change.points.type === 'sound')
+        env.points = change.points.content.map(envPointFromJson)
+    }
+  }
+  
+  removeEnvelope(id: number) {
+    this.map.envelopes.splice(id, 1)
+  }
+  
   editTile(change: EditTile) {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer] as RenderAnyTilesLayer<PhysicsLayer | TilesLayer>
@@ -109,6 +144,10 @@ export class RenderMap {
       points: change.points,
       colors: change.colors,
       texCoords: change.texCoords,
+      posEnv: change.posEnv === null ? null : this.map.envelopes[change.posEnv] as PositionEnvelope,
+      posEnvOffset: change.posEnvOffset,
+      colorEnv: change.colorEnv === null ? null : this.map.envelopes[change.colorEnv] as ColorEnvelope,
+      colorEnvOffset: change.colorEnvOffset,
     }
     
     rlayer.layer.quads.push(quad)
@@ -120,11 +159,13 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
     const quad = rlayer.layer.quads[change.quad]
     
-    for (let key in quad) {
-      if (key in change) {
-        quad[key] = change[key]
-      }
-    }
+    if ('points' in change) quad.points = change.points
+    if ('colors' in change) quad.colors = change.colors
+    if ('texCoords' in change) quad.texCoords = change.texCoords
+    if ('posEnv' in change) quad.posEnv = change.posEnv === null ? null : this.map.envelopes[change.posEnv] as PositionEnvelope
+    if ('posEnvOffset' in change) quad.posEnvOffset = change.posEnvOffset
+    if ('colorEnv' in change) quad.colorEnv = change.colorEnv === null ? null : this.map.envelopes[change.colorEnv] as ColorEnvelope
+    if ('colorEnvOffset' in change) quad.colorEnvOffset = change.colorEnvOffset
 
     rlayer.recompute()
   }
@@ -168,13 +209,15 @@ export class RenderMap {
     const rgroup = this.groups[change.group]
     const rlayer = rgroup.layers[change.layer]
 
-    if ('flags' in change) rlayer.layer.detail = (change.flags & LayerFlags.DETAIL) === 1
+    if ('flags' in change) rlayer.layer.detail = (change.flags & Info.LayerFlags.DETAIL) === 1
     if ('name' in change) rlayer.layer.name = change.name
 
     if (rlayer instanceof RenderAnyTilesLayer) {
       if ('color' in change) rlayer.layer.color = change.color
       if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
       if ('height' in change) this.setLayerHeight(rgroup, rlayer, change.height)
+      if ('colorEnv' in change) rlayer.layer.colorEnv = change.colorEnv === null ? null : this.map.envelopes[change.colorEnv]
+      if ('colorEnvOffset' in change) rlayer.layer.colorEnvOffset = change.colorEnvOffset
       if ('image' in change) {
         if (change.image === null) {
           rlayer.layer.image = null

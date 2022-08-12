@@ -41,9 +41,14 @@ export class Server {
       'deletelayer': [],
   
       'edittile': [],
+
       'createquad': [],
       'editquad': [],
       'deletequad': [],
+
+      'createenvelope': [],
+      'editenvelope': [],
+      'deleteenvelope': [],
 
       'sendmap': [],
       'listusers': [],

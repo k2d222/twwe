@@ -1,5 +1,6 @@
 import type { DataFile } from './datafile'
 import type { Map } from './map'
+import type { ColorEnvelope } from './envelope'
 import * as Info from './types'
 import { Layer } from './layer'
 import type { Image } from './image'
@@ -79,11 +80,15 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
 export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   color: Info.Color
   image: Image | null
+  colorEnv: ColorEnvelope | null
+  colorEnvOffset: number
   
   constructor() {
     super(Info.TilesLayerFlags.TILES)
     this.color = { r: 255, g: 255, b: 255, a: 255 }
     this.image = null
+    this.colorEnv = null
+    this.colorEnvOffset = 0
   }
   
   static defaultTile(): Info.Tile {
@@ -97,6 +102,8 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
     this.width = info.width
     this.height = info.height
     this.color = info.color
+    this.colorEnv = info.colorEnv === -1 ? null : map.envelopes[info.colorEnv] as ColorEnvelope
+    this.colorEnvOffset = info.colorEnvOffset
 
     this.image = null
     if (info.image !== -1) {

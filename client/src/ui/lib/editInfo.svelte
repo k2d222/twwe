@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { Info } from '../../twmap/map'
+  import type { MapInfo } from '../../twmap/map'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
 
-  export let info: Info
+  export let info: MapInfo
   
   function onChange() {
     dispatch('change')

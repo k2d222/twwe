@@ -15,9 +15,10 @@ use futures::channel::mpsc::UnboundedSender;
 use tokio_tungstenite::tungstenite::protocol::Message;
 
 use twmap::{
-    constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage,
-    ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, QuadsLayer,
-    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer, TuneLayer, TwMap,
+    constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage, Env,
+    Envelope, ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind,
+    QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer,
+    TuneLayer, TwMap,
 };
 
 use crate::{
@@ -308,6 +309,21 @@ impl Room {
 
     pub fn set_quad(&self, edit_quad: &EditQuad) -> Result<(), &'static str> {
         let mut map = self.map.get();
+
+        if let Some(pos_env) = edit_quad.content.pos_env {
+            match map.envelopes.get(pos_env as usize) {
+                Some(Envelope::Position(_)) => (),
+                _ => return Err("invalid envelope index or type"),
+            }
+        }
+
+        if let Some(color_env) = edit_quad.content.color_env {
+            match map.envelopes.get(color_env as usize) {
+                Some(Envelope::Color(_)) => (),
+                _ => return Err("invalid envelope index or type"),
+            }
+        }
+
         let group = map
             .groups
             .get_mut(edit_quad.group as usize)
@@ -323,9 +339,14 @@ impl Room {
                     .quads
                     .get_mut(edit_quad.quad as usize)
                     .ok_or("invalid quad index")?;
+
                 quad.corners.copy_from_slice(&edit_quad.content.points[..4]);
                 quad.position = edit_quad.content.points[4];
                 quad.texture_coords = edit_quad.content.tex_coords;
+                quad.position_env = edit_quad.content.pos_env;
+                quad.position_env_offset = edit_quad.content.pos_env_offset;
+                quad.color_env = edit_quad.content.color_env;
+                quad.color_env_offset = edit_quad.content.color_env_offset;
             }
             _ => return Err("layer is not a quads layer"),
         }
@@ -354,6 +375,77 @@ impl Room {
             }
             _ => return Err("layer is not a quads layer"),
         }
+
+        Ok(())
+    }
+
+    pub fn create_envelope(&self, create_envelope: &CreateEnvelope) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if create_envelope.name.len() > Envelope::MAX_NAME_LENGTH {
+            return Err("envelope name too long");
+        }
+        if map.envelopes.len() == u16::MAX as usize {
+            return Err("max number of envelopes reached");
+        }
+
+        let mut env = match create_envelope.kind {
+            EnvelopeKind::Color => Envelope::Color(Env::default()),
+            EnvelopeKind::Position => Envelope::Position(Env::default()),
+            EnvelopeKind::Sound => Envelope::Sound(Env::default()),
+        };
+
+        *env.name_mut() = create_envelope.name.to_owned();
+
+        map.envelopes.push(env);
+
+        Ok(())
+    }
+
+    pub fn edit_envelope(&self, edit_envelope: &EditEnvelope) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let envelope = map
+            .envelopes
+            .get_mut(edit_envelope.index as usize)
+            .ok_or("invalid envelope index")?;
+
+        match edit_envelope.change.clone() {
+            OneEnvelopeChange::Name(name) => {
+                if name.len() > Envelope::MAX_NAME_LENGTH {
+                    return Err("envelope name too long");
+                } else {
+                    *envelope.name_mut() = name;
+                }
+            }
+            OneEnvelopeChange::Synchronized(synchronized) => match envelope {
+                Envelope::Color(env) => env.synchronized = synchronized,
+                Envelope::Position(env) => env.synchronized = synchronized,
+                Envelope::Sound(env) => env.synchronized = synchronized,
+            },
+            OneEnvelopeChange::Points(points) => match (envelope, points) {
+                (Envelope::Color(env), EnvPoints::Color(points)) => env.points = points,
+                (Envelope::Position(env), EnvPoints::Position(points)) => env.points = points,
+                (Envelope::Sound(env), EnvPoints::Sound(points)) => env.points = points,
+                _ => return Err("invalid envelope points type"),
+            },
+        }
+
+        Ok(())
+    }
+
+    pub fn remove_envelope(&self, index: u16) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        if index as usize >= map.envelopes.len() {
+            return Err("invalid envelope index");
+        }
+
+        if map.is_env_in_use(index) {
+            return Err("envelope in use");
+        }
+
+        map.envelopes.remove(index as usize);
+        map.edit_env_indices(|i| i.map(|i| if i > index { i - 1 } else { i }));
 
         Ok(())
     }
@@ -525,6 +617,13 @@ impl Room {
             }
         }
 
+        if let ColorEnv(Some(i)) = edit_layer.change {
+            match map.envelopes.get(i as usize) {
+                Some(Envelope::Color(_)) => (),
+                _ => return Err("invalid envelope index or type"),
+            }
+        }
+
         let group = map
             .groups
             .get_mut(edit_layer.group as usize)
@@ -619,6 +718,14 @@ impl Room {
                 Layer::Tiles(layer) => layer.image = None,
                 Layer::Quads(layer) => layer.image = None,
                 _ => return Err("cannot change layer image"),
+            },
+            ColorEnv(color_env) => match layer {
+                Layer::Tiles(layer) => layer.color_env = color_env, // envelope check performed earlier
+                _ => return Err("cannot change layer color envelope"),
+            },
+            ColorEnvOffset(color_env_off) => match layer {
+                Layer::Tiles(layer) => layer.color_env_offset = color_env_off,
+                _ => return Err("cannot change layer color envelope offset"),
             },
         }
 

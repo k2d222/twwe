@@ -10,6 +10,7 @@
   import { server } from '../global'
   import { decodePng, externalImageUrl, queryImage, isPhysicsLayer } from './util'
   import { Image } from '../../twmap/image'
+  import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
   import { createEventDispatcher } from 'svelte'
 
@@ -23,6 +24,7 @@
   $: group = rgroup.group
   $: rlayer = rgroup.layers[l]
   $: layer = rlayer.layer
+  $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
 
   function intVal(target: EventTarget) {
     return parseInt((target as HTMLInputElement).value)
@@ -242,10 +244,17 @@
         on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
       <label>Opacity <input type="range" min={0} max={255} value={col.a}
         on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
-      {#if layer.flags === TilesLayerFlags.TILES}
-        <label>Name <input type="text" value={layer.name}
-          on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
-      {/if}
+      <label>Color Envelope <select on:change={(e) => onEditLayer({ group: g, layer: l, colorEnv: intVal(e.target) })}>
+        <option selected={layer.colorEnv === null} value={null}>None</option>
+        {#each colorEnvelopes as env}
+          {@const i = rmap.map.envelopes.indexOf(env)}
+          <option selected={layer.colorEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
+        {/each}
+      </select></label>
+      <label>Color Env. Offset <input type="number" value={layer.colorEnvOffset}
+        on:change={(e) => onEditLayer({ group: g, layer: l, colorEnvOffset: intVal(e.target) })}></label>
+      <label>Name <input type="text" value={layer.name}
+        on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
     {/if}
   {:else if layer instanceof QuadsLayer}
     {@const img = layer.image ? layer.image.name : "<none>" }

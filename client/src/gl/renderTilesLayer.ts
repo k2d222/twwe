@@ -56,6 +56,9 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     // Vertex colors are not needed
     gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
     gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
+
+    // white color
+    gl.uniform4fv(shader.locs.unifs.uColorMask, [ 1.0, 1.0, 1.0, 1.0 ])
   }
   
   protected postRender() {
@@ -303,12 +306,20 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
     super.preRender()
     // Set color mask
     const { r, g, b, a } = this.layer.color
-    const col = [r, g, b, a].map(x => x / 255)
+    let col = [r, g, b, a].map(x => x / 255)
+    if (this.layer.colorEnv) {
+      let env = this.layer.colorEnv.current.point
+      if (this.layer.colorEnvOffset)
+        env = this.layer.colorEnv.computePoint(this.layer.colorEnv.current.time + this.layer.colorEnvOffset)
+      const { r, g, b, a } = env
+      const envCol = [r, g, b, a].map(x => x / 1024)
+      col = col.map((c, i) => Math.min(Math.max(0, c * envCol[i]), 1))
+    }
     gl.uniform4fv(shader.locs.unifs.uColorMask, col)
   }
 }
 
-export class RenderFrontLayer extends RenderTilesLayer {
+export class RenderFrontLayer extends RenderAnyTilesLayer<FrontLayer> {
   static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/editor/front.png')
@@ -316,13 +327,13 @@ export class RenderFrontLayer extends RenderTilesLayer {
     return image
   })()
 
-  constructor(rmap: RenderMap, layer: FrontLayer) {
-    super(rmap, layer)
-    this.texture = new Texture(RenderFrontLayer.image)
+  constructor(_: RenderMap, layer: FrontLayer) {
+    const texture = new Texture(RenderFrontLayer.image)
+    super(layer, texture)
   }
 }
 
-export class RenderGameLayer extends RenderTilesLayer {
+export class RenderGameLayer extends RenderAnyTilesLayer<GameLayer> {
   static image: Image = (() => {
     const image = new Image()
     image.loadExternal('/entities/DDNet.png')
@@ -330,9 +341,8 @@ export class RenderGameLayer extends RenderTilesLayer {
     return image
   })()
 
-  constructor(rmap: RenderMap, layer: GameLayer) {
-    super(rmap, layer)
-    this.texture = new Texture(RenderGameLayer.image)
+  constructor(_: RenderMap, layer: GameLayer) {
+    super(layer, new Texture(RenderGameLayer.image))
   }
 }
 
