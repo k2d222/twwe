@@ -404,6 +404,16 @@
     server.send('editenvelope', change)
   }
   
+  function onDeletePoint(e: FormEvent<HTMLButtonElement>) {
+    selected.points.splice(cm_j, 1)
+    cm_j = -1
+
+    selected = selected // hack to redraw
+
+    const change = makeEnvEdit()
+    server.send('editenvelope', change)
+  }
+  
   function onEditCurve(e: FormEvent<HTMLSelectElement>) {
     const point = selected.points[cm_k]
     const val: Info.CurveType = parseInt(e.currentTarget.value)
@@ -417,6 +427,10 @@
   function onMouseWheel(e: WheelEvent) {
     const direction = e.deltaY < 0 ? -1 : 1
     viewBox = scaleViewBox(viewBox, 1 + direction * 0.1)
+  }
+  
+  function onRescale() {
+    viewBox = makeViewBox(selected)
   }
   
 </script>
@@ -447,6 +461,7 @@
           Sound envelope not supported yet.
         {/if}
       </div>
+      <button on:click={onRescale}>Rescale</button>
     {/if}
     <div class="buttons">
       <select on:change={onNewEnv}>
@@ -492,6 +507,7 @@
     <div class="edit-env-point">
       <label>Time <input type="number" value={p.x / 1000} on:change={onEditTime} /></label>
       <label>Value <input type="number" value={-p.y / 1024} on:change={onEditValue} /></label>
+      <button on:click={onDeletePoint}>Delete</button>
     </div>
   </ContextMenu>
 {:else if cm_i !== -1 && cm_k !== -1}
