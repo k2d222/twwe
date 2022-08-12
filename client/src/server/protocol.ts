@@ -162,6 +162,7 @@ export interface DeleteQuad {
 // ENVELOPES
 
 export type EnvType = 'invalid' | 'sound' | 'position' | 'color'
+export const envTypes: EnvType[] = [ 'invalid', 'sound', 'invalid', 'position', 'color' ]
 
 export interface CreateEnvelope {
   name: string,

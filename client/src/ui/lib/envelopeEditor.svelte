@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Envelope } from '../../twmap/map'
   import type { RenderMap } from '../../gl/renderMap'
-  import type { CreateEnvelope, EditEnvelope, DeleteEnvelope, CurveTypeStr } from '../../server/protocol'
+  import { CreateEnvelope, EditEnvelope, DeleteEnvelope, CurveTypeStr, envTypes } from '../../server/protocol'
   import { envPointToJson } from '../../server/convert';
   import { server } from '../global'
   import * as Info from '../../twmap/types'
@@ -469,7 +469,7 @@
     <select on:change={(e) => selected = rmap.map.envelopes[e.currentTarget.value]}>
      {#each rmap.map.envelopes as env}
        {@const i = rmap.map.envelopes.indexOf(env)}
-       <option selected={env === selected} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
+       <option selected={env === selected} value={i}>{`#${i} ${env.name || ''} (${envTypes[env.type]})`}</option>
      {/each}
     </select>
     {#if selected}
