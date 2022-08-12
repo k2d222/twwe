@@ -109,6 +109,10 @@
   }
 
   function makeViewBox(env: Envelope): ViewBox {
+    if (env.points.length === 0) {
+      return { x: -1000, y: -1024, w: 2000, h: 2048 }
+    }
+  
     const allPoints = envChannels(env).map(c =>
         env.points.map((p: EnvPoint<any>) => channelVal[c](p))
     ).flat()

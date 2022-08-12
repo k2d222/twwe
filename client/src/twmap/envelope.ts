@@ -31,6 +31,7 @@ export abstract class Envelope<T> {
   abstract load(map: Map, df: DataFile, info: Info.Envelope): void
   abstract default(): T
   protected abstract interpolate(from: T, to: T, factor: number): T
+  abstract clone(point: T): T
   
   computePoint(time: number) {
     if (!this.points.length)
@@ -58,7 +59,7 @@ export abstract class Envelope<T> {
       }
     }
     
-    return this.points[0].content
+    return this.clone(this.points[0].content)
   }
   
   applyCurve(t: number, curve: Info.CurveType) {
@@ -117,6 +118,10 @@ export class ColorEnvelope extends Envelope<EnvColor> {
     }
   }
   
+  clone(point: EnvColor): EnvColor {
+    return { ...point }
+  }
+  
   protected interpolate(from: EnvColor, to: EnvColor, factor: number) {
     return {
       r: from.r * (1 - factor) + to.r * factor,
@@ -137,6 +142,10 @@ export class PositionEnvelope extends Envelope<EnvPos> {
     return {
       x: 0, y: 0, rotation: 0
     }
+  }
+
+  clone(point: EnvPos): EnvPos {
+    return { ...point }
   }
   
   load(_map: Map, df: DataFile, info: Info.Envelope) {
@@ -200,6 +209,10 @@ export class SoundEnvelope extends Envelope<EnvSound> {
 
   default(): EnvSound {
     return 0
+  }
+  
+  clone(point: EnvSound): EnvSound {
+    return point
   }
 
   protected interpolate(from: EnvSound, to: EnvSound, factor: number) {
