@@ -438,7 +438,7 @@
   }
   
   function addPoint(e: MouseEvent) {
-    if (!(e.target instanceof SVGSVGElement))
+    if (!(e.target instanceof SVGSVGElement) || e.button !== 0)
       return
   
     const [ px, _ ] = pixelToSvg(e.clientX, e.clientY)
