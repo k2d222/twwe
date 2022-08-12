@@ -26,7 +26,7 @@ export class Server {
     this.broadcastListeners = {
       'createmap': [],
       'joinmap': [],
-      // 'editmap': [],
+      'editmap': [],
       'savemap': [],
       'deletemap': [],
   

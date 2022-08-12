@@ -60,6 +60,13 @@ canvas {
     align-items: center;
     gap: .2rem;
   }
+  
+  // #edit-info {
+  //   background: none;
+  //   // border: none;
+  //   border: 1px solid grey;
+  //   border-radius: 3px;
+  // }
 }
 
 #dialog {
@@ -428,10 +435,10 @@ nav {
 }
 
 .context {
-    pointer-events: auto;
-    position: fixed;
-    inset: 0;
-    z-index: 10;
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
 
   .content {
     position: absolute;
@@ -443,10 +450,10 @@ nav {
   }
 }
  
-.edit-layer, .edit-group, .edit-quad, .edit-env-point {
-    display: flex;
-    flex-direction: column;
-    gap: .5rem;
+.edit-layer, .edit-group, .edit-quad, .edit-info, .edit-env-point {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
 
   span {
     text-align: center;
@@ -759,4 +766,20 @@ nav.hidden .context {
 
 #tile-selector .box-select {
   position: absolute;
+}
+
+#info-editor {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, .5);
+  padding: 5rem;
+  
+  .content {
+    background: white;
+    padding: 1rem;
+    border: 1px solid black;
+  }
 }

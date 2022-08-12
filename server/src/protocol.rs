@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use twmap::{Color, EnvPoint, I32Color, InvalidLayerKind, LayerKind, Point, Position};
+use twmap::{Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -57,6 +57,12 @@ pub struct CreateMap {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct JoinMap {
     pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EditMap {
+    // pub name: String, // TODO
+    pub info: Info,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -387,7 +393,7 @@ pub enum Error {
 pub enum RequestContent {
     CreateMap(CreateMap),
     JoinMap(JoinMap),
-    // EditMap(EditMap),
+    EditMap(EditMap),
     SaveMap(SaveMap),
     DeleteMap(DeleteMap),
 
@@ -425,7 +431,7 @@ pub enum RequestContent {
 pub enum ResponseContent {
     CreateMap(CreateMap),
     JoinMap(JoinMap),
-    // EditMap(EditMap),
+    EditMap(EditMap),
     SaveMap(SaveMap),
     DeleteMap(DeleteMap),
 

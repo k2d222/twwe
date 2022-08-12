@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type {
-    ListUsers, ServerError,
+    ListUsers, ServerError, EditMap,
     EditTile, EditTileParams,
     CreateQuad, EditQuad, DeleteQuad,
     CreateEnvelope, EditEnvelope, DeleteEnvelope,
@@ -21,9 +21,10 @@
   import { RenderQuadsLayer } from '../../gl/renderQuadsLayer'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
-  import { showInfo, showError } from './dialog'
+  import { showInfo, showError, clearDialog } from './dialog'
   import Statusbar from './statusbar.svelte'
   import QuadsView from './quadsView.svelte'
+  import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
@@ -39,6 +40,7 @@
   let selectedTiles: EditTileParams[][]
   let peerCount = 0
   let tileSelectorVisible = false
+  let infoEditorVisible = false
   let activeLayer: Layer = map.physicsLayer(GameLayer)
   let rmap = new RenderMap(map)
 
@@ -138,8 +140,11 @@
       rmap.addImage(image)
     }
   }
-  async function serverOnDeleteImage(e: DeleteImage) {
+  function serverOnDeleteImage(e: DeleteImage) {
     rmap.removeImage(e.index)
+  }
+  async function serverOnEditMap(e: EditMap) {
+    map.info = e.info
   }
   function serverOnError(e: ServerError) {
     if ('serverError' in e) {
@@ -264,6 +269,7 @@
     server.on('deletelayer', serverOnDeleteLayer)
     server.on('createimage', serverOnCreateImage)
     server.on('deleteimage', serverOnDeleteImage)
+    server.on('editmap', serverOnEditMap)
     server.on('error', serverOnError)
     server.send('listusers')
 
@@ -309,6 +315,7 @@
     server.off('deletelayer', serverOnDeleteLayer)
     server.off('createimage', serverOnCreateImage)
     server.off('deleteimage', serverOnDeleteImage)
+    server.off('editmap', serverOnEditMap)
     server.off('error', serverOnError)
     canvas.removeEventListener('keydown', onKeyDown)
     destroyed = true
@@ -413,6 +420,28 @@
       boxSelect = false
     }
   }
+  
+  function onEditInfo() {
+    infoEditorVisible = !infoEditorVisible
+  }
+  
+  async function onInfoChange() {
+    try {
+      showInfo('Please wait…')
+      const change: EditMap = {
+        info: map.info
+      }
+      const res = await server.query('editmap', change)
+      map.info = res.info
+      clearDialog()
+    } catch (e) {
+      showError('Failed to edit map info: ' + e)
+    }
+  }
+  
+  function onInfoClose() {
+    infoEditorVisible = false
+  }
 
 </script>
 
@@ -435,13 +464,14 @@
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
       <button id="env-toggle" on:click={onToggleEnvEditor}><img src="/assets/envelope.svg" alt="" title="Show envelopes"></button>
-      <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server">Save</button>
-      <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer">Download</button>
+      <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server"></button>
+      <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer"></button>
       {#if animEnabled}
         <button id="anim-toggle" on:click={onToggleAnim}><img src="/assets/pause.svg" alt="pause" title="Pause envelope animations"></button>
       {:else}
         <button id="anim-toggle" on:click={onToggleAnim}><img src="/assets/play.svg" alt="play" title="Play envelope animations"></button>
       {/if}
+      <button id="edit-info" on:click={onEditInfo}><img src="/assets/edit.svg" alt="" title="Edit map properties"></button>
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
@@ -456,7 +486,12 @@
   {/if}
 
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
-
+  
   <EnvelopeEditor visible={envEditorVisible} {rmap} />
+
+  {#if infoEditorVisible}
+    <InfoEditor info={map.info}
+      on:close={onInfoClose} on:change={onInfoChange} />
+  {/if}
 
 </div>

@@ -69,6 +69,15 @@ export type MapObj = {
   version: number,
 }
 
+export type MapInfo = {
+  // version: number, // we don't need that, and the name conflicts
+  author: number,
+  version: number,
+  credits: number,
+  license: number,
+  settings: number,
+}
+
 export type Group = MapObj & {
   version: number,
   offX: number,
