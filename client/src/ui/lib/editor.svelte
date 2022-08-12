@@ -36,6 +36,7 @@
   let treeViewVisible = true
   let envEditorVisible = false
   let animEnabled = false
+  let currentTime = 0
   let selectedTile: EditTileParams
   let peerCount = 0
   let tileSelectorVisible = false
@@ -250,12 +251,17 @@
     
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
+    
+    let lastTime: DOMHighResTimeStamp = 0
 
-    const renderLoop = (t: number) => {
-      if (animEnabled)
-        updateEnvelopes(t)
+    const renderLoop = (t: DOMHighResTimeStamp) => {
+      if (animEnabled) {
+        currentTime += t - lastTime
+        updateEnvelopes(currentTime)
+      }
       renderer.render(viewport, rmap)
       updateOutlines()
+      lastTime = t
       if (!destroyed)
         requestAnimationFrame(renderLoop)
     }
