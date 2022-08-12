@@ -43,8 +43,8 @@ export abstract class Envelope<T> {
     // wrap time periodically between minTime and maxTime
     if (duration) {
       time = (time - minTime) % duration
-      if (time < 0) time = duration - time
       time += minTime
+      if (time < 0) time = duration - time
     }
     else {
       time = minTime

@@ -308,7 +308,10 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
     const { r, g, b, a } = this.layer.color
     let col = [r, g, b, a].map(x => x / 255)
     if (this.layer.colorEnv) {
-      const { r, g, b, a } = this.layer.colorEnv.current.point
+      let env = this.layer.colorEnv.current.point
+      if (this.layer.colorEnvOffset)
+        env = this.layer.colorEnv.computePoint(this.layer.colorEnv.current.time + this.layer.colorEnvOffset)
+      const { r, g, b, a } = env
       const envCol = [r, g, b, a].map(x => x / 1024)
       col = col.map((c, i) => Math.min(Math.max(0, c * envCol[i]), 1))
     }
