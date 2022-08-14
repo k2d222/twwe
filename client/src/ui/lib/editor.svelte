@@ -317,7 +317,7 @@
     server.off('deleteimage', serverOnDeleteImage)
     server.off('editmap', serverOnEditMap)
     server.off('error', serverOnError)
-    canvas.removeEventListener('keydown', onKeyDown)
+    canvas.removeEventListener('keydown', onKeyPress)
     destroyed = true
   })
 
@@ -353,7 +353,11 @@
   let lastTreeViewVisible = treeViewVisible
   let lastEnvEditorVisible = envEditorVisible
 
-  function onKeyDown(e: KeyboardEvent) {
+  function onKeyPress(e: KeyboardEvent) {
+    const target = e.target as HTMLElement
+    if (!target.contains(canvas))
+      return
+
     if ([' ', 'Tab'].includes(e.key)) {
       e.preventDefault()
 
@@ -445,9 +449,11 @@
 
 </script>
 
+<svelte:window on:keydown={onKeyPress} />
+
 <div id="editor">
 
-  <div bind:this={cont} tabindex={1} on:keydown={onKeyDown} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove}>
+  <div bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove}>
     <!-- Here goes the canvas on mount() -->
     <div id="clip-outline" style={clipOutlineStyle}></div>
     {#if activeLayer instanceof AnyTilesLayer}
