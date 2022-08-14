@@ -31,6 +31,7 @@ use room::Room;
 mod protocol;
 use protocol::*;
 
+mod twmap_map_checks;
 mod twmap_map_edit;
 
 use tokio_rustls::{rustls, TlsAcceptor};

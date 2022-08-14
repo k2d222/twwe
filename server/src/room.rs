@@ -23,6 +23,7 @@ use twmap::{
 
 use crate::{
     protocol::*,
+    twmap_map_checks::check_env_points,
     twmap_map_edit::{extend_layer, shrink_layer},
     Peer,
 };
@@ -423,9 +424,18 @@ impl Room {
                 Envelope::Sound(env) => env.synchronized = synchronized,
             },
             OneEnvelopeChange::Points(points) => match (envelope, points) {
-                (Envelope::Color(env), EnvPoints::Color(points)) => env.points = points,
-                (Envelope::Position(env), EnvPoints::Position(points)) => env.points = points,
-                (Envelope::Sound(env), EnvPoints::Sound(points)) => env.points = points,
+                (Envelope::Color(env), EnvPoints::Color(points)) => {
+                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
+                    env.points = points;
+                }
+                (Envelope::Position(env), EnvPoints::Position(points)) => {
+                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
+                    env.points = points;
+                }
+                (Envelope::Sound(env), EnvPoints::Sound(points)) => {
+                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
+                    env.points = points;
+                }
                 _ => return Err("invalid envelope points type"),
             },
         }

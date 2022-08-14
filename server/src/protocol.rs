@@ -282,13 +282,6 @@ pub struct DeleteQuad {
 
 // ENVELOPES
 
-// #[derive(Clone, Debug, Serialize, Deserialize)]
-// pub struct EnvPoint<T> {
-//     time: i32,
-//     content: T,
-//     curve:
-// }
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type", content = "content")]
 pub enum EnvPoints {
