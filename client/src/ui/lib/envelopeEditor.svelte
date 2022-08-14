@@ -319,6 +319,7 @@
       const next = selected.points[Math.min(selected.points.length - 1, activePoint + 1)] 
       let [ px, py ] = pixelToSvg(e.clientX, e.clientY)
       
+      px = Math.max(0, px) // env times must be >= 0
       px = Math.min(Math.max(viewBox.x, px), viewBox.x + viewBox.w)
       py = Math.min(Math.max(viewBox.y, py), viewBox.y + viewBox.h)
       
@@ -401,6 +402,10 @@
     const point = selected.points[cm_j]
     const chan = envChannels(selected)[cm_i]
     const val = Math.floor(parseFloat(e.currentTarget.value) * 1024)
+
+    if (isNaN(val))
+      return
+    
     setChannelVal[chan](point, val)
     selected = selected // hack to redraw
     
@@ -413,6 +418,11 @@
     const prev = selected.points[Math.max(0, cm_j - 1)] 
     const next = selected.points[Math.min(selected.points.length - 1, cm_j + 1)] 
     let val = Math.floor(parseFloat(e.currentTarget.value) * 1000)
+    
+    if (isNaN(val))
+      return
+    
+    val = Math.max(0, val) // env point time must be >= O
 
     if (point !== next)
       val = Math.min(val, next.time)
@@ -459,15 +469,22 @@
     if (!(e.target instanceof SVGSVGElement) || e.button !== 0)
       return
   
-    const [ px, _ ] = pixelToSvg(e.clientX, e.clientY)
+    let [ px, _ ] = pixelToSvg(e.clientX, e.clientY)
+    px = Math.floor(px)
+    
+    if (px < 0) // point time must be >= 0
+      return
 
-    let nextIndex = selected.points.findIndex((p: EnvPoint<any>) => p.time > px)
+    let nextIndex = selected.points.findIndex((p: EnvPoint<any>) => p.time >= px)
     if (nextIndex === -1)
       nextIndex = selected.points.length
+      
+    else if (selected.points[nextIndex].time === px) // don't add another point on top
+      return
 
     const newPoint: EnvPoint<any> = {
       type: Info.CurveType.LINEAR,
-      time: Math.floor(px),
+      time: px,
       content: selected.computePoint(px),
     }
     
@@ -553,7 +570,7 @@
   {@const p = paths[cm_i][cm_j]}
   <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
     <div class="edit-env-point">
-      <label>Time <input type="number" value={p.x / 1000} on:change={onEditTime} /></label>
+      <label>Time <input type="number" min={0} value={p.x / 1000} on:change={onEditTime} /></label>
       <label>Value <input type="number" value={-p.y / 1024} on:change={onEditValue} /></label>
       <button on:click={onDeletePoint}>Delete</button>
     </div>
