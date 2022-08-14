@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { RenderMap } from '../../gl/renderMap'
   import type { QuadsLayer, Quad } from '../../twmap/quadsLayer'
-  import type { EditQuad } from 'src/server/protocol'
+  import type { CreateQuad, EditQuad } from 'src/server/protocol'
   import type * as Info from '../../twmap/types'
   import { viewport } from '../../gl/global'
   import { onMount, onDestroy } from 'svelte'
@@ -146,7 +146,9 @@
     const w = (layer.image ? layer.image.width : 64) * 1024
     const h = (layer.image ? layer.image.height : 64) * 1024
 
-    const quad: Info.Quad = {
+    const change: CreateQuad = {
+      group: g,
+      layer: l,
       points: [
         { x: -w / 2 + mx, y: -h / 2 + my }, // top left
         { x:  w / 2 + mx, y: -h / 2 + my }, // top right
@@ -166,15 +168,14 @@
         { x: 0,    y: 1024 },
         { x: 1024, y: 1024 },
       ],
-      posEnv: -1,
+      posEnv: null,
       posEnvOffset: 0,
-      colorEnv: -1,
+      colorEnv: null,
       colorEnvOffset: 0
     }
 
     try {
       showInfo('Please wait…')
-      const change = { group: g, layer: l, ...quad }
       server.query('createquad', change)
       rmap.createQuad(change)
       layer = layer
