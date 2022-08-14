@@ -5,6 +5,9 @@
   import { ColorEnvelope, PositionEnvelope } from '../../twmap/envelope'
   import { createEventDispatcher } from 'svelte'
 
+  type FormEvent<T> = Event & { currentTarget: EventTarget & T }
+  type FormInputEvent = FormEvent<HTMLInputElement>
+
   const dispatch = createEventDispatcher()
 
   export let rmap: RenderMap
@@ -23,12 +26,8 @@
     else return 'Center'
   }
 
-  function intVal(target: EventTarget) {
-    return parseInt((target as HTMLInputElement).value)
-  }
-
-  function strVal(target: EventTarget) {
-    return (target as HTMLInputElement).value
+  function minmax(min: number, cur: number, max: number) {
+    return Math.min(Math.max(min, cur), max)
   }
 
   function colorToStr(c: Color) {
@@ -45,21 +44,30 @@
     }
   }
 
-  function onEditPos(x: number, y: number) {
-    const points = quad.points[p]
-    points.x = Math.floor(x)
-    points.y = Math.floor(y)
-    dispatch('change')
+  function onEditPosX(e: FormInputEvent) {
+    const x = Math.floor(parseFloat(e.currentTarget.value) * 1024)
+    if (!isNaN(x)) {
+      quad.points[p].x = x
+      dispatch('change')
+    }
   }
 
-  function onEditColor(rgb: string) {
-    const color = strToColor(rgb, quad.colors[p].a)
+  function onEditPosY(e: FormInputEvent) {
+    const y = Math.floor(parseFloat(e.currentTarget.value) * 1024)
+    if (!isNaN(y)) {
+      quad.points[p].y = y
+      dispatch('change')
+    }
+  }
+
+  function onEditColor(e: FormInputEvent) {
+    const color = strToColor(e.currentTarget.value, quad.colors[p].a)
     quad.colors[p] = color
     dispatch('change')
   }
 
-  function onEditOpacity(a: number) {
-    quad.colors[p].a = a
+  function onEditOpacity(e: FormInputEvent) {
+    quad.colors[p].a = minmax(0, parseInt(e.currentTarget.value), 255)
     dispatch('change')
   }
 
@@ -71,59 +79,59 @@
     dispatch('duplicate')
   }
   
-  function onEditColEnv(env: number) {
-    quad.colorEnv = rmap.map.envelopes[env] as ColorEnvelope
+  function onEditColEnv(e: FormEvent<HTMLSelectElement>) {
+    quad.colorEnv = rmap.map.envelopes[parseInt(e.currentTarget.value)] as ColorEnvelope
     dispatch('change')
   }
 
-  function onEditColEnvOff(off: number) {
-    quad.colorEnvOffset = off
-    dispatch('change')
+  function onEditColEnvOff(e: FormInputEvent) {
+    const colorEnvOffset = parseInt(e.currentTarget.value)
+    if (!isNaN(colorEnvOffset)) {
+      quad.colorEnvOffset = colorEnvOffset
+      dispatch('change')
+    }
   }
   
-  function onEditPosEnv(env: number) {
-    quad.posEnv = rmap.map.envelopes[env] as PositionEnvelope
+  function onEditPosEnv(e: FormEvent<HTMLSelectElement>) {
+    quad.posEnv = rmap.map.envelopes[parseInt(e.currentTarget.value)] as PositionEnvelope
     dispatch('change')
   }
 
-  function onEditPosEnvOff(off: number) {
-    quad.posEnvOffset = off
-    dispatch('change')
+  function onEditPosEnvOff(e: FormInputEvent) {
+    const posEnvOffset = parseInt(e.currentTarget.value)
+    if (!isNaN(posEnvOffset)) {
+      quad.posEnvOffset = posEnvOffset
+      dispatch('change')
+    }
   }
 
 </script>
 
 <div class="edit-quad">
   <span>Quad {pointName(p)}</span>
-  <label>Pos X <input type="number" value={Math.floor(point.x / 1024)}
-    on:change={(e) =>  onEditPos(intVal(e.target) * 1024, point.y)}></label>
-  <label>Pos Y <input type="number" value={Math.floor(point.y / 1024)}
-    on:change={(e) =>  onEditPos(point.x, intVal(e.target) * 1024)}></label>
+  <label>Pos X <input type="number" value={Math.floor(point.x / 1024)} on:change={onEditPosX}></label>
+  <label>Pos Y <input type="number" value={Math.floor(point.y / 1024)} on:change={onEditPosY}></label>
   {#if p !== 4}
     {@const col = quad.colors[p]}
-    <label>Color <input type="color" value={colorToStr(col)}
-      on:change={(e) => onEditColor(strVal(e.target))}></label>
-    <label>Opacity <input type="range" min={0} max={255} value={col.a}
-      on:change={(e) => onEditOpacity(intVal(e.target))}></label>
+    <label>Color <input type="color" value={colorToStr(col)} on:change={onEditColor}></label>
+    <label>Opacity <input type="range" min={0} max={255} value={col.a} on:change={onEditOpacity}></label>
   {:else}
-    <label>Position Envelope <select on:change={(e) => onEditPosEnv(intVal(e.target))}>
+    <label>Position Envelope <select on:change={onEditPosEnv}>
       <option selected={quad.posEnv === null} value={-1}>None</option>
       {#each positionEnvelopes as env}
         {@const i = rmap.map.envelopes.indexOf(env)}
         <option selected={quad.posEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
       {/each}
     </select></label>
-    <label>Position Envelope  Offset <input type="number" value={quad.posEnvOffset}
-      on:change={(e) => onEditPosEnvOff(intVal(e.target))}></label>
-    <label>Color Env. <select on:change={(e) => onEditColEnv(intVal(e.target))}>
+    <label>Position Env. Offset <input type="number" value={quad.posEnvOffset} on:change={onEditPosEnvOff}></label>
+    <label>Color Env. <select on:change={onEditColEnv}>
       <option selected={quad.colorEnv === null} value={-1}>None</option>
       {#each colorEnvelopes as env}
         {@const i = rmap.map.envelopes.indexOf(env)}
         <option selected={quad.colorEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
       {/each}
     </select></label>
-    <label>Color Env. Offset <input type="number" value={quad.colorEnvOffset}
-      on:change={(e) => onEditColEnvOff(intVal(e.target))}></label>
+    <label>Color Env. Offset <input type="number" value={quad.colorEnvOffset} on:change={onEditColEnvOff}></label>
     <button on:click={onDuplicate}>Duplicate</button>
     <button on:click={onDelete}>Delete</button>
   {/if}

@@ -14,6 +14,9 @@
   import ImagePicker from './imagePicker.svelte'
   import { createEventDispatcher } from 'svelte'
 
+  type FormEvent<T> = Event & { currentTarget: EventTarget & T }
+  type FormInputEvent = FormEvent<HTMLInputElement>
+
   const dispatch = createEventDispatcher()
   
   export let rmap: RenderMap
@@ -26,12 +29,8 @@
   $: layer = rlayer.layer
   $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
 
-  function intVal(target: EventTarget) {
-    return parseInt((target as HTMLInputElement).value)
-  }
-
-  function strVal(target: EventTarget) {
-    return (target as HTMLInputElement).value
+  function minmax(min: number, cur: number, max: number) {
+    return Math.min(Math.max(min, cur), max)
   }
 
   function colorToStr(c: Color) {
@@ -211,7 +210,63 @@
       picker.$destroy()
     })
   }
-
+  
+  function onEditGroup(e: FormInputEvent) {
+    const newGroup = minmax(0, parseInt(e.currentTarget.value), rmap.groups.length - 1)
+    if (!isNaN(newGroup))
+      onReorderLayer({ group: g, layer: l, newGroup, newLayer: 0 })
+  }
+  function onEditOrder(e: FormInputEvent) {
+    const newLayer = minmax(0, parseInt(e.currentTarget.value), rmap.groups.length - 1)
+    if (!isNaN(newLayer))
+      onReorderLayer({ group: g, layer: l, newGroup: g, newLayer })
+  }
+  function onEditWidth(e: FormInputEvent) {
+    const width = minmax(2, parseInt(e.currentTarget.value), 10000)
+    if (!isNaN(width))
+      onEditLayer({ group: g, layer: l, width })
+  }
+  function onEditHeight(e: FormInputEvent) {
+    const height = minmax(2, parseInt(e.currentTarget.value), 10000)
+    if (!isNaN(height))
+      onEditLayer({ group: g, layer: l, height })
+  }
+  function onEditDetail(_: FormInputEvent) {
+    const flags = layer.detail ? LayerFlags.NONE : LayerFlags.DETAIL
+    onEditLayer({ group: g, layer: l, flags })
+  }
+  function onEditColor(e: FormInputEvent) {
+    if (layer instanceof TilesLayer) {
+      const color = strToColor(e.currentTarget.value, layer.color.a)
+      onEditLayer({ group: g, layer: l, color })
+    }
+  }
+  function onEditOpacity(e: FormInputEvent) {
+    if (layer instanceof TilesLayer) {
+      const color = { ...layer.color, a: minmax(0, parseInt(e.currentTarget.value), 255) }
+      onEditLayer({ group: g, layer: l, color })
+    }
+  }
+  function onEditColorEnv(e: FormEvent<HTMLSelectElement>) {
+    if (layer instanceof TilesLayer) {
+      const colorEnv = parseInt(e.currentTarget.value)
+      onEditLayer({ group: g, layer: l, colorEnv })
+    }
+  }
+  function onEditColorEnvOffset(e: FormInputEvent) {
+    if (layer instanceof TilesLayer) {
+      const colorEnvOffset = parseInt(e.currentTarget.value)
+      if (!isNaN(colorEnvOffset))
+        onEditLayer({ group: g, layer: l, colorEnvOffset })
+    }
+  }
+  function onEditName(e: FormInputEvent) {
+    const name = e.currentTarget.value.substring(0, 11)
+    onEditLayer({ group: g, layer: l, name })
+  }
+  function onDelete() {
+    onDeleteLayer({ group: g, layer: l })
+  }
 
 </script>
 
@@ -219,54 +274,34 @@
 <div class="edit-layer">
   <span>{layerName(layer)}</span>
   {#if !isPhysicsLayer(layer)}
-    <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g}
-      on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: intVal(e.target), newLayer: 0 })}></label>
+    <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g} on:change={onEditGroup} /></label>
   {/if}
-  <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l}
-    on:change={(e) => onReorderLayer({ group: g, layer: l, newGroup: g, newLayer: intVal(e.target) })}></label>
+  <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l} on:change={onEditOrder} /></label>
   {#if layer instanceof AnyTilesLayer}
-    <label>Width <input type="number" min={2} max={10000} value={layer.width}
-      on:change={(e) => onEditLayer({ group: g, layer: l, width: intVal(e.target) })}></label>
-    <label>Height <input type="number" min={2} max={10000} value={layer.height}
-      on:change={(e) => onEditLayer({ group: g, layer: l, height: intVal(e.target) })}></label>
+    <label>Width <input type="number" min={2} max={10000} value={layer.width} on:change={onEditWidth}></label>
+    <label>Height <input type="number" min={2} max={10000} value={layer.height} on:change={onEditHeight}></label>
   {/if}
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
-    <label>Detail <input type="checkbox" checked={layer.detail}
-      on:change={() => onEditLayer({ group: g, layer: l, flags: layer.detail ? LayerFlags.NONE : LayerFlags.DETAIL })}></label>
+    <label>Detail <input type="checkbox" checked={layer.detail} on:change={onEditDetail}></label>
+    {@const img = layer.image ? layer.image.name : "<none>" }
+    <label>Image <input type="button" value={img} on:click={openFilePicker}></label>
   {/if}
   {#if layer instanceof TilesLayer}
-    {#if layer instanceof TilesLayer}
-      {@const img = layer.image ? layer.image.name : "<none>" }
-      <label>Image <input type="button" value={img}
-        on:click={openFilePicker}></label>
-      {@const col = layer.color}
-      <label>Color <input type="color" value={colorToStr(layer.color)}
-        on:change={(e) => onEditLayer({ group: g, layer: l, color: strToColor(strVal(e.target), col.a) })}></label>
-      <label>Opacity <input type="range" min={0} max={255} value={col.a}
-        on:change={(e) => onEditLayer({ group: g, layer: l, color: { ...col, a: intVal(e.target) } })}></label>
-      <label>Color Envelope <select on:change={(e) => onEditLayer({ group: g, layer: l, colorEnv: intVal(e.target) })}>
-        <option selected={layer.colorEnv === null} value={null}>None</option>
-        {#each colorEnvelopes as env}
-          {@const i = rmap.map.envelopes.indexOf(env)}
-          <option selected={layer.colorEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
-        {/each}
-      </select></label>
-      <label>Color Env. Offset <input type="number" value={layer.colorEnvOffset}
-        on:change={(e) => onEditLayer({ group: g, layer: l, colorEnvOffset: intVal(e.target) })}></label>
-      <label>Name <input type="text" value={layer.name}
-        on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
-    {/if}
-  {:else if layer instanceof QuadsLayer}
-    {@const img = layer.image ? layer.image.name : "<none>" }
-    <label>Image <input type="button" value={img}
-      on:click={openFilePicker}></label>
-    <label>Name <input type="text" value={layer.name} maxlength={11}
-      on:change={(e) => onEditLayer({ group: g, layer: l, name: strVal(e.target) })}></label>
+    <label>Color <input type="color" value={colorToStr(layer.color)} on:change={onEditColor}></label>
+    <label>Opacity <input type="range" min={0} max={255} value={layer.color.a} on:change={onEditOpacity}></label>
+    <label>Color Envelope <select on:change={onEditColorEnv}>
+      <option selected={layer.colorEnv === null} value={null}>None</option>
+      {#each colorEnvelopes as env}
+        {@const i = rmap.map.envelopes.indexOf(env)}
+        <option selected={layer.colorEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
+      {/each}
+    </select></label>
+    <label>Color Env. Offset <input type="number" value={layer.colorEnvOffset} on:change={onEditColorEnvOffset}></label>
+  {/if}
+  {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
+    <label>Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName}></label>
   {/if}
   {#if !(layer instanceof GameLayer)}
-    <button
-      on:click={() => onDeleteLayer({ group: g, layer: l })}>
-      Delete layer
-    </button>
+    <button on:click={onDelete}>Delete layer</button>
   {/if}
 </div>

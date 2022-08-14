@@ -32,6 +32,14 @@ let currentSwitch:  { type: 'switch'  } & Switch  = { type: 'switch',  ...Switch
 let currentSpeedup: { type: 'speedup' } & Speedup = { type: 'speedup', ...SpeedupLayer.defaultTile() }
 let currentTune:    { type: 'tune'    } & Tune    = { type: 'tune',    ...TuneLayer.defaultTile()    }
 
+$: currentTele.number      = minmax(0, currentTele.number,      255)
+$: currentSwitch.delay     = minmax(0, currentSwitch.delay,     255)
+$: currentSwitch.number    = minmax(0, currentSwitch.number,    255)
+$: currentSpeedup.angle    = minmax(0, currentSpeedup.angle,    359)
+$: currentSpeedup.maxSpeed = minmax(0, currentSpeedup.maxSpeed, 255)
+$: currentSpeedup.force    = minmax(0, currentSpeedup.force,    255)
+$: currentTune.number      = minmax(0, currentTune.number,      255)
+
 let current: EditTileParams
 let boxSelect = false
 
@@ -55,6 +63,10 @@ $: current =
 
 $: normSelection = normalizeRange(selection)
 $: selected = makeBoxSelection(current, normSelection)
+
+function minmax(min: number, cur: number, max: number) {
+  return Math.min(Math.max(min, cur), max)
+}
 
 function normalizeRange(range: Range): Range {
   const minX = Math.min(range.start.x, range.end.x)
