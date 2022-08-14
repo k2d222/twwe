@@ -128,17 +128,17 @@
 <div class='edit-group'>  
   <span>Group #{g} {group.name}</span>
   <label>Order <input type="number" min={0} max={rmap.groups.length - 1} value={g} on:change={onEditOrder}></label>
-  <label>Pos X <input type="number" value={group.offX} on:change={onEditPosX}></label>
-  <label>Pos Y <input type="number" value={group.offY} on:change={onEditPosY}></label>
-  <label>Para X <input type="number" value={group.paraX} on:change={onEditParaX}></label>
-  <label>Para Y <input type="number" value={group.paraY} on:change={onEditParaY}></label>
   {#if group !== rmap.physicsGroup.group}
-    <label>Name <input type="text" value={group.name} maxlength={11} on:change={onEditName}></label>
+    <label>Pos X <input type="number" value={group.offX} on:change={onEditPosX}></label>
+    <label>Pos Y <input type="number" value={group.offY} on:change={onEditPosY}></label>
+    <label>Para X <input type="number" value={group.paraX} on:change={onEditParaX}></label>
+    <label>Para Y <input type="number" value={group.paraY} on:change={onEditParaY}></label>
     <label>Use Clipping <input type="checkbox" checked={group.clipping} on:change={onEditUseClipping}></label>
     <label>Clip X <input type="number" value={group.clipX} disabled={!group.clipping} on:change={onEditClipX}></label>
     <label>Clip Y <input type="number" value={group.clipY} disabled={!group.clipping} on:change={onEditClipY}></label>
     <label>Clip Width <input type="number" value={group.clipW} min={0} disabled={!group.clipping} on:change={onEditClipW}></label>
     <label>Clip Height <input type="number" value={group.clipH} min={0} disabled={!group.clipping} on:change={onEditClipH}></label>
+    <label>Name <input type="text" value={group.name} maxlength={11} on:change={onEditName}></label>
   {/if}
   <button on:click={() => onCreateLayer({ kind: 'tiles', group: g, name: "" })}>
     Add tile layer
