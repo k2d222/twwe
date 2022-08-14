@@ -180,16 +180,16 @@ export class RenderMap {
   editGroup(change: EditGroup) {
     const rgroup = this.groups[change.group]
     
-    if (change.offX) rgroup.group.offX = change.offX
-    if (change.offY) rgroup.group.offY = change.offY
-    if (change.paraX) rgroup.group.paraX = change.paraX
-    if (change.paraY) rgroup.group.paraY = change.paraY
-    if (change.clipping) rgroup.group.clipping = change.clipping
-    if (change.clipX) rgroup.group.clipX = change.clipX
-    if (change.clipY) rgroup.group.clipY = change.clipY
-    if (change.clipW) rgroup.group.clipW = change.clipW
-    if (change.clipH) rgroup.group.clipH = change.clipH
-    if (change.name) rgroup.group.name = change.name
+    if ('offX' in change) rgroup.group.offX = change.offX
+    if ('offY' in change) rgroup.group.offY = change.offY
+    if ('paraX' in change) rgroup.group.paraX = change.paraX
+    if ('paraY' in change) rgroup.group.paraY = change.paraY
+    if ('clipping' in change) rgroup.group.clipping = change.clipping
+    if ('clipX' in change) rgroup.group.clipX = change.clipX
+    if ('clipY' in change) rgroup.group.clipY = change.clipY
+    if ('clipW' in change) rgroup.group.clipW = change.clipW
+    if ('clipH' in change) rgroup.group.clipH = change.clipH
+    if ('name' in change) rgroup.group.name = change.name
   }
   
   reorderGroup(change: ReorderGroup) {
