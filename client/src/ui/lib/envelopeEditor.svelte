@@ -114,38 +114,40 @@
       return soundChannels
   }
 
+  const viewBoxMargin = 0.01 // additional space, relative to the viewbox
+  
   function makeViewBox(env: Envelope | null): ViewBox {
+
     if (env === null || env.points.length === 0) {
-      return { x: -1000, y: -1024, w: 2000, h: 2048 }
+      const xMargin = viewBoxMargin * 1000
+      return { x: -xMargin, y: -1024, w: 1000 + 2 * xMargin, h: 2048 }
     }
   
     const allPoints = envChannels(env).map(c =>
         env.points.map((p: EnvPoint<any>) => channelVal[c](p))
     ).flat()
 
-    let minX = env.points[0].time
-    let maxX = env.points[env.points.length - 1].time
+    let minX = -viewBoxMargin
+    let maxX = Math.max(1000, env.points[env.points.length - 1].time)
     let maxY = Math.max.apply(null, allPoints.map(p => Math.abs(p)))
     let minY = -maxY
     
-    if (maxX - minX === 0) {
-      minX = -1000
-      maxX = 1000
-    }
-
-    if (maxY - minY === 0) {
+    if (maxY === 0) { // no point
       minY = -1024
       maxY = 1024
     }
+    
+    const xMargin = viewBoxMargin * (maxX - minX)
+    minX -= xMargin
+    maxX += xMargin
 
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
   }
   
   function scaleViewBox(vb: ViewBox, scale: number) {
     let { x, y, w, h } = vb
-    const middleX = x + w / 2
     const middleY = y + h / 2
-    x = (x - middleX) * scale + middleX
+    x = -viewBoxMargin * w * scale
     y = (y - middleY) * scale + middleY
     w *= scale
     h *= scale
@@ -540,7 +542,6 @@
       {/each}
       <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis"></line> <!-- the x=0 line -->
       <line x1={viewBox.x} y1={1024} x2={viewBox.x + viewBox.w} y2={1024} class="axis"></line> <!-- the x=1 line -->
-      <line x1={viewBox.x} y1={-1024} x2={viewBox.x + viewBox.w} y2={-1024} class="axis"></line> <!-- the x=-1 line -->
       <line x1={0} y1={viewBox.y} x2={0} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=0 line -->
       <line x1={1000} y1={viewBox.y} x2={1000} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=1 line -->
       <line x1={-1000} y1={viewBox.y} x2={-1000} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=-1 line -->
