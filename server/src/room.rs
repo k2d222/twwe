@@ -343,6 +343,7 @@ impl Room {
 
                 quad.corners.copy_from_slice(&edit_quad.content.points[..4]);
                 quad.position = edit_quad.content.points[4];
+                quad.colors = edit_quad.content.colors;
                 quad.texture_coords = edit_quad.content.tex_coords;
                 quad.position_env = edit_quad.content.pos_env;
                 quad.position_env_offset = edit_quad.content.pos_env_offset;
