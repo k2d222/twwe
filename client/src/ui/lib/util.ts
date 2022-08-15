@@ -45,7 +45,8 @@ export async function queryMapBinary(sendMap: SendMap): Promise<ArrayBuffer> {
 
 export async function queryMap(sendMap: SendMap): Promise<Map> {
   const data = await queryMapBinary(sendMap)
-  const map = new Map(sendMap.name, data)
+  const map = new Map()
+  map.load(sendMap.name, data)
   return map
 }
 
