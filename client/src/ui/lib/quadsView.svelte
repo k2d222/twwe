@@ -219,12 +219,25 @@
 
   function onDuplicate(q: number) {
     const quad = cloneQuad(layer.quads[q])
-    quad.points = quad.points.map(p => { return { x: p.x + 10 * 1024, y: p.y + 10 * 1024 } })
+    const { colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
+    const posEnv_ = rmap.map.envelopes.indexOf(posEnv)
+    const colorEnv_ = rmap.map.envelopes.indexOf(colorEnv)
+    const points = quad.points.map(p => { return { x: p.x + 10 * 1024, y: p.y + 10 * 1024 } })
+
+    const change: CreateQuad = {
+      group: g,
+      layer: l,
+      points,
+      colors,
+      texCoords,
+      posEnv: posEnv_ === -1 ? null : posEnv_,
+      posEnvOffset,
+      colorEnv: colorEnv_ === -1 ? null : colorEnv_,
+      colorEnvOffset,
+    }
 
     try {
       showInfo('Please wait…')
-
-      const change = editQuad(q)
       server.query('createquad', change)
       rmap.createQuad(change)
       hideCM()
