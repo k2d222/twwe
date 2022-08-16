@@ -19,6 +19,7 @@
   import { Viewport } from '../../gl/viewport'
   import { RenderMap } from '../../gl/renderMap'
   import { RenderQuadsLayer } from '../../gl/renderQuadsLayer'
+  import { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError, clearDialog } from './dialog'
@@ -47,6 +48,7 @@
   $: [ g, l ] = layerIndex(map, activeLayer)
   $: activeRlayer = rmap.groups[g].layers[l]
   $: activeRgroup = rmap.groups[g]
+  $: if (activeLayer) activeRlayer = activeRlayer // hack to redraw tileSelector
   
   $: {
     for (const rgroup of rmap.groups) {
@@ -487,7 +489,7 @@
     </div>
   </div>
 
-  {#if activeLayer instanceof AnyTilesLayer}
+  {#if activeRlayer instanceof RenderAnyTilesLayer}
     <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} bind:tilesVisible={tileSelectorVisible} />
   {/if}
 

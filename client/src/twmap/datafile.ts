@@ -16,7 +16,6 @@ type DataInfo = {
 }
 
 export class DataFile {
-  mapName: string
   data: ArrayBuffer
   reader: DataReader
   version: number
@@ -41,8 +40,7 @@ export class DataFile {
 
   decData: ArrayBuffer[]
 
-  constructor(mapName: string, data: ArrayBuffer) {
-    this.mapName = mapName
+  constructor(data: ArrayBuffer) {
     this.data = data
 
     this.reader = new DataReader(this.data)

@@ -25,9 +25,23 @@ export class Map {
   groups: Group[]
   info: MapInfo
   
-  constructor(name: string, data: ArrayBuffer)  {
+  constructor()  {
+    this.name = ''
+    this.images = []
+    this.envelopes = []
+    this.groups = []
+    this.info = {
+      author: '',
+      version: '',
+      credits: '',
+      license: '',
+      settings: [],
+    }
+  }
+
+  load(name: string, data: ArrayBuffer)  {
+    const df = new DataFile(data)
     this.name = name
-    const df = new DataFile(name, data)
     this.images = this.loadImages(df)
     this.envelopes = this.loadEnvelopes(df)
     this.groups = this.loadGroups(df)

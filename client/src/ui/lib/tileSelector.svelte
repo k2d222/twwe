@@ -1,9 +1,12 @@
 <script lang="ts">
+import type { Color } from '../../twmap/types'
+import type { EditTileParams } from '../../server/protocol'
 import type { Image } from '../../twmap/image'
-import type { RenderLayer } from '../../gl/renderLayer'
-import type { EditTileParams } from 'src/server/protocol'
+import type { AnyTilesLayer } from '../../twmap/tilesLayer'
+import type { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
 import { TileFlags, Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer, TuneLayer } from '../../twmap/tilesLayer'
+import { onMount } from 'svelte'
 
 type Range = {
   start: Coord,
@@ -12,10 +15,13 @@ type Range = {
 
 const tileCount = 16
 
-export let rlayer: RenderLayer
+export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
 export let tilesVisible = false
 export let settingsVisible = false
 export let selected: EditTileParams[][]
+
+let canvas: HTMLCanvasElement
+let ctx: CanvasRenderingContext2D
 
 // inclusive range
 let selection: Range = {
@@ -50,8 +56,6 @@ $: {
     tilesVisible = false
 }
 
-$: url = getImgURL(rlayer.texture.image)
-
 $: current =
   rlayer.layer instanceof TilesLayer ? currentTile :
   rlayer.layer instanceof GameLayer ? currentGame :
@@ -63,6 +67,55 @@ $: current =
 
 $: normSelection = normalizeRange(selection)
 $: selected = makeBoxSelection(current, normSelection)
+
+let mounted = false
+onMount(() => {
+  ctx = canvas.getContext('2d')
+  drawLayer()
+  mounted = true
+})
+
+$: if (mounted && rlayer) {
+  drawLayer()
+}
+
+async function drawLayer() {
+  const img = await getCanvasImage(rlayer.texture.image)
+  canvas.width = img.width as number
+  canvas.height = img.height as number
+  ctx.globalCompositeOperation = 'copy'
+  ctx.drawImage(img, 0, 0)
+
+  if (rlayer.layer instanceof TilesLayer) {
+    // see https://stackoverflow.com/q/31607663/8775116
+    ctx.globalCompositeOperation = 'multiply'
+    ctx.fillStyle = colorToStr(rlayer.layer.color)
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.globalCompositeOperation = 'destination-atop'
+    ctx.drawImage(img, 0, 0)
+  }
+
+  // the first tile is always transparent
+  ctx.clearRect(0, 0, canvas.width / tileCount, canvas.height / tileCount)
+}
+
+async function getCanvasImage(image: Image): Promise<CanvasImageSource> {
+  if (image.data instanceof HTMLImageElement) {
+    ctx.drawImage(image.data, 0, 0)
+    return image.data
+  }
+  else if (image.data instanceof ImageData) {
+    return createImageBitmap(image.data)
+  }
+  else if (image.img) {
+    return image.img 
+  }
+}
+
+function colorToStr(c: Color) {
+  let hex = (i: number) => ('0' + i.toString(16)).slice(-2)
+  return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`
+}
 
 function minmax(min: number, cur: number, max: number) {
   return Math.min(Math.max(min, cur), max)
@@ -96,46 +149,6 @@ function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
   
   return res
 }
-
-function getImgURL(image: Image) {
-  if (image.img !== null) {
-    return image.img.src
-  }
-  else if (image.data instanceof ImageData) {
-    const canvas = document.createElement('canvas')
-    canvas.width = image.data.width
-    canvas.height = image.data.height
-    const ctx = canvas.getContext('2d')
-    ctx.putImageData(image.data, 0, 0)
-    return canvas.toDataURL()
-  }
-  else {
-    console.warn('unsupported image data type:', image)
-    return ""
-  }
-}
-
-function buttonStyle(url: string, id: number) {
-  if (id === 0) {
-    return `
-      background-image: url('/editor/checker.png');
-      background-size: 16px;
-      background-repeat: repeat;
-    `
-  }
-
-  const row = Math.floor(id / tileCount)
-  const col = id % tileCount
-  const c = rlayer.layer instanceof TilesLayer ? rlayer.layer.color : { r: 255, g: 255, b: 255, a:255 }
-  return `
-    background-image: url('${url}');
-    background-position-x: -${col}00%;
-    background-position-y: -${row}00%;
-    background-color: rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255});
-  `
-}
-
-$: buttonStyles = Array.from({length: tileCount * tileCount}, (_, i) => buttonStyle(url, i))
 
 let boxStyle = ''
 
@@ -190,12 +203,13 @@ function onMouseUp() {
 
 <div id="tile-selector">
   <div class="tile selected">
-    <button on:click={() => tilesVisible = !tilesVisible} style={buttonStyles[selected[0][0].id]}></button>
+    <button on:click={() => tilesVisible = !tilesVisible}><img src="/assets/palette.svg" alt='tile picker' /></button>
     <button on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>
-    {#each buttonStyles as style, i}
-      <button style={style} on:mousedown={(e) => onMouseDown(e, i)} on:mouseup={onMouseUp} on:mouseover={() => onMouseOver(i)} on:focus={() => {}}></button>
+    <canvas bind:this={canvas} ></canvas>
+    {#each Array.from({ length: tileCount * tileCount }) as _, i}
+      <button on:mousedown={(e) => onMouseDown(e, i)} on:mouseup={onMouseUp} on:mouseover={() => onMouseOver(i)} on:focus={() => {}}></button>
     {/each}
     <div class="box-select" style={boxStyle}></div>
   </div>
