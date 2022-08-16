@@ -148,6 +148,7 @@
     const change = editQuad(q)
     rmap.editQuad(change)
     server.send('editquad', change)
+    quadPoints = quadPoints // hack to redraw
   }
 
   function onDelete(q: number) {

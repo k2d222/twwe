@@ -105,6 +105,15 @@
     }
   }
 
+  function onRecenter() {
+    const corners = quad.points.filter((_, i) => i !== 4)
+    const centerX = corners.map(p => p.x).reduce((acc, x) => acc + x) / 4
+    const centerY = corners.map(p => p.y).reduce((acc, y) => acc + y) / 4
+    quad.points[4].x = Math.round(centerX)
+    quad.points[4].y = Math.round(centerY)
+    dispatch('change')
+  }
+
 </script>
 
 <div class="edit-quad">
@@ -132,6 +141,7 @@
       {/each}
     </select></label>
     <label>Color Env. Offset <input type="number" value={quad.colorEnvOffset} on:change={onEditColEnvOff}></label>
+    <button on:click={onRecenter}>Recenter</button>
     <button on:click={onDuplicate}>Duplicate</button>
     <button on:click={onDelete}>Delete</button>
   {/if}
