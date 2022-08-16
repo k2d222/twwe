@@ -31,10 +31,10 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
     this.tiles = []
   }
 
-  init(width: number, height: number, fill: () => Tile) {
+  init(width: number, height: number, fill: (i: number) => Tile) {
     this.width = width
     this.height = height
-    this.tiles = Array.from({ length: width * height }, fill)
+    this.tiles = Array.from({ length: width * height }, (_, i) => fill(i))
     return self
   }
 

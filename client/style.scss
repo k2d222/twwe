@@ -225,6 +225,15 @@ nav {
   $tile-size: 3rem;
   z-index: 10;
   
+  canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  
   button {
     width: 100%;
     height: 100%;
@@ -233,15 +242,19 @@ nav {
     margin: 0;
     border: 0;
     outline: 0;
-    
-    .color {
-      width: 100%;
-      height: 100%;
-      background: red;
-      mask-size: $tile-size * 16;
-    }
   }
 
+  .tiles button {
+    background: transparent;
+    z-index: 1;
+    outline: 1px solid black;
+
+    &:hover {
+      outline: 2px solid black;
+      background: rgba(255, 255, 255, .4);
+    }
+  }
+  
   .tile.selected {
     position: fixed;
     bottom: 2rem;
@@ -277,7 +290,6 @@ nav {
     grid-gap: 1px;
     max-width: calc(100% - 2rem);
     max-height: calc(100% - 4rem - $tile-size - 1rem);
-    overflow: auto;
     border: 3px solid black;
   }
   
