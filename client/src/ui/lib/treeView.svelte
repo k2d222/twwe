@@ -48,8 +48,8 @@
   }
 
   function onChange() {
-    activeLayer = activeLayer // hack to redraw the tileSelector
     rmap = rmap // hack to redraw the treeview
+    activeLayer = activeLayer // this will update the parent component
   }
 
   function layerName(layer: Layer) {

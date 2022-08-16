@@ -87,7 +87,6 @@ async function drawLayer() {
   canvas.height = img.height as number
   ctx.globalCompositeOperation = 'copy'
   ctx.drawImage(img, 0, 0)
-  console.log('hello')
 
   if (rlayer.layer instanceof TilesLayer) {
     // see https://stackoverflow.com/q/31607663/8775116

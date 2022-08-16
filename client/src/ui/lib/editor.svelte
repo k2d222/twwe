@@ -48,6 +48,7 @@
   $: [ g, l ] = layerIndex(map, activeLayer)
   $: activeRlayer = rmap.groups[g].layers[l]
   $: activeRgroup = rmap.groups[g]
+  $: if (activeLayer) activeRlayer = activeRlayer // hack to redraw tileSelector
   
   $: {
     for (const rgroup of rmap.groups) {
