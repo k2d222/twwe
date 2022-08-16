@@ -222,12 +222,12 @@ nav {
 }
 
 #tile-selector {
-  $tile-size: 3rem;
   z-index: 10;
   
   canvas {
     width: 100%;
     height: 100%;
+    object-fit: cover;
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
@@ -237,7 +237,6 @@ nav {
   button {
     width: 100%;
     height: 100%;
-    background-size: $tile-size * 16;
     padding: 0;
     margin: 0;
     border: 0;
@@ -264,15 +263,15 @@ nav {
     gap: 2rem;
 
     > button {
-      width: $tile-size;
-      height: $tile-size;
+      width: 3rem;
+      height: 3rem;
       outline: 3px solid black;
     }
   }
   
   .tiles, .settings {
     position: fixed;
-    bottom: 4rem + $tile-size;
+    bottom: 10rem;
     left: 50%;
     transform: translateX(-50%);
     
@@ -285,12 +284,14 @@ nav {
     z-index: 1;
     background: black;
     display: grid;
-    grid-template-rows: repeat(16, $tile-size);
-    grid-template-columns: repeat(16, $tile-size);
+    bottom: 7rem;
+    width: min(calc(100vh - 11rem), calc(100vw - 4rem));
+    height: min(calc(100vh - 11rem), calc(100vw - 4rem));
+    grid-template-rows: repeat(16, auto);
+    grid-template-columns: repeat(16, auto);
     grid-gap: 1px;
-    max-width: calc(100% - 2rem);
-    max-height: calc(100% - 4rem - $tile-size - 1rem);
     border: 3px solid black;
+    overflow: auto;
   }
   
   .settings {
