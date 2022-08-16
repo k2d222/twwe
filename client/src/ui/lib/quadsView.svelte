@@ -54,6 +54,7 @@
   })
 
   let activeQuad = -1
+  let startPos = { x: 0, y: 0 }
   let lastPos = { x: 0, y: 0 }
   let selectedPoints: number[] = []
 
@@ -62,6 +63,8 @@
       activeQuad = q
       selectedPoints = lp
       const [ x, y ] = viewport.pixelToWorld(e.clientX, e.clientY)
+      startPos.x = x
+      startPos.y = y
       lastPos.x = x
       lastPos.y = y
     }
@@ -70,17 +73,40 @@
   function onMouseMove(e: MouseEvent) {
     if (activeQuad === -1)
       return
-  
-    const [x, y] = viewport.pixelToWorld(e.clientX, e.clientY)
+    
+    const points = quadPoints[activeQuad]
+    let [x, y] = viewport.pixelToWorld(e.clientX, e.clientY)
 
-    const delta = {
-      x: x - lastPos.x,
-      y: y - lastPos.y
+    // reset position as it was before drag start
+    for (let p of selectedPoints) {
+      points[p].x -= Math.floor((lastPos.x - startPos.x) * 32 * 1024)
+      points[p].y -= Math.floor((lastPos.y - startPos.y) * 32 * 1024)
     }
 
+    // project the mouse move on the normal if 2 points are selected
+    if (selectedPoints.length === 2) {
+      const p1 = points[selectedPoints[0]]
+      const p2 = points[selectedPoints[1]]
+      const dir = {
+        x: x - startPos.x,
+        y: y - startPos.y
+      }
+      const normal = {
+        x: p1.y - p2.y,
+        y: p2.x - p1.x,
+      }
+      const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y)
+      normal.x /= len
+      normal.y /= len
+      const dot = dir.x * normal.x + dir.y * normal.y
+      x = startPos.x + normal.x * dot
+      y = startPos.y + normal.y * dot
+    }
+
+    // set new points positions
     for (let p of selectedPoints) {
-      quadPoints[activeQuad][p].x += Math.floor(delta.x * 32 * 1024)
-      quadPoints[activeQuad][p].y += Math.floor(delta.y * 32 * 1024)
+      points[p].x += Math.floor((x - startPos.x) * 32 * 1024)
+      points[p].y += Math.floor((y - startPos.y) * 32 * 1024)
     }
 
     lastPos.x = x
