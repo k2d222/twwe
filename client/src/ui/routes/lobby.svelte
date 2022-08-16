@@ -124,11 +124,11 @@
 
       <div class="list">
         {#each filteredMaps as info}
-          <div class="row">
+          <label class="row">
             <input type="radio" name="map" bind:group={selected} value={info.name} />
             <span class="name">{info.name}</span>
             <span class="users">{info.users}</span>
-          </div>
+          </label>
         {/each}
       </div>
 
