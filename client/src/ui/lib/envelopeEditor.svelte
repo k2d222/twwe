@@ -557,11 +557,10 @@
             on:mousedown={(e) => onMouseDown(e, i, j)} on:contextmenu={(e) => showCM(e, i, j, -1)}></path>
         {/each}
       {/each}
-      <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis"></line> <!-- the x=0 line -->
-      <line x1={viewBox.x} y1={1024} x2={viewBox.x + viewBox.w} y2={1024} class="axis"></line> <!-- the x=1 line -->
-      <line x1={0} y1={viewBox.y} x2={0} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=0 line -->
-      <line x1={1000} y1={viewBox.y} x2={1000} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=1 line -->
-      <line x1={-1000} y1={viewBox.y} x2={-1000} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the y=-1 line -->
+      <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis"></line> <!-- the y=0 line -->
+      {#each Array.from({ length: Math.ceil(viewBox.w / 1000) }) as _, i}
+        <line x1={i * 1000} y1={viewBox.y} x2={i * 1000} y2={viewBox.y + viewBox.h} class="axis"></line> <!-- the x=i line -->
+      {/each}
     </svg>
   </div>
 </div>
