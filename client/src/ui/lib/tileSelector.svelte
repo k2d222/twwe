@@ -203,7 +203,7 @@ function onMouseUp() {
 
 <div id="tile-selector">
   <div class="tile selected">
-    <button on:click={() => tilesVisible = !tilesVisible}></button>
+    <button on:click={() => tilesVisible = !tilesVisible}><img src="/assets/palette.svg" alt='tile picker' /></button>
     <button on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>

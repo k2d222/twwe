@@ -266,12 +266,16 @@ nav {
       width: 3rem;
       height: 3rem;
       outline: 3px solid black;
+      > img {
+        width: 100%;
+        height: 100%;
+      }
     }
   }
   
   .tiles, .settings {
     position: fixed;
-    bottom: 10rem;
+    bottom: 7rem;
     left: 50%;
     transform: translateX(-50%);
     
@@ -284,7 +288,6 @@ nav {
     z-index: 1;
     background: black;
     display: grid;
-    bottom: 7rem;
     width: min(calc(100vh - 11rem), calc(100vw - 4rem));
     height: min(calc(100vh - 11rem), calc(100vw - 4rem));
     grid-template-rows: repeat(16, auto);
