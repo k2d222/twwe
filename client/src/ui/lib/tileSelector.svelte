@@ -56,8 +56,6 @@ $: {
     tilesVisible = false
 }
 
-$: url = getImgURL(rlayer.texture.image)
-
 $: current =
   rlayer.layer instanceof TilesLayer ? currentTile :
   rlayer.layer instanceof GameLayer ? currentGame :
@@ -152,47 +150,6 @@ function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
   return res
 }
 
-function getImgURL(image: Image) {
-  if (image.img !== null) {
-    return image.img.src
-  }
-  else if (image.data instanceof ImageData) {
-    const canvas = document.createElement('canvas')
-    canvas.width = image.data.width
-    canvas.height = image.data.height
-    const ctx = canvas.getContext('2d')
-    ctx.putImageData(image.data, 0, 0)
-    return canvas.toDataURL()
-  }
-  else {
-    console.warn('unsupported image data type:', image)
-    return ""
-  }
-}
-
-function buttonStyle(url: string, id: number) {
-  // if (id === 0) {
-  //   return `
-  //     background-image: url('/editor/checker.png');
-  //     background-size: 16px;
-  //     background-repeat: repeat;
-  //   `
-  // }
-
-  // const row = Math.floor(id / tileCount)
-  // const col = id % tileCount
-  // const c = rlayer.layer instanceof TilesLayer ? rlayer.layer.color : { r: 255, g: 255, b: 255, a:255 }
-  // return `
-  //   background-image: url('${url}');
-  //   background-position-x: -${col}00%;
-  //   background-position-y: -${row}00%;
-  //   background-color: rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255});
-  // `
-  return ''
-}
-
-$: buttonStyles = Array.from({length: tileCount * tileCount}, (_, i) => buttonStyle(url, i))
-
 let boxStyle = ''
 
 $: {
@@ -246,13 +203,13 @@ function onMouseUp() {
 
 <div id="tile-selector">
   <div class="tile selected">
-    <button on:click={() => tilesVisible = !tilesVisible} style={buttonStyles[selected[0][0].id]}></button>
+    <button on:click={() => tilesVisible = !tilesVisible}></button>
     <button on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>
     <canvas bind:this={canvas} ></canvas>
-    {#each buttonStyles as style, i}
-      <button style={style} on:mousedown={(e) => onMouseDown(e, i)} on:mouseup={onMouseUp} on:mouseover={() => onMouseOver(i)} on:focus={() => {}}></button>
+    {#each Array.from({ length: tileCount * tileCount }) as _, i}
+      <button on:mousedown={(e) => onMouseDown(e, i)} on:mouseup={onMouseUp} on:mouseover={() => onMouseOver(i)} on:focus={() => {}}></button>
     {/each}
     <div class="box-select" style={boxStyle}></div>
   </div>
