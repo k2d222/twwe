@@ -135,7 +135,7 @@ function normalizeRange(range: Range): Range {
 
 
 function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
-  const res: EditTileParams[][] = []
+  let res: EditTileParams[][] = []
 
   for (let j = sel.start.y; j <= sel.end.y; j++) {
     const row = []
@@ -145,6 +145,21 @@ function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
       })
     }
     res.push(row)
+  }
+  
+  // apply transforms (COMBAK: for some reason, vflip and hflip are semantically wrong. Is this a bug in teeworlds?)
+  if (cur.type === 'tile') {
+    if (cur.flags & TileFlags.VFLIP) {
+      res = res.map(row => row.reverse())
+    }
+    if (cur.flags & TileFlags.HFLIP) {
+      res = res.reverse()
+    }
+    if (cur.flags & TileFlags.ROTATE) {
+      res = Array.from({ length: res[0].length }, (_, j) =>
+              Array.from({ length: res.length }, (_, i) =>
+                res[res.length - 1 - i][j]))
+    }
   }
   
   return res
@@ -173,6 +188,7 @@ $: {
 function onMouseDown(e: MouseEvent, id: number) {
   const x = id % tileCount
   const y = Math.floor(id / tileCount)
+  currentTile.flags = currentTile.flags & TileFlags.OPAQUE // reset rotation/flip
   selection = {
     start: { x, y },
     end: { x, y },
