@@ -45,6 +45,8 @@ Key/Mouse bindings:
  * Place tiles -> `left_click+drag`
  * select a range of tiles -> `shift+left_click+drag` (this applies in the picker too)
  * Open tile picker -> `space_bar`
+ * Flip brush horizontally / vertically -> `h` / `v`
+ * Rotate brush clockwise / counterclockwise -> `r` / `shift+r`
  * Toggle layers view / envelope view -> `tab`
  * `right_click` opens context-menus on quad points, envelope points and envelope lines.
 
