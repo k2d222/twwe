@@ -276,7 +276,23 @@ function onRotateCCW() {
   selected = rotateCCW(selected)
 }
 
+function onKeyPress(e: KeyboardEvent) {
+  const target = e.target as HTMLElement
+  if (target.querySelector('canvas') === null) // COMBAK: this is a bit dirty
+    return
+    
+  if(['r', 'v', 'h'].includes(e.key.toLowerCase()))
+    e.preventDefault()
+    
+  if (e.key === 'r') onRotateCW()
+  else if (e.key === 'R') onRotateCCW()
+  else if (e.key === 'v') onFlipV()
+  else if (e.key === 'h') onFlipH()
+}
+
 </script>
+
+<svelte:window on:keypress={onKeyPress} />
 
 <div id="tile-selector">
   <div class="tile selected">
