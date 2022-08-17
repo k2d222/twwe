@@ -315,13 +315,17 @@ nav {
       width: 4rem;
     }
     
-    .buttons button {
-      width: 2rem;
-      height: 2rem;
+    .buttons {
+      text-align: center;
 
-      > img {
-        width: 100%;
-        height: 100%;
+      button {
+        width: 2rem;
+        height: 2rem;
+
+        > img {
+          width: 100%;
+          height: 100%;
+        }
       }
     }
   }

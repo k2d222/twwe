@@ -133,7 +133,6 @@ function normalizeRange(range: Range): Range {
   }
 }
 
-
 function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
   let res: EditTileParams[][] = []
 
@@ -147,22 +146,24 @@ function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
     res.push(row)
   }
   
-  // apply transforms (COMBAK: for some reason, vflip and hflip are semantically wrong. Is this a bug in teeworlds?)
-  if (cur.type === 'tile') {
-    if (cur.flags & TileFlags.VFLIP) {
-      res = res.map(row => row.reverse())
-    }
-    if (cur.flags & TileFlags.HFLIP) {
-      res = res.reverse()
-    }
-    if (cur.flags & TileFlags.ROTATE) {
-      res = Array.from({ length: res[0].length }, (_, j) =>
-              Array.from({ length: res.length }, (_, i) =>
-                res[res.length - 1 - i][j]))
-    }
-  }
-  
   return res
+}
+
+function rotateCW(sel: EditTileParams[][]) {
+  return Array.from({ length: sel[0].length }, (_, j) =>
+          Array.from({ length: sel.length }, (_, i) =>
+            sel[sel.length - 1 - i][j]))
+}
+function rotateCCW(sel: EditTileParams[][]) {
+  return Array.from({ length: sel[0].length }, (_, j) =>
+          Array.from({ length: sel.length }, (_, i) =>
+            sel[i][sel[0].length - 1 - j]))
+}
+function vFlip(sel: EditTileParams[][]) {
+  return sel.reverse()
+}
+function hFlip(sel: EditTileParams[][]) { // WARN: mutates the array
+  return sel.map(row => row.reverse())
 }
 
 let boxStyle = ''
@@ -216,35 +217,64 @@ function onMouseUp() {
 }
 
 function onFlipV() {
-  if (currentTile.flags & TileFlags.ROTATE)
-    currentTile.flags ^= TileFlags.VFLIP
-  else
-    currentTile.flags ^= TileFlags.HFLIP
-}
-function onFlipH() {
-  if (currentTile.flags & TileFlags.ROTATE)
-    currentTile.flags ^= TileFlags.HFLIP
-  else
-    currentTile.flags ^= TileFlags.VFLIP
-}
-function onRotateCW() {
-  if (currentTile.flags & TileFlags.ROTATE) {
-    currentTile.flags ^= TileFlags.HFLIP
-    currentTile.flags ^= TileFlags.VFLIP
+  for (let row of selected) {
+    for (let tile of row) {
+      if (tile.type === 'tile') {
+        if (tile.flags & TileFlags.ROTATE)
+          tile.flags ^= TileFlags.VFLIP
+        else
+          tile.flags ^= TileFlags.HFLIP
+      }
+    }
   }
-  currentTile.flags ^= TileFlags.ROTATE
-}
-function onRotateCCW() {
-  if (!(currentTile.flags & TileFlags.ROTATE)) {
-    currentTile.flags ^= TileFlags.HFLIP
-    currentTile.flags ^= TileFlags.VFLIP
-  }
-  currentTile.flags ^= TileFlags.ROTATE
-}
-function onResetFlags() {
-  currentTile.flags &= TileFlags.OPAQUE // only keep opaque flag TODO: what is the opaque flag?
+  
+  selected = vFlip(selected)
 }
 
+function onFlipH() {
+  for (let row of selected) {
+    for (let tile of row) {
+      if (tile.type === 'tile') {
+        if (tile.flags & TileFlags.ROTATE)
+          tile.flags ^= TileFlags.HFLIP
+        else
+          tile.flags ^= TileFlags.VFLIP
+      }
+    }
+  }
+  
+  selected = hFlip(selected)
+}
+function onRotateCW() {
+  for (let row of selected) {
+    for (let tile of row) {
+      if (tile.type === 'tile') {
+        if (tile.flags & TileFlags.ROTATE) {
+          tile.flags ^= TileFlags.HFLIP
+          tile.flags ^= TileFlags.VFLIP
+        }
+        tile.flags ^= TileFlags.ROTATE
+      }
+    }
+  }
+  
+  selected = rotateCW(selected)
+}
+function onRotateCCW() {
+  for (let row of selected) {
+    for (let tile of row) {
+      if (tile.type === 'tile') {
+        if (!(tile.flags & TileFlags.ROTATE)) {
+          tile.flags ^= TileFlags.HFLIP
+          tile.flags ^= TileFlags.VFLIP
+        }
+        tile.flags ^= TileFlags.ROTATE
+      }
+    }
+  }
+
+  selected = rotateCCW(selected)
+}
 
 </script>
 
@@ -261,19 +291,13 @@ function onResetFlags() {
     <div class="box-select" style={boxStyle}></div>
   </div>
   <div class="settings" class:hidden = {!settingsVisible}>
-    {#if rlayer.layer instanceof TilesLayer}
-      <button on:click={onResetFlags}>Reset Transforms</button>
-      <div class="buttons">
-        <button on:click={onFlipV}><img alt="Flip Vertically" src="/assets/flip-v.svg"/></button>
-        <button on:click={onFlipH}><img alt="Flip Horizontally" src="/assets/flip-h.svg"/></button>
-        <button on:click={onRotateCW}><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg"/></button>
-        <button on:click={onRotateCCW}><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg"/></button>
-      </div>
-    {:else if rlayer.layer instanceof GameLayer}
-      Nothing to set for the game layer.
-    {:else if rlayer.layer instanceof FrontLayer}
-      Nothing to set for the front layer.
-    {:else if rlayer.layer instanceof TeleLayer}
+    <div class="buttons">
+      <button on:click={onFlipV}><img alt="Flip Vertically" src="/assets/flip-v.svg"/></button>
+      <button on:click={onFlipH}><img alt="Flip Horizontally" src="/assets/flip-h.svg"/></button>
+      <button on:click={onRotateCW}><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg"/></button>
+      <button on:click={onRotateCCW}><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg"/></button>
+    </div>
+    {#if rlayer.layer instanceof TeleLayer}
       <label>Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number}></label>
     {:else if rlayer.layer instanceof SwitchLayer}
       <label>Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay}></label>
