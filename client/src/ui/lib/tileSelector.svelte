@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Color } from '../../twmap/types'
+import type * as Info from '../../twmap/types'
 import type { EditTileParams } from '../../server/protocol'
 import type { Image } from '../../twmap/image'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
@@ -112,7 +112,7 @@ async function getCanvasImage(image: Image): Promise<CanvasImageSource> {
   }
 }
 
-function colorToStr(c: Color) {
+function colorToStr(c: Info.Color) {
   let hex = (i: number) => ('0' + i.toString(16)).slice(-2)
   return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`
 }
@@ -199,6 +199,37 @@ function onMouseUp() {
   }
 }
 
+function onFlipV() {
+  if (currentTile.flags & TileFlags.ROTATE)
+    currentTile.flags ^= TileFlags.VFLIP
+  else
+    currentTile.flags ^= TileFlags.HFLIP
+}
+function onFlipH() {
+  if (currentTile.flags & TileFlags.ROTATE)
+    currentTile.flags ^= TileFlags.HFLIP
+  else
+    currentTile.flags ^= TileFlags.VFLIP
+}
+function onRotateCW() {
+  if (currentTile.flags & TileFlags.ROTATE) {
+    currentTile.flags ^= TileFlags.HFLIP
+    currentTile.flags ^= TileFlags.VFLIP
+  }
+  currentTile.flags ^= TileFlags.ROTATE
+}
+function onRotateCCW() {
+  if (!(currentTile.flags & TileFlags.ROTATE)) {
+    currentTile.flags ^= TileFlags.HFLIP
+    currentTile.flags ^= TileFlags.VFLIP
+  }
+  currentTile.flags ^= TileFlags.ROTATE
+}
+function onResetFlags() {
+  currentTile.flags &= TileFlags.OPAQUE // only keep opaque flag TODO: what is the opaque flag?
+}
+
+
 </script>
 
 <div id="tile-selector">
@@ -215,12 +246,13 @@ function onMouseUp() {
   </div>
   <div class="settings" class:hidden = {!settingsVisible}>
     {#if rlayer.layer instanceof TilesLayer}
-      <label>Tile flip Vertical <input type="checkbox" value={currentTile.flags & TileFlags.VFLIP}
-        on:change={() => currentTile.flags ^= TileFlags.VFLIP}></label>
-      <label>Tile flip Horizontal <input type="checkbox" value={currentTile.flags & TileFlags.HFLIP}
-        on:change={() => currentTile.flags ^= TileFlags.HFLIP}></label>
-      <label>Tile rotate <input type="checkbox" value={currentTile.flags & TileFlags.ROTATE}
-        on:change={() => currentTile.flags ^= TileFlags.ROTATE}></label>
+      <button on:click={onResetFlags}>Reset Transforms</button>
+      <div class="buttons">
+        <button on:click={onFlipV}><img alt="Flip Vertically" src="/assets/flip-v.svg"/></button>
+        <button on:click={onFlipH}><img alt="Flip Horizontally" src="/assets/flip-h.svg"/></button>
+        <button on:click={onRotateCW}><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg"/></button>
+        <button on:click={onRotateCCW}><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg"/></button>
+      </div>
     {:else if rlayer.layer instanceof GameLayer}
       Nothing to set for the game layer.
     {:else if rlayer.layer instanceof FrontLayer}
