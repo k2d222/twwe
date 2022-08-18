@@ -206,17 +206,28 @@ export function bresenham(p1: [number, number], p2: [number, number]) {
   return res;
 }
 
-const keyPressCallbacks = []
+type EventMap = HTMLElementEventMap
+type EventTypes = keyof EventMap & ( 'keydown' | 'keyup' | 'keypress' )
+type EventCallback<K extends EventTypes> = (e: EventMap[K]) => any
 
-export function onKeyPress(fn: (e: KeyboardEvent) => any) {
-  keyPressCallbacks.push(fn)
+const callbacks: { [K in EventTypes]: EventCallback<K>[] } = {
+  'keydown': [],
+  'keyup': [],
+  'keypress': [],
 }
-export function fireKeyPress(e: KeyboardEvent) {
-  for (const fn of keyPressCallbacks)
+
+export function on<K extends EventTypes>(type: K, fn: EventCallback<K>) {
+  callbacks[type].push(fn as any)
+}
+
+export function fire<K extends EventTypes>(type: K, e: EventMap[K]) {
+  for (const fn of callbacks[type])
     fn(e)
 }
-export function offKeyPress(fn: (e: KeyboardEvent) => any) {
-  const index = keyPressCallbacks.indexOf(fn)
+export function off<K extends EventTypes>(type: K, fn: EventCallback<K>) {
+  const index = callbacks[type].indexOf(fn as any)
   if (index)
-    keyPressCallbacks.splice(index)
+    callbacks[type].splice(index)
+  else
+    console.error('failed to remove', type, 'event')
 }

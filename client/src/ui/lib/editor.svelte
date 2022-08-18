@@ -40,7 +40,6 @@
   let currentTime = 0
   let selectedTiles: EditTileParams[][]
   let peerCount = 0
-  let tileSelectorVisible = false
   let infoEditorVisible = false
   let activeLayer: Layer = map.physicsLayer(GameLayer)
   let rmap = new RenderMap(map)
@@ -189,13 +188,18 @@
         `
       }
       else {
-        hoverTileStyle = `
-          width: ${scale * selectedTiles[0].length}px;
-          height: ${scale * selectedTiles.length}px;
-          top: ${(y + offY - pos.y) * scale}px;
-          left: ${(x + offX - pos.x) * scale}px;
-          border-width: ${scale / 16}px;
-          border-color: ${color};
+        if (selectedTiles.length)
+          hoverTileStyle = `
+            width: ${scale * selectedTiles[0].length}px;
+            height: ${scale * selectedTiles.length}px;
+            top: ${(y + offY - pos.y) * scale}px;
+            left: ${(x + offX - pos.x) * scale}px;
+            border-width: ${scale / 16}px;
+            border-color: ${color};
+          `
+        else
+          hoverTileStyle = `
+          display: none;
         `
         boxStyle = `
           display: none;
@@ -350,12 +354,12 @@
   let lastTreeViewVisible = treeViewVisible
   let lastEnvEditorVisible = envEditorVisible
 
-  function onKeyPress(e: KeyboardEvent) {
+  function onKeyDown(e: KeyboardEvent) {
     const target = e.target as HTMLElement
     if (!target.contains(canvas))
       return
       
-    Editor.fireKeyPress(e)
+    Editor.fire('keydown', e)
 
     if (e.ctrlKey && ['s', 'd', ' '].includes(e.key)) {
       e.preventDefault()
@@ -367,13 +371,10 @@
         onToggleAnim()
       }
     }
-    else if ([' ', 'Tab'].includes(e.key)) {
+    else if (['Tab'].includes(e.key)) {
       e.preventDefault()
 
-      if (e.key === ' ') {
-        tileSelectorVisible = !tileSelectorVisible
-      }
-      else if (e.key === 'Tab') {
+      if (e.key === 'Tab') {
         if (treeViewVisible || envEditorVisible) {
           lastTreeViewVisible = treeViewVisible
           lastEnvEditorVisible = envEditorVisible
@@ -386,6 +387,22 @@
         }
       }
     }
+  }
+
+  function onKeyUp(e: KeyboardEvent) {
+    const target = e.target as HTMLElement
+    if (!target.contains(canvas))
+      return
+    
+    Editor.fire('keyup', e)
+  }
+  
+  function onKeyPress(e: KeyboardEvent) {
+    const target = e.target as HTMLElement
+    if (!target.contains(canvas))
+      return
+    
+    Editor.fire('keypress', e)
   }
   
   let hoverTileStyle = ''
@@ -459,7 +476,7 @@
 
 </script>
 
-<svelte:window on:keydown={onKeyPress} />
+<svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:keypress={onKeyPress} />
 
 <div id="editor">
 
@@ -498,7 +515,7 @@
   </div>
 
   {#if activeRlayer instanceof RenderAnyTilesLayer}
-    <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} bind:tilesVisible={tileSelectorVisible} />
+    <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} />
   {/if}
 
   <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />

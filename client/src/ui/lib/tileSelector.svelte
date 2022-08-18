@@ -17,9 +17,10 @@ type Range = {
 const tileCount = 16
 
 export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
-export let tilesVisible = false
-export let settingsVisible = false
-export let selected: EditTileParams[][]
+export let selected: EditTileParams[][] = []
+
+let tilesVisible = false
+let settingsVisible = false
 
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
@@ -29,6 +30,8 @@ let selection: Range = {
   start: { x: 0, y: 0 },
   end: { x: 0, y: 0 },
 }
+
+$: normSelection = normalizeRange(selection)
 
 // this is a bit monolithic but hey typescript
 let currentTile:    { type: 'tile'    } & Tile    = { type: 'tile',    ...TilesLayer.defaultTile()   }
@@ -66,19 +69,20 @@ $: current =
   rlayer.layer instanceof SpeedupLayer ? currentSpeedup :
   rlayer.layer instanceof TuneLayer ? currentTune : null
 
-$: normSelection = normalizeRange(selection)
-$: selected = makeBoxSelection(current, normSelection)
-
 let mounted = false
 onMount(() => {
   ctx = canvas.getContext('2d')
   drawLayer()
-  Editor.onKeyPress(onKeyPress)
+  Editor.on('keydown', onKeyDown)
+  Editor.on('keyup', onKeyUp)
+  Editor.on('keypress', onKeyPress)
   mounted = true
 })
 
 onDestroy(() => {
-  Editor.offKeyPress(onKeyPress)
+  Editor.off('keydown', onKeyDown)
+  Editor.off('keyup', onKeyUp)
+  Editor.off('keypress', onKeyPress)
 })
 
 $: if (mounted && rlayer) {
@@ -192,44 +196,50 @@ $: {
   }
 }
 
-function onMouseDown(e: MouseEvent, id: number) {
-  const x = id % tileCount
-  const y = Math.floor(id / tileCount)
+function onMouseDown(e: MouseEvent) {
+  const x = Math.floor(e.offsetX / (e.currentTarget as HTMLElement).clientWidth * tileCount)
+  const y = Math.floor(e.offsetY / (e.currentTarget as HTMLElement).clientHeight * tileCount)
   currentTile.flags = currentTile.flags & TileFlags.OPAQUE // reset rotation/flip
   selection = {
     start: { x, y },
     end: { x, y },
   }
   
-  if (e.shiftKey)
-    boxSelect = true
-  else
-    tilesVisible = false
+  boxSelect = true
 }
 
-function onMouseOver(id: number) {
+function onMouseMove(e: MouseEvent) {
   if (boxSelect) {
-    const x = id % tileCount
-    const y = Math.floor(id / tileCount)
+    const x = Math.floor(e.offsetX / (e.currentTarget as HTMLElement).clientWidth * tileCount)
+    const y = Math.floor(e.offsetY / (e.currentTarget as HTMLElement).clientHeight * tileCount)
     selection.end = { x, y }
   }
 }
 
-function onMouseUp() {
+function onMouseUp(e: MouseEvent) {
   if (boxSelect) {
+    const x = Math.floor(e.offsetX / (e.currentTarget as HTMLElement).clientWidth * tileCount)
+    const y = Math.floor(e.offsetY / (e.currentTarget as HTMLElement).clientHeight * tileCount)
+    selection.end = { x, y }
     boxSelect = false
     tilesVisible = false
+    selected = makeBoxSelection(current, normalizeRange(selection))
   }
 }
 
 function onFlipV() {
-  for (let row of selected) {
-    for (let tile of row) {
-      if (tile.type === 'tile') {
-        if (tile.flags & TileFlags.ROTATE)
-          tile.flags ^= TileFlags.VFLIP
-        else
-          tile.flags ^= TileFlags.HFLIP
+  if (selected.length === 0)
+    return
+
+  if (rlayer.layer instanceof TilesLayer) {
+    for (let row of selected) {
+      for (let tile of row) {
+        if (tile.type === 'tile') {
+          if (tile.flags & TileFlags.ROTATE)
+            tile.flags ^= TileFlags.VFLIP
+          else
+            tile.flags ^= TileFlags.HFLIP
+        }
       }
     }
   }
@@ -238,13 +248,18 @@ function onFlipV() {
 }
 
 function onFlipH() {
-  for (let row of selected) {
-    for (let tile of row) {
-      if (tile.type === 'tile') {
-        if (tile.flags & TileFlags.ROTATE)
-          tile.flags ^= TileFlags.HFLIP
-        else
-          tile.flags ^= TileFlags.VFLIP
+  if (selected.length === 0)
+    return
+
+  if (rlayer.layer instanceof TilesLayer) {
+    for (let row of selected) {
+      for (let tile of row) {
+        if (tile.type === 'tile') {
+          if (tile.flags & TileFlags.ROTATE)
+            tile.flags ^= TileFlags.HFLIP
+          else
+            tile.flags ^= TileFlags.VFLIP
+        }
       }
     }
   }
@@ -252,14 +267,19 @@ function onFlipH() {
   selected = hFlip(selected)
 }
 function onRotateCW() {
-  for (let row of selected) {
-    for (let tile of row) {
-      if (tile.type === 'tile') {
-        if (tile.flags & TileFlags.ROTATE) {
-          tile.flags ^= TileFlags.HFLIP
-          tile.flags ^= TileFlags.VFLIP
+  if (selected.length === 0)
+    return
+
+  if (rlayer.layer instanceof TilesLayer) {
+    for (let row of selected) {
+      for (let tile of row) {
+        if (tile.type === 'tile') {
+          if (tile.flags & TileFlags.ROTATE) {
+            tile.flags ^= TileFlags.HFLIP
+            tile.flags ^= TileFlags.VFLIP
+          }
+          tile.flags ^= TileFlags.ROTATE
         }
-        tile.flags ^= TileFlags.ROTATE
       }
     }
   }
@@ -267,14 +287,19 @@ function onRotateCW() {
   selected = rotateCW(selected)
 }
 function onRotateCCW() {
-  for (let row of selected) {
-    for (let tile of row) {
-      if (tile.type === 'tile') {
-        if (!(tile.flags & TileFlags.ROTATE)) {
-          tile.flags ^= TileFlags.HFLIP
-          tile.flags ^= TileFlags.VFLIP
+  if (selected.length === 0)
+    return
+
+  if (rlayer.layer instanceof TilesLayer) {
+    for (let row of selected) {
+      for (let tile of row) {
+        if (tile.type === 'tile') {
+          if (!(tile.flags & TileFlags.ROTATE)) {
+            tile.flags ^= TileFlags.HFLIP
+            tile.flags ^= TileFlags.VFLIP
+          }
+          tile.flags ^= TileFlags.ROTATE
         }
-        tile.flags ^= TileFlags.ROTATE
       }
     }
   }
@@ -283,13 +308,37 @@ function onRotateCCW() {
 }
 
 function onKeyPress(e: KeyboardEvent) {
-  if(['r', 'v', 'h'].includes(e.key.toLowerCase()))
+  if (e.ctrlKey || e.altKey)
+    return
+
+  if (['r', 'v', 'h'].includes(e.key.toLowerCase()))
     e.preventDefault()
     
   if (e.key === 'r') onRotateCW()
   else if (e.key === 'R') onRotateCCW()
   else if (e.key === 'v') onFlipV()
   else if (e.key === 'h') onFlipH()
+}
+
+let spaceKeyDown = false
+
+function onKeyDown(e: KeyboardEvent) {
+  if (e.ctrlKey || e.shiftKey || e.altKey)
+    return
+    
+  if (!spaceKeyDown && e.key == ' ') {
+    tilesVisible = true
+    spaceKeyDown = true
+  }
+}
+function onKeyUp(e: KeyboardEvent) {
+  if (e.ctrlKey || e.shiftKey || e.altKey)
+    return
+    
+  if (e.key == ' ') {
+    tilesVisible = false
+    spaceKeyDown = false
+  }
 }
 
 </script>
@@ -300,10 +349,7 @@ function onKeyPress(e: KeyboardEvent) {
     <button on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>
-    <canvas bind:this={canvas} ></canvas>
-    {#each Array.from({ length: tileCount * tileCount }) as _, i}
-      <button on:mousedown={(e) => onMouseDown(e, i)} on:mouseup={onMouseUp} on:mouseover={() => onMouseOver(i)} on:focus={() => {}}></button>
-    {/each}
+    <canvas bind:this={canvas} on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp}></canvas>
     <div class="box-select" style={boxStyle}></div>
   </div>
   <div class="settings" class:hidden = {!settingsVisible}>
