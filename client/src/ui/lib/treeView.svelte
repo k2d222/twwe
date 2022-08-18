@@ -63,6 +63,11 @@
       return '…'
     }
   }
+  
+  function onRadioChange(e: Event & { currentTarget: HTMLInputElement }, layer: Layer) {
+    activeLayer = layer
+    e.currentTarget.blur()
+  }
 
 </script>
 
@@ -88,7 +93,7 @@
           {@const layer = rlayer.layer}
           <div class="layer" class:visible={rlayer.visible}>
             <label>
-              <input name="layer" type="radio" on:change={() => activeLayer = layer} checked={layer === activeLayer} />
+              <input name="layer" type="radio" on:change={(e) => onRadioChange(e, layer)} checked={layer === activeLayer} />
               {layerName(layer)}
             </label>
             <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}></span>
