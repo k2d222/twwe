@@ -275,10 +275,6 @@
     server.on('error', serverOnError)
     server.send('listusers')
 
-    // canvas.tabIndex = 1 // make canvas focusable to catch keyboard events
-    // canvas.addEventListener('keydown', onKeyDown)
-    // canvas.focus()
-    
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
     
@@ -319,7 +315,6 @@
     server.off('deleteimage', serverOnDeleteImage)
     server.off('editmap', serverOnEditMap)
     server.off('error', serverOnError)
-    canvas.removeEventListener('keydown', onKeyPress)
     destroyed = true
   })
 
@@ -359,6 +354,8 @@
     const target = e.target as HTMLElement
     if (!target.contains(canvas))
       return
+      
+    Editor.fireKeyPress(e)
 
     if ([' ', 'Tab'].includes(e.key)) {
       e.preventDefault()

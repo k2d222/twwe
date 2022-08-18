@@ -205,3 +205,18 @@ export function bresenham(p1: [number, number], p2: [number, number]) {
   res.push(current.slice());
   return res;
 }
+
+const keyPressCallbacks = []
+
+export function onKeyPress(fn: (e: KeyboardEvent) => any) {
+  keyPressCallbacks.push(fn)
+}
+export function fireKeyPress(e: KeyboardEvent) {
+  for (const fn of keyPressCallbacks)
+    fn(e)
+}
+export function offKeyPress(fn: (e: KeyboardEvent) => any) {
+  const index = keyPressCallbacks.indexOf(fn)
+  if (index)
+    keyPressCallbacks.splice(index)
+}

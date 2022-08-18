@@ -6,7 +6,8 @@ import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
 import { TileFlags, Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer, TuneLayer } from '../../twmap/tilesLayer'
-import { onMount } from 'svelte'
+import * as Editor from './editor'
+import { onMount, onDestroy } from 'svelte'
 
 type Range = {
   start: Coord,
@@ -72,7 +73,12 @@ let mounted = false
 onMount(() => {
   ctx = canvas.getContext('2d')
   drawLayer()
+  Editor.onKeyPress(onKeyPress)
   mounted = true
+})
+
+onDestroy(() => {
+  Editor.offKeyPress(onKeyPress)
 })
 
 $: if (mounted && rlayer) {
@@ -277,10 +283,6 @@ function onRotateCCW() {
 }
 
 function onKeyPress(e: KeyboardEvent) {
-  const target = e.target as HTMLElement
-  if (target.querySelector('canvas') === null) // COMBAK: this is a bit dirty
-    return
-    
   if(['r', 'v', 'h'].includes(e.key.toLowerCase()))
     e.preventDefault()
     
@@ -291,8 +293,6 @@ function onKeyPress(e: KeyboardEvent) {
 }
 
 </script>
-
-<svelte:window on:keypress={onKeyPress} />
 
 <div id="tile-selector">
   <div class="tile selected">
