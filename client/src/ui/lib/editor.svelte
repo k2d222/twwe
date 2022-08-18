@@ -357,11 +357,22 @@
       
     Editor.fireKeyPress(e)
 
-    if ([' ', 'Tab'].includes(e.key)) {
+    if (e.ctrlKey && ['s', 'd', ' '].includes(e.key)) {
+      e.preventDefault()
+      
+      if (e.key === 's') {
+        onSaveMap()
+      }
+      else if (e.key === ' ') {
+        onToggleAnim()
+      }
+    }
+    else if ([' ', 'Tab'].includes(e.key)) {
       e.preventDefault()
 
-      if (e.key === ' ')
+      if (e.key === ' ') {
         tileSelectorVisible = !tileSelectorVisible
+      }
       else if (e.key === 'Tab') {
         if (treeViewVisible || envEditorVisible) {
           lastTreeViewVisible = treeViewVisible
