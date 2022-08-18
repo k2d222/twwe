@@ -43,11 +43,12 @@ Key/Mouse bindings:
  * Zoom in/out -> mouse wheel
  * Pan around -> `ctrl+left_click+drag` or `wheel_button+drag`
  * Place tiles -> `left_click+drag`
- * select a range of tiles -> `shift+left_click+drag` (this applies in the picker too)
- * Open tile picker -> `space_bar`
+ * select a range of tiles -> `shift+left_click+drag`
+ * Open tile picker -> hold `space_bar` and `left_click+drag` to select tiles
  * Flip brush horizontally / vertically -> `h` / `v`
  * Rotate brush clockwise / counterclockwise -> `r` / `shift+r`
  * Toggle layers view / envelope view -> `tab`
+ * Save map -> `ctrl+s`
  * `right_click` opens context-menus on quad points, envelope points and envelope lines.
 
 The Save button saves the map on the disk on the server side. If a teeworlds server using this map is running, enter `reload` in the server console to update it.
