@@ -226,7 +226,7 @@ export function fire<K extends EventTypes>(type: K, e: EventMap[K]) {
 }
 export function off<K extends EventTypes>(type: K, fn: EventCallback<K>) {
   const index = callbacks[type].indexOf(fn as any)
-  if (index)
+  if (index !== -1)
     callbacks[type].splice(index)
   else
     console.error('failed to remove', type, 'event')
