@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use twmap::{Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position};
 
+use crate::map_cfg::MapAccess;
+
 // Some documentation about the communication between clients and the server:
 // ----------
 // a request is a message from a client to the server
@@ -50,6 +52,7 @@ pub enum CreateParams {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateMap {
     pub name: String,
+    pub access: MapAccess,
     #[serde(flatten)]
     pub params: CreateParams,
 }

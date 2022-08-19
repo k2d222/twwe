@@ -2,6 +2,7 @@ extern crate pretty_env_logger;
 
 use std::{
     collections::HashMap,
+    fs::File,
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::Arc,
@@ -22,6 +23,7 @@ use twmap::{
 };
 
 use crate::{
+    map_cfg::MapConfig,
     protocol::*,
     twmap_map_checks::check_env_points,
     twmap_map_edit::{extend_layer, shrink_layer},
@@ -113,6 +115,7 @@ impl LazyMap {
 }
 
 pub struct Room {
+    pub config: MapConfig,
     peers: Mutex<HashMap<SocketAddr, Tx>>,
     pub map: LazyMap,
     saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
@@ -121,6 +124,16 @@ pub struct Room {
 impl Room {
     pub fn new(path: PathBuf) -> Self {
         Room {
+            config: MapConfig::default(),
+            peers: Mutex::new(HashMap::new()),
+            map: LazyMap::new(path),
+            saving: Mutex::new(()),
+        }
+    }
+
+    pub fn new_with_config(path: PathBuf, config: MapConfig) -> Self {
+        Room {
+            config,
             peers: Mutex::new(HashMap::new()),
             map: LazyMap::new(path),
             saving: Mutex::new(()),
@@ -166,7 +179,7 @@ impl Room {
         Ok(())
     }
 
-    pub fn save_copy(&self, path: &PathBuf) -> Result<(), &'static str> {
+    pub fn save_map_copy(&self, path: &PathBuf) -> Result<(), &'static str> {
         // clone the map to release the lock as soon as possible
         self.map
             .get()
@@ -175,6 +188,12 @@ impl Room {
             .map_err(server_error)?;
 
         log::debug!("cloned {} to {}", self.map.path.display(), path.display());
+        Ok(())
+    }
+
+    pub fn save_config(&self, path: &PathBuf) -> Result<(), &'static str> {
+        let file = File::create(path).map_err(server_error)?;
+        serde_json::to_writer(file, &self.config).map_err(server_error)?;
         Ok(())
     }
 

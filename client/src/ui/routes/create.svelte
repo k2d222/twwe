@@ -1,14 +1,14 @@
 <script type="ts">
-  import type { CreateMap } from '../../server/protocol'
+  import type { CreateMap, MapAccess } from '../../server/protocol'
   import { server } from '../global'
-  import { showInfo, showError, clearDialog } from '../lib/dialog'
+  import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
   import { navigate } from 'svelte-routing'
 
   let name = ''
+  let access: MapAccess = 'public'
 
   let width = 100
   let height = 100
-  let defaultLayers = true
 
   let clone = ''
   
@@ -42,11 +42,11 @@
       showError('Please enter a map name first.')
       return
     }
-
+    
     let create: CreateMap
     if (creationMethod === 'blank') {
       create = {
-        name, blank: { width, height, defaultLayers }
+        name, access, blank: { width, height, defaultLayers: false }
       }
     }
     else if (creationMethod === 'clone') {
@@ -55,7 +55,7 @@
         return
       }
       create = {
-        name, clone: { clone }
+        name, access, clone: { clone }
       }
     }
     else if (creationMethod === 'upload') {
@@ -64,7 +64,7 @@
         return
       }
       create = {
-        name, upload: {}
+        name, access, upload: {}
       }
     }
     
@@ -72,6 +72,11 @@
     try {
       await server.query('createmap', create)
       clearDialog()
+      if (access === 'unlisted') {
+        const url = window.location.origin + '/edit/' + encodeURIComponent(create.name)
+        showWarning('You created a private map that won\'t be publicly listed. To access it in the future, use this URL: ' + url)
+      }
+
       navigate('/edit/' + name)
     }
     catch (e) {
@@ -88,6 +93,9 @@
       <input type="text" placeholder="Enter map name…" bind:value={name} />
       <button class="join" on:click={onCreateMap}>Create</button>
     </div>
+    {#if access === 'unlisted' && name}
+      <code>{window.location.origin}/edit/{encodeURIComponent(name)}</code>
+    {/if}
     <h2>Settings</h2>
     <div class="settings">
       <span>Method:</span>
@@ -96,13 +104,16 @@
         <label><input type="radio" name="creationMethod" bind:group={creationMethod} value="upload" />Upload from computer</label>
         <label><input type="radio" name="creationMethod" bind:group={creationMethod} value="clone" />Clone existing map</label>
       </span>
+      <label for="access">Access level:</label>
+      <select bind:value={access} id="access">
+        <option value="public">Public - Everyone can edit the map.</option>
+        <option value="unlisted">Unlisted - People need the link to edit the map.</option>
+      </select>
       {#if creationMethod === 'blank'}
         <label for="width">Width:</label>
         <input id="width" type="number" min={0} bind:value={width} />
         <label for="height">Height:</label>
         <input id="height" type="number" min={0} bind:value={height} />
-        <label for="createDefault">Create default layers:</label>
-        <input id="createDefault" type="checkbox" bind:checked={defaultLayers} />
       {:else if creationMethod === 'upload'}
         <span>Upload file</span>
         <span><input type="file" placeholder="upload map file…" accept=".map" on:change={onFileChange} /></span>

@@ -12,6 +12,7 @@ use std::io::prelude::*;
 
 use clap::Parser;
 use glob::glob;
+use map_cfg::MapAccess;
 use regex::Regex;
 
 use futures::{
@@ -28,6 +29,7 @@ use tokio::{
 mod room;
 use room::Room;
 
+mod map_cfg;
 mod protocol;
 use protocol::*;
 
@@ -227,9 +229,11 @@ impl Server {
             return Err("name already taken");
         }
 
+        let map_path: PathBuf = format!("maps/{}.map", create_map.name).into();
+        let cfg_path: PathBuf = format!("maps/{}.json", create_map.name).into();
+
         match create_map.params {
             CreateParams::Blank(ref params) => {
-                let mut rooms = self.rooms.lock().unwrap();
                 let mut map = TwMap::empty(params.version.unwrap_or(twmap::Version::DDNet06));
                 let mut group = twmap::Group::physics();
                 let layer = twmap::GameLayer {
@@ -241,32 +245,30 @@ impl Server {
                 group.layers.push(twmap::Layer::Game(layer));
                 map.groups.push(group);
                 map.check().map_err(server_error)?;
-                let path: PathBuf = format!("maps/{}.map", create_map.name).into();
-                path.parent().map(fs::create_dir_all);
-                map.save_file(&path).map_err(server_error)?;
-                rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
+                map_path.parent().map(fs::create_dir_all);
+                map.save_file(&map_path).map_err(server_error)?;
             }
             CreateParams::Clone(ref params) => {
                 let room = self
                     .room(&params.clone)
                     .ok_or("cannot clone non-existing map")?;
-                let path: PathBuf = format!("maps/{}.map", create_map.name).into();
-                room.save_copy(&path)?;
-                let mut rooms = self.rooms.lock().unwrap();
-                rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
+                room.save_map_copy(&map_path)?;
             }
             CreateParams::Upload {} => {
-                let mut rooms = self.rooms.lock().unwrap();
                 let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
-                let path: PathBuf = format!("maps/{}.map", create_map.name).into();
-                std::fs::rename(&upload_path, &path).map_err(|_| "upload a map first")?;
-                TwMap::parse_file(&path).map_err(|_| {
-                    std::fs::remove_file(&path).unwrap();
+                std::fs::rename(&upload_path, &map_path).map_err(|_| "upload a map first")?;
+                TwMap::parse_file(&map_path).map_err(|_| {
+                    std::fs::remove_file(&map_path).unwrap();
                     "not a valid map file"
                 })?;
-                rooms.insert(create_map.name.to_owned(), Arc::new(Room::new(path)));
             }
         }
+
+        let mut new_room = Room::new(map_path);
+        new_room.config.access = create_map.access.clone();
+        new_room.save_config(&cfg_path)?;
+        let mut rooms = self.rooms.lock().unwrap();
+        rooms.insert(create_map.name.to_owned(), Arc::new(new_room));
 
         Ok(ResponseContent::CreateMap(create_map))
     }
@@ -304,7 +306,10 @@ impl Server {
                     Err("map contains users")
                 } else {
                     self.rooms().remove(&delete_map.name);
-                    std::fs::remove_file(room.map.path.to_owned()).map_err(server_error)?;
+                    let map_path: PathBuf = room.map.path.to_owned().into();
+                    let config_path: PathBuf = map_path.with_extension("json");
+                    std::fs::remove_file(&config_path).ok();
+                    std::fs::remove_file(&map_path).map_err(server_error)?;
                     Ok(ResponseContent::DeleteMap(delete_map))
                 }
             }
@@ -414,6 +419,7 @@ impl Server {
         let maps: Vec<MapInfo> = self
             .rooms()
             .iter()
+            .filter(|(_, map)| map.config.access == MapAccess::Public)
             .map(|(name, map)| MapInfo {
                 name: name.to_owned(),
                 users: map.peers().len() as u32,
@@ -593,7 +599,14 @@ fn create_server() -> Server {
             .expect("no map found in maps directory")
             .into_iter()
             .filter_map(|e| e.ok())
-            .map(|e| Arc::new(Room::new(e)));
+            .map(|e| {
+                let config_path = e.with_extension("json");
+                let config = File::open(config_path)
+                    .ok()
+                    .and_then(|file| serde_json::from_reader(file).ok())
+                    .unwrap_or_default();
+                Arc::new(Room::new_with_config(e, config))
+            });
         for r in rooms {
             let name = r.map.path.with_extension("").to_string_lossy().into_owned();
             server_rooms.insert(name[5..].to_string(), r);

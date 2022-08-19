@@ -5,6 +5,8 @@ import type * as Info from '../twmap/types'
 
 // MAPS
 
+export type MapAccess = 'public' | 'unlisted'
+
 export interface CreateBlankParams {
   // version: MapVersion // TODO
   width: number,
@@ -21,6 +23,7 @@ export interface CreateUploadParams {
 
 export type CreateMap = {
   name: string,
+  access: MapAccess,
 } & (
   { blank: CreateBlankParams } |
   { clone: CreateCloneParams } |
