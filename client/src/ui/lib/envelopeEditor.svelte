@@ -105,6 +105,14 @@
     lastSelected = selected
   }
 
+  function clampI32(n: number) {
+    return clamp(n, -2_147_483_648, 2_147_483_647)
+  }
+
+  function clamp(cur: number, min: number, max: number) {
+    return Math.min(Math.max(min, cur), max)
+  }
+
   function envChannels(env: Envelope) {
     if (env instanceof ColorEnvelope)
       return colorChannels
@@ -401,7 +409,7 @@
   function onEditValue(e: InputEvent) {
     const point = selected.points[cm_j]
     const chan = envChannels(selected)[cm_i]
-    const val = Math.floor(parseFloat(e.currentTarget.value) * 1024)
+    const val = clampI32(Math.floor(parseFloat(e.currentTarget.value) * 1024))
 
     if (isNaN(val))
       return
@@ -417,7 +425,7 @@
     const point = selected.points[cm_j]
     const prev = selected.points[Math.max(0, cm_j - 1)] 
     const next = selected.points[Math.min(selected.points.length - 1, cm_j + 1)] 
-    let val = Math.floor(parseFloat(e.currentTarget.value) * 1000)
+    let val = clampI32(Math.floor(parseFloat(e.currentTarget.value) * 1000))
     
     if (isNaN(val))
       return
@@ -448,7 +456,7 @@
   
   function onEditCurve(e: FormEvent<HTMLSelectElement>) {
     const point = selected.points[cm_k]
-    const val: Info.CurveType = parseInt(e.currentTarget.value)
+    const val: Info.CurveType = clampI32(parseInt(e.currentTarget.value))
     point.type = val
     selected = selected // hack to redraw
     

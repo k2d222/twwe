@@ -29,7 +29,11 @@
   $: layer = rlayer.layer
   $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
 
-  function minmax(min: number, cur: number, max: number) {
+  function parseI32(str: string) {
+    return clamp(parseInt(str), -2_147_483_648, 2_147_483_647)
+  }
+
+  function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
   }
 
@@ -212,22 +216,22 @@
   }
   
   function onEditGroup(e: FormInputEvent) {
-    const newGroup = minmax(0, parseInt(e.currentTarget.value), rmap.groups.length - 1)
+    const newGroup = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
     if (!isNaN(newGroup))
       onReorderLayer({ group: g, layer: l, newGroup, newLayer: 0 })
   }
   function onEditOrder(e: FormInputEvent) {
-    const newLayer = minmax(0, parseInt(e.currentTarget.value), rmap.groups.length - 1)
+    const newLayer = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
     if (!isNaN(newLayer))
       onReorderLayer({ group: g, layer: l, newGroup: g, newLayer })
   }
   function onEditWidth(e: FormInputEvent) {
-    const width = minmax(2, parseInt(e.currentTarget.value), 10000)
+    const width = clamp(parseInt(e.currentTarget.value), 2, 10000)
     if (!isNaN(width))
       onEditLayer({ group: g, layer: l, width })
   }
   function onEditHeight(e: FormInputEvent) {
-    const height = minmax(2, parseInt(e.currentTarget.value), 10000)
+    const height = clamp(parseInt(e.currentTarget.value), 2, 10000)
     if (!isNaN(height))
       onEditLayer({ group: g, layer: l, height })
   }
@@ -243,7 +247,7 @@
   }
   function onEditOpacity(e: FormInputEvent) {
     if (layer instanceof TilesLayer) {
-      const color = { ...layer.color, a: minmax(0, parseInt(e.currentTarget.value), 255) }
+      const color = { ...layer.color, a: clamp(parseInt(e.currentTarget.value), 0, 255) }
       onEditLayer({ group: g, layer: l, color })
     }
   }
@@ -255,7 +259,7 @@
   }
   function onEditColorEnvOffset(e: FormInputEvent) {
     if (layer instanceof TilesLayer) {
-      const colorEnvOffset = parseInt(e.currentTarget.value)
+      const colorEnvOffset = parseI32(e.currentTarget.value)
       if (!isNaN(colorEnvOffset))
         onEditLayer({ group: g, layer: l, colorEnvOffset })
     }

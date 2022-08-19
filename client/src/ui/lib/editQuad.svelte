@@ -26,7 +26,11 @@
     else return 'Center'
   }
 
-  function minmax(min: number, cur: number, max: number) {
+  function parseI32(str: string) {
+    return clamp(parseInt(str), -2_147_483_648, 2_147_483_647)
+  }
+
+  function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
   }
 
@@ -67,7 +71,7 @@
   }
 
   function onEditOpacity(e: FormInputEvent) {
-    quad.colors[p].a = minmax(0, parseInt(e.currentTarget.value), 255)
+    quad.colors[p].a = clamp(parseInt(e.currentTarget.value), 0, 255)
     dispatch('change')
   }
 
@@ -85,7 +89,7 @@
   }
 
   function onEditColEnvOff(e: FormInputEvent) {
-    const colorEnvOffset = parseInt(e.currentTarget.value)
+    const colorEnvOffset = parseI32(e.currentTarget.value)
     if (!isNaN(colorEnvOffset)) {
       quad.colorEnvOffset = colorEnvOffset
       dispatch('change')

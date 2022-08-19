@@ -18,7 +18,11 @@
   $: rgroup = rmap.groups[g]
   $: group = rgroup.group
 
-  function minmax(min: number, cur: number, max: number) {
+  function parseI32(str: string) {
+    return clamp(parseInt(str), -2_147_483_648, 2_147_483_647)
+  }
+
+  function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
   }
 
@@ -68,28 +72,28 @@
   }
   
   function onEditOrder(e: FormInputEvent) {
-    const newGroup = minmax(0, parseInt(e.currentTarget.value), rmap.groups.length - 1)
+    const newGroup = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
     if (!isNaN(newGroup))
       onReorderGroup({ group: g, newGroup })
   }
 
   function onEditPosX(e: FormInputEvent) {
-    const offX = parseInt(e.currentTarget.value)
+    const offX = parseI32(e.currentTarget.value)
     if (!isNaN(offX))
       onEditGroup({ group: g, offX })
   }
   function onEditPosY(e: FormInputEvent) {
-    const offY = parseInt(e.currentTarget.value)
+    const offY = parseI32(e.currentTarget.value)
     if (!isNaN(offY))
       onEditGroup({ group: g, offY })
   }
   function onEditParaX(e: FormInputEvent) {
-    const paraX = parseInt(e.currentTarget.value)
+    const paraX = parseI32(e.currentTarget.value)
     if (!isNaN(paraX))
       onEditGroup({ group: g, paraX })
   }
   function onEditParaY(e: FormInputEvent) {
-    const paraY = parseInt(e.currentTarget.value)
+    const paraY = parseI32(e.currentTarget.value)
     if (!isNaN(paraY))
       onEditGroup({ group: g, paraY })
   }
@@ -102,22 +106,22 @@
     onEditGroup({ group: g, clipping })
   }
   function onEditClipX(e: FormInputEvent) {
-    const clipX = parseInt(e.currentTarget.value)
+    const clipX = parseI32(e.currentTarget.value)
     if (!isNaN(clipX))
       onEditGroup({ group: g, clipX })
   }
   function onEditClipY(e: FormInputEvent) {
-    const clipY = parseInt(e.currentTarget.value)
+    const clipY = parseI32(e.currentTarget.value)
     if (!isNaN(clipY))
       onEditGroup({ group: g, clipY })
   }
   function onEditClipW(e: FormInputEvent) {
-    const clipW = Math.max(parseInt(e.currentTarget.value), 0)
+    const clipW = Math.max(parseI32(e.currentTarget.value), 0)
     if (!isNaN(clipW))
       onEditGroup({ group: g, clipW })
   }
   function onEditClipH(e: FormInputEvent) {
-    const clipH = Math.max(parseInt(e.currentTarget.value), 0)
+    const clipH = Math.max(parseI32(e.currentTarget.value), 0)
     if (!isNaN(clipH))
       onEditGroup({ group: g, clipH })
   }
