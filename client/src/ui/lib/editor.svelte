@@ -29,6 +29,11 @@
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
+  
+  type Coord = {
+    x: number,
+    y: number,
+  }
 
   export let map: Map
 
@@ -417,64 +422,75 @@
   let hoverTileStyle = ''
   let layerOutlineStyle = ''
   let clipOutlineStyle = ''
+  let boxStyle = ''
 
   let boxSelect = false
   let boxRange: Editor.Range = {
     start: { x: 0, y: 0 },
     end: { x: 0, y: 0 },
   }
-  let boxStyle = ''
+  let lastPos = { x: 0, y: 0 }
   
+  function worldPosToTileCoord(pos: Coord): Coord {
+    const [ offX, offY ] = activeRgroup.offset()
+    return {
+      x: Math.floor(pos.x - offX),
+      y: Math.floor(pos.y - offY),
+    }
+  }
+
   function onMouseDown(e: MouseEvent) {
-    Editor.press()
     if (activeLayer instanceof AnyTilesLayer) {
+      const curPos = worldPosToTileCoord(viewport.mousePos)
       if (e.buttons === 1) {
         if (!e.ctrlKey && !e.shiftKey && selectedTiles.length !== 0 && !boxSelect) {
-          Editor.placeTilesLine(rmap, g, l, selectedTiles)
+          Editor.placeTiles(rmap, g, l, curPos, selectedTiles)
         }
         else if (selectedTiles.length === 0) {
-          Editor.startBoxSelect(activeRgroup)
+          boxRange.start = curPos
+          boxRange.end = curPos
           boxSelect = true
-          boxRange = Editor.endBoxSelect(activeRgroup)
         }
       }
+      lastPos = curPos
     }
   }
   
   function onMouseMove(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
+      const curPos = worldPosToTileCoord(viewport.mousePos)
       if (e.buttons === 1 && !e.ctrlKey) {
         if (!boxSelect && !e.shiftKey) {
-          Editor.placeTilesLine(rmap, g, l, selectedTiles)
+          Editor.drawLine(rmap, g, l, lastPos, curPos, selectedTiles)
         }
         else if (boxSelect) {
-          boxRange = Editor.endBoxSelect(activeRgroup)
+          boxRange.end = curPos
+          boxRange = Editor.normalizeRange(boxRange)
         }
       }
+      lastPos = curPos
     }
   }
   
   function onMouseUp(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
-      if (boxSelect && !e.shiftKey) {
-        const range = Editor.endBoxSelect(activeRgroup)
-        selectedTiles = Editor.makeBoxSelection(activeLayer, range)
-        boxSelect = false
-      }
-      else if (boxSelect && e.shiftKey) {
-        const range = Editor.endBoxSelect(activeRgroup)
-        const tiles = Editor.makeEmptySelection(activeLayer, range)
-        const [ offX, offY ] = activeRgroup.offset()
-        const pos = [
-          Math.floor(viewport.mousePos.x - tiles[0].length + 1 - offX),
-          Math.floor(viewport.mousePos.y - tiles.length + 1 - offY),
-        ]
-        Editor.placeTiles(rmap, g, l, pos, tiles)
-        selectedTiles = []
-        boxSelect = false
+      if (boxSelect) {
+        const curPos = worldPosToTileCoord(viewport.mousePos)
+        boxRange.end = curPos
+        boxRange = Editor.normalizeRange(boxRange)
+
+        if (!e.shiftKey) {
+          selectedTiles = Editor.makeBoxSelection(activeLayer, boxRange)
+          boxSelect = false
+        }
+        else if (e.shiftKey) {
+          const tiles = Editor.makeEmptySelection(activeLayer, boxRange)
+          Editor.placeTiles(rmap, g, l, boxRange.start, tiles)
+          selectedTiles = []
+          boxSelect = false
+        }
       }
     }
-    Editor.release()
   }
 
   function onContextMenu(e: MouseEvent) {

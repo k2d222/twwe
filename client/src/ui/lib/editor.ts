@@ -8,6 +8,8 @@ import { server } from '../global'
 import { viewport } from '../../gl/global'
 import { queryMapBinary } from '../lib/util'
 
+export type Brush = EditTileParams[][]
+
 export type Range = {
   start: Coord,
   end: Coord,
@@ -31,31 +33,15 @@ export function getLayerImage(rmap: RenderMap, g: number, l: number) {
   return rmap.groups[g].layers[l].texture.image
 }
 
-let pressed = false
-let lastPos = { x: 0, y: 0 }
-let selection: Range = {
-  start: { x: 0, y: 0 },
-  end: { x: 0, y: 0 },
-}
+// export function startBoxSelect(activeRgroup: RenderGroup) {
+//   let off = activeRgroup.offset()
+//   const x = Math.floor(viewport.mousePos.x - off[0])
+//   const y = Math.floor(viewport.mousePos.y - off[1])
 
-export function press() {
-  lastPos = { ...viewport.mousePos }
-  pressed = true
-}
+//   selection.start = { x, y }
+// }
 
-export function release() {
-  pressed = false
-}
-
-export function startBoxSelect(activeRgroup: RenderGroup) {
-  let off = activeRgroup.offset()
-  const x = Math.floor(viewport.mousePos.x - off[0])
-  const y = Math.floor(viewport.mousePos.y - off[1])
-
-  selection.start = { x, y }
-}
-
-function normalizeRange(range: Range): Range {
+export function normalizeRange(range: Range): Range {
   const minX = Math.min(range.start.x, range.end.x)
   const maxX = Math.max(range.start.x, range.end.x)
   const minY = Math.min(range.start.y, range.end.y)
@@ -67,15 +53,15 @@ function normalizeRange(range: Range): Range {
   }
 }
 
-export function endBoxSelect(activeRgroup: RenderGroup) {
-  let off = activeRgroup.offset()
-  const x = Math.floor(viewport.mousePos.x - off[0])
-  const y = Math.floor(viewport.mousePos.y - off[1])
+// export function endBoxSelect(activeRgroup: RenderGroup) {
+//   let off = activeRgroup.offset()
+//   const x = Math.floor(viewport.mousePos.x - off[0])
+//   const y = Math.floor(viewport.mousePos.y - off[1])
 
-  selection.end = { x, y }
+//   selection.end = { x, y }
   
-  return normalizeRange(selection)
-}
+//   return normalizeRange(selection)
+// }
 
 function makeTileParams(layer: AnyTilesLayer<any>, x: number, y: number): EditTileParams {
   return layer instanceof TilesLayer ? { type: 'tile', ...layer.getTile(x, y) } :
@@ -99,8 +85,8 @@ function makeDefaultTileParams(layer: AnyTilesLayer<any>): EditTileParams {
          null
 }
 
-export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): EditTileParams[][] {
-  const res: EditTileParams[][] = []
+export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): Brush {
+  const res: Brush = []
 
   for (let j = sel.start.y; j <= sel.end.y; j++) {
     const row  = []
@@ -113,8 +99,8 @@ export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): EditTil
   return res
 }
 
-export function makeEmptySelection(layer: AnyTilesLayer<any>, sel: Range): EditTileParams[][] {
-  const res: EditTileParams[][] = []
+export function makeEmptySelection(layer: AnyTilesLayer<any>, sel: Range): Brush {
+  const res: Brush = []
 
   for (let j = sel.start.y; j <= sel.end.y; j++) {
     const row  = []
@@ -127,29 +113,27 @@ export function makeEmptySelection(layer: AnyTilesLayer<any>, sel: Range): EditT
   return res
 }
 
+export function placeTiles(rmap: RenderMap, g: number, l: number, pos: Coord, tiles: Brush) {
+  let [ i, j ] = [ 0, 0 ]
+  let changes: EditTile[] = []
 
-export function placeTileLine(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {
-  const rgroup = rmap.groups[g]
-  let off = rgroup.offset()
-
-  let p1: [number, number] = [ lastPos.x, lastPos.y ]
-  let p2: [number, number] = [ viewport.mousePos.x, viewport.mousePos.y ]
-  p1 = p1.map((v, i) => Math.floor(v - off[i])) as [number, number]
-  p2 = p2.map((v, i) => Math.floor(v - off[i])) as [number, number]
-  
-  lastPos = { ...viewport.mousePos }
-  
-  const points = bresenham(p1, p2)
-
-  for (const point of points) {
-    const change: EditTile = {
-      group: g,
-      layer: l,
-      x: point[0],
-      y: point[1],
-      ...tile
+  for (const row of tiles) {
+    for (const tile of row) {
+      const change: EditTile = {
+        group: g,
+        layer: l,
+        x: pos.x + i,
+        y: pos.y + j,
+        ...tile
+      }
+      changes.push(change)
+      i++
     }
+    j++
+    i = 0
+  }
 
+  for (const change of changes) {
     const res = rmap.editTile(change)
 
     // only send change if succeeded e.g. not redundant
@@ -158,23 +142,14 @@ export function placeTileLine(rmap: RenderMap, g: number, l: number, tile: EditT
   }
 }
 
-export function placeTilesLine(rmap: RenderMap, g: number, l: number, tiles: EditTileParams[][]) {
-  const rgroup = rmap.groups[g]
-  let off = rgroup.offset()
-
-  let p1: [number, number] = [ lastPos.x, lastPos.y ]
-  let p2: [number, number] = [ viewport.mousePos.x, viewport.mousePos.y ]
-  p1 = p1.map((v, i) => Math.floor(v - off[i])) as [number, number]
-  p2 = p2.map((v, i) => Math.floor(v - off[i])) as [number, number]
-  
-  lastPos = { ...viewport.mousePos }
-  
-  const points = bresenham(p1, p2)
+export function drawLine(rmap: RenderMap, g: number, l: number, start: Coord, end: Coord, tiles: Brush) {
+  const points = bresenham([ start.x, start.y ], [ end.x, end.y ])
   
   for (const point of points) {
     let [ i, j ] = [ 0, 0 ]
     let changes: EditTile[] = []
 
+    // TODO: avoid changing twice the same tile
     for (const row of tiles) {
       for (const tile of row) {
         const change: EditTile = {
@@ -198,35 +173,6 @@ export function placeTilesLine(rmap: RenderMap, g: number, l: number, tiles: Edi
       if(res)
         server.send('edittile', change)
     }
-  }
-}
-
-export function placeTiles(rmap: RenderMap, g: number, l: number, pos: [number, number], tiles: EditTileParams[][]) {
-  let [ i, j ] = [ 0, 0 ]
-  let changes: EditTile[] = []
-
-  for (const row of tiles) {
-    for (const tile of row) {
-      const change: EditTile = {
-        group: g,
-        layer: l,
-        x: pos[0] + i,
-        y: pos[1] + j,
-        ...tile
-      }
-      changes.push(change)
-      i++
-    }
-    j++
-    i = 0
-  }
-
-  for (const change of changes) {
-    const res = rmap.editTile(change)
-
-    // only send change if succeeded e.g. not redundant
-    if(res)
-      server.send('edittile', change)
   }
 }
 
