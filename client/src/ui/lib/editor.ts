@@ -88,6 +88,17 @@ function makeTileParams(layer: AnyTilesLayer<any>, x: number, y: number): EditTi
          null
 }
 
+function makeDefaultTileParams(layer: AnyTilesLayer<any>): EditTileParams {
+  return layer instanceof TilesLayer ? { type: 'tile', ...layer.defaultTile() } :
+         layer instanceof GameLayer ? { type: 'tile', ...layer.defaultTile() } :
+         layer instanceof FrontLayer ? { type: 'tile', ...layer.defaultTile() } :
+         layer instanceof TeleLayer ? { type: 'tele', ...layer.defaultTile() } :
+         layer instanceof SwitchLayer ? { type: 'switch', ...layer.defaultTile() } :
+         layer instanceof SpeedupLayer ? { type: 'speedup', ...layer.defaultTile() } :
+         layer instanceof TuneLayer ? { type: 'tune', ...layer.defaultTile() } :
+         null
+}
+
 export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): EditTileParams[][] {
   const res: EditTileParams[][] = []
 
@@ -102,10 +113,22 @@ export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): EditTil
   return res
 }
 
-export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {
-  if (!pressed)
-    return
+export function makeEmptySelection(layer: AnyTilesLayer<any>, sel: Range): EditTileParams[][] {
+  const res: EditTileParams[][] = []
 
+  for (let j = sel.start.y; j <= sel.end.y; j++) {
+    const row  = []
+    for (let i = sel.start.x; i <= sel.end.x; i++) {
+      row.push(makeDefaultTileParams(layer))
+    }
+    res.push(row)
+  }
+  
+  return res
+}
+
+
+export function placeTileLine(rmap: RenderMap, g: number, l: number, tile: EditTileParams) {
   const rgroup = rmap.groups[g]
   let off = rgroup.offset()
 
@@ -135,10 +158,7 @@ export function placeTile(rmap: RenderMap, g: number, l: number, tile: EditTileP
   }
 }
 
-export function placeTiles(rmap: RenderMap, g: number, l: number, tiles: EditTileParams[][]) {
-  if (!pressed)
-    return
-  
+export function placeTilesLine(rmap: RenderMap, g: number, l: number, tiles: EditTileParams[][]) {
   const rgroup = rmap.groups[g]
   let off = rgroup.offset()
 
@@ -178,6 +198,35 @@ export function placeTiles(rmap: RenderMap, g: number, l: number, tiles: EditTil
       if(res)
         server.send('edittile', change)
     }
+  }
+}
+
+export function placeTiles(rmap: RenderMap, g: number, l: number, pos: [number, number], tiles: EditTileParams[][]) {
+  let [ i, j ] = [ 0, 0 ]
+  let changes: EditTile[] = []
+
+  for (const row of tiles) {
+    for (const tile of row) {
+      const change: EditTile = {
+        group: g,
+        layer: l,
+        x: pos[0] + i,
+        y: pos[1] + j,
+        ...tile
+      }
+      changes.push(change)
+      i++
+    }
+    j++
+    i = 0
+  }
+
+  for (const change of changes) {
+    const res = rmap.editTile(change)
+
+    // only send change if succeeded e.g. not redundant
+    if(res)
+      server.send('edittile', change)
   }
 }
 

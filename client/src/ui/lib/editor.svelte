@@ -185,6 +185,7 @@
           height: ${y2 - y1}px;
           top: ${y1}px;
           left: ${x1}px;
+          background: ${shiftKey ? 'red' : 'blue'};
         `
       }
       else {
@@ -353,8 +354,13 @@
   
   let lastTreeViewVisible = treeViewVisible
   let lastEnvEditorVisible = envEditorVisible
+  let ctrlKey = false
+  let shiftKey = false
 
   function onKeyDown(e: KeyboardEvent) {
+    ctrlKey = e.ctrlKey
+    shiftKey = e.shiftKey
+  
     const target = e.target as HTMLElement
     if (!target.contains(canvas))
       return
@@ -390,6 +396,9 @@
   }
 
   function onKeyUp(e: KeyboardEvent) {
+    ctrlKey = e.ctrlKey
+    shiftKey = e.shiftKey
+  
     const target = e.target as HTMLElement
     if (!target.contains(canvas))
       return
@@ -416,40 +425,61 @@
   }
   let boxStyle = ''
   
-  function onMouseMove(e: MouseEvent) {
-    if (activeLayer instanceof AnyTilesLayer) {
-      // left button pressed
-      if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
-        Editor.placeTiles(rmap, g, l, selectedTiles)
-      }
-      else if (e.buttons === 1 && e.shiftKey) {
-        boxRange = Editor.endBoxSelect(activeRgroup)
-        selectedTiles = Editor.makeBoxSelection(activeLayer, boxRange)
-      }
-    }
-  }
-  
   function onMouseDown(e: MouseEvent) {
     Editor.press()
     if (activeLayer instanceof AnyTilesLayer) {
-      if (!boxSelect && e.buttons === 1 && !e.ctrlKey && !e.shiftKey) {
-        Editor.placeTiles(rmap, g, l, selectedTiles)
-      }
-      else if (e.buttons === 1 && e.shiftKey) {
-        Editor.startBoxSelect(activeRgroup)
-        boxSelect = true
-        boxRange = Editor.endBoxSelect(activeRgroup)
+      if (e.buttons === 1) {
+        if (!e.ctrlKey && !e.shiftKey && selectedTiles.length !== 0 && !boxSelect) {
+          Editor.placeTilesLine(rmap, g, l, selectedTiles)
+        }
+        else if (selectedTiles.length === 0) {
+          Editor.startBoxSelect(activeRgroup)
+          boxSelect = true
+          boxRange = Editor.endBoxSelect(activeRgroup)
+        }
       }
     }
   }
   
-  function onMouseUp() {
-    Editor.release()
-    if (boxSelect && activeLayer instanceof AnyTilesLayer) {
-      const range = Editor.endBoxSelect(activeRgroup)
-      selectedTiles = Editor.makeBoxSelection(activeLayer, range)
-      boxSelect = false
+  function onMouseMove(e: MouseEvent) {
+    if (activeLayer instanceof AnyTilesLayer) {
+      if (e.buttons === 1 && !e.ctrlKey) {
+        if (!boxSelect && !e.shiftKey) {
+          Editor.placeTilesLine(rmap, g, l, selectedTiles)
+        }
+        else if (boxSelect) {
+          boxRange = Editor.endBoxSelect(activeRgroup)
+        }
+      }
     }
+  }
+  
+  function onMouseUp(e: MouseEvent) {
+    if (activeLayer instanceof AnyTilesLayer) {
+      if (boxSelect && !e.shiftKey) {
+        const range = Editor.endBoxSelect(activeRgroup)
+        selectedTiles = Editor.makeBoxSelection(activeLayer, range)
+        boxSelect = false
+      }
+      else if (boxSelect && e.shiftKey) {
+        const range = Editor.endBoxSelect(activeRgroup)
+        const tiles = Editor.makeEmptySelection(activeLayer, range)
+        const [ offX, offY ] = activeRgroup.offset()
+        const pos = [
+          Math.floor(viewport.mousePos.x - tiles[0].length + 1 - offX),
+          Math.floor(viewport.mousePos.y - tiles.length + 1 - offY),
+        ]
+        Editor.placeTiles(rmap, g, l, pos, tiles)
+        selectedTiles = []
+        boxSelect = false
+      }
+    }
+    Editor.release()
+  }
+
+  function onContextMenu(e: MouseEvent) {
+    e.preventDefault()
+    selectedTiles = []
   }
   
   function onEditInfo() {
@@ -480,7 +510,7 @@
 
 <div id="editor">
 
-  <div bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove}>
+  <div bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
     <!-- Here goes the canvas on mount() -->
     <div id="clip-outline" style={clipOutlineStyle}></div>
     {#if activeLayer instanceof AnyTilesLayer}
