@@ -311,13 +311,13 @@ function onKeyPress(e: KeyboardEvent) {
   if (e.ctrlKey || e.altKey)
     return
 
-  if (['r', 'v', 'h'].includes(e.key.toLowerCase()))
+  if (['r', 'v', 'h', 'n', 'm'].includes(e.key.toLowerCase()))
     e.preventDefault()
     
   if (e.key === 'r') onRotateCW()
   else if (e.key === 'R') onRotateCCW()
-  else if (e.key === 'v') onFlipV()
-  else if (e.key === 'h') onFlipH()
+  else if (e.key === 'v' || e.key === 'm') onFlipV()
+  else if (e.key === 'h' || e.key === 'n') onFlipH()
 }
 
 let spaceKeyDown = false
