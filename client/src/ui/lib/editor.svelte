@@ -174,9 +174,10 @@
       color = 'red'
     }
     
-      if (boxSelect) {
-        let [ x1, y1 ] = viewport.worldToPixel(boxRange.start.x - offX, boxRange.start.y)
-        let [ x2, y2 ] = viewport.worldToPixel(boxRange.end.x + 1 - offX, boxRange.end.y + 1)
+      if (boxSelect || boxFill) {
+        const range = Editor.normalizeRange(boxRange)
+        let [ x1, y1 ] = viewport.worldToPixel(range.start.x - offX, range.start.y)
+        let [ x2, y2 ] = viewport.worldToPixel(range.end.x + 1 - offX, range.end.y + 1)
         hoverTileStyle = `
           width: ${x2 - x1}px;
           height: ${y2 - y1}px;
@@ -190,7 +191,7 @@
           height: ${y2 - y1}px;
           top: ${y1}px;
           left: ${x1}px;
-          background: ${shiftKey ? 'red' : 'blue'};
+          background: ${boxFill ? 'orange' : shiftKey ? 'red' : 'blue'};
         `
       }
       else {
@@ -424,7 +425,8 @@
   let clipOutlineStyle = ''
   let boxStyle = ''
 
-  let boxSelect = false
+  let boxSelect = false // visual box when selecting an area
+  let boxFill = false // visual box when using shift+drag (fill a rect with brush)
   let boxRange: Editor.Range = {
     start: { x: 0, y: 0 },
     end: { x: 0, y: 0 },
@@ -443,8 +445,13 @@
     if (activeLayer instanceof AnyTilesLayer) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
       if (e.buttons === 1) {
-        if (!e.ctrlKey && !e.shiftKey && selectedTiles.length !== 0 && !boxSelect) {
+        if (!e.ctrlKey && !e.shiftKey && selectedTiles.length !== 0) {
           Editor.placeTiles(rmap, g, l, curPos, selectedTiles)
+        }
+        else if (e.shiftKey && selectedTiles.length !== 0) {
+          boxRange.start = curPos
+          boxRange.end = curPos
+          boxFill = true
         }
         else if (selectedTiles.length === 0) {
           boxRange.start = curPos
@@ -460,12 +467,11 @@
     if (activeLayer instanceof AnyTilesLayer) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
       if (e.buttons === 1 && !e.ctrlKey) {
-        if (!boxSelect && !e.shiftKey) {
+        if (!boxFill && !boxSelect && !e.shiftKey) {
           Editor.drawLine(rmap, g, l, lastPos, curPos, selectedTiles)
         }
-        else if (boxSelect) {
+        else if (boxFill || boxSelect) {
           boxRange.end = curPos
-          boxRange = Editor.normalizeRange(boxRange)
         }
       }
       lastPos = curPos
@@ -474,20 +480,24 @@
   
   function onMouseUp(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
-      if (boxSelect) {
+      if (boxSelect || boxFill) {
         const curPos = worldPosToTileCoord(viewport.mousePos)
         boxRange.end = curPos
         boxRange = Editor.normalizeRange(boxRange)
 
-        if (!e.shiftKey) {
+        if (boxSelect && !e.shiftKey) {
           selectedTiles = Editor.makeBoxSelection(activeLayer, boxRange)
           boxSelect = false
         }
-        else if (e.shiftKey) {
-          const tiles = Editor.makeEmptySelection(activeLayer, boxRange)
-          Editor.placeTiles(rmap, g, l, boxRange.start, tiles)
+        else if (boxSelect && e.shiftKey) {
+          const brush = Editor.makeEmptySelection(activeLayer, boxRange)
+          Editor.placeTiles(rmap, g, l, boxRange.start, brush)
           selectedTiles = []
           boxSelect = false
+        }
+        else if (boxFill) {
+          Editor.fill(rmap, g, l, boxRange, selectedTiles)
+          boxFill = false
         }
       }
     }

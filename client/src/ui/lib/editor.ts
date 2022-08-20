@@ -142,6 +142,31 @@ export function placeTiles(rmap: RenderMap, g: number, l: number, pos: Coord, ti
   }
 }
 
+export function fill(rmap: RenderMap, g: number, l: number, range: Range, tiles: Brush) {
+  let changes: EditTile[] = []
+
+  for (let j = range.start.y; j <= range.end.y; j++) {
+    for (let i = range.start.x; i <= range.end.x; i++) {
+      const change: EditTile = {
+        group: g,
+        layer: l,
+        x: i,
+        y: j,
+        ...tiles[(j - range.start.y) % tiles.length][(i - range.start.x) % tiles[0].length]
+      }
+      changes.push(change)
+    }
+  }
+
+  for (const change of changes) {
+    const res = rmap.editTile(change)
+
+    // only send change if succeeded e.g. not redundant
+    if(res)
+      server.send('edittile', change)
+  }
+}
+
 export function drawLine(rmap: RenderMap, g: number, l: number, start: Coord, end: Coord, tiles: Brush) {
   const points = bresenham([ start.x, start.y ], [ end.x, end.y ])
   
