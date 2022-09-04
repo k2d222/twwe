@@ -46,6 +46,10 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
     return this.tiles[y * this.width + x]
   }
   
+  setTile(x: number, y: number, tile: Tile) {
+    this.tiles[y * this.width + x] = tile
+  }
+  
   abstract defaultTile(): Tile;
   
   setWidth(width: number, fill: () => Tile) {
