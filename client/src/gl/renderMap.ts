@@ -15,7 +15,7 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
 import { envPointFromJson } from '../server/convert'
-import { Automapper, automap } from 'src/twmap/automap'
+import { Automapper, automap } from '../twmap/automap'
 
 export type RenderPhysicsLayer = RenderGameLayer | RenderFrontLayer | RenderTeleLayer | RenderSpeedupLayer | RenderSwitchLayer | RenderTuneLayer
 

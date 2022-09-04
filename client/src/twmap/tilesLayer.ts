@@ -5,6 +5,7 @@ import * as Info from './types'
 import { Layer } from './layer'
 import type { Image } from './image'
 import { parseTiles, parseTeleTiles, parseSpeedupTiles, parseTuneTiles, parseSwitchTiles } from './parser'
+import type { Automapper } from './automap'
 
 export function createLayer(flags: Info.TilesLayerFlags) {
   return flags === Info.TilesLayerFlags.TILES ? new TilesLayer()
@@ -86,6 +87,7 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   image: Image | null
   colorEnv: ColorEnvelope | null
   colorEnvOffset: number
+  automapper: Automapper | null
   
   constructor() {
     super(Info.TilesLayerFlags.TILES)
@@ -93,6 +95,7 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
     this.image = null
     this.colorEnv = null
     this.colorEnvOffset = 0
+    this.automapper = null
   }
   
   static defaultTile(): Info.Tile {

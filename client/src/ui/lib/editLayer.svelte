@@ -12,6 +12,7 @@
   import { Image } from '../../twmap/image'
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
+  import AutomapperPicker from './automapper.svelte'
   import { createEventDispatcher } from 'svelte'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
@@ -301,6 +302,8 @@
       {/each}
     </select></label>
     <label>Color Env. Offset <input type="number" value={layer.colorEnvOffset} on:change={onEditColorEnvOffset}></label>
+    {@const automapper = layer.automapper ? layer.automapper.name : "<none>" }
+    <label>Automapper <input type="button" value={automapper} on:click={openAutomapper}></label>
   {/if}
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
     <label>Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName}></label>
