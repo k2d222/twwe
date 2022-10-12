@@ -1,5 +1,8 @@
+use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
-use twmap::{Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position};
+use twmap::{
+    Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position, Volume,
+};
 
 use crate::map_cfg::MapAccess;
 
@@ -95,15 +98,15 @@ pub struct CreateGroup {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum OneGroupChange {
-    OffX(i32),
-    OffY(i32),
+    OffX(I27F5),
+    OffY(I27F5),
     ParaX(i32),
     ParaY(i32),
     Clipping(bool),
-    ClipX(i32),
-    ClipY(i32),
-    ClipW(i32),
-    ClipH(i32),
+    ClipX(I27F5),
+    ClipY(I27F5),
+    ClipW(I27F5),
+    ClipH(I27F5),
     Name(String),
 }
 
@@ -146,9 +149,9 @@ pub enum OneLayerChange {
 #[serde(remote = "InvalidLayerKind", rename_all = "lowercase")]
 enum SerdeInvalidLayerKind {
     Unknown(i32),        // unknown value of 'LAYERTYPE' identifier
-    UnknownTileMap(i32), // 'LAYERTYPE' identified a tile layer, unknown value of 'TILESLAYERFLAG' identifier
+    UnknownTilemap(i32), // 'LAYERTYPE' identified a tile layer, unknown value of 'TILESLAYERFLAG' identifier
     NoType,              // layer item too short to get 'LAYERTYPE' identifier
-    NoTypeTileMap, // 'LAYERTYPE' identified a tile layer, layer item too short to get 'TILESLAYERFLAG' identifier
+    NoTypeTilemap, // 'LAYERTYPE' identified a tile layer, layer item too short to get 'TILESLAYERFLAG' identifier
 }
 
 #[derive(Serialize, Deserialize)]
@@ -257,9 +260,9 @@ pub struct EditTile {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Quad {
-    pub points: [Point; 5],
+    pub points: [Point<I17F15>; 5],
     pub colors: [Color; 4],
-    pub tex_coords: [Point; 4],
+    pub tex_coords: [Point<I22F10>; 4],
     pub pos_env: Option<u16>,
     pub pos_env_offset: i32,
     pub color_env: Option<u16>,
@@ -297,7 +300,7 @@ pub struct DeleteQuad {
 pub enum EnvPoints {
     Color(Vec<EnvPoint<I32Color>>),
     Position(Vec<EnvPoint<Position>>),
-    Sound(Vec<EnvPoint<i32>>),
+    Sound(Vec<EnvPoint<Volume>>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

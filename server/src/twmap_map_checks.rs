@@ -1,4 +1,4 @@
-use twmap::{map_checks::EnvPointErrorKind, EnvPoint};
+use twmap::{checks::EnvPointErrorKind, EnvPoint};
 
 // because those implementations are private in twmap, I copy-pasted them here.
 

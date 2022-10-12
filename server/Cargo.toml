@@ -17,7 +17,7 @@ futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ndarray =  { version = "0.15", features = ["serde"] }
-twmap = "0.7"
+twmap = "0.9"
 pretty_env_logger = "0.4"
 log = "0.4"
 glob = "0.3"
@@ -28,3 +28,4 @@ axum = { version = "0.6.8", features = ["ws", "headers", "tokio"] }
 axum-server = { version = "0.3", features = ["tls-rustls"] }
 tower-http = {version = "0.4.0", features = ["fs"] }
 tokio-util = "0.7.7"
+fixed = "1.19"
