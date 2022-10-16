@@ -216,6 +216,22 @@
     })
   }
   
+  function openAutomapper() {
+    if (!(layer instanceof TilesLayer))
+      return
+
+    const picker = new AutomapperPicker({
+      target: document.body,
+      props: {
+        layer
+      },
+    })
+
+    picker.$on('close', async () => {
+      picker.$destroy()
+    })
+  }
+  
   function onEditGroup(e: FormInputEvent) {
     const newGroup = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
     if (!isNaN(newGroup))
@@ -272,6 +288,9 @@
   function onDelete() {
     onDeleteLayer({ group: g, layer: l })
   }
+  function onAutomap() {
+    alert('TODO')
+  }
 
 </script>
 
@@ -302,8 +321,9 @@
       {/each}
     </select></label>
     <label>Color Env. Offset <input type="number" value={layer.colorEnvOffset} on:change={onEditColorEnvOffset}></label>
-    {@const automapper = layer.automapper ? layer.automapper.name : "<none>" }
+    {@const automapper = layer.automapper.config ? layer.automapper.config.name : "<none>" }
     <label>Automapper <input type="button" value={automapper} on:click={openAutomapper}></label>
+    <button disabled={layer.automapper.config === null || layer.automapper.automatic} on:click={onAutomap}>Apply Automapper</button>
   {/if}
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
     <label>Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName}></label>

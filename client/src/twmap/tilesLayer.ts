@@ -82,12 +82,18 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
   protected abstract load(map: Map, df: DataFile, info: Info.TilesLayer): void;
 }
 
+type AutomapperConfig = {
+  config: Automapper | null,
+  seed: number,
+  automatic: boolean,
+}
+
 export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   color: Info.Color
   image: Image | null
   colorEnv: ColorEnvelope | null
   colorEnvOffset: number
-  automapper: Automapper | null
+  automapper: AutomapperConfig
   
   constructor() {
     super(Info.TilesLayerFlags.TILES)
@@ -95,7 +101,11 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
     this.image = null
     this.colorEnv = null
     this.colorEnvOffset = 0
-    this.automapper = null
+    this.automapper = {
+      config: null,
+      seed: 0,
+      automatic: false,
+    }
   }
   
   static defaultTile(): Info.Tile {

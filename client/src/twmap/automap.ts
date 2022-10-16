@@ -65,6 +65,10 @@ function err<T>(content: T): Result<any, T> {
 
 /// lexer
 
+// range of characters in a line.
+// range delimits space between characters:
+//  - range [0, 0] is an empty range at the start of the line
+//  - range [0, 1] contains the first character
 type Range = [number, number]
 
 enum TokenErrorKind {
@@ -75,12 +79,13 @@ enum TokenErrorKind {
 
 interface TokenError {
   range: Range,
+  line: number,
   reason: TokenErrorKind,
   note?: string,
 }
 
-function tokError(reason: TokenErrorKind, range: Range, note?: string): TokenError {
-  return { range, reason, note }
+function tokError(reason: TokenErrorKind, line: number, range: Range, note?: string): TokenError {
+  return { range, line, reason, note }
 }
   
 // export enum Keyword {
@@ -94,7 +99,7 @@ function tokError(reason: TokenErrorKind, range: Range, note?: string): TokenErr
 //   NoLayerCopy,
 // }
 
-type Token = { range: Range } & ({ word: string } | { header: string } | { float: number } | { int: number })
+type Token = { line: number, range: Range } & ({ word: string } | { header: string } | { float: number } | { int: number })
 
 class FileReader {
   state: {
@@ -105,86 +110,97 @@ class FileReader {
 
   constructor(content: string) {
     this.state = {
-      line: 0,
+      line: -1, // call to nextline() follows
       token: 0,
     }
     this.lines = content
-      .split('\n')
-      .filter(l => l.length !== 0)
+      .split(/\r?\n/)
+
+    this.nextLine()
   }
   
   nextLine() {
     this.state.line++
     this.state.token = 0
+
+    // ignore comments, newlines etc.
+    while (this.state.line < this.lines.length) {
+      const line = this.lines[this.state.line]
+      if (line === '' || /^\s*#/.test(line) || /^\s+$/.test(line))
+        this.state.line++
+      else
+        break
+    }
   }
   
   token(): Result<Token, TokenError> {
-    if (this.state.line >= this.lines.length)
-      return null
+    if (this.state.line >= this.lines.length) {
+      return err(tokError(TokenErrorKind.MissingToken, this.state.line, [0, 0]))
+    }
 
     const line = this.lines[this.state.line].substring(this.state.token)
     
-    if (line === '') {
-      const range: Range = [this.state.token, this.state.token + 1]
-      return err(tokError(TokenErrorKind.MissingToken, range))
+    if (line === '' || /^\s*#/.test(line)) {
+      const range: Range = [this.state.token, this.state.token]
+      return err(tokError(TokenErrorKind.MissingToken, this.state.line, range))
     }
     
-    // lexing
-
-    if (line[0] === '[') {
+    else if (line[0] === '[') {
       const end = line.indexOf(']')
 
       if (end === -1) {
         const range: Range = [this.state.token, this.state.token + line.length]
         this.state.token = range[1]
-        return err(tokError(TokenErrorKind.InvalidHeader, range, 'Missing closing bracket "]"'))
+        return err(tokError(TokenErrorKind.InvalidHeader, this.state.line, range, 'Missing closing bracket "]"'))
       }
       else {
-        const range: Range = [this.state.token, this.state.token + end]
+        const range: Range = [this.state.token, this.state.token + end + 1]
         this.state.token = range[1]
-        return ok({ header: line.substring(1, end), range })
+        return ok({ header: line.substring(1, end), line: this.state.line, range })
       }
     }
     
-    else if ('0' <= line[0] && line[0] <= '9') {
-      let str = line.split(' ')[0]
+    else if (/^[-+]?[\d\.]+%?/.test(line)) {
+      let str = line.split(/\s/)[0]
       const range: Range = [this.state.token, this.state.token + str.length]
-      this.state.token = range[1]
+      this.state.token = range[1] + 1 // add a single space
       
-      if (/^\d+$/.test(str)) {
-        const num = Number(str)
-        if (isNaN(num))
-          return err(tokError(TokenErrorKind.InvalidNumber, range))
-        else
-          return ok({ int: num / 100.0, range })
-      }
       if (str[str.length - 1] === '%') {
         const num = Number(str.substring(0, str.length - 1))
         if (isNaN(num))
-          return err(tokError(TokenErrorKind.InvalidNumber, range))
+          return err(tokError(TokenErrorKind.InvalidNumber, this.state.line, range))
         else
-          return ok({ float: num / 100.0, range })
+          return ok({ float: num / 100.0, line: this.state.line, range })
       }
       else {
         const num = Number(str)
         if (isNaN(num))
-          return err(tokError(TokenErrorKind.InvalidNumber, range))
+          return err(tokError(TokenErrorKind.InvalidNumber, this.state.line, range))
+        else if (str.indexOf('.') === -1)
+          return ok({ int: num, line: this.state.line, range })
         else
-          return ok({ float: 1.0 / num, range })
+          return ok({ float: num, line: this.state.line, range })
       }
     }
     
     else {
-      const word = line.split(' ')[0]
+      const word = line.split(/\s/)[0]
       const range: Range = [this.state.token, this.state.token + word.length]
-      this.state.token = range[1]
-      return ok({ range, word })
+      this.state.token = range[1] + 1 // add a single space
+      return ok({ range, line: this.state.line, word })
     }
   }
   
+  peek() {
+    const tok = this.state.token
+    const res = this.token()
+    this.state.token = tok
+    return res
+  }
+  
   lineEmpty() {
-    return this.state.line < this.lines.length
-        && this.lines[this.state.line].length <= this.state.token
+    const tok = this.peek()
+    return tok.success === false && tok.content.reason === TokenErrorKind.MissingToken
   }
   
   empty() {
@@ -196,85 +212,256 @@ class FileReader {
 
 /// linting
 
-// export enum LintLevel { Warning, Error }
+export enum LintLevel { Warning, Error }
 
-// export interface Lint {
-//   range: Range,
-//   level: LintLevel,
-//   reason: string,
-//   note?: string,
-// }
+export interface Lint {
+  line: number,
+  range: Range,
+  level: LintLevel,
+  reason: string,
+  note?: string,
+}
 
-// function lintWarn(reason: string, range: Range, note?: string): Lint {
-//   return { level: LintLevel.Warning, range, reason, note }
-// }
+function lintWarn(reason: string, line: number, range: Range, note?: string): Lint {
+  return { level: LintLevel.Warning, line, range, reason, note }
+}
 
-// function lintErr(reason: string, range: Range, note?: string): Lint {
-//   return { level: LintLevel.Error, range, reason, note }
-// }
+function lintErr(reason: string, line: number, range: Range, note?: string): Lint {
+  return { level: LintLevel.Error, line, range, reason, note }
+}
 
 // linter functions
-// linter functions expect reader to be at the start of the line and return the reader at
-// the start of the following line.
+// linter functions expect reader to be at the start of the line and return the reader
+// after the last consumed token.
 
-// function lintHeader(reader: FileReader): Lint[] {
-//   const errs: Lint[] = []
-//   const tok = reader.token()
+function lintHeader(reader: FileReader): Lint[] {
+  const errs: Lint[] = []
+  const tok = reader.token()
 
-//   if (!tok.success || !('header' in tok.content))
-//     errs.push(lintErr('Expected a configuration name', tok.content.range, 'Configuration name are written in square brackets, e.g. "[my config]"'))
+  if (!tok.success || !('header' in tok.content))
+    errs.push(lintErr('Expected a configuration name', reader.state.line, tok.content.range, 'Configuration name are written in square brackets, e.g. "[my config]"'))
 
-//   if (!reader.lineEmpty()) {
-//     const range: Range = [reader.state.token, reader.lines[reader.state.line].length]
-//     errs.push(lintWarn('Expected end of line', range))
-//   }
+  return errs
+}
 
-//   reader.nextLine()
-//   return errs
-// }
-
-// function lintAutomapper(reader: FileReader): Lint[] {
-//   const errs = lintHeader(reader)
-//   let noLayerCopy = false
-
-//   {
-//     const validToks = ['NoLayerCopy', 'Index']
-//     const tok = reader.token()
-
-//     if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word))
-//       errs.push(lintErr('Unexpected token', tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
-
-//     else if (tok.content.word === 'NoLayerCopy') {
-//       noLayerCopy = true
-//       errs.push(lintInfo('Duplicate "NoLayerCopy"'))
-//     }
-//   }
-//   {
-//     const validToks = ['NoLayerCopy', 'Index']
-//     const tok = reader.token()
-
-//     if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word))
-//       errs.push(lintErr('Unexpected token', tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
-//   }
-
-
-//   return errs
-// }
-
-// export function lint(content: string): Lint[] {
-//   const reader = new FileReader(content)
-//   const errs: Lint[] = []
+function lintIndex(reader: FileReader): Lint[] {
+  const errs: Lint[] = []
+  let tok = reader.token()
   
-//   while(!reader.empty()) {
-//     errs.push(...lintAutomapper(reader))
-//   }
+  if (!tok.success || !('word' in tok.content) || tok.content.word !== 'Index') {
+    errs.push(lintErr('Expected "Index"', reader.state.line, tok.content.range))
+    return errs
+  }
+
+  tok = reader.token()
+  if (!tok.success || !('int' in tok.content)) {
+    errs.push(lintErr('Expected a tile id', reader.state.line, tok.content.range))
+    return errs
+  }
   
-//   return errs
-// }
+  let xflip = false, yflip = false, rotate = false
+  
+  while (!reader.lineEmpty()) {
+    tok = reader.token()
+    const validToks = ['XFLIP', 'YFLIP', 'ROTATE']
+
+    if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word)) {
+      errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
+    }
+    else if (tok.content.word === 'XFLIP') {
+      if (xflip) errs.push(lintWarn('Duplicate "XFLIP"', reader.state.line, tok.content.range))
+      else xflip = true
+    }
+    else if (tok.content.word === 'YFLIP') {
+      if (yflip) errs.push(lintWarn('Duplicate "YFLIP"', reader.state.line, tok.content.range))
+      else yflip = true
+    }
+    else if (tok.content.word === 'ROTATE') {
+      if (rotate) errs.push(lintWarn('Duplicate "ROTATE"', reader.state.line, tok.content.range))
+      else rotate = true
+    }
+  }
+  
+  return errs
+}
+
+function lintPos(reader: FileReader): Lint[] {
+  const errs: Lint[] = []
+
+  let tok = reader.token()
+  if (!tok.success || !('word' in tok.content) || tok.content.word !== 'Pos') {
+    errs.push(lintErr('Expected "Pos"', reader.state.line, tok.content.range))
+    return errs
+  }
+
+  // offset
+  tok = reader.token()
+  if (!tok.success || !('int' in tok.content))
+    errs.push(lintErr('Expected position x-offset', reader.state.line, tok.content.range, '"Pos" must be followed by a x-offset, then a y-offset, e.g. "Pos -1 1"'))
+  tok = reader.token()
+  if (!tok.success || !('int' in tok.content))
+    errs.push(lintErr('Expected position y-offset', reader.state.line, tok.content.range, '"Pos" must be followed by a x-offset, then a y-offset, e.g. "Pos -1 1"'))
+
+  // rule
+  tok = reader.token()
+  const validToks = ['EMPTY', 'FULL', 'INDEX', 'NOTINDEX']
+
+  if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word))
+    errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
+
+  else if (tok.content.word === 'INDEX' || tok.content.word === 'NOTINDEX') {
+    tok = reader.token()
+    if (!tok.success || !('int' in tok.content))
+      errs.push(lintErr('Expected a tile index', reader.state.line, tok.content.range, '"INDEX" or "NOTINDEX" must be followed by a tile index, e.g. "INDEX 10"'))
+    
+    let none = false, xflip = false, yflip = false, rotate = false
+  
+    while (!reader.lineEmpty()) {
+      tok = reader.token()
+      const validToks = ['XFLIP', 'YFLIP', 'ROTATE', 'OR', 'NONE']
+
+      if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word)) {
+        errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
+      }
+      else if (tok.content.word === 'XFLIP') {
+        if (xflip)
+          errs.push(lintWarn('Duplicate "XFLIP"', reader.state.line, tok.content.range))
+        else if (none)
+          errs.push(lintWarn('"ROTATE" after a "NONE"', reader.state.line, tok.content.range, '"NONE" conflicts with other flags'))
+        xflip = true
+      }
+      else if (tok.content.word === 'YFLIP') {
+        if (yflip)
+          errs.push(lintWarn('Duplicate "YFLIP"', reader.state.line, tok.content.range))
+        else if (none)
+          errs.push(lintWarn('"ROTATE" after a "NONE"', reader.state.line, tok.content.range, '"NONE" conflicts with other flags'))
+        yflip = true
+      }
+      else if (tok.content.word === 'ROTATE') {
+        if (rotate)
+          errs.push(lintWarn('Duplicate "ROTATE"', reader.state.line, tok.content.range))
+        else if (none)
+          errs.push(lintWarn('"ROTATE" after a "NONE"', reader.state.line, tok.content.range, '"NONE" conflicts with other flags'))
+        rotate = true
+      }
+      else if (tok.content.word === 'NONE') {
+        if (none)
+          errs.push(lintWarn('Duplicate "NONE"', reader.state.line, tok.content.range))
+        else if (xflip || yflip || rotate)
+          errs.push(lintWarn('"NONE" preceded by a "XFLIP", "YFLIP" or "ROTATE"', reader.state.line, tok.content.range, '"NONE" conflicts with the previous flags'))
+        none = true
+        xflip = yflip = rotate = false
+      }
+      else if (tok.content.word === 'OR') {
+        tok = reader.token()
+        if (!tok.success || !('int' in tok.content))
+          errs.push(lintErr('Expected a tile index', reader.state.line, tok.content.range, '"OR" must be followed by a tile index, e.g. "INDEX 3 OR 4"'))
+        xflip = yflip = rotate = none = false
+      }
+    }
+  }
+
+  return errs
+}
+
+function lintRandom(reader: FileReader): Lint[] {
+  const errs: Lint[] = []
+
+  let tok = reader.token()
+  if (!tok.success || !('word' in tok.content) || tok.content.word !== 'Random') {
+    errs.push(lintErr('Expected "Random"', reader.state.line, tok.content.range))
+    return errs
+  }
+
+  tok = reader.token()
+  if (!tok.success || !('int' in tok.content) && !('float' in tok.content)) {
+    errs.push(lintErr('Expected a number', reader.state.line, tok.content.range))
+    return errs
+  }
+
+  return errs
+}
+
+function lintAutomapper(reader: FileReader): Lint[] {
+  const errs = lintHeader(reader)
+
+  if (!reader.lineEmpty()) {
+    const range: Range = [reader.state.token, reader.lines[reader.state.line].length]
+    console.log(reader.lines[reader.state.line], reader.lines[reader.state.line])
+    errs.push(lintWarn('Expected end of line', reader.state.line, range))
+  }
+  reader.nextLine()
+
+  let noLayerCopy = false
+  let noDefaultRule = false
+  let indexRule = false
+
+  while (!reader.empty()) {
+    let tok = reader.token()
+    
+    if (tok.success && 'header' in tok.content) { // finished config
+      if (!indexRule)
+        errs.push(lintWarn('Previous config is empty', reader.state.line, tok.content.range))
+      reader.state.token = 0
+      return errs
+    }
+
+    const validToks = ['NoLayerCopy', 'Index']
+    if (indexRule)
+      validToks.push('NewRun', 'Pos', 'Random', 'NoDefaultRule')
+
+    if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word))
+      errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
+
+    else if (tok.content.word === 'NoLayerCopy') {
+      if (noLayerCopy) errs.push(lintWarn('Duplicate "NoLayerCopy"', reader.state.line, tok.content.range))
+      else noLayerCopy = true
+    }
+    else if (tok.content.word === 'Index') {
+      reader.state.token = 0
+      errs.push(...lintIndex(reader))
+      indexRule = true
+    }
+    else if (tok.content.word === 'NewRun') {
+      // TODO
+    }
+    else if (tok.content.word === 'Pos') {
+      reader.state.token = 0
+      errs.push(...lintPos(reader))
+    }
+    else if (tok.content.word === 'Random') {
+      reader.state.token = 0
+      errs.push(...lintRandom(reader))
+    }
+    else if (tok.content.word === 'NoDefaultRule') {
+      if (noDefaultRule) errs.push(lintWarn('Duplicate "NoDefaultRule"', reader.state.line, tok.content.range))
+      else noDefaultRule = true
+    }
+
+    if (!reader.lineEmpty()) {
+      const range: Range = [reader.state.token, reader.lines[reader.state.line].length]
+      errs.push(lintWarn('Expected end of line', reader.state.line, range))
+    }
+    reader.nextLine()
+  }
+
+  return errs
+}
+
+export function lint(content: string): Lint[] {
+  const reader = new FileReader(content)
+  const errs: Lint[] = []
+  
+  while(!reader.empty()) {
+    errs.push(...lintAutomapper(reader))
+  }
+  
+  return errs
+}
 
 /// parsing
 
-export function parse(content: string): Automapper[] {
+export function parse(content: string): Automapper[] | null {
   const reader = new FileReader(content)
   
   const automappers: Automapper[] = []
@@ -282,17 +469,14 @@ export function parse(content: string): Automapper[] {
   let run: Run | null = null 
   let indexRule: IndexRule | null = null
   
-  let tok = reader.token()
-  while (tok.success) {
+  while (!reader.empty()) {
+    let tok = reader.token()
     if ('header' in tok.content) {
-      let tok = reader.token()
-      if (!tok.success || !('header' in tok.content))
-        return null
       const name = tok.content.header
-      
       indexRule = null
       run = { layerCopy: true, indexRules: [] }
       automapper = { name, runs: [run] }
+      automappers.push(automapper)
     }
     else if (!('word' in tok.content) || !automapper) { // invalid line, skip
       continue
@@ -386,6 +570,11 @@ export function parse(content: string): Automapper[] {
               state.rotate = false
             }
             else if (tok.content.word === 'OR') {
+              // id
+              tok = reader.token()
+              if (!tok.success || !('int' in tok.content))
+                return null
+              const id = tok.content.int
               state = { id }
               states.push(state)
             }
@@ -402,7 +591,7 @@ export function parse(content: string): Automapper[] {
       if (tok.success && 'float' in tok.content)
         coef = tok.content.float
       else if (tok.success && 'int' in tok.content)
-        coef = tok.content.int
+        coef = 1.0 / tok.content.int
       const rule: RandomRule = { coef }
       indexRule.rules.push(rule)
     }
