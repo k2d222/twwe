@@ -285,6 +285,21 @@ export function parseEnvelope(envelopeData: ArrayBuffer): Info.Envelope {
   return data
 }
 
+export function parseAutomapper(automapperData: ArrayBuffer): Info.Automapper {
+  const d = new DataReader(automapperData)
+
+  const data: Info.Automapper= {
+    version: d.uint32(),
+    group: d.uint32(),
+    layer: d.uint32(),
+    config: d.int32(),
+    seed: d.int32(),
+    flags: d.uint32(),
+  }
+  
+  return data
+}
+
 export function parseSoundEnvPoint(envPointData: ArrayBuffer): Info.SoundEnvPoint {
   const d = new DataReader(envPointData)
 

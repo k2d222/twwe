@@ -1,6 +1,7 @@
 import { crc32 } from 'crc'
 import { inflate } from 'pako' // zlib
 
+import { UUID, compare as compareUUID } from './uuid'
 import { DataReader } from './dataReader'
 
 type ItemType = {
@@ -13,6 +14,13 @@ type DataInfo = {
   offset: number,
   size: number,
   compSize: number,
+}
+
+type Item = {
+  type: number,
+  id: number,
+  size: number,
+  data: ArrayBuffer
 }
 
 export class DataFile {
@@ -50,27 +58,25 @@ export class DataFile {
   }
 
   private parse() {
-    console.log('begin parsing')
-
     // parse header
     const { reader } = this
     var signature = reader.uint32()
 
     // signature 'DATA' or 'ATAD'
-    if (signature == 0x41544144 || signature == 0x44415441)
-      console.log('valid signature')
-    else
+    if (signature != 0x41544144 && signature != 0x44415441) {
+      console.error('invalid signature', signature)
       return false
+    }
 
     this.version = reader.uint32()
 
     // calculate checksum
     this.crc = crc32(new Uint8Array(this.data))
-    console.log('crc', this.crc.toString(16))
+    console.info('map crc', this.crc.toString(16))
 
     // we only support datafile version 4
     if (this.version != 4) {
-      console.log('invalid version', this.version)
+      console.error('invalid version', this.version)
       return false
     }
 
@@ -139,7 +145,7 @@ export class DataFile {
       const arrayBuf = infl.buffer.slice(0, infl.length)
       this.decData.push(arrayBuf)
     }
-
+    
     return true
   }
 
@@ -153,7 +159,7 @@ export class DataFile {
     return this.itemOffsets[index + 1] - this.itemOffsets[index]
   }
 
-  getItem(index: number) {
+  getItem(index: number): Item {
     const offset = this.itemStart + this.itemOffsets[index]
     const typeAndId = this.reader.getUint32(offset, true)
 
@@ -167,21 +173,44 @@ export class DataFile {
     return item
   }
 
-  getType(type: number) {
+  getType(type: number): ItemType {
     for (let i = 0; i < this.numItemTypes; i++) {
       if (this.itemTypes[i].type == type) {
         return this.itemTypes[i]
       }
     }
   }
+  
+  findUuidType(uuid: UUID): ItemType | null {
+    const uuidIndex = this.getType(0xffff)
+    
+    for (let i = 0; i < uuidIndex.num; i++) {
+      const item = this.getItem(uuidIndex.start + i)
 
-  findItem(type: number, id: number) {
-    var t = this.getType(type)
+      // COMBAK: this looks very ineffective, just because little endian
+      const view = new DataView(item.data.slice(0, 16))
+      view.setUint32(0, view.getUint32(0, true)) // swap endianess
+      view.setUint32(4, view.getUint32(4, true))
+      view.setUint32(8, view.getUint32(8, true))
+      view.setUint32(12, view.getUint32(12, true))
+      const thisUuid = new Uint8Array(view.buffer)
+
+      if(compareUUID(uuid, thisUuid))
+        return this.getType(item.id)
+    }
+
+    return null
+  }
+
+  findItem(type: number, id: number): Item | null {
+    const t = this.getType(type)
 
     for (let i = 0; i < t.num; i++) {
-      const item = this.getItem(t.start)
+      const item = this.getItem(t.start + i)
       if (item.id === id)
         return item
     }
+
+    return null
   }
 }

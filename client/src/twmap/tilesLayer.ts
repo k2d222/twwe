@@ -5,7 +5,6 @@ import * as Info from './types'
 import { Layer } from './layer'
 import type { Image } from './image'
 import { parseTiles, parseTeleTiles, parseSpeedupTiles, parseTuneTiles, parseSwitchTiles } from './parser'
-import type { Automapper } from './automap'
 
 export function createLayer(flags: Info.TilesLayerFlags) {
   return flags === Info.TilesLayerFlags.TILES ? new TilesLayer()
@@ -83,7 +82,7 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
 }
 
 type AutomapperConfig = {
-  config: Automapper | null,
+  config: number,
   seed: number,
   automatic: boolean,
 }

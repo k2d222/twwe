@@ -182,16 +182,25 @@ export type Tune = {
 export type AnyTile = Tile | Tele | Speedup | Switch | Tune
 
 export type Envelope = {
-    version: number,
-    type: EnvType,
-    startPoint: number,
-    numPoints: number,
-    
-    // extension without version change
-    name?: string,
-    
-    // version 2 extension
-    synchronized?: boolean,
+  version: number,
+  type: EnvType,
+  startPoint: number,
+  numPoints: number,
+  
+  // extension without version change
+  name?: string,
+  
+  // version 2 extension
+  synchronized?: boolean,
+}
+
+export type Automapper = {
+  version: number,
+  group: number,
+  layer: number,
+  config: number,
+  seed: number,
+  flags: number,
 }
 
 export type EnvPoint = {
