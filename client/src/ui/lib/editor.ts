@@ -1,11 +1,9 @@
 import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { RenderMap } from '../../gl/renderMap'
-import type { RenderGroup } from '../../gl/renderGroup'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
 import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer, TuneLayer } from '../../twmap/tilesLayer'
 import { server } from '../global'
-import { viewport } from '../../gl/global'
 import { queryMapBinary } from '../lib/util'
 
 export type Brush = EditTileParams[][]

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
 use twmap::{
@@ -356,6 +358,22 @@ pub struct ListMaps {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ListAutomappers {
+    pub configs: HashMap<String, Vec<String>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SendAutomapper {
+    pub image: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UploadAutomapper {
+    pub image: String,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateImage {
     pub name: String,
     pub index: u16,
@@ -419,6 +437,9 @@ pub enum RequestContent {
     SendMap(SendMap),
     ListUsers,
     ListMaps,
+    ListAutomappers,
+    SendAutomapper(SendAutomapper),
+    UploadAutomapper(UploadAutomapper),
 
     CreateImage(CreateImage),
     SendImage(SendImage),
@@ -457,6 +478,8 @@ pub enum ResponseContent {
     SendMap(SendMap),
     ListUsers(ListUsers),
     ListMaps(ListMaps),
+    ListAutomappers(ListAutomappers),
+    SendAutomapper(String),
     UploadComplete,
 
     CreateImage(CreateImage),

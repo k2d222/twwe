@@ -38,7 +38,7 @@ mod twmap_map_edit;
 
 use tokio_rustls::{rustls, TlsAcceptor};
 use tokio_tungstenite::tungstenite::Message;
-use twmap::TwMap;
+use twmap::{automapper::Automapper, TwMap};
 
 type Tx = UnboundedSender<Message>;
 type Res = Result<ResponseContent, &'static str>;
@@ -206,6 +206,8 @@ impl Server {
                 ResponseContent::SendImage(_) => (),
                 ResponseContent::DeleteImage(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::Error(_) => (),
+                ResponseContent::ListAutomappers(_) => (),
+                ResponseContent::SendAutomapper(_) => (),
             }
         }
     }
@@ -474,6 +476,96 @@ impl Server {
         Ok(ResponseContent::UploadComplete)
     }
 
+    fn handle_list_automappers(&self, peer: &Peer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        let map_name = room
+            .map
+            .path
+            .file_stem()
+            .ok_or("internal server error")?
+            .to_string_lossy();
+
+        let rule_files: Vec<_> = glob(&format!("automappers/{}/*.rules", map_name))
+            .map(|paths| paths.into_iter().filter_map(|p| p.ok()).collect())
+            .unwrap_or_default();
+
+        let parse_automapper = |path: PathBuf| -> Option<(String, Automapper)> {
+            let file_name = path.file_stem()?.to_string_lossy().into_owned();
+            let file_contents = fs::read_to_string(path).ok()?;
+            let automapper = Automapper::parse(file_name.clone(), &file_contents).ok()?;
+            Some((file_name, automapper))
+        };
+
+        let automappers: HashMap<_, _> = rule_files
+            .into_iter()
+            .filter_map(parse_automapper)
+            .map(|(img_name, am)| (img_name, am.configs.into_iter().map(|c| c.name).collect()))
+            .collect();
+
+        Ok(ResponseContent::ListAutomappers(ListAutomappers {
+            configs: automappers,
+        }))
+    }
+
+    fn check_image_name(&self, name: &str) -> bool {
+        // this is a very primitive sanitization to prevent path traversal attacks.
+        !(name.chars().any(std::path::is_separator) || name.starts_with("."))
+    }
+
+    fn handle_send_automapper(&self, peer: &Peer, send_automapper: SendAutomapper) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        let map_name = room
+            .map
+            .path
+            .file_stem()
+            .ok_or("internal server error")?
+            .to_string_lossy();
+
+        if !self.check_image_name(&send_automapper.image) {
+            return Err("invalid image name");
+        }
+
+        let rule_file = fs::read_to_string(format!(
+            "automappers/{}/{}.rules",
+            map_name, send_automapper.image
+        ))
+        .map_err(|_| "automapper file not found")?;
+
+        Ok(ResponseContent::SendAutomapper(rule_file))
+    }
+
+    fn handle_upload_automapper(
+        &self,
+        peer: &mut Peer,
+        upload_automapper: UploadAutomapper,
+    ) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        let map_name = room
+            .map
+            .path
+            .file_stem()
+            .ok_or("internal server error")?
+            .to_string_lossy();
+
+        if !self.check_image_name(&upload_automapper.image) {
+            return Err("invalid image name");
+        }
+
+        Automapper::parse(upload_automapper.image.clone(), &upload_automapper.content)
+            .map_err(|_| "invalid automapper file")?;
+
+        fs::write(
+            format!("automappers/{}/{}.rules", map_name, upload_automapper.image),
+            upload_automapper.content,
+        )
+        .map_err(server_error)?;
+
+        Ok(ResponseContent::UploadComplete)
+    }
+
     fn handle_request(&self, peer: &mut Peer, req: Request) {
         let res = match req.content {
             RequestContent::CreateMap(content) => self.handle_create_map(peer, content),
@@ -502,6 +594,11 @@ impl Server {
             RequestContent::CreateImage(content) => self.handle_create_image(peer, content),
             RequestContent::SendImage(content) => self.handle_send_image(peer, content),
             RequestContent::DeleteImage(content) => self.handle_delete_image(peer, content),
+            RequestContent::ListAutomappers => self.handle_list_automappers(peer),
+            RequestContent::SendAutomapper(content) => self.handle_send_automapper(peer, content),
+            RequestContent::UploadAutomapper(content) => {
+                self.handle_upload_automapper(peer, content)
+            }
         };
         self.respond_and_broadcast(peer, req.id, res);
     }

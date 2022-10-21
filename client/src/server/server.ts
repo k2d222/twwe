@@ -53,6 +53,8 @@ export class Server {
       'sendmap': [],
       'listusers': [],
       'listmaps': [],
+      'listautomappers': [],
+      'sendautomapper': [],
       'uploadcomplete': [],
       'createimage': [],
       'sendimage': [],

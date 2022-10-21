@@ -234,6 +234,19 @@ export interface ListMaps {
   maps: MapInfo[],
 }
 
+export interface ListAutomappers {
+  configs: { [k in string]: string[] }
+}
+
+export interface SendAutomapper {
+  image: string
+}
+
+export interface UploadAutomapper {
+  image: string
+  content: string
+}
+
 export interface CreateImage {
   name: string,
   index: number,
@@ -292,6 +305,9 @@ export interface RequestContent {
   'sendmap': SendMap
   'listusers': null
   'listmaps': null
+  'listautomappers': null
+  'sendautomapper': SendAutomapper
+  'uploadautomapper': UploadAutomapper
 
   'createimage': CreateImage
   'sendimage': SendImage
@@ -329,6 +345,8 @@ export interface ResponseContent {
   'sendmap': ArrayBuffer
   'listusers': ListUsers
   'listmaps': ListMaps
+  'listautomappers': ListAutomappers
+  'sendautomapper': string
   'uploadcomplete': null
 
   'createimage': CreateImage
