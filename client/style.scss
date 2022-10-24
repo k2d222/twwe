@@ -8,8 +8,24 @@ body, html {
   padding: 0;
 }
 
-
 $menu_h: 3rem;
+
+#panes {
+  > .splitpanes__pane {
+    height: calc(100vh - $menu-h);
+  }
+  
+  > .splitpanes__pane.viewport {
+    position: relative;
+
+    > div {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      clip: rect(0, auto, auto, 0);
+    }
+  }
+}
 
 canvas {
   position: fixed;
@@ -20,10 +36,7 @@ canvas {
 }
 
 #menu {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  width: 100%;
   height: $menu_h;
   justify-content: space-between;
   display: flex;
@@ -31,7 +44,6 @@ canvas {
   background: white;
   padding: .5rem 1rem;
   border-bottom: 1px solid lightgrey;
-  box-shadow: 0 0 10px -5px black;
 
   > .left, > .right, > .middle {
     display: flex;
@@ -107,19 +119,6 @@ canvas {
 }
 
 nav {
-  position: fixed;
-  top: $menu_h;
-  left: 0;
-  bottom: 0;
-  max-width: 15rem;
-  background: white;
-  transition: transform .3s;
-  border-right: 1px solid lightgrey;
-  box-shadow: 0 10px 10px -5px black;
-  
-  &.hidden {
-    transform: translateX(-100%);
-  }
   
   #tree {
     padding: 1rem;

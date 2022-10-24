@@ -29,6 +29,7 @@
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
+  import { Pane, Splitpanes } from 'svelte-splitpanes'
   
   type Coord = {
     x: number,
@@ -536,19 +537,6 @@
 
 <div id="editor">
 
-  <div bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
-    <!-- Here goes the canvas on mount() -->
-    <div id="clip-outline" style={clipOutlineStyle}></div>
-    {#if activeLayer instanceof AnyTilesLayer}
-      <div id="hover-tile" style={hoverTileStyle}></div>
-      <div id="layer-outline" style={layerOutlineStyle}></div>
-    {:else if activeLayer instanceof QuadsLayer}
-      <QuadsView {rmap} layer={activeLayer} />
-    {/if}
-    <div class="box-select" style={boxStyle}></div>
-    <Statusbar />
-  </div>
-
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
@@ -570,11 +558,32 @@
     </div>
   </div>
 
+  <Splitpanes id="panes">
+    <Pane>
+      <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
+    </Pane>
+    <Pane class="viewport">
+      <div bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
+        <!-- Here goes the canvas on mount() -->
+        <div id="clip-outline" style={clipOutlineStyle}></div>
+        {#if activeLayer instanceof AnyTilesLayer}
+          <div id="hover-tile" style={hoverTileStyle}></div>
+          <div id="layer-outline" style={layerOutlineStyle}></div>
+        {:else if activeLayer instanceof QuadsLayer}
+          <QuadsView {rmap} layer={activeLayer} />
+        {/if}
+        <div class="box-select" style={boxStyle}></div>
+        <!-- <Statusbar /> -->
+      </div>
+    </Pane>
+    <Pane></Pane>
+  </Splitpanes>
+
+
   {#if activeRlayer instanceof RenderAnyTilesLayer}
     <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} />
   {/if}
 
-  <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
   
   <EnvelopeEditor visible={envEditorVisible} {rmap} />
 
