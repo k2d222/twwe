@@ -560,7 +560,7 @@
 
   <Splitpanes id="panes">
     <Pane>
-      <TreeView visible={treeViewVisible} {rmap} bind:activeLayer={activeLayer} />
+      <TreeView {rmap} />
     </Pane>
     <Pane class="viewport">
       <div bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>

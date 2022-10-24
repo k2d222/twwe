@@ -1,56 +1,32 @@
 <script lang="ts">
-  import type { CreateGroup } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
-  import { TilesLayer } from '../../twmap/tilesLayer'
-  import ContextMenu from './contextMenu.svelte'
-  import GroupEditor from './editGroup.svelte'
-  import LayerEditor from './editLayer.svelte'
-  import { showInfo, showError, clearDialog } from '../lib/dialog'
-  import { server } from '../global'
+  import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
+  import {
+    View, ViewOff, CaretDown,
+    GameConsole as GameLayerIcon,
+    Grid as TilesLayerIcon,
+    AreaCustom as QuadsLayerIcon,
+    Unknown as UnknownLayerIcon,
+    Layers as GroupIcon
+  } from 'carbon-icons-svelte'
 
   export let rmap: RenderMap
-  export let activeLayer: Layer
-  export let visible = true
-
+  export let active: [number, number] = [-1, -1]
+  export let selected: [number, number][] = [active]
+  
   let folded = new Array(rmap.map.groups.length).fill(false)
 
-  let cm_group: Group | null = null
-  let cm_layer: Layer | null = null
-  let cm_x = 0
-  let cm_y = 0
+  let self: HTMLElement
+  let treeWalker: TreeWalker
 
-  function showCM(e: MouseEvent, group: Group | null, layer: Layer | null) {
-    cm_x = e.clientX
-    cm_y = e.clientY
-    cm_group = group
-    cm_layer = layer
-  }
-
-  function hideCM() {
-    cm_group = null
-    cm_layer = null
-  }
-
-  async function onCreateGroup() {
-    try {
-      const change: CreateGroup = { name: "" }
-      showInfo('Please wait…')
-      await server.query('creategroup', change)
-      rmap.createGroup(change)
-      rmap = rmap // hack to redraw the treeview
-      clearDialog()
-    } catch (e) {
-      showError('Failed to create group: ' + e)
+  $: if (self) treeWalker = document.createTreeWalker(self, NodeFilter.SHOW_ELEMENT, {
+    acceptNode: (node) => {
+      return node instanceof HTMLElement && node.classList.contains('node') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
     }
-  }
-
-  function onChange() {
-    rmap = rmap // hack to redraw the treeview
-    activeLayer = activeLayer // this will update the parent component
-  }
+  })
 
   function layerName(layer: Layer) {
     if (layer.name) {
@@ -64,52 +40,110 @@
     }
   }
   
-  function onRadioChange(e: Event & { currentTarget: HTMLInputElement }, layer: Layer) {
-    activeLayer = layer
-    e.currentTarget.blur()
+  function groupName(group: Group) {
+    return group.name || '…'
   }
-
+  
+  function layerIcon(layer: Layer) {
+    return layer instanceof TilesLayer ? TilesLayerIcon :
+           layer instanceof AnyTilesLayer ? GameLayerIcon :
+           layer instanceof QuadsLayer ? QuadsLayerIcon :
+           UnknownLayerIcon
+  }
+  
+  function select(g: number, l: number) {
+    active = [g, l]
+    selected = [active]
+  }
+  
+  function onKeyDown(g: number, l: number, e: KeyboardEvent) {
+    if (l === -1) {
+      if (['ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
+        e.preventDefault()
+      }
+      if (e.key === 'ArrowLeft') {
+        folded[g] = true
+      }
+      else if (e.key == 'ArrowRight') {
+        folded[g] = false
+      }
+      else if (e.key === 'Enter' || e.key === ' ') {
+        folded[g] = !folded[g]
+        select(g, l)
+      }
+    }
+    else {
+      if (e.key === 'Enter' || e.key === ' ') {
+        select(g, l)
+      }
+    }
+    if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault()
+      treeWalker.currentNode = e.currentTarget as HTMLElement
+      let node = (e.key === 'ArrowUp') ? treeWalker.previousNode() : treeWalker.nextNode()
+      if (node && node instanceof HTMLElement) {
+        node.focus()
+      }
+    }
+  }
+  
+  function isSelected(selected: [number, number][], g: number, l: number) {
+    return selected.findIndex(([sg, sl]) => sg === g && sl === l) !== -1
+  }
+  
+  function isActive(active: [number, number], g: number, l: number) {
+    const [ag, al] = active
+    return ag === g && al === l
+  }
+  
 </script>
 
-<nav class:hidden={!visible}>
-  <div id="tree">
-
-    {#each rmap.groups as rgroup, g}
-      {@const group = rgroup.group}
-      <div class="group" class:visible={rgroup.visible} class:folded={folded[g]}>
-        <div class="title">
-          <span class="fold" on:click={() => folded[g] = !folded[g]}></span>
-          <b>#{g} {group.name}</b>
-          <span class="eye" on:click={() => rgroup.visible = !rgroup.visible}></span>
-          <span class="options" on:click={(e) => showCM(e, group, null)}></span>
-          {#if cm_group === group}
-            <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-              <GroupEditor {rmap} {g} on:change={onChange} />
-            </ContextMenu>
-          {/if}
-        </div>
-    
+<ul id="tree" bind:this={self}>
+  {#each rmap.groups as rgroup, g}
+    {@const group = rgroup.group}
+    <li
+      class="group"
+      class:visible={rgroup.visible}
+      class:folded={folded[g]}
+    >
+      <div class="node"
+        tabindex="0"
+        class:selected={isSelected(selected, g, -1)}
+        class:active={isActive(active, g, -1)}
+        on:click={() => select(g, -1)}
+        on:keydown={(e) => onKeyDown(g, -1, e)}
+      >
+        <span class="toggle" on:click={() => folded[g] = !folded[g]}><CaretDown /></span>
+        <span class="icon"><GroupIcon /></span>
+        <span class="label">{groupName(group)}</span>
+        <span class="eye" on:click={() => rgroup.visible = !rgroup.visible}>
+          <svelte:component this={rgroup.visible ? View: ViewOff}/>
+        </span>
+      </div>
+  
+      <ul>
         {#each rgroup.layers as rlayer, l}
           {@const layer = rlayer.layer}
-          <div class="layer" class:visible={rlayer.visible}>
-            <label>
-              <input name="layer" type="radio" on:change={(e) => onRadioChange(e, layer)} checked={layer === activeLayer} />
-              {layerName(layer)}
-            </label>
-            <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}></span>
-            <span class="options" on:click={(e) => showCM(e, null, layer)}></span>
-            {#if cm_layer === layer}
-              <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-                <LayerEditor {rmap} {g} {l} on:change={onChange} />
-              </ContextMenu>
-            {/if}
-          </div>
+          <li class="layer"
+            class:visible={rlayer.visible}
+          >
+            <div class="node"
+              tabindex="0"
+              class:selected={isSelected(selected, g, l)}
+              class:active={isActive(active, g, l)}
+              on:click={() => select(g, l)}
+              on:keydown={(e) => onKeyDown(g, l, e)}
+            >
+              <span class="icon"><svelte:component this={layerIcon(layer)} /></span>
+              <span class="label">{layerName(layer)}</span>
+              <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}>
+                <svelte:component this={rlayer.visible ? View: ViewOff}/>
+              </span>
+            </div>
+          </li>
         {/each}
+      </ul>
 
-      </div>
-    {/each}
-
-    <button on:click={onCreateGroup}>Add group</button>
-
-  </div>
-</nav>
+    </li>
+  {/each}
+</ul>

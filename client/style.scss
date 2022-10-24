@@ -8,11 +8,23 @@ body, html {
   padding: 0;
 }
 
+ol, ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+
 $menu_h: 3rem;
 
 #panes {
   > .splitpanes__pane {
     height: calc(100vh - $menu-h);
+  }
+  
+  > .splitpanes__splitter {
+    border: 0;
+    margin: 0;
   }
   
   > .splitpanes__pane.viewport {
@@ -118,91 +130,82 @@ canvas {
   }
 }
 
-nav {
+#tree {
+  display: flex;
+  flex-direction: column;
+  color: #161616;
   
-  #tree {
-    padding: 1rem;
-    height: 100%;
+  .node {
+    position: relative;
     display: flex;
-    flex-direction: column;
-    gap: .5rem;
-    overflow: auto;
-  }    
+    align-items: center;
+    width: 100%;
+    height: 2rem;
+    padding-left: 1rem;
+    
+    &:hover, &.selected, &.active {
+      background: #e0e0e0;
+    }
+    
+    &.active::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: .25rem;
+      background: #0f62fe;
+    }
+    
+    &:focus {
+      outline: 2px solid #0f62fe;
+      outline-offset: -2px;
+    }
 
+    > .label {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+      flex-grow: 1;
+      padding-right: .5rem;
+    }
+  }
+  
+  .layer .node {
+    padding-left: 3.5rem;
+  }
+  
   .group {
     display: flex;
     flex-direction: column;
     
-    &.folded .layer {
+    &.folded > ul {
       display: none;
+    }
+    
+    &.folded > .node > .toggle > svg {
+      transform: rotate(-90deg);
     }
   }
   
-  .eye, .options {
-    float: right;
-    width: 1rem;
-    height: 1rem;
-    background-position: center;
-    background-size: cover;
-    margin-top: .1rem; // compensate for line height…
+  .toggle, .icon, .eye {
+    margin-right: .5rem;
   }
   
-  .eye {
-    background-image: url('/assets/hidden.svg');
+  .toggle, .eye {
+    cursor: pointer;
   }
   
-  .options {
-    background-image: url('/assets/dots-vertical.svg');
+  li.visible:not(:hover) > .node > .eye {
+    display: none;
   }
   
-  .fold {
-    float: left;
-    width: 1rem;
-    height: 1rem;
-    background-image: url('/assets/fold.svg');
-    background-position: center;
-    background-size: cover;
-    margin-top: .1rem; // compensate for line height…
+  .toggle > svg {
+    transition: transform .2s;
   }
   
-  .group.folded .title > .fold {
-    background-image: url('/assets/unfold.svg');
-  }
-    
-  .group.visible .title > .eye, .layer.visible > .eye {
-    background-image: url('/assets/shown.svg');
-  }
-
   .group:not(.visible) .layer {
     opacity: .5;
-  }
-
-  .layer {
-    border-left: 1px solid black;
-    padding-left: .5rem;
-    margin-left: .5rem;
-  }
-
-  .layer,
-  .group > .title {
-    display: flex;
-    align-items: center;
-    gap: .2rem;
-  }
-    
-  .layer > label,
-  .group > .title > b {
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    flex-grow: 1;
-    padding-right: .5rem;
-  }
-    
-  .layer > span,
-  .group > .title > span {
-    flex-shrink: 0;
-    width: 1rem;
   }
 }
 
