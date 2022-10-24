@@ -10,6 +10,9 @@
     CreateImage, DeleteImage,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
+  import type { Group } from 'src/twmap/group'
+  import type { RenderGroup } from 'src/gl/renderGroup'
+  import type { RenderLayer } from 'src/gl/renderLayer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { QuadsLayer } from '../../twmap/quadsLayer'
@@ -30,6 +33,17 @@
   import * as Editor from './editor'
   import { queryImage, externalImageUrl, layerIndex } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
+  import LayerEditor from './editLayer.svelte'
+  import GroupEditor from './editGroup.svelte'
+  import {
+    Layers as LayersIcon,
+    Activity as EnvelopesIcon,
+    Save as SaveIcon,
+    Download as DownloadIcon,
+    Play as PlayIcon,
+    Pause as PauseIcon,
+    SettingsAdjust as EditInfoIcon
+  } from 'carbon-icons-svelte'
   
   type Coord = {
     x: number,
@@ -47,25 +61,17 @@
   let selectedTiles: EditTileParams[][]
   let peerCount = 0
   let infoEditorVisible = false
-  let activeLayer: Layer = map.physicsLayer(GameLayer)
+  let active: [number, number] = map.physicsLayerIndex(GameLayer)
   let rmap = new RenderMap(map)
-
-  $: [ g, l ] = layerIndex(map, activeLayer)
-  $: activeRlayer = rmap.groups[g].layers[l]
-  $: activeRgroup = rmap.groups[g]
-  $: if (activeLayer) activeRlayer = activeRlayer // hack to redraw tileSelector
   
-  $: {
-    for (const rgroup of rmap.groups) {
-      rgroup.active = false
-      for (const rlayer of rgroup.layers) {
-        rlayer.active = false
-      }
-    }
-    activeRlayer.active = true
-    activeRgroup.active = true
-    activeRlayer = activeRlayer // WTF
-  }
+  let g: number, l: number
+  let activeRgroup: RenderGroup | null, activeRlayer: RenderLayer | null
+  let activeGroup: Group | null, activeLayer: Layer | null
+  $: [g, l] = active
+  $: activeRgroup = g === -1 ? null : rmap.groups[g]
+  $: activeRlayer = l === -1 ? null : activeRgroup.layers[l]
+  $: activeGroup = activeRgroup === null ? null : activeRgroup.group
+  $: activeLayer = activeRlayer === null ? null : activeRlayer.layer
   
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
@@ -530,6 +536,13 @@
   function onInfoClose() {
     infoEditorVisible = false
   }
+  
+  function rem2px(rem: number) {
+    return parseFloat(window.getComputedStyle(document.documentElement).fontSize) * rem
+  }
+  function px2percent(px: number) {
+    return px / window.screen.width * 100
+  }
 
 </script>
 
@@ -539,16 +552,12 @@
 
   <div id="menu">
     <div class="left">
-      <button id="nav-toggle" on:click={onToggleTreeView}><img src="/assets/tree.svg" alt="" title="Show layers"></button>
-      <button id="env-toggle" on:click={onToggleEnvEditor}><img src="/assets/envelope.svg" alt="" title="Show envelopes"></button>
-      <button id="save" on:click={onSaveMap}><img src="/assets/save.svg" alt="" title="Save the map on the server"></button>
-      <button id="download" on:click={onDownloadMap}><img src="/assets/download.svg" alt="" title="Download this map to your computer"></button>
-      {#if animEnabled}
-        <button id="anim-toggle" on:click={onToggleAnim}><img src="/assets/pause.svg" alt="pause" title="Pause envelope animations"></button>
-      {:else}
-        <button id="anim-toggle" on:click={onToggleAnim}><img src="/assets/play.svg" alt="play" title="Play envelope animations"></button>
-      {/if}
-      <button id="edit-info" on:click={onEditInfo}><img src="/assets/edit.svg" alt="" title="Edit map properties"></button>
+      <button id="nav-toggle" on:click={onToggleTreeView}><LayersIcon size={20} title="Show layers" /></button>
+      <button id="env-toggle" on:click={onToggleEnvEditor}><EnvelopesIcon size={20} title="Show envelope editor" /></button>
+      <button id="save" on:click={onSaveMap}><SaveIcon size={20} title="Save map on server" /></button>
+      <button id="download" on:click={onDownloadMap}><DownloadIcon size={20} title="Download this map on your computer" /></button>
+      <button id="anim-toggle" on:click={onToggleAnim}><svelte:component size={20} this={animEnabled ? PauseIcon : PlayIcon} title="Play/Pause envelopes animations" /></button>
+      <button id="edit-info" on:click={onEditInfo}><EditInfoIcon size={20} title="Edit map properties" /></button>
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
@@ -558,34 +567,48 @@
     </div>
   </div>
 
-  <Splitpanes id="panes">
+  <Splitpanes horizontal id="panes" dblClickSplitter={false}>
     <Pane>
-      <TreeView {rmap} />
+      <Splitpanes dblClickSplitter={false}>
+        <Pane size={px2percent(rem2px(15))}>
+          <TreeView {rmap} bind:active />
+        </Pane>
+
+        <Pane class="viewport">
+          <div id="canvas-container" bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
+            <!-- Here goes the canvas on mount() -->
+            <div id="clip-outline" style={clipOutlineStyle}></div>
+            {#if activeLayer instanceof AnyTilesLayer}
+              <div id="hover-tile" style={hoverTileStyle}></div>
+              <div id="layer-outline" style={layerOutlineStyle}></div>
+            {:else if activeLayer instanceof QuadsLayer}
+              <QuadsView {rmap} layer={activeLayer} />
+            {/if}
+            <div class="box-select" style={boxStyle}></div>
+            <!-- <Statusbar /> -->
+          </div>
+          {#if activeRlayer instanceof RenderAnyTilesLayer}
+            <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} />
+          {/if}
+        </Pane>
+
+        <Pane class="properties" size={px2percent(rem2px(15))}>
+          {#if activeLayer !== null}
+            <LayerEditor {rmap} {g} {l} />
+          {:else if activeGroup !== null}
+            <GroupEditor {rmap} {g} />
+          {:else}
+            <span>Select a group or a layer in the left bar.</span>
+          {/if}
+        </Pane>
+      </Splitpanes>
     </Pane>
-    <Pane class="viewport">
-      <div bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
-        <!-- Here goes the canvas on mount() -->
-        <div id="clip-outline" style={clipOutlineStyle}></div>
-        {#if activeLayer instanceof AnyTilesLayer}
-          <div id="hover-tile" style={hoverTileStyle}></div>
-          <div id="layer-outline" style={layerOutlineStyle}></div>
-        {:else if activeLayer instanceof QuadsLayer}
-          <QuadsView {rmap} layer={activeLayer} />
-        {/if}
-        <div class="box-select" style={boxStyle}></div>
-        <!-- <Statusbar /> -->
-      </div>
+
+    <Pane>
+      <EnvelopeEditor {rmap} />
     </Pane>
-    <Pane></Pane>
   </Splitpanes>
 
-
-  {#if activeRlayer instanceof RenderAnyTilesLayer}
-    <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} />
-  {/if}
-
-  
-  <EnvelopeEditor visible={envEditorVisible} {rmap} />
 
   {#if infoEditorVisible}
     <InfoEditor info={map.info}

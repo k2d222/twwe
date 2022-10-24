@@ -18,24 +18,28 @@ ol, ul {
 $menu_h: 3rem;
 
 #panes {
-  > .splitpanes__pane {
-    height: calc(100vh - $menu-h);
+  height: calc(100vh - $menu-h);
+  
+  .splitpanes__splitter {
+    
+    &:before, &:after {
+      background-color: #aaa;
+    }
   }
   
-  > .splitpanes__splitter {
-    border: 0;
-    margin: 0;
-  }
-  
-  > .splitpanes__pane.viewport {
+  .splitpanes__pane.viewport {
     position: relative;
 
-    > div {
+    #canvas-container {
       position: absolute;
       width: 100%;
       height: 100%;
       clip: rect(0, auto, auto, 0);
     }
+  }
+  
+  .splitpanes__pane.properties {
+    padding: 1rem;
   }
 }
 
@@ -53,15 +57,13 @@ canvas {
   justify-content: space-between;
   display: flex;
   flex-direction: row;
-  background: white;
-  padding: .5rem 1rem;
-  border-bottom: 1px solid lightgrey;
+  background: #161616;
+  color: white;
 
   > .left, > .right, > .middle {
     display: flex;
     align-items: center;
     flex-direction: row;
-    gap: 1rem;
     flex-basis: 0;
     flex-grow: 1;
   }
@@ -72,25 +74,34 @@ canvas {
   
   .right {
     justify-content: flex-end;
+    margin-right: 1rem;
   }
 
-  #map-name {
-    font-size: 1.3rem;
-  }
-  
   button {
-    height: 100%;
+    width: $menu_h;
+    height: $menu_h;
     display:flex;
+    justify-content: center;
     align-items: center;
-    gap: .2rem;
+    background: transparent;
+    border: none;
+    outline: none;
+    margin: 0;
+    padding: 0;
+    
+    > svg {
+      fill: white;
+    }
+    
+    &:hover, &:focus {
+      background: #393939;
+    }
+    
+    &:focus {
+      outline: 2px solid #0f62fe;
+      outline-offset: -2px;
+    }
   }
-  
-  // #edit-info {
-  //   background: none;
-  //   // border: none;
-  //   border: 1px solid grey;
-  //   border-radius: 3px;
-  // }
 }
 
 #dialog {
@@ -224,8 +235,6 @@ canvas {
 }
 
 #tile-selector {
-  z-index: 10;
-  
   canvas {
     width: 100%;
     height: 100%;
@@ -254,7 +263,7 @@ canvas {
   }
   
   .tile.selected {
-    position: fixed;
+    position: absolute;
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%);
@@ -487,7 +496,6 @@ canvas {
   gap: .5rem;
 
   span {
-    text-align: center;
     font-weight: bold;
   }
   
@@ -723,16 +731,9 @@ nav.hidden .context {
 }
 
 #envelope-editor {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: white;
-  transition: transform .3s;
-  border-top: 1px solid lightgrey;
-  box-shadow: 0 0 10px -5px black;
   display: flex;
   flex-direction: column;
+  height: 100%;
 
   &.hidden {
     transform: translateY(100%);
@@ -752,12 +753,14 @@ nav.hidden .context {
   
   .graph {
     flex-grow: 1;
+    position: relative;
+    background: white;
   }
   
   svg {
-    display: block;
+    position: absolute;
     width: 100%;
-    height: 30vh;
+    height: 100%;
   }
 
   path {

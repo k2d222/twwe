@@ -24,7 +24,6 @@
   }
   
   export let rmap: RenderMap
-  export let visible: boolean = false
   export let selected: Envelope | null = null
   
   let viewBox: ViewBox = { x: 0, y: 0, w: 0, h: 0 }
@@ -511,7 +510,7 @@
 
 <svelte:window on:resize={onResize} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
-<div id="envelope-editor" class:hidden={!visible}>
+<div id="envelope-editor">
   <div class="header">
     {#if selected}
       <select on:change={(e) => selected = rmap.map.envelopes[e.currentTarget.value]}>
