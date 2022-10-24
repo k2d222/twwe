@@ -9,6 +9,7 @@
 
   export let url = ""
 
+  import 'carbon-components/scss/components/modal/_modal.scss'
 </script>
 
 {#await pServer}

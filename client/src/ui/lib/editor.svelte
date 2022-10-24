@@ -31,7 +31,7 @@
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl, layerIndex } from './util'
+  import { queryImage, externalImageUrl } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
@@ -42,8 +42,11 @@
     Download as DownloadIcon,
     Play as PlayIcon,
     Pause as PauseIcon,
-    SettingsAdjust as EditInfoIcon
+    SettingsAdjust as EditInfoIcon,
+    Image as ImagesIcon,
+    Music as SoundsIcon,
   } from 'carbon-icons-svelte'
+import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte';
   
   type Coord = {
     x: number,
@@ -76,7 +79,6 @@
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
   }
-
   function serverOnEditTile(e: EditTile) {
     rmap.editTile(e)
     // rmap = rmap // hack to redraw treeview
@@ -519,7 +521,8 @@
     infoEditorVisible = !infoEditorVisible
   }
   
-  async function onInfoChange() {
+  async function onInfoClose() {
+    infoEditorVisible = false
     try {
       showInfo('Please wait…')
       const change: EditMap = {
@@ -531,10 +534,6 @@
     } catch (e) {
       showError('Failed to edit map info: ' + e)
     }
-  }
-  
-  function onInfoClose() {
-    infoEditorVisible = false
   }
   
   function rem2px(rem: number) {
@@ -552,12 +551,14 @@
 
   <div id="menu">
     <div class="left">
-      <button id="nav-toggle" on:click={onToggleTreeView}><LayersIcon size={20} title="Show layers" /></button>
-      <button id="env-toggle" on:click={onToggleEnvEditor}><EnvelopesIcon size={20} title="Show envelope editor" /></button>
+      <button id="nav-toggle" on:click={onToggleTreeView}><LayersIcon size={20} title="Layers" /></button>
+      <button id="env-toggle" on:click={onToggleEnvEditor}><EnvelopesIcon size={20} title="Envelopes" /></button>
+      <button id="images-toggle" disabled><ImagesIcon size={20} title="Images" /></button>
+      <button id="sounds-toggle" disabled><SoundsIcon size={20} title="Sounds" /></button>
+      <button id="info-toggle" on:click={onEditInfo}><EditInfoIcon size={20} title="Map properties" /></button>
       <button id="save" on:click={onSaveMap}><SaveIcon size={20} title="Save map on server" /></button>
       <button id="download" on:click={onDownloadMap}><DownloadIcon size={20} title="Download this map on your computer" /></button>
       <button id="anim-toggle" on:click={onToggleAnim}><svelte:component size={20} this={animEnabled ? PauseIcon : PlayIcon} title="Play/Pause envelopes animations" /></button>
-      <button id="edit-info" on:click={onEditInfo}><EditInfoIcon size={20} title="Edit map properties" /></button>
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
@@ -570,7 +571,7 @@
   <Splitpanes horizontal id="panes" dblClickSplitter={false}>
     <Pane>
       <Splitpanes dblClickSplitter={false}>
-        <Pane size={px2percent(rem2px(15))}>
+        <Pane class="layers" size={px2percent(rem2px(15))}>
           <TreeView {rmap} bind:active />
         </Pane>
 
@@ -604,15 +605,17 @@
       </Splitpanes>
     </Pane>
 
-    <Pane>
+    <Pane size={0}>
       <EnvelopeEditor {rmap} />
     </Pane>
   </Splitpanes>
 
 
-  {#if infoEditorVisible}
-    <InfoEditor info={map.info}
-      on:close={onInfoClose} on:change={onInfoChange} />
-  {/if}
+  <ComposedModal open={infoEditorVisible} on:close={onInfoClose}>
+    <ModalHeader title="Map Properties" />
+    <ModalBody hasForm>
+      <InfoEditor info={map.info}/>
+    </ModalBody>
+  </ComposedModal>
 
 </div>

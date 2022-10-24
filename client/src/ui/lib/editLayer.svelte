@@ -276,7 +276,7 @@
 
 
 <div class="edit-layer">
-  <span>{layerName(layer)}</span>
+  <h3 class="bx--modal-header__heading">{layerName(layer)}</h3>
   {#if !isPhysicsLayer(layer)}
     <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g} on:change={onEditGroup} /></label>
   {/if}

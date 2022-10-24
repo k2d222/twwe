@@ -130,7 +130,7 @@
 
 
 <div class='edit-group'>  
-  <span>Group #{g} {group.name}</span>
+  <h3 class="bx--modal-header__heading">Group #{g} {group.name}</h3>
   <label>Order <input type="number" min={0} max={rmap.groups.length - 1} value={g} on:change={onEditOrder}></label>
   {#if group !== rmap.physicsGroup.group}
     <label>Pos X <input type="number" value={group.offX} on:change={onEditPosX}></label>

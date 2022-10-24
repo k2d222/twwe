@@ -1,3 +1,7 @@
+.bx--modal-content {
+  margin-bottom: 1rem !important;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -14,6 +18,31 @@ ol, ul {
   padding: 0;
 }
 
+input[type=number],
+input[type=text],
+input[type=button],
+input[type=color],
+select,
+textarea
+{
+  border: none;
+  padding: .25rem .4rem;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  background-color: #f2f2f2;
+
+  outline: 1px solid #aaaaaa;
+  outline-offset: -1px;
+  
+  &:hover {
+    outline: 1px solid #393939;
+    outline-offset: -1px;
+  }
+  &:focus {
+    outline: 2px solid #0f62fe;
+    outline-offset: -2px;
+  }
+}
 
 $menu_h: 3rem;
 
@@ -21,10 +50,18 @@ $menu_h: 3rem;
   height: calc(100vh - $menu-h);
   
   .splitpanes__splitter {
+    border: 0;
+    margin: 0;
+    background-color: #f2f2f2;
+    z-index: unset;
     
     &:before, &:after {
       background-color: #aaa;
     }
+  }
+  
+  > .splitpanes__splitter {
+    background-color: white;
   }
   
   .splitpanes__pane.viewport {
@@ -37,9 +74,14 @@ $menu_h: 3rem;
       clip: rect(0, auto, auto, 0);
     }
   }
+
+  .splitpanes__pane.layers {
+    overflow: auto;
+  }
   
   .splitpanes__pane.properties {
     padding: 1rem;
+    overflow: auto;
   }
 }
 
@@ -493,15 +535,12 @@ canvas {
 .edit-layer, .edit-group, .edit-quad, .edit-info, .edit-env-point {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
-
-  span {
-    font-weight: bold;
-  }
+  gap: 1rem;
   
   label {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     width: 100%;
     gap: 1rem;
   }
@@ -801,20 +840,4 @@ nav.hidden .context {
 
 #tile-selector .box-select {
   position: absolute;
-}
-
-#info-editor {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0, 0, 0, .5);
-  padding: 5rem;
-  
-  .content {
-    background: white;
-    padding: 1rem;
-    border: 1px solid black;
-  }
 }
