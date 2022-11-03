@@ -23,7 +23,9 @@ input[type=text],
 input[type=button],
 input[type=color],
 select,
-textarea
+textarea,
+button.danger,
+button.default
 {
   border: none;
   padding: .25rem .4rem;
@@ -44,6 +46,15 @@ textarea
   }
 }
 
+button.large {
+  padding: .5rem .8rem;
+}
+
+button.danger {
+  color: white;
+  background-color: #da1e28;
+}
+
 $menu_h: 3rem;
 
 #panes {
@@ -52,11 +63,11 @@ $menu_h: 3rem;
   .splitpanes__splitter {
     border: 0;
     margin: 0;
-    background-color: #f2f2f2;
+    // background-color: #f2f2f2;
     z-index: unset;
     
     &:before, &:after {
-      background-color: #aaa;
+      background-color: #888;
     }
   }
   

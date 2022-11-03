@@ -306,6 +306,6 @@
     <label>Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName}></label>
   {/if}
   {#if !(layer instanceof GameLayer)}
-    <button on:click={onDelete}>Delete layer</button>
+    <button class="danger large" on:click={onDelete}>Delete layer</button>
   {/if}
 </div>

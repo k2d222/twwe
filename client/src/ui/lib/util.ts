@@ -91,3 +91,13 @@ export function layerIndex(map: Map, layer: Layer): [number, number] {
   return [ -1, -1 ]
 }
 
+export function rem2px(rem: number) {
+  return parseFloat(window.getComputedStyle(document.documentElement).fontSize) * rem
+}
+export function px2vw(px: number) {
+  return px / window.screen.width * 100
+}
+export function px2vh(px: number) {
+  return px / window.screen.height * 100
+}
+

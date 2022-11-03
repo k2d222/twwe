@@ -30,7 +30,7 @@
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl } from './util'
+  import { queryImage, externalImageUrl, px2vw, rem2px } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
@@ -65,9 +65,13 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   let rmap = new RenderMap(map)
     
   // split panes
-  let layerPaneSize = px2percent(rem2px(15))
-  let propsPaneSize = px2percent(rem2px(15))
+  let layerPaneSize = px2vw(rem2px(15))
+  let propsPaneSize = px2vw(rem2px(15))
   let topPaneSize = 0
+  let lastLayerPaneSize = layerPaneSize
+  let lastPropsPaneSize = propsPaneSize
+  let lastTopPaneSize = 50
+  let closedPaneThreshold = px2vw(rem2px(2))
   
   let g: number, l: number
   let activeRgroup: RenderGroup | null, activeRlayer: RenderLayer | null
@@ -340,11 +344,8 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     destroyed = true
   })
 
-  let lastLayerPaneSize = layerPaneSize
-  let lastPropsPaneSize = propsPaneSize
-
   function onToggleLayerPanes() {
-    if (layerPaneSize < px2percent(20) || propsPaneSize < px2percent(20)) {
+    if (layerPaneSize < closedPaneThreshold || propsPaneSize < closedPaneThreshold) {
       layerPaneSize = lastLayerPaneSize
       propsPaneSize = lastPropsPaneSize
     }
@@ -356,8 +357,14 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     }
   }
 
-  function onToggleEnvEditor() {
-    topPaneSize = topPaneSize < px2percent(20) ? 50 : 0
+  function onToggleTopPane() {
+    if (topPaneSize < closedPaneThreshold) {
+      topPaneSize = lastTopPaneSize
+    }
+    else {
+      lastTopPaneSize = topPaneSize
+      topPaneSize = 0
+    }
   }
 
   function onToggleAnim() {
@@ -539,13 +546,6 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     }
   }
   
-  function rem2px(rem: number) {
-    return parseFloat(window.getComputedStyle(document.documentElement).fontSize) * rem
-  }
-  function px2percent(px: number) {
-    return px / window.screen.width * 100
-  }
-
 </script>
 
 <svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:keypress={onKeyPress} />
@@ -555,7 +555,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   <div id="menu">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleLayerPanes}><LayersIcon size={20} title="Layers" /></button>
-      <button id="env-toggle" on:click={onToggleEnvEditor}><EnvelopesIcon size={20} title="Envelopes" /></button>
+      <button id="env-toggle" on:click={onToggleTopPane}><EnvelopesIcon size={20} title="Envelopes" /></button>
       <button id="images-toggle" disabled><ImagesIcon size={20} title="Images" /></button>
       <button id="sounds-toggle" disabled><SoundsIcon size={20} title="Sounds" /></button>
       <button id="info-toggle" on:click={onEditInfo}><EditInfoIcon size={20} title="Map properties" /></button>
@@ -576,7 +576,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
       <EnvelopeEditor {rmap} />
     </Pane>
 
-    <Pane>
+    <Pane size={100 - topPaneSize}>
       <Splitpanes dblClickSplitter={false}>
         <Pane class="layers" bind:size={layerPaneSize}>
           <TreeView {rmap} bind:active />
