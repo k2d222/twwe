@@ -1,3 +1,4 @@
+import type { Layer } from './layer'
 import * as Info from './types'
 import { GameLayer, FrontLayer, TeleLayer, SpeedupLayer, SwitchLayer, TuneLayer } from './tilesLayer'
 import { DataFile } from './datafile'
@@ -46,6 +47,20 @@ export class Map {
     this.envelopes = this.loadEnvelopes(df)
     this.groups = this.loadGroups(df)
     this.info = this.loadInfo(df)
+  }
+  
+  groupIndex(group: Group): number {
+    return this.groups.indexOf(group)
+  }
+  
+  layerIndex(layer: Layer): [number, number] {
+    for (let g = 0; g < this.groups.length; g++) {
+      const group = this.groups[g]
+      const l = group.layers.indexOf(layer)
+      if (l !== -1)
+        return [g, l]
+    }
+    return [-1, -1]
   }
   
   physicsGroupIndex(): number {

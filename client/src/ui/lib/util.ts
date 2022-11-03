@@ -8,6 +8,9 @@ import { TilesLayerFlags } from '../../twmap/types'
 
 export type Ctor<T> = new(...args: any[]) => T
 
+export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
+export type FormInputEvent = FormEvent<HTMLInputElement>
+
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
     const img = document.createElement('img')

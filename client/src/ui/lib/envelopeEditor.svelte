@@ -534,7 +534,7 @@
           <label><b style:color="red">V</b><input type="checkbox" bind:checked={channelEnabled.sound_v} /></label>
         {/if}
       </div>
-      <button on:click={onRescale}>Rescale</button>
+      <button class="default" on:click={onRescale}>Rescale</button>
     {/if}
     <div class="buttons">
       <select on:change={onNewEnv}>
@@ -543,7 +543,7 @@
         <option value='position'>Position</option>
         <option value='sound'>Sound</option>
       </select>
-      <button on:click={onDelete} disabled={selected === null}>Delete</button>
+      <button class="danger" on:click={onDelete} disabled={selected === null}>Delete</button>
     </div>
   </div>
   

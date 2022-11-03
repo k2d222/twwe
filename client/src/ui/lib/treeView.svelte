@@ -28,12 +28,31 @@
     }
   })
 
+  // if active is changed, and some node is focused, focus active instead.
+  $: if (self && active[0] !== -1) {
+    const focused = self.querySelector(':focus')
+    if (focused) {
+      const [g, l] = active
+      const group = self.children[g]
+      if (l === -1) {
+        const node = group.firstElementChild as HTMLElement
+        node.focus()
+      }
+      else {
+        const layer = group.lastElementChild.children[l]
+        const node = layer.firstElementChild as HTMLElement
+        node.focus()
+      }
+    }
+  }
+  
+  
   function layerName(layer: Layer) {
     if (layer.name) {
       return layer.name
     }
     else if ((layer instanceof QuadsLayer || layer instanceof TilesLayer) && layer.image) {
-      return '(' + layer.image.name + ')'
+      return '<span style="font-style:italic">(' + layer.image.name + ')</span>'
     }
     else {
       return '…'
@@ -135,7 +154,7 @@
               on:keydown={(e) => onKeyDown(g, l, e)}
             >
               <span class="icon"><svelte:component this={layerIcon(layer)} /></span>
-              <span class="label">{layerName(layer)}</span>
+              <span class="label">{@html layerName(layer)}</span>
               <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}>
                 <svelte:component this={rlayer.visible ? View: ViewOff}/>
               </span>

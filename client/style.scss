@@ -140,6 +140,9 @@ canvas {
     > svg {
       fill: white;
     }
+    &[disabled] > svg {
+      fill: grey;
+    }
     
     &:hover, &:focus {
       background: #393939;

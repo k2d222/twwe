@@ -354,10 +354,10 @@ function onKeyUp(e: KeyboardEvent) {
   </div>
   <div class="settings" class:hidden = {!settingsVisible}>
     <div class="buttons">
-      <button on:click={onFlipV}><img alt="Flip Vertically" src="/assets/flip-v.svg"/></button>
-      <button on:click={onFlipH}><img alt="Flip Horizontally" src="/assets/flip-h.svg"/></button>
-      <button on:click={onRotateCW}><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg"/></button>
-      <button on:click={onRotateCCW}><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg"/></button>
+      <button class="default" on:click={onFlipV}><img alt="Flip Vertically" src="/assets/flip-v.svg"/></button>
+      <button class="default" on:click={onFlipH}><img alt="Flip Horizontally" src="/assets/flip-h.svg"/></button>
+      <button class="default" on:click={onRotateCW}><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg"/></button>
+      <button class="default" on:click={onRotateCCW}><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg"/></button>
     </div>
     {#if rlayer.layer instanceof TeleLayer}
       <label>Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number}></label>

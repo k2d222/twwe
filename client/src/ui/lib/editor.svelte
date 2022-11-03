@@ -62,6 +62,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   let peerCount = 0
   let infoEditorVisible = false
   let active: [number, number] = map.physicsLayerIndex(GameLayer)
+  let selected: [number, number][] = [active]
   let rmap = new RenderMap(map)
     
   // split panes
@@ -70,9 +71,10 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   let topPaneSize = 0
   let lastLayerPaneSize = layerPaneSize
   let lastPropsPaneSize = propsPaneSize
-  let lastTopPaneSize = 50
+  let lastTopPaneSize = 20
   let closedPaneThreshold = px2vw(rem2px(2))
   
+  // computed (readonly)
   let g: number, l: number
   let activeRgroup: RenderGroup | null, activeRlayer: RenderLayer | null
   let activeGroup: Group | null, activeLayer: Layer | null
@@ -82,12 +84,100 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   $: activeGroup = activeRgroup === null ? null : activeRgroup.group
   $: activeLayer = activeRlayer === null ? null : activeRlayer.layer
   
+  async function onCreateLayer(e: CreateLayer) {
+    showInfo('Creating layer…')
+    try {
+      await server.query('createlayer', e)
+      serverOnCreateLayer(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to create layer: ' + e)
+    }
+  }
+  async function onDeleteLayer(e: DeleteLayer) {
+    showInfo('Deleting layer…')
+    try {
+      await server.query('deletelayer', e)
+      serverOnDeleteLayer(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to delete layer: ' + e)
+    }
+  }
+  async function onEditLayer(e: EditLayer) {
+    showInfo('Please wait…')
+    try {
+      await server.query('editlayer', e)
+      serverOnEditLayer(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to edit layer: ' + e)
+    }
+  }
+  async function onReorderLayer(e: ReorderLayer) {
+    showInfo('Please wait…')
+    try {
+      await server.query('reorderlayer', e)
+      serverOnReorderLayer(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to reorder layer: ' + e)
+    }
+  }
+  async function onCreateGroup(e: CreateGroup) {
+    showInfo('Creating group…')
+    try {
+      await server.query('creategroup', e)
+      serverOnCreateGroup(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to create group: ' + e)
+    }
+  }
+  async function onDeleteGroup(e: DeleteGroup) {
+    showInfo('Deleting group…')
+    try {
+      await server.query('deletegroup', e)
+      serverOnDeleteGroup(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to delete group: ' + e)
+    }
+  }
+  async function onEditGroup(e: EditGroup) {
+    showInfo('Please wait…')
+    try {
+      await server.query('editgroup', e)
+      serverOnEditGroup(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to edit group: ' + e)
+    }
+  }
+  async function onReorderGroup(e: ReorderGroup) {
+    showInfo('Please wait…')
+    try {
+      await server.query('reordergroup', e)
+      serverOnReorderGroup(e)
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to reorder group: ' + e)
+    }
+  }
+
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
   }
   function serverOnEditTile(e: EditTile) {
     rmap.editTile(e)
-    // rmap = rmap // hack to redraw treeview
   }
   function serverOnCreateQuad(e: CreateQuad) {
     rmap.createQuad(e)
@@ -131,22 +221,30 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   }
   function serverOnDeleteGroup(e: DeleteGroup) {
     const deleted = rmap.deleteGroup(e)
-    if (deleted.layers.includes(activeRlayer))
-      activeLayer = rmap.gameLayer.layer
+    if (activeRlayer && deleted.layers.includes(activeRlayer))
+      active = map.physicsLayerIndex(GameLayer)
+    selected = selected.filter(([g, _]) => g !== e.group)
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteLayer(e: DeleteLayer) {
     const deleted = rmap.deleteLayer(e)
-    if (deleted === activeRlayer)
-      activeLayer = rmap.gameLayer.layer
+    if (activeRlayer && deleted === activeRlayer)
+      active = map.physicsLayerIndex(GameLayer)
+    selected = selected.filter(([g, l]) => g !== e.group || l !== e.layer)
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderGroup(e: ReorderGroup) {
     rmap.reorderGroup(e)
+    if (activeLayer)
+      active = map.layerIndex(activeLayer)
+    selected = [active] // TODO: keep selected layers
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderLayer(e: ReorderLayer) {
     rmap.reorderLayer(e)
+    if (activeLayer)
+      active = map.layerIndex(activeLayer)
+    selected = [active] // TODO: keep selected layers
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {
@@ -579,7 +677,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     <Pane size={100 - topPaneSize}>
       <Splitpanes dblClickSplitter={false}>
         <Pane class="layers" bind:size={layerPaneSize}>
-          <TreeView {rmap} bind:active />
+          <TreeView {rmap} bind:active bind:selected />
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>
@@ -602,9 +700,18 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 
         <Pane class="properties" bind:size={propsPaneSize}>
           {#if activeLayer !== null}
-            <LayerEditor {rmap} {g} {l} />
+            <LayerEditor {rmap} {g} {l}
+              on:deletelayer={(e) => onDeleteLayer(e.detail)}
+              on:editlayer={(e) => onEditLayer(e.detail)}
+              on:reorderlayer={(e) => onReorderLayer(e.detail)}
+            />
           {:else if activeGroup !== null}
-            <GroupEditor {rmap} {g} />
+            <GroupEditor {rmap} {g}
+              on:createlayer={(e) => onCreateLayer(e.detail)}
+              on:deletegroup={(e) => onDeleteGroup(e.detail)}
+              on:editgroup={(e) => onEditGroup(e.detail)}
+              on:reordergroup={(e) => onReorderGroup(e.detail)}
+            />
           {:else}
             <span>Select a group or a layer in the left bar.</span>
           {/if}

@@ -1,8 +1,9 @@
 <script lang="ts">
-  import type { EditLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
+  import type { EditLayer, DeleteLayer, ReorderLayer, RequestContent } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
+  import type { FormEvent, FormInputEvent } from './util'
   import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
@@ -14,10 +15,10 @@
   import ImagePicker from './imagePicker.svelte'
   import { createEventDispatcher } from 'svelte'
 
-  type FormEvent<T> = Event & { currentTarget: EventTarget & T }
-  type FormInputEvent = FormEvent<HTMLInputElement>
+  type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
+  type EventMap = { [K in Events]: RequestContent[K] }
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<EventMap>()
   
   export let rmap: RenderMap
   export let g: number
@@ -51,38 +52,14 @@
     }
   }
 
-  async function onEditLayer(change: EditLayer) {
-    try {
-      showInfo('Please wait…')
-      await server.query('editlayer', change)
-      rmap.editLayer(change)
-      clearDialog()
-      dispatch('change')
-    } catch (e) {
-      showError('Failed to edit layer: ' + e)
-    }
+  function onEditLayer(change: EditLayer) {
+    dispatch('editlayer', change)
   }
-  async function onReorderLayer(change: ReorderLayer) {
-    try {
-      showInfo('Please wait…')
-      await server.query('reorderlayer', change)
-      rmap.reorderLayer(change)
-      clearDialog()
-      dispatch('change')
-    } catch (e) {
-      showError('Failed to reorder layer: ' + e)
-    }
+  function onReorderLayer(change: ReorderLayer) {
+    dispatch('reorderlayer', change)
   }
-  async function onDeleteLayer(change: DeleteLayer) {
-    try {
-      showInfo('Please wait…')
-      await server.query('deletelayer', change)
-      rmap.deleteLayer(change)
-      clearDialog()
-      dispatch('change')
-    } catch (e) {
-      showError('Failed to delete layer: ' + e)
-    }
+  function onDeleteLayer(change: DeleteLayer) {
+    dispatch('deletelayer', change)
   }
 
   function layerName(layer: Layer) {
@@ -221,7 +198,7 @@
       onReorderLayer({ group: g, layer: l, newGroup, newLayer: 0 })
   }
   function onEditOrder(e: FormInputEvent) {
-    const newLayer = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
+    const newLayer = clamp(parseInt(e.currentTarget.value), 0, group.layers.length - 1)
     if (!isNaN(newLayer))
       onReorderLayer({ group: g, layer: l, newGroup: g, newLayer })
   }
