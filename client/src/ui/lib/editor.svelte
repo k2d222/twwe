@@ -26,7 +26,6 @@
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
   import { showInfo, showError, clearDialog } from './dialog'
-  import Statusbar from './statusbar.svelte'
   import QuadsView from './quadsView.svelte'
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
@@ -57,8 +56,6 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 
   let cont: HTMLElement
   let viewport: Viewport
-  let treeViewVisible = true
-  let envEditorVisible = false
   let animEnabled = false
   let currentTime = 0
   let selectedTiles: EditTileParams[][]
@@ -66,6 +63,11 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   let infoEditorVisible = false
   let active: [number, number] = map.physicsLayerIndex(GameLayer)
   let rmap = new RenderMap(map)
+    
+  // split panes
+  let layerPaneSize = px2percent(rem2px(15))
+  let propsPaneSize = px2percent(rem2px(15))
+  let topPaneSize = 0
   
   let g: number, l: number
   let activeRgroup: RenderGroup | null, activeRlayer: RenderLayer | null
@@ -338,12 +340,24 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     destroyed = true
   })
 
-  function onToggleTreeView() {
-    treeViewVisible = !treeViewVisible
+  let lastLayerPaneSize = layerPaneSize
+  let lastPropsPaneSize = propsPaneSize
+
+  function onToggleLayerPanes() {
+    if (layerPaneSize < px2percent(20) || propsPaneSize < px2percent(20)) {
+      layerPaneSize = lastLayerPaneSize
+      propsPaneSize = lastPropsPaneSize
+    }
+    else {
+      lastLayerPaneSize = layerPaneSize
+      lastPropsPaneSize = propsPaneSize
+      layerPaneSize = 0
+      propsPaneSize = 0
+    }
   }
 
   function onToggleEnvEditor() {
-    envEditorVisible = !envEditorVisible
+    topPaneSize = topPaneSize < px2percent(20) ? 50 : 0
   }
 
   function onToggleAnim() {
@@ -367,8 +381,6 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     Editor.downloadMap(map.name)
   }
   
-  let lastTreeViewVisible = treeViewVisible
-  let lastEnvEditorVisible = envEditorVisible
   let ctrlKey = false
   let shiftKey = false
 
@@ -396,16 +408,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
       e.preventDefault()
 
       if (e.key === 'Tab') {
-        if (treeViewVisible || envEditorVisible) {
-          lastTreeViewVisible = treeViewVisible
-          lastEnvEditorVisible = envEditorVisible
-          treeViewVisible = false
-          envEditorVisible = false
-        }
-        else {
-          treeViewVisible = lastTreeViewVisible
-          envEditorVisible = lastEnvEditorVisible
-        }
+        onToggleLayerPanes()
       }
     }
   }
@@ -551,7 +554,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 
   <div id="menu">
     <div class="left">
-      <button id="nav-toggle" on:click={onToggleTreeView}><LayersIcon size={20} title="Layers" /></button>
+      <button id="nav-toggle" on:click={onToggleLayerPanes}><LayersIcon size={20} title="Layers" /></button>
       <button id="env-toggle" on:click={onToggleEnvEditor}><EnvelopesIcon size={20} title="Envelopes" /></button>
       <button id="images-toggle" disabled><ImagesIcon size={20} title="Images" /></button>
       <button id="sounds-toggle" disabled><SoundsIcon size={20} title="Sounds" /></button>
@@ -569,14 +572,18 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   </div>
 
   <Splitpanes horizontal id="panes" dblClickSplitter={false}>
+    <Pane bind:size={topPaneSize}>
+      <EnvelopeEditor {rmap} />
+    </Pane>
+
     <Pane>
       <Splitpanes dblClickSplitter={false}>
-        <Pane class="layers" size={px2percent(rem2px(15))}>
+        <Pane class="layers" bind:size={layerPaneSize}>
           <TreeView {rmap} bind:active />
         </Pane>
 
-        <Pane class="viewport">
-          <div id="canvas-container" bind:this={cont} tabindex={1} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
+        <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>
+          <div id="canvas-container" bind:this={cont} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
             <!-- Here goes the canvas on mount() -->
             <div id="clip-outline" style={clipOutlineStyle}></div>
             {#if activeLayer instanceof AnyTilesLayer}
@@ -593,7 +600,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
           {/if}
         </Pane>
 
-        <Pane class="properties" size={px2percent(rem2px(15))}>
+        <Pane class="properties" bind:size={propsPaneSize}>
           {#if activeLayer !== null}
             <LayerEditor {rmap} {g} {l} />
           {:else if activeGroup !== null}
@@ -604,14 +611,10 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
         </Pane>
       </Splitpanes>
     </Pane>
-
-    <Pane size={0}>
-      <EnvelopeEditor {rmap} />
-    </Pane>
   </Splitpanes>
 
 
-  <ComposedModal open={infoEditorVisible} on:close={onInfoClose}>
+  <ComposedModal open={infoEditorVisible} on:close={onInfoClose} selectorPrimaryFocus=".bx--modal-close">
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
       <InfoEditor info={map.info}/>

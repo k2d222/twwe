@@ -75,12 +75,7 @@ $menu_h: 3rem;
     }
   }
 
-  .splitpanes__pane.layers {
-    overflow: auto;
-  }
-  
-  .splitpanes__pane.properties {
-    padding: 1rem;
+  .splitpanes__pane.layers, .splitpanes__pane.properties {
     overflow: auto;
   }
 }
@@ -536,6 +531,7 @@ canvas {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  padding: 1rem;
   
   label {
     display: flex;
