@@ -68,7 +68,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
   let propsPaneSize = px2vw(rem2px(15))
-  let topPaneSize = 0
+  let envPaneSize = 0
   let lastLayerPaneSize = layerPaneSize
   let lastPropsPaneSize = propsPaneSize
   let lastTopPaneSize = 20
@@ -456,12 +456,12 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   }
 
   function onToggleTopPane() {
-    if (topPaneSize < closedPaneThreshold) {
-      topPaneSize = lastTopPaneSize
+    if (envPaneSize < closedPaneThreshold) {
+      envPaneSize = lastTopPaneSize
     }
     else {
-      lastTopPaneSize = topPaneSize
-      topPaneSize = 0
+      lastTopPaneSize = envPaneSize
+      envPaneSize = 0
     }
   }
 
@@ -670,11 +670,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   </div>
 
   <Splitpanes horizontal id="panes" dblClickSplitter={false}>
-    <Pane bind:size={topPaneSize}>
-      <EnvelopeEditor {rmap} />
-    </Pane>
-
-    <Pane size={100 - topPaneSize}>
+    <Pane size={100 - envPaneSize}>
       <Splitpanes dblClickSplitter={false}>
         <Pane class="layers" bind:size={layerPaneSize}>
           <TreeView {rmap} bind:active bind:selected />
@@ -717,6 +713,10 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
           {/if}
         </Pane>
       </Splitpanes>
+    </Pane>
+
+    <Pane bind:size={envPaneSize}>
+      <EnvelopeEditor {rmap} />
     </Pane>
   </Splitpanes>
 
