@@ -28,8 +28,11 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   $: rgroup = rmap.groups[g]
   $: group = rgroup.group
   $: rlayer = rgroup.layers[l]
-  $: layer = rlayer.layer
+  $: layer = rlayer.layer as TilesLayer | QuadsLayer
   $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
+  
+  $: images = rmap.map.images
+  $: image = layer.image
 
   function parseI32(str: string) {
     return clamp(parseInt(str), -2_147_483_648, 2_147_483_647)
@@ -92,109 +95,91 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   }
 
   let imagePickerOpen = false
-  function openFilePicker() {
-    imagePickerOpen = true
-    return
 
-    // if (!(layer instanceof TilesLayer) && !(layer instanceof QuadsLayer))
-    //   return
+  async function onImagePick (e: Event & { detail: Image | string | null }) {
+    imagePickerOpen = false
+    const image = e.detail
 
-    // const picker = new ImagePicker({
-    //   target: document.body,
-    //   props: {
-    //     images: rmap.map.images,
-    //     image: layer.image
-    //   },
-    // })
+    if (image === null) { // no image used
+      onEditLayer({ group: g, layer: l, image: null })
+    }
+    else if (image instanceof Image) { // use embedded image
+      const index = rmap.map.images.indexOf(image)
+      onEditLayer({ group: g, layer: l, image: index })
+    }
+    else { // new external image
+      const index = rmap.map.images.length
+      const url = externalImageUrl(image)
+      const embed = await showInfo('Do you wish to embed this image?', 'yesno');
+      if (embed) {
+        try {
+          showInfo('Uploading image...', 'none')
+          const resp = await fetch(url)
+          const file = await resp.arrayBuffer()
+          await server.uploadFile(file)
+          await server.query('createimage', { name: image, index, external: false })
+          const img = await queryImage({ index })
+          rmap.addImage(img)
+          onEditLayer({ group: g, layer: l, image: index })
+          clearDialog()
+        }
+        catch (e) {
+          showError('Failed to upload image: ' + e)
+        }
+      }
+      else {
+        try {
+          showInfo('Creating image...', 'none')
+          const index = rmap.map.images.length
+          await server.query('createimage', { name: image, index, external: true })
+          const img = new Image()
+          img.loadExternal(url)
+          img.name = image
+          rmap.addImage(img)
+          onEditLayer({ group: g, layer: l, image: index })
+          clearDialog()
+        }
+        catch (e) {
+          showError('Failed to create external image: ' + e)
+        }
+      }
+    }
+  }
 
-    // picker.$on('pick', async (e: Event & { detail: Image | string | null }) => {
-    //   picker.$destroy()
-    //   const image = e.detail
+  async function onImageUpload(e: Event & { detail: File }) {
+    const image = e.detail
+    try {
+      showInfo('Uploading image...', 'none')
+      const name = image.name.replace(/\.[^\.]+$/, '')
+      const index = rmap.map.images.length
+      await server.uploadFile(await image.arrayBuffer())
+      await server.query('createimage', { name, index, external: false })
+      const data = await decodePng(image)
+      const img = new Image()
+      img.loadEmbedded(data)
+      img.name = name
+      rmap.addImage(img)
+      images = images // update the component
+      clearDialog()
+    }
+    catch (e) {
+      showError('Failed to upload image: ' + e)
+    }
+  }
+  
+  async function onImageDelete (e: Event & { detail: Image }) {
+    const image = e.detail
 
-    //   if (image === null) { // no image used
-    //     onEditLayer({ group: g, layer: l, image: null })
-    //   }
-    //   else if (image instanceof Image) { // use embedded image
-    //     const index = rmap.map.images.indexOf(image)
-    //     onEditLayer({ group: g, layer: l, image: index })
-    //   }
-    //   else { // new external image
-    //     const index = rmap.map.images.length
-    //     const url = externalImageUrl(image)
-    //     const embed = await showInfo('Do you wish to embed this image?', 'yesno');
-    //     if (embed) {
-    //       try {
-    //         showInfo('Uploading image...', 'none')
-    //         const resp = await fetch(url)
-    //         const file = await resp.arrayBuffer()
-    //         await server.uploadFile(file)
-    //         await server.query('createimage', { name: image, index, external: false })
-    //         const img = await queryImage({ index })
-    //         rmap.addImage(img)
-    //         onEditLayer({ group: g, layer: l, image: index })
-    //         clearDialog()
-    //       }
-    //       catch (e) {
-    //         showError('Failed to upload image: ' + e)
-    //       }
-    //     }
-    //     else {
-    //       try {
-    //         showInfo('Creating image...', 'none')
-    //         const index = rmap.map.images.length
-    //         await server.query('createimage', { name: image, index, external: true })
-    //         const img = new Image()
-    //         img.loadExternal(url)
-    //         img.name = image
-    //         rmap.addImage(img)
-    //         onEditLayer({ group: g, layer: l, image: index })
-    //         clearDialog()
-    //       }
-    //       catch (e) {
-    //         showError('Failed to create external image: ' + e)
-    //       }
-    //     }
-    //   }
-    // })
-
-    // picker.$on('upload', async (e: Event & { detail: File }) => {
-    //   const image = e.detail
-    //   try {
-    //     showInfo('Uploading image...', 'none')
-    //     const name = image.name.replace(/\.[^\.]+$/, '')
-    //     const index = rmap.map.images.length
-    //     await server.uploadFile(await image.arrayBuffer())
-    //     await server.query('createimage', { name, index, external: false })
-    //     const data = await decodePng(image)
-    //     const img = new Image()
-    //     img.loadEmbedded(data)
-    //     img.name = name
-    //     rmap.addImage(img)
-    //     picker.$set({ images: rmap.map.images })
-    //     clearDialog()
-    //   }
-    //   catch (e) {
-    //     showError('Failed to upload image: ' + e)
-    //   }
-    // })
-
-    // picker.$on('delete', async (e: Event & { detail: Image }) => {
-    //   const image = e.detail
-
-    //   try {
-    //     const index = rmap.map.images.indexOf(image)
-    //     await server.query('deleteimage', { index })
-    //     rmap.removeImage(index)
-    //     picker.$set({ images: rmap.map.images })
-    //   }
-    //   catch (e) {
-    //     showError('Failed to delete image: ' + e)
-    //   }
-    // })
-
-    // picker.$on('cancel', () => {
-    //   picker.$destroy()
-    // })
+    try {
+      const index = rmap.map.images.indexOf(image)
+      await server.query('deleteimage', { index })
+      rmap.removeImage(index)
+      images = images // update the component
+    }
+    catch (e) {
+      imagePickerOpen = false
+      showError('Failed to delete image: ' + e)
+    }
   }
   
   function onEditGroup(e: FormInputEvent) {
@@ -270,7 +255,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
     <label>Detail <input type="checkbox" checked={layer.detail} on:change={onEditDetail}></label>
     {@const img = layer.image ? layer.image.name : "<none>" }
-    <label>Image <input type="button" value={img} on:click={openFilePicker}></label>
+    <label>Image <input type="button" value={img} on:click={() => imagePickerOpen = true}></label>
   {/if}
   {#if layer instanceof TilesLayer}
     <label>Color <input type="color" value={colorToStr(layer.color)} on:change={onEditColor}></label>
@@ -295,6 +280,11 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 <ComposedModal bind:open={imagePickerOpen} size="lg">
   <ModalHeader title="Pick an image" />
   <ModalBody hasForm>
-    <ImagePicker />
+    <ImagePicker {images} {image}
+      on:pick={onImagePick}
+      on:cancel={() => imagePickerOpen = false}
+      on:upload={onImageUpload}
+      on:delete={onImageDelete}
+    />
   </ModalBody>
 </ComposedModal>
