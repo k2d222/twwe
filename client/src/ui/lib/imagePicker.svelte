@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Image } from '../../twmap/image'
   import { createEventDispatcher } from 'svelte'
+import { FileUploader, Tab, TabContent, Tabs } from 'carbon-components-svelte';
 
   export let images: Image[] = []
   export let image: Image | null = null
@@ -84,8 +85,8 @@
       onCancel()
   }
 
-  function onFileChange(e: Event) {
-    const file = (e.target as HTMLInputElement).files[0]
+  function onFileChange(e: CustomEvent<readonly File[]>) {
+    const file = e.detail[0]
     dispatch('upload', file)
   }
   
@@ -129,36 +130,50 @@
 <svelte:window on:keydown={onKeyDown} />
 
 <div id="image-picker">
-  <div class="content">
-    <h4>Upload</h4>
-    <label>Select a file:&nbsp;
-      <input type="file" placeholder="upload png file…" accept=".png,image/png" on:change={onFileChange}/>
-    </label>
-    <h4>Embedded images</h4>
-    <div class="images">
-      {#each images.filter(i => !i.img) as img}
-        <button class="default image" class:selected={image === img} on:click={() => selectEmbedded(img)}>
-          <img src={getImgURL(img)} alt={img.name}>
-          <div class="hover">
-            <span>{img.name}</span>
-          </div>
-          <button on:click={() => onDeleteImage(img)}>&times;</button>
-        </button>
-      {/each}
-    </div>
-    <h4>External images</h4>
-    <div class="images">
-      {#each externalImages as img, i}
-        <button class="default image" class:selected={external === i} on:click={() => selectExternal(i)}>
-          <img src="/mapres/{img}.png" alt={img}>
-          <div class="hover">
-            <span>{img}</span>
-          </div>
-        </button>
-      {/each}
-    </div>
-  </div>
+  <Tabs>
+    <Tab label="Upload image" />
+    <Tab label="Embedded images" />
+    <Tab label="External images" />
+    <svelte:fragment slot="content">
+      <TabContent>
+        <FileUploader
+          labelTitle="Upload an image"
+          buttonLabel="Pick a file"
+          labelDescription="Only png files are accepted."
+          accept={[".png"]}
+          status="complete"
+          on:change={onFileChange}
+        />
+      </TabContent>
+      <TabContent class="images">
+        <div class="list">
+          {#each images.filter(i => !i.img) as img}
+            <button class="default image" class:selected={image === img} on:click={() => selectEmbedded(img)}>
+              <img src={getImgURL(img)} alt={img.name}>
+              <div class="hover">
+                <span>{img.name}</span>
+              </div>
+              <button on:click={() => onDeleteImage(img)}>&times;</button>
+            </button>
+          {/each}
+        </div>
+      </TabContent>
+      <TabContent class="images">
+        <div class="list">
+          {#each externalImages as img, i}
+            <button class="default image" class:selected={external === i} on:click={() => selectExternal(i)}>
+              <img src="/mapres/{img}.png" alt={img}>
+              <div class="hover">
+                <span>{img}</span>
+              </div>
+            </button>
+          {/each}
+        </div>
+      </TabContent>
+    </svelte:fragment>
+  </Tabs>
   <div class="footer">
+
     <span>Selected: {selectedName}</span>
     <div>
       <button class="default large" on:click={onCancel}>Cancel</button>

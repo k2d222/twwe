@@ -170,6 +170,7 @@ canvas {
   align-items: center;
   background: rgba(0, 0, 0, .5);
   padding: 5rem;
+  z-index: 10000;
 
   > .content {
     position: relative;
@@ -600,16 +601,10 @@ nav.hidden .context {
 }
 
 #image-picker {
-  // position: fixed;
-  // inset: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
   gap: 1rem;
-  // justify-content: center;
-  // align-items: center;
-  // background: rgba(0, 0, 0, .5);
-  // padding: 5rem;
   
   $img-size: 10rem;
   
@@ -624,14 +619,10 @@ nav.hidden .context {
     justify-content: space-between;
   }
   
-  > .content {
-    // position: relative;
-    // padding: 3rem 5rem;
-    // background: white;
-    // border: 1px solid black;
+  > .images {
     overflow: auto;
     
-    .images {
+    .list {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;

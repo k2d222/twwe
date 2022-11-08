@@ -149,7 +149,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   async function onImageUpload(e: Event & { detail: File }) {
     const image = e.detail
     try {
-      showInfo('Uploading image...', 'none')
+      showInfo('Uploading image…', 'none')
       const name = image.name.replace(/\.[^\.]+$/, '')
       const index = rmap.map.images.length
       await server.uploadFile(await image.arrayBuffer())
@@ -160,7 +160,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
       img.name = name
       rmap.addImage(img)
       images = images // update the component
-      clearDialog()
+      showInfo('Image available in the Embedded section.')
     }
     catch (e) {
       showError('Failed to upload image: ' + e)
@@ -177,7 +177,6 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
       images = images // update the component
     }
     catch (e) {
-      imagePickerOpen = false
       showError('Failed to delete image: ' + e)
     }
   }
