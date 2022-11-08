@@ -543,7 +543,9 @@
         <option value='position'>Position</option>
         <option value='sound'>Sound</option>
       </select>
-      <button class="danger" on:click={onDelete} disabled={selected === null}>Delete</button>
+      {#if selected}
+        <button class="danger" on:click={onDelete} disabled={selected === null}>Delete</button>
+      {/if}
     </div>
   </div>
   
