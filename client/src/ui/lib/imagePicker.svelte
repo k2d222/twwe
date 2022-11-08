@@ -2,6 +2,9 @@
   import type { Image } from '../../twmap/image'
   import { createEventDispatcher } from 'svelte'
 
+  export let images: Image[] = []
+  export let image: Image | null = null
+
   const dispatch = createEventDispatcher()
 
   const externalImages = [
@@ -57,9 +60,6 @@
     "winter_mountains",
   ]
 
-  export let images: Image[] = []
-  
-  export let image: Image | null = null
   let external = -1
   $: external = image && image.img ? externalImages.indexOf(image.name) : external
 
@@ -130,39 +130,39 @@
 
 <div id="image-picker">
   <div class="content">
-    <h3>Upload</h3>
+    <h4>Upload</h4>
     <label>Select a file:&nbsp;
       <input type="file" placeholder="upload png file…" accept=".png,image/png" on:change={onFileChange}/>
     </label>
-    <h3>Embedded images</h3>
+    <h4>Embedded images</h4>
     <div class="images">
       {#each images.filter(i => !i.img) as img}
-        <div class="image" class:selected={image === img} on:click={() => selectEmbedded(img)}>
+        <button class="default image" class:selected={image === img} on:click={() => selectEmbedded(img)}>
           <img src={getImgURL(img)} alt={img.name}>
           <div class="hover">
             <span>{img.name}</span>
           </div>
           <button on:click={() => onDeleteImage(img)}>&times;</button>
-        </div>
+        </button>
       {/each}
     </div>
-    <h3>External images</h3>
+    <h4>External images</h4>
     <div class="images">
       {#each externalImages as img, i}
-        <div class="image" class:selected={external === i} on:click={() => selectExternal(i)}>
+        <button class="default image" class:selected={external === i} on:click={() => selectExternal(i)}>
           <img src="/mapres/{img}.png" alt={img}>
           <div class="hover">
             <span>{img}</span>
           </div>
-        </div>
+        </button>
       {/each}
     </div>
   </div>
   <div class="footer">
     <span>Selected: {selectedName}</span>
     <div>
-      <button class="cancel" on:click={onCancel}>Cancel</button>
-      <button class="confirm" on:click={onConfirm}>Confirm</button>
+      <button class="default large" on:click={onCancel}>Cancel</button>
+      <button class="primary large" on:click={onConfirm}>Confirm</button>
     </div>
   </div>
 </div>

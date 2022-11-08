@@ -33,11 +33,11 @@
   </div>
   
   {#if controls === 'closable'}
-    <button on:click={onClose}>Close</button>
+    <button class="default" on:click={onClose}>Close</button>
   {:else if controls === 'yesno'}
     <div class="buttons">
-      <button on:click={onNo}>No</button>
-      <button on:click={onYes}>Yes</button>
+      <button class="default" on:click={onNo}>No</button>
+      <button class="default" on:click={onYes}>Yes</button>
     </div>
   {/if}
 

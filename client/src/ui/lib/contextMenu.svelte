@@ -33,8 +33,8 @@
 
 <svelte:window on:keydown={onKeyDown} />
 
-<div class="context" on:click|self={onClose}>
-  <div class="content" bind:this={self} {style}>    
+<div class="context" role="presentation" on:click|self={onClose}>
+  <div class="content" role="menu" bind:this={self} {style}>    
     <slot></slot>
   </div>
 </div>

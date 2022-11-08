@@ -578,7 +578,7 @@
     <div class="edit-env-point">
       <label>Time <input type="number" min={0} value={p.x / 1000} on:change={onEditTime} /></label>
       <label>Value <input type="number" value={-p.y / 1024} on:change={onEditValue} /></label>
-      <button on:click={onDeletePoint}>Delete</button>
+      <button class="danger" on:click={onDeletePoint}>Delete</button>
     </div>
   </ContextMenu>
 {:else if cm_i !== -1 && cm_k !== -1}

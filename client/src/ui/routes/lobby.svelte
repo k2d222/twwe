@@ -133,10 +133,10 @@
       </div>
 
       <div id="join-map" class="buttons right">
-        <button class="refresh" on:click={refresh}><img src="/assets/refresh.svg" alt="refresh"/></button>
-        <button class="create" on:click={() => navigate('/create/')}>New…</button>
-        <button class="delete" on:click={onDelete}><img src="/assets/trash.svg" alt="delete"/></button>
-        <button class="join" on:click={() => navigate('/edit/' + selected)}>Join</button>
+        <button class="default refresh" on:click={refresh}><img src="/assets/refresh.svg" alt="refresh"/></button>
+        <button class="default create" on:click={() => navigate('/create/')}>New…</button>
+        <button class="danger delete" on:click={onDelete}><img src="/assets/trash.svg" alt="delete"/></button>
+        <button class="primary join" on:click={() => navigate('/edit/' + selected)}>Join</button>
         <input on:input={updateSearch} value="{searchTerm}" type="text" name="search" id="search" placeholder="search" use:onload>
       </div>
     </div>

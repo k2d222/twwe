@@ -117,7 +117,7 @@
   
 </script>
 
-<ul id="tree" bind:this={self}>
+<ul id="tree" role="tree" bind:this={self}>
   {#each rmap.groups as rgroup, g}
     {@const group = rgroup.group}
     <li
@@ -126,16 +126,18 @@
       class:folded={folded[g]}
     >
       <div class="node"
+        role="treeitem"
         tabindex="0"
+        aria-selected={isSelected(selected, g, -1)}
         class:selected={isSelected(selected, g, -1)}
         class:active={isActive(active, g, -1)}
         on:click={() => select(g, -1)}
         on:keydown={(e) => onKeyDown(g, -1, e)}
       >
-        <span class="toggle" on:click={() => folded[g] = !folded[g]}><CaretDown /></span>
+        <span class="toggle" aria-hidden="true" on:click={() => folded[g] = !folded[g]}><CaretDown /></span>
         <span class="icon"><GroupIcon /></span>
         <span class="label">{groupName(group)}</span>
-        <span class="eye" on:click={() => rgroup.visible = !rgroup.visible}>
+        <span class="eye" aria-hidden="true" on:click={() => rgroup.visible = !rgroup.visible}>
           <svelte:component this={rgroup.visible ? View: ViewOff}/>
         </span>
       </div>
@@ -147,7 +149,9 @@
             class:visible={rlayer.visible}
           >
             <div class="node"
+              role="treeitem"
               tabindex="0"
+              aria-selected={isSelected(selected, g, l)}
               class:selected={isSelected(selected, g, l)}
               class:active={isActive(active, g, l)}
               on:click={() => select(g, l)}
@@ -155,7 +159,7 @@
             >
               <span class="icon"><svelte:component this={layerIcon(layer)} /></span>
               <span class="label">{@html layerName(layer)}</span>
-              <span class="eye" on:click={() => rlayer.visible = !rlayer.visible}>
+              <span class="eye" aria-hidden="true" on:click={() => rlayer.visible = !rlayer.visible}>
                 <svelte:component this={rlayer.visible ? View: ViewOff}/>
               </span>
             </div>

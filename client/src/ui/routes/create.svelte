@@ -91,7 +91,7 @@
     <h2>Create new map</h2>
     <div class="buttons">
       <input type="text" placeholder="Enter map name…" bind:value={name} />
-      <button class="join" on:click={onCreateMap}>Create</button>
+      <button class="primary join" on:click={onCreateMap}>Create</button>
     </div>
     {#if access === 'unlisted' && name}
       <code>{window.location.origin}/edit/{encodeURIComponent(name)}</code>

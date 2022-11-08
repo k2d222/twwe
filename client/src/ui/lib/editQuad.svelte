@@ -145,8 +145,8 @@
       {/each}
     </select></label>
     <label>Color Env. Offset <input type="number" value={quad.colorEnvOffset} on:change={onEditColEnvOff}></label>
-    <button on:click={onRecenter}>Recenter</button>
-    <button on:click={onDuplicate}>Duplicate</button>
-    <button on:click={onDelete}>Delete</button>
+    <button class="default" on:click={onRecenter}>Recenter</button>
+    <button class="default" on:click={onDuplicate}>Duplicate</button>
+    <button class="danger" on:click={onDelete}>Delete</button>
   {/if}
 </div>

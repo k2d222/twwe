@@ -310,5 +310,5 @@
         <QuadEditor {rmap} {quad} p={cm_p} on:change={() => onChange(cm_q)} on:delete={() => onDelete(cm_q)}  on:duplicate={() => onDuplicate(cm_q)}/>
       </ContextMenu>
     {/if}
-  <button on:click={onCreateQuad}><img src="/assets/plus.svg" alt='add quad' /></button>
+  <button class="default" on:click={onCreateQuad}><img src="/assets/plus.svg" alt='add quad' /></button>
 </div>

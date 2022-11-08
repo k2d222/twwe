@@ -345,8 +345,8 @@ function onKeyUp(e: KeyboardEvent) {
 
 <div id="tile-selector">
   <div class="tile selected">
-    <button on:click={() => tilesVisible = !tilesVisible}><img src="/assets/palette.svg" alt='tile picker' /></button>
-    <button on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
+    <button class="default" on:click={() => tilesVisible = !tilesVisible}><img src="/assets/palette.svg" alt='tile picker' /></button>
+    <button class="default" on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>
     <canvas bind:this={canvas} on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp}></canvas>
