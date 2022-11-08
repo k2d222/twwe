@@ -44,6 +44,7 @@
     SettingsAdjust as EditInfoIcon,
     Image as ImagesIcon,
     Music as SoundsIcon,
+    Add as CreateGroupIcon,
   } from 'carbon-icons-svelte'
 import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte';
   
@@ -128,7 +129,8 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
       showError('Failed to reorder layer: ' + e)
     }
   }
-  async function onCreateGroup(e: CreateGroup) {
+  async function onCreateGroup() {
+    const e: CreateGroup = { name: '' }
     showInfo('Creating group…')
     try {
       await server.query('creategroup', e)
@@ -221,8 +223,8 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   }
   function serverOnDeleteGroup(e: DeleteGroup) {
     const deleted = rmap.deleteGroup(e)
-    if (activeRlayer && deleted.layers.includes(activeRlayer))
-      active = map.physicsLayerIndex(GameLayer)
+    if (activeRgroup && deleted === activeRgroup)
+      active = [map.physicsGroupIndex(), -1]
     selected = selected.filter(([g, _]) => g !== e.group)
     rmap = rmap // hack to redraw treeview
   }
@@ -674,6 +676,10 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
       <Splitpanes dblClickSplitter={false}>
         <Pane class="layers" bind:size={layerPaneSize}>
           <TreeView {rmap} bind:active bind:selected />
+          <button id="create-group" on:click={onCreateGroup}>
+            <span class="icon"><CreateGroupIcon /></span>
+            <span class="label">Add group</span>
+          </button>
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>

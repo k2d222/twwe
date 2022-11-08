@@ -144,7 +144,7 @@
     {/if}
   {/if}
   {#if rmap.groups[g] !== rmap.physicsGroup}
-    <button class="default" on:click={() => onDeleteGroup({ group: g })}>
+    <button class="danger large" on:click={() => onDeleteGroup({ group: g })}>
       Delete group
     </button>
   {/if}

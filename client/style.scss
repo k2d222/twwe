@@ -278,6 +278,37 @@ canvas {
   }
 }
 
+#create-group {
+  width: 100%;
+  background: none;
+  border: none;
+  // border-top: 1px solid lightgrey;
+  height: 2rem;
+  padding: 0;
+  padding-left: 1rem;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+
+  > .icon {
+    margin-right: .5rem;
+    stroke: black;
+  }
+
+  > .label {
+    text-align: left;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    flex-grow: 1;
+    padding-right: .5rem;
+  }
+
+  &:hover, &.selected, &.active {
+    background: #e0e0e0;
+  }
+}
+
 #statusbar {
   position: fixed;
   left: 15rem;
