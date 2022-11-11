@@ -805,7 +805,7 @@ nav.hidden .context {
     flex-direction: row;
     gap: 1rem;
     
-    :nth-child(3) {
+    > :nth-child(3) {
       flex-grow: 1;
     }
   }
@@ -847,6 +847,62 @@ nav.hidden .context {
 
     &:hover {
       stroke-width: 10px;
+    }
+  }
+  
+  .channels {
+    display: flex;
+    // gap: .5rem;
+    align-items: center;
+
+    label {
+      position: relative;
+      display: block;
+      width: 1.5rem;
+      height: 1.5rem;
+      user-select: none;
+      
+      &.red span {
+        color: red;
+      }
+      &.green span {
+        color: green;
+      }
+      &.blue span {
+        color: blue;
+      }
+      &.orange span {
+        color: orange;
+      }
+      &.red input:checked ~ span {
+        background-color: red;
+        color: white;
+      }
+      &.green input:checked ~ span {
+        background-color: green;
+        color: white;
+      }
+      &.blue input:checked ~ span {
+        background-color: blue;
+        color: white;
+      }
+      &.orange input:checked ~ span {
+        background-color: orange;
+        color: white;
+      }
+
+      input {
+        position: absolute;
+        opacity: 0;
+        inset: 0;
+      }
+      
+      span {
+        position: absolute;
+        inset: 0;
+        text-align: center;
+        padding: .25rem;
+      }
     }
   }
 }

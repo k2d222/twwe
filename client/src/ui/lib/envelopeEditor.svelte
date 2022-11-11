@@ -522,16 +522,16 @@
       <label><input type="text" value={selected.name} placeholder="(unnamed)" on:change={onRename}/></label>
       <div class="channels">
         {#if selected instanceof ColorEnvelope}
-          <label><b style:color="red">R</b><input type="checkbox" bind:checked={channelEnabled.color_r} /></label>
-          <label><b style:color="green">G</b><input type="checkbox" bind:checked={channelEnabled.color_g} /></label>
-          <label><b style:color="blue">B</b><input type="checkbox" bind:checked={channelEnabled.color_b} /></label>
-          <label><b style:color="orange">A</b><input type="checkbox" bind:checked={channelEnabled.color_a} /></label>
+          <label class="red"><input type="checkbox" bind:checked={channelEnabled.color_r} /><span>R</span></label>
+          <label class="green"><input type="checkbox" bind:checked={channelEnabled.color_g} /><span>G</span></label>
+          <label class="blue"><input type="checkbox" bind:checked={channelEnabled.color_b} /><span>B</span></label>
+          <label class="orange"><input type="checkbox" bind:checked={channelEnabled.color_a} /><span>A</span></label>
         {:else if selected instanceof PositionEnvelope}
-          <label><b style:color="red">X</b><input type="checkbox" bind:checked={channelEnabled.pos_x} /></label>
-          <label><b style:color="green">Y</b><input type="checkbox" bind:checked={channelEnabled.pos_y} /></label>
-          <label><b style:color="blue">R</b><input type="checkbox" bind:checked={channelEnabled.pos_r} /></label>
+          <label class="red"><input type="checkbox" bind:checked={channelEnabled.pos_x} /><span>X</span></label>
+          <label class="green"><input type="checkbox" bind:checked={channelEnabled.pos_y} /><span>Y</span></label>
+          <label class="blue"><input type="checkbox" bind:checked={channelEnabled.pos_r} /><span>R</span></label>
         {:else if selected instanceof SoundEnvelope}
-          <label><b style:color="red">V</b><input type="checkbox" bind:checked={channelEnabled.sound_v} /></label>
+          <label class="red"><input type="checkbox" bind:checked={channelEnabled.sound_v} /><span>V</span></label>
         {/if}
       </div>
       <button class="default" on:click={onRescale}>Rescale</button>
