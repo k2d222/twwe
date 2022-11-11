@@ -135,6 +135,8 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     try {
       await server.query('creategroup', e)
       serverOnCreateGroup(e)
+      active = [map.groups.length - 1, -1]
+      selected = [active]
       clearDialog()
     }
     catch (e) {
@@ -224,14 +226,18 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   function serverOnDeleteGroup(e: DeleteGroup) {
     const deleted = rmap.deleteGroup(e)
     if (activeRgroup && deleted === activeRgroup)
-      active = [map.physicsGroupIndex(), -1]
+      active = [Math.min(map.groups.length - 1, e.group), -1]
     selected = selected.filter(([g, _]) => g !== e.group)
     rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteLayer(e: DeleteLayer) {
     const deleted = rmap.deleteLayer(e)
-    if (activeRlayer && deleted === activeRlayer)
-      active = map.physicsLayerIndex(GameLayer)
+    if (activeRlayer && deleted === activeRlayer) {
+      if (activeGroup.layers.length === 0)
+        active = map.physicsLayerIndex(GameLayer)
+      else
+        active = [g, Math.min(activeGroup.layers.length - 1, e.layer)]
+    }
     selected = selected.filter(([g, l]) => g !== e.group || l !== e.layer)
     rmap = rmap // hack to redraw treeview
   }
@@ -239,6 +245,8 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     rmap.reorderGroup(e)
     if (activeLayer)
       active = map.layerIndex(activeLayer)
+    else if (activeGroup)
+      active = [map.groupIndex(activeGroup), -1]
     selected = [active] // TODO: keep selected layers
     rmap = rmap // hack to redraw treeview
   }

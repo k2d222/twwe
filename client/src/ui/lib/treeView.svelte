@@ -29,23 +29,22 @@
   })
 
   // if active is changed, and some node is focused, focus active instead.
-  // TODO: this doesnt work anymore?
-  // $: if (self && active[0] !== -1) {
-  //   const focused = self.querySelector(':focus')
-  //   if (focused) {
-  //     const [g, l] = active
-  //     const group = self.children[g]
-  //     if (l === -1) {
-  //       const node = group.firstElementChild as HTMLElement
-  //       node.focus()
-  //     }
-  //     else {
-  //       const layer = group.lastElementChild.children[l]
-  //       const node = layer.firstElementChild as HTMLElement
-  //       node.focus()
-  //     }
-  //   }
-  // }
+  $: if (self && active[0] !== -1) {
+    const focused = self.querySelector(':focus')
+    if (focused) {
+      const [g, l] = active
+      const group = self.children[g]
+      if (l === -1) {
+        const node = group.firstElementChild as HTMLElement
+        node.focus()
+      }
+      else {
+        const layer = group.lastElementChild.children[l]
+        const node = layer.firstElementChild as HTMLElement
+        node.focus()
+      }
+    }
+  }
   
   
   function layerName(layer: Layer) {
