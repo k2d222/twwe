@@ -237,6 +237,9 @@ canvas {
       white-space: nowrap;
       flex-grow: 1;
       padding-right: .5rem;
+      height: 100%;
+      display: flex;
+      align-items: center;
     }
   }
   
