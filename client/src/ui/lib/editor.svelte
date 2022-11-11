@@ -68,7 +68,7 @@ import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
     
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
-  let propsPaneSize = px2vw(rem2px(15))
+  let propsPaneSize = px2vw(rem2px(20))
   let envPaneSize = 0
   let lastLayerPaneSize = layerPaneSize
   let lastPropsPaneSize = propsPaneSize
