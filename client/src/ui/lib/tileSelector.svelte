@@ -1,374 +1,431 @@
 <script lang="ts">
-import type * as Info from '../../twmap/types'
-import type { EditTileParams } from '../../server/protocol'
-import type { Image } from '../../twmap/image'
-import type { AnyTilesLayer } from '../../twmap/tilesLayer'
-import type { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
-import { TileFlags, Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
-import { TilesLayer, GameLayer, FrontLayer, TeleLayer, SwitchLayer, SpeedupLayer, TuneLayer } from '../../twmap/tilesLayer'
-import * as Editor from './editor'
-import { onMount, onDestroy } from 'svelte'
+  import type * as Info from '../../twmap/types'
+  import type { EditTileParams } from '../../server/protocol'
+  import type { Image } from '../../twmap/image'
+  import type { AnyTilesLayer } from '../../twmap/tilesLayer'
+  import type { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
+  import { TileFlags, Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
+  import {
+    TilesLayer,
+    GameLayer,
+    FrontLayer,
+    TeleLayer,
+    SwitchLayer,
+    SpeedupLayer,
+    TuneLayer,
+  } from '../../twmap/tilesLayer'
+  import * as Editor from './editor'
+  import { onMount, onDestroy } from 'svelte'
 
-type Range = {
-  start: Coord,
-  end: Coord,
-}
+  type Range = {
+    start: Coord
+    end: Coord
+  }
 
-const tileCount = 16
+  const tileCount = 16
 
-export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
-export let selected: EditTileParams[][] = []
+  export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
+  export let selected: EditTileParams[][] = []
 
-let tilesVisible = false
-let settingsVisible = false
+  let tilesVisible = false
+  let settingsVisible = false
 
-let canvas: HTMLCanvasElement
-let ctx: CanvasRenderingContext2D
+  let canvas: HTMLCanvasElement
+  let ctx: CanvasRenderingContext2D
 
-// inclusive range
-let selection: Range = {
-  start: { x: 0, y: 0 },
-  end: { x: 0, y: 0 },
-}
+  // inclusive range
+  let selection: Range = {
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 0 },
+  }
 
-$: normSelection = normalizeRange(selection)
+  $: normSelection = normalizeRange(selection)
 
-// this is a bit monolithic but hey typescript
-let currentTile:    { type: 'tile'    } & Tile    = { type: 'tile',    ...TilesLayer.defaultTile()   }
-let currentGame:    { type: 'tile'    } & Tile    = { type: 'tile',    ...GameLayer.defaultTile()    }
-let currentFront:   { type: 'tile'    } & Tile    = { type: 'tile',    ...FrontLayer.defaultTile()   }
-let currentTele:    { type: 'tele'    } & Tele    = { type: 'tele',    ...TeleLayer.defaultTile()    }
-let currentSwitch:  { type: 'switch'  } & Switch  = { type: 'switch',  ...SwitchLayer.defaultTile()  }
-let currentSpeedup: { type: 'speedup' } & Speedup = { type: 'speedup', ...SpeedupLayer.defaultTile() }
-let currentTune:    { type: 'tune'    } & Tune    = { type: 'tune',    ...TuneLayer.defaultTile()    }
+  // this is a bit monolithic but hey typescript
+  let currentTile: { type: 'tile' } & Tile = { type: 'tile', ...TilesLayer.defaultTile() }
+  let currentGame: { type: 'tile' } & Tile = { type: 'tile', ...GameLayer.defaultTile() }
+  let currentFront: { type: 'tile' } & Tile = { type: 'tile', ...FrontLayer.defaultTile() }
+  let currentTele: { type: 'tele' } & Tele = { type: 'tele', ...TeleLayer.defaultTile() }
+  let currentSwitch: { type: 'switch' } & Switch = { type: 'switch', ...SwitchLayer.defaultTile() }
+  let currentSpeedup: { type: 'speedup' } & Speedup = {
+    type: 'speedup',
+    ...SpeedupLayer.defaultTile(),
+  }
+  let currentTune: { type: 'tune' } & Tune = { type: 'tune', ...TuneLayer.defaultTile() }
 
-$: currentTele.number      = minmax(0, currentTele.number,      255)
-$: currentSwitch.delay     = minmax(0, currentSwitch.delay,     255)
-$: currentSwitch.number    = minmax(0, currentSwitch.number,    255)
-$: currentSpeedup.angle    = minmax(0, currentSpeedup.angle,    359)
-$: currentSpeedup.maxSpeed = minmax(0, currentSpeedup.maxSpeed, 255)
-$: currentSpeedup.force    = minmax(0, currentSpeedup.force,    255)
-$: currentTune.number      = minmax(0, currentTune.number,      255)
+  $: currentTele.number = minmax(0, currentTele.number, 255)
+  $: currentSwitch.delay = minmax(0, currentSwitch.delay, 255)
+  $: currentSwitch.number = minmax(0, currentSwitch.number, 255)
+  $: currentSpeedup.angle = minmax(0, currentSpeedup.angle, 359)
+  $: currentSpeedup.maxSpeed = minmax(0, currentSpeedup.maxSpeed, 255)
+  $: currentSpeedup.force = minmax(0, currentSpeedup.force, 255)
+  $: currentTune.number = minmax(0, currentTune.number, 255)
 
-let current: EditTileParams
-let boxSelect = false
+  let current: EditTileParams
+  let boxSelect = false
 
-$: {
-  if (tilesVisible)
-    settingsVisible = false
-  else if (settingsVisible)
-    tilesVisible = false
-}
+  $: {
+    if (tilesVisible) settingsVisible = false
+    else if (settingsVisible) tilesVisible = false
+  }
 
-$: current =
-  rlayer.layer instanceof TilesLayer ? currentTile :
-  rlayer.layer instanceof GameLayer ? currentGame :
-  rlayer.layer instanceof FrontLayer ? currentFront :
-  rlayer.layer instanceof TeleLayer ? currentTele :
-  rlayer.layer instanceof SwitchLayer ? currentSwitch :
-  rlayer.layer instanceof SpeedupLayer ? currentSpeedup :
-  rlayer.layer instanceof TuneLayer ? currentTune : null
+  $: current =
+    rlayer.layer instanceof TilesLayer
+      ? currentTile
+      : rlayer.layer instanceof GameLayer
+      ? currentGame
+      : rlayer.layer instanceof FrontLayer
+      ? currentFront
+      : rlayer.layer instanceof TeleLayer
+      ? currentTele
+      : rlayer.layer instanceof SwitchLayer
+      ? currentSwitch
+      : rlayer.layer instanceof SpeedupLayer
+      ? currentSpeedup
+      : rlayer.layer instanceof TuneLayer
+      ? currentTune
+      : null
 
-let mounted = false
-onMount(() => {
-  ctx = canvas.getContext('2d')
-  drawLayer()
-  Editor.on('keydown', onKeyDown)
-  Editor.on('keyup', onKeyUp)
-  Editor.on('keypress', onKeyPress)
-  mounted = true
-})
+  let mounted = false
+  onMount(() => {
+    ctx = canvas.getContext('2d')
+    drawLayer()
+    Editor.on('keydown', onKeyDown)
+    Editor.on('keyup', onKeyUp)
+    Editor.on('keypress', onKeyPress)
+    mounted = true
+  })
 
-onDestroy(() => {
-  Editor.off('keydown', onKeyDown)
-  Editor.off('keyup', onKeyUp)
-  Editor.off('keypress', onKeyPress)
-})
+  onDestroy(() => {
+    Editor.off('keydown', onKeyDown)
+    Editor.off('keyup', onKeyUp)
+    Editor.off('keypress', onKeyPress)
+  })
 
-$: if (mounted && rlayer) {
-  drawLayer()
-}
+  $: if (mounted && rlayer) {
+    drawLayer()
+  }
 
-async function drawLayer() {
-  const img = await getCanvasImage(rlayer.texture.image)
-  canvas.width = img.width as number
-  canvas.height = img.height as number
-  ctx.globalCompositeOperation = 'copy'
-  ctx.drawImage(img, 0, 0)
-
-  if (rlayer.layer instanceof TilesLayer) {
-    // see https://stackoverflow.com/q/31607663/8775116
-    ctx.globalCompositeOperation = 'multiply'
-    ctx.fillStyle = colorToStr(rlayer.layer.color)
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.globalCompositeOperation = 'destination-atop'
+  async function drawLayer() {
+    const img = await getCanvasImage(rlayer.texture.image)
+    canvas.width = img.width as number
+    canvas.height = img.height as number
+    ctx.globalCompositeOperation = 'copy'
     ctx.drawImage(img, 0, 0)
-  }
 
-  // the first tile is always transparent
-  ctx.clearRect(0, 0, canvas.width / tileCount, canvas.height / tileCount)
-}
-
-async function getCanvasImage(image: Image): Promise<CanvasImageSource> {
-  if (image.data instanceof HTMLImageElement) {
-    ctx.drawImage(image.data, 0, 0)
-    return image.data
-  }
-  else if (image.data instanceof ImageData) {
-    return createImageBitmap(image.data)
-  }
-  else if (image.img) {
-    return image.img 
-  }
-}
-
-function colorToStr(c: Info.Color) {
-  let hex = (i: number) => ('0' + i.toString(16)).slice(-2)
-  return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`
-}
-
-function minmax(min: number, cur: number, max: number) {
-  return Math.min(Math.max(min, cur), max)
-}
-
-function normalizeRange(range: Range): Range {
-  const minX = Math.min(range.start.x, range.end.x)
-  const maxX = Math.max(range.start.x, range.end.x)
-  const minY = Math.min(range.start.y, range.end.y)
-  const maxY = Math.max(range.start.y, range.end.y)
-
-  return {
-    start: { x: minX, y: minY },
-    end: { x: maxX, y: maxY },
-  }
-}
-
-function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
-  let res: EditTileParams[][] = []
-
-  for (let j = sel.start.y; j <= sel.end.y; j++) {
-    const row = []
-    for (let i = sel.start.x; i <= sel.end.x; i++) {
-      row.push({
-        ...cur, id: j * tileCount + i
-      })
+    if (rlayer.layer instanceof TilesLayer) {
+      // see https://stackoverflow.com/q/31607663/8775116
+      ctx.globalCompositeOperation = 'multiply'
+      ctx.fillStyle = colorToStr(rlayer.layer.color)
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.globalCompositeOperation = 'destination-atop'
+      ctx.drawImage(img, 0, 0)
     }
-    res.push(row)
+
+    // the first tile is always transparent
+    ctx.clearRect(0, 0, canvas.width / tileCount, canvas.height / tileCount)
   }
-  
-  return res
-}
 
-function rotateCW(sel: EditTileParams[][]) {
-  return Array.from({ length: sel[0].length }, (_, j) =>
-          Array.from({ length: sel.length }, (_, i) =>
-            sel[sel.length - 1 - i][j]))
-}
-function rotateCCW(sel: EditTileParams[][]) {
-  return Array.from({ length: sel[0].length }, (_, j) =>
-          Array.from({ length: sel.length }, (_, i) =>
-            sel[i][sel[0].length - 1 - j]))
-}
-function vFlip(sel: EditTileParams[][]) {
-  return sel.reverse()
-}
-function hFlip(sel: EditTileParams[][]) { // WARN: mutates the array
-  return sel.map(row => row.reverse())
-}
+  async function getCanvasImage(image: Image): Promise<CanvasImageSource> {
+    if (image.data instanceof HTMLImageElement) {
+      ctx.drawImage(image.data, 0, 0)
+      return image.data
+    } else if (image.data instanceof ImageData) {
+      return createImageBitmap(image.data)
+    } else if (image.img) {
+      return image.img
+    }
+  }
 
-let boxStyle = ''
+  function colorToStr(c: Info.Color) {
+    let hex = (i: number) => ('0' + i.toString(16)).slice(-2)
+    return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`
+  }
 
-$: {
-  if (boxSelect) {
-    const [ x1, y1 ] = [ normSelection.start.x, normSelection.start.y ]
-    const [ x2, y2 ] = [ normSelection.end.x, normSelection.end.y ]
-    boxStyle = `
-      width: ${(x2 - x1 + 1) * 100 / tileCount}%;
-      height: ${(y2 - y1 + 1) * 100 / tileCount}%;
-      left: ${x1 * 100 / tileCount}%;
-      top: ${y1 * 100 / tileCount}%;
+  function minmax(min: number, cur: number, max: number) {
+    return Math.min(Math.max(min, cur), max)
+  }
+
+  function normalizeRange(range: Range): Range {
+    const minX = Math.min(range.start.x, range.end.x)
+    const maxX = Math.max(range.start.x, range.end.x)
+    const minY = Math.min(range.start.y, range.end.y)
+    const maxY = Math.max(range.start.y, range.end.y)
+
+    return {
+      start: { x: minX, y: minY },
+      end: { x: maxX, y: maxY },
+    }
+  }
+
+  function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
+    let res: EditTileParams[][] = []
+
+    for (let j = sel.start.y; j <= sel.end.y; j++) {
+      const row = []
+      for (let i = sel.start.x; i <= sel.end.x; i++) {
+        row.push({
+          ...cur,
+          id: j * tileCount + i,
+        })
+      }
+      res.push(row)
+    }
+
+    return res
+  }
+
+  function rotateCW(sel: EditTileParams[][]) {
+    return Array.from({ length: sel[0].length }, (_, j) =>
+      Array.from({ length: sel.length }, (_, i) => sel[sel.length - 1 - i][j])
+    )
+  }
+  function rotateCCW(sel: EditTileParams[][]) {
+    return Array.from({ length: sel[0].length }, (_, j) =>
+      Array.from({ length: sel.length }, (_, i) => sel[i][sel[0].length - 1 - j])
+    )
+  }
+  function vFlip(sel: EditTileParams[][]) {
+    return sel.reverse()
+  }
+  function hFlip(sel: EditTileParams[][]) {
+    // WARN: mutates the array
+    return sel.map(row => row.reverse())
+  }
+
+  let boxStyle = ''
+
+  $: {
+    if (boxSelect) {
+      const [x1, y1] = [normSelection.start.x, normSelection.start.y]
+      const [x2, y2] = [normSelection.end.x, normSelection.end.y]
+      boxStyle = `
+      width: ${((x2 - x1 + 1) * 100) / tileCount}%;
+      height: ${((y2 - y1 + 1) * 100) / tileCount}%;
+      left: ${(x1 * 100) / tileCount}%;
+      top: ${(y1 * 100) / tileCount}%;
     `
-  }
-  else {
-    boxStyle = `
+    } else {
+      boxStyle = `
       display: none;
     `
-  }
-}
-
-function onMouseDown(e: MouseEvent) {
-  const x = Math.floor(e.offsetX / (e.currentTarget as HTMLElement).clientWidth * tileCount)
-  const y = Math.floor(e.offsetY / (e.currentTarget as HTMLElement).clientHeight * tileCount)
-  currentTile.flags = currentTile.flags & TileFlags.OPAQUE // reset rotation/flip
-  selection = {
-    start: { x, y },
-    end: { x, y },
-  }
-  
-  boxSelect = true
-}
-
-function onMouseMove(e: MouseEvent) {
-  if (boxSelect) {
-    const x = Math.floor(e.offsetX / (e.currentTarget as HTMLElement).clientWidth * tileCount)
-    const y = Math.floor(e.offsetY / (e.currentTarget as HTMLElement).clientHeight * tileCount)
-    selection.end = { x, y }
-  }
-}
-
-function onMouseUp(e: MouseEvent) {
-  if (boxSelect) {
-    const x = Math.floor(e.offsetX / (e.currentTarget as HTMLElement).clientWidth * tileCount)
-    const y = Math.floor(e.offsetY / (e.currentTarget as HTMLElement).clientHeight * tileCount)
-    selection.end = { x, y }
-    boxSelect = false
-    tilesVisible = false
-    selected = makeBoxSelection(current, normalizeRange(selection))
-  }
-}
-
-function onFlipV() {
-  if (selected.length === 0)
-    return
-
-  if (rlayer.layer instanceof TilesLayer) {
-    for (let row of selected) {
-      for (let tile of row) {
-        if (tile.type === 'tile') {
-          if (tile.flags & TileFlags.ROTATE)
-            tile.flags ^= TileFlags.VFLIP
-          else
-            tile.flags ^= TileFlags.HFLIP
-        }
-      }
     }
   }
-  
-  selected = vFlip(selected)
-}
 
-function onFlipH() {
-  if (selected.length === 0)
-    return
+  function onMouseDown(e: MouseEvent) {
+    const x = Math.floor((e.offsetX / (e.currentTarget as HTMLElement).clientWidth) * tileCount)
+    const y = Math.floor((e.offsetY / (e.currentTarget as HTMLElement).clientHeight) * tileCount)
+    currentTile.flags = currentTile.flags & TileFlags.OPAQUE // reset rotation/flip
+    selection = {
+      start: { x, y },
+      end: { x, y },
+    }
 
-  if (rlayer.layer instanceof TilesLayer) {
-    for (let row of selected) {
-      for (let tile of row) {
-        if (tile.type === 'tile') {
-          if (tile.flags & TileFlags.ROTATE)
-            tile.flags ^= TileFlags.HFLIP
-          else
-            tile.flags ^= TileFlags.VFLIP
-        }
-      }
+    boxSelect = true
+  }
+
+  function onMouseMove(e: MouseEvent) {
+    if (boxSelect) {
+      const x = Math.floor((e.offsetX / (e.currentTarget as HTMLElement).clientWidth) * tileCount)
+      const y = Math.floor((e.offsetY / (e.currentTarget as HTMLElement).clientHeight) * tileCount)
+      selection.end = { x, y }
     }
   }
-  
-  selected = hFlip(selected)
-}
-function onRotateCW() {
-  if (selected.length === 0)
-    return
 
-  if (rlayer.layer instanceof TilesLayer) {
-    for (let row of selected) {
-      for (let tile of row) {
-        if (tile.type === 'tile') {
-          if (tile.flags & TileFlags.ROTATE) {
-            tile.flags ^= TileFlags.HFLIP
-            tile.flags ^= TileFlags.VFLIP
+  function onMouseUp(e: MouseEvent) {
+    if (boxSelect) {
+      const x = Math.floor((e.offsetX / (e.currentTarget as HTMLElement).clientWidth) * tileCount)
+      const y = Math.floor((e.offsetY / (e.currentTarget as HTMLElement).clientHeight) * tileCount)
+      selection.end = { x, y }
+      boxSelect = false
+      tilesVisible = false
+      selected = makeBoxSelection(current, normalizeRange(selection))
+    }
+  }
+
+  function onFlipV() {
+    if (selected.length === 0) return
+
+    if (rlayer.layer instanceof TilesLayer) {
+      for (let row of selected) {
+        for (let tile of row) {
+          if (tile.type === 'tile') {
+            if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
+            else tile.flags ^= TileFlags.HFLIP
           }
-          tile.flags ^= TileFlags.ROTATE
         }
       }
     }
-  }
-  
-  selected = rotateCW(selected)
-}
-function onRotateCCW() {
-  if (selected.length === 0)
-    return
 
-  if (rlayer.layer instanceof TilesLayer) {
-    for (let row of selected) {
-      for (let tile of row) {
-        if (tile.type === 'tile') {
-          if (!(tile.flags & TileFlags.ROTATE)) {
-            tile.flags ^= TileFlags.HFLIP
-            tile.flags ^= TileFlags.VFLIP
+    selected = vFlip(selected)
+  }
+
+  function onFlipH() {
+    if (selected.length === 0) return
+
+    if (rlayer.layer instanceof TilesLayer) {
+      for (let row of selected) {
+        for (let tile of row) {
+          if (tile.type === 'tile') {
+            if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
+            else tile.flags ^= TileFlags.VFLIP
           }
-          tile.flags ^= TileFlags.ROTATE
         }
       }
     }
+
+    selected = hFlip(selected)
+  }
+  function onRotateCW() {
+    if (selected.length === 0) return
+
+    if (rlayer.layer instanceof TilesLayer) {
+      for (let row of selected) {
+        for (let tile of row) {
+          if (tile.type === 'tile') {
+            if (tile.flags & TileFlags.ROTATE) {
+              tile.flags ^= TileFlags.HFLIP
+              tile.flags ^= TileFlags.VFLIP
+            }
+            tile.flags ^= TileFlags.ROTATE
+          }
+        }
+      }
+    }
+
+    selected = rotateCW(selected)
+  }
+  function onRotateCCW() {
+    if (selected.length === 0) return
+
+    if (rlayer.layer instanceof TilesLayer) {
+      for (let row of selected) {
+        for (let tile of row) {
+          if (tile.type === 'tile') {
+            if (!(tile.flags & TileFlags.ROTATE)) {
+              tile.flags ^= TileFlags.HFLIP
+              tile.flags ^= TileFlags.VFLIP
+            }
+            tile.flags ^= TileFlags.ROTATE
+          }
+        }
+      }
+    }
+
+    selected = rotateCCW(selected)
   }
 
-  selected = rotateCCW(selected)
-}
+  function onKeyPress(e: KeyboardEvent) {
+    if (e.ctrlKey || e.altKey) return
 
-function onKeyPress(e: KeyboardEvent) {
-  if (e.ctrlKey || e.altKey)
-    return
+    if (['r', 'v', 'h', 'n', 'm'].includes(e.key.toLowerCase())) e.preventDefault()
 
-  if (['r', 'v', 'h', 'n', 'm'].includes(e.key.toLowerCase()))
-    e.preventDefault()
-    
-  if (e.key === 'r') onRotateCW()
-  else if (e.key === 'R') onRotateCCW()
-  else if (e.key === 'v' || e.key === 'm') onFlipV()
-  else if (e.key === 'h' || e.key === 'n') onFlipH()
-}
-
-let spaceKeyDown = false
-
-function onKeyDown(e: KeyboardEvent) {
-  if (e.ctrlKey || e.shiftKey || e.altKey)
-    return
-    
-  if (!spaceKeyDown && e.key == ' ') {
-    tilesVisible = true
-    spaceKeyDown = true
+    if (e.key === 'r') onRotateCW()
+    else if (e.key === 'R') onRotateCCW()
+    else if (e.key === 'v' || e.key === 'm') onFlipV()
+    else if (e.key === 'h' || e.key === 'n') onFlipH()
   }
-}
-function onKeyUp(e: KeyboardEvent) {
-  if (e.ctrlKey || e.shiftKey || e.altKey)
-    return
-    
-  if (e.key == ' ') {
-    tilesVisible = false
-    spaceKeyDown = false
-  }
-}
 
+  let spaceKeyDown = false
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.ctrlKey || e.shiftKey || e.altKey) return
+
+    if (!spaceKeyDown && e.key == ' ') {
+      tilesVisible = true
+      spaceKeyDown = true
+    }
+  }
+  function onKeyUp(e: KeyboardEvent) {
+    if (e.ctrlKey || e.shiftKey || e.altKey) return
+
+    if (e.key == ' ') {
+      tilesVisible = false
+      spaceKeyDown = false
+    }
+  }
 </script>
 
 <div id="tile-selector">
   <div class="tile selected">
-    <button class="default" on:click={() => tilesVisible = !tilesVisible}><img src="/assets/palette.svg" alt='tile picker' /></button>
-    <button class="default" on:click={() => settingsVisible = !settingsVisible}><img src="/assets/tune.svg" alt='tile options' /></button>
+    <button class="default" on:click={() => (tilesVisible = !tilesVisible)}
+      ><img src="/assets/palette.svg" alt="tile picker" /></button
+    >
+    <button class="default" on:click={() => (settingsVisible = !settingsVisible)}
+      ><img src="/assets/tune.svg" alt="tile options" /></button
+    >
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>
-    <canvas bind:this={canvas} on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp}></canvas>
-    <div class="box-select" style={boxStyle}></div>
+    <canvas
+      bind:this={canvas}
+      on:mousedown={onMouseDown}
+      on:mousemove={onMouseMove}
+      on:mouseup={onMouseUp}
+    />
+    <div class="box-select" style={boxStyle} />
   </div>
-  <div class="settings" class:hidden = {!settingsVisible}>
+  <div class="settings" class:hidden={!settingsVisible}>
     <div class="buttons">
-      <button class="default" on:click={onFlipV}><img alt="Flip Vertically" src="/assets/flip-v.svg"/></button>
-      <button class="default" on:click={onFlipH}><img alt="Flip Horizontally" src="/assets/flip-h.svg"/></button>
-      <button class="default" on:click={onRotateCW}><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg"/></button>
-      <button class="default" on:click={onRotateCCW}><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg"/></button>
+      <button class="default" on:click={onFlipV}
+        ><img alt="Flip Vertically" src="/assets/flip-v.svg" /></button
+      >
+      <button class="default" on:click={onFlipH}
+        ><img alt="Flip Horizontally" src="/assets/flip-h.svg" /></button
+      >
+      <button class="default" on:click={onRotateCW}
+        ><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg" /></button
+      >
+      <button class="default" on:click={onRotateCCW}
+        ><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg" /></button
+      >
     </div>
     {#if rlayer.layer instanceof TeleLayer}
-      <label>Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number}></label>
+      <label
+        >Teleport target <input
+          type="number"
+          min={0}
+          max={255}
+          bind:value={currentTele.number}
+        /></label
+      >
     {:else if rlayer.layer instanceof SwitchLayer}
-      <label>Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay}></label>
+      <label
+        >Switch delay <input
+          type="number"
+          min={0}
+          max={255}
+          bind:value={currentSwitch.delay}
+        /></label
+      >
     {:else if rlayer.layer instanceof SpeedupLayer}
-      <label>Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force}></label>
-      <label>Speedup max speed <input type="number" min={0} max={255} bind:value={currentSpeedup.maxSpeed}></label>
-      <label>Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle}></label>
+      <label
+        >Speedup force <input
+          type="number"
+          min={0}
+          max={255}
+          bind:value={currentSpeedup.force}
+        /></label
+      >
+      <label
+        >Speedup max speed <input
+          type="number"
+          min={0}
+          max={255}
+          bind:value={currentSpeedup.maxSpeed}
+        /></label
+      >
+      <label
+        >Speedup angle <input
+          type="number"
+          min={0}
+          max={359}
+          bind:value={currentSpeedup.angle}
+        /></label
+      >
     {:else if rlayer.layer instanceof TuneLayer}
-      <label>Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number}></label>
+      <label
+        >Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} /></label
+      >
     {/if}
   </div>
 </div>

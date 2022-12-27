@@ -16,7 +16,7 @@ export class RenderQuadsLayer extends RenderLayer {
   constructor(rmap: RenderMap, layer: QuadsLayer) {
     super()
     this.layer = layer
-    
+
     this.texture = null
 
     if (layer.image !== null) {
@@ -30,7 +30,7 @@ export class RenderQuadsLayer extends RenderLayer {
     this.indexBuf = gl.createBuffer()
     this.initBuffers()
   }
-  
+
   recompute() {
     gl.deleteBuffer(this.colorBuf)
     gl.deleteBuffer(this.vertexBuf)
@@ -44,7 +44,7 @@ export class RenderQuadsLayer extends RenderLayer {
 
     this.initBuffers()
   }
-  
+
   recomputeEnvelope() {
     const quadCount = this.layer.quads.length
     const vertexArr = new Float32Array(quadCount * 4 * 2)
@@ -57,7 +57,7 @@ export class RenderQuadsLayer extends RenderLayer {
 
       vertexArr.set(vertices, t * 4 * 2)
       colorArr.set(colors, t * 4 * 4)
-      
+
       t++
     }
 
@@ -69,17 +69,15 @@ export class RenderQuadsLayer extends RenderLayer {
   }
 
   render() {
-    if (!this.visible)
-      return
+    if (!this.visible) return
 
-    if (!this.texture) { // textureless quad
+    if (!this.texture) {
+      // textureless quad
       gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
       gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
-    }
-    else if (!this.texture.loaded) {
+    } else if (!this.texture.loaded) {
       this.texture.load()
-    }
-    else {
+    } else {
       gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
       gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
       gl.bindTexture(gl.TEXTURE_2D, this.texture.tex)
@@ -149,34 +147,39 @@ export class RenderQuadsLayer extends RenderLayer {
 function makeVertices(q: Quad) {
   if (q.posEnv) {
     let env = q.posEnv.current.point
-    if (q.posEnvOffset)
-      env = q.posEnv.computePoint(q.posEnv.current.time + q.posEnvOffset)
-    
-    let cos_r = Math.cos(env.rotation / 1024 / 180 * Math.PI)
-    let sin_r = Math.sin(env.rotation / 1024 / 180 * Math.PI)
-    
+    if (q.posEnvOffset) env = q.posEnv.computePoint(q.posEnv.current.time + q.posEnvOffset)
+
+    let cos_r = Math.cos((env.rotation / 1024 / 180) * Math.PI)
+    let sin_r = Math.sin((env.rotation / 1024 / 180) * Math.PI)
+
     const points = [q.points[0], q.points[2], q.points[3], q.points[1]]
-      .map(({ x, y }) => [ // translate quad center to origin for rotation
+      .map(({ x, y }) => [
+        // translate quad center to origin for rotation
         x - q.points[4].x,
         y - q.points[4].y,
       ])
-      .map(([ x, y ]) => [ // rotate
-        (x * cos_r - y * sin_r),
-        (x * sin_r + y * cos_r),
+      .map(([x, y]) => [
+        // rotate
+        x * cos_r - y * sin_r,
+        x * sin_r + y * cos_r,
       ])
-      .map(([ x, y ]) => [ // translate center back in place + env translate
+      .map(([x, y]) => [
+        // translate center back in place + env translate
         x + q.points[4].x + env.x,
         y + q.points[4].y + env.y,
       ])
-        
+
     return points.flat().map(x => x / 1024 / 32)
-  }
-  else {
+  } else {
     return [
-      q.points[0].x / 1024 / 32, q.points[0].y / 1024 / 32,
-      q.points[2].x / 1024 / 32, q.points[2].y / 1024 / 32,
-      q.points[3].x / 1024 / 32, q.points[3].y / 1024 / 32,
-      q.points[1].x / 1024 / 32, q.points[1].y / 1024 / 32,
+      q.points[0].x / 1024 / 32,
+      q.points[0].y / 1024 / 32,
+      q.points[2].x / 1024 / 32,
+      q.points[2].y / 1024 / 32,
+      q.points[3].x / 1024 / 32,
+      q.points[3].y / 1024 / 32,
+      q.points[1].x / 1024 / 32,
+      q.points[1].y / 1024 / 32,
     ]
   }
 }
@@ -186,28 +189,26 @@ function makeColors(q: Quad) {
 
   if (q.colorEnv) {
     let env = q.colorEnv.current.point
-    if (q.colorEnvOffset)
-      env = q.colorEnv.computePoint(q.colorEnv.current.time + q.colorEnvOffset)
+    if (q.colorEnvOffset) env = q.colorEnv.computePoint(q.colorEnv.current.time + q.colorEnvOffset)
 
     const { r, g, b, a } = env
-    const compEnv = [ r, g, b, a ].map(x => x / 1024)
-    comp = ({ r, g, b, a }) => [r, g, b, a].map((x, i) => x / 255 * compEnv[i])
+    const compEnv = [r, g, b, a].map(x => x / 1024)
+    comp = ({ r, g, b, a }) => [r, g, b, a].map((x, i) => (x / 255) * compEnv[i])
   }
 
-  return [
-    ...comp(q.colors[0]),
-    ...comp(q.colors[2]),
-    ...comp(q.colors[3]),
-    ...comp(q.colors[1]),
-  ]
+  return [...comp(q.colors[0]), ...comp(q.colors[2]), ...comp(q.colors[3]), ...comp(q.colors[1])]
 }
 
 function makeTexCoords(q: Quad) {
   return [
-    q.texCoords[0].x / 1024, q.texCoords[0].y / 1024,
-    q.texCoords[2].x / 1024, q.texCoords[2].y / 1024,
-    q.texCoords[3].x / 1024, q.texCoords[3].y / 1024,
-    q.texCoords[1].x / 1024, q.texCoords[1].y / 1024,
+    q.texCoords[0].x / 1024,
+    q.texCoords[0].y / 1024,
+    q.texCoords[2].x / 1024,
+    q.texCoords[2].y / 1024,
+    q.texCoords[3].x / 1024,
+    q.texCoords[3].y / 1024,
+    q.texCoords[1].x / 1024,
+    q.texCoords[1].y / 1024,
   ]
 }
 

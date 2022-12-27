@@ -9,7 +9,7 @@ import { optimizeImports } from 'carbon-preprocess-svelte'
 export default defineConfig({
   plugins: [
     svelte({
-      preprocess: seqPreprocessor([ sveltePreprocess(), optimizeImports(), importAssets() ])
-    })
-  ]
+      preprocess: seqPreprocessor([sveltePreprocess(), optimizeImports(), importAssets()]),
+    }),
+  ],
 })

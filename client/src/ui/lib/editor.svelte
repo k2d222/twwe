@@ -1,13 +1,27 @@
 <script lang="ts">
   import type { Map } from '../../twmap/map'
   import type {
-    ListUsers, ServerError, EditMap,
-    EditTile, EditTileParams,
-    CreateQuad, EditQuad, DeleteQuad,
-    CreateEnvelope, EditEnvelope, DeleteEnvelope,
-    CreateGroup,  EditGroup, DeleteGroup, ReorderGroup,
-    CreateLayer, EditLayer, DeleteLayer, ReorderLayer,
-    CreateImage, DeleteImage,
+    ListUsers,
+    ServerError,
+    EditMap,
+    EditTile,
+    EditTileParams,
+    CreateQuad,
+    EditQuad,
+    DeleteQuad,
+    CreateEnvelope,
+    EditEnvelope,
+    DeleteEnvelope,
+    CreateGroup,
+    EditGroup,
+    DeleteGroup,
+    ReorderGroup,
+    CreateLayer,
+    EditLayer,
+    DeleteLayer,
+    ReorderLayer,
+    CreateImage,
+    DeleteImage,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from 'src/twmap/group'
@@ -46,11 +60,11 @@
     Music as SoundsIcon,
     Add as CreateGroupIcon,
   } from 'carbon-icons-svelte'
-  import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte';
-  
+  import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
+
   type Coord = {
-    x: number,
-    y: number,
+    x: number
+    y: number
   }
 
   export let map: Map
@@ -65,7 +79,7 @@
   let active: [number, number] = map.physicsLayerIndex(GameLayer)
   let selected: [number, number][] = [active]
   let rmap = new RenderMap(map)
-    
+
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
   let propsPaneSize = px2vw(rem2px(20))
@@ -74,7 +88,7 @@
   let lastPropsPaneSize = propsPaneSize
   let lastTopPaneSize = 20
   let closedPaneThreshold = px2vw(rem2px(2))
-  
+
   // computed (readonly)
   let g: number, l: number
   let activeRgroup: RenderGroup | null, activeRlayer: RenderLayer | null
@@ -84,15 +98,14 @@
   $: activeRlayer = l === -1 ? null : activeRgroup.layers[l]
   $: activeGroup = activeRgroup === null ? null : activeRgroup.group
   $: activeLayer = activeRlayer === null ? null : activeRlayer.layer
-  
+
   async function onCreateLayer(e: CreateLayer) {
     showInfo('Creating layer…')
     try {
       await server.query('createlayer', e)
       serverOnCreateLayer(e)
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to create layer: ' + e)
     }
   }
@@ -102,8 +115,7 @@
       await server.query('deletelayer', e)
       serverOnDeleteLayer(e)
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to delete layer: ' + e)
     }
   }
@@ -113,8 +125,7 @@
       await server.query('editlayer', e)
       serverOnEditLayer(e)
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to edit layer: ' + e)
     }
   }
@@ -124,8 +135,7 @@
       await server.query('reorderlayer', e)
       serverOnReorderLayer(e)
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to reorder layer: ' + e)
     }
   }
@@ -138,8 +148,7 @@
       active = [map.groups.length - 1, -1]
       selected = [active]
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to create group: ' + e)
     }
   }
@@ -149,8 +158,7 @@
       await server.query('deletegroup', e)
       serverOnDeleteGroup(e)
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to delete group: ' + e)
     }
   }
@@ -160,8 +168,7 @@
       await server.query('editgroup', e)
       serverOnEditGroup(e)
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to edit group: ' + e)
     }
   }
@@ -171,8 +178,7 @@
       await server.query('reordergroup', e)
       serverOnReorderGroup(e)
       clearDialog()
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to reorder group: ' + e)
     }
   }
@@ -233,27 +239,22 @@
   function serverOnDeleteLayer(e: DeleteLayer) {
     const deleted = rmap.deleteLayer(e)
     if (activeRlayer && deleted === activeRlayer) {
-      if (activeGroup.layers.length === 0)
-        active = map.physicsLayerIndex(GameLayer)
-      else
-        active = [g, Math.min(activeGroup.layers.length - 1, e.layer)]
+      if (activeGroup.layers.length === 0) active = map.physicsLayerIndex(GameLayer)
+      else active = [g, Math.min(activeGroup.layers.length - 1, e.layer)]
     }
     selected = selected.filter(([g, l]) => g !== e.group || l !== e.layer)
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderGroup(e: ReorderGroup) {
     rmap.reorderGroup(e)
-    if (activeLayer)
-      active = map.layerIndex(activeLayer)
-    else if (activeGroup)
-      active = [map.groupIndex(activeGroup), -1]
+    if (activeLayer) active = map.layerIndex(activeLayer)
+    else if (activeGroup) active = [map.groupIndex(activeGroup), -1]
     selected = [active] // TODO: keep selected layers
     rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderLayer(e: ReorderLayer) {
     rmap.reorderLayer(e)
-    if (activeLayer)
-      active = map.layerIndex(activeLayer)
+    if (activeLayer) active = map.layerIndex(activeLayer)
     selected = [active] // TODO: keep selected layers
     rmap = rmap // hack to redraw treeview
   }
@@ -263,8 +264,7 @@
       image.loadExternal(externalImageUrl(e.name))
       image.name = e.name
       rmap.addImage(image)
-    }
-    else {
+    } else {
       const image = await queryImage({ index: e.index })
       rmap.addImage(image)
     }
@@ -277,31 +277,39 @@
   }
   function serverOnError(e: ServerError) {
     if ('serverError' in e) {
-      showError('The server met an unexpected error. You should download or save the map, then reload the page.', 'closable')
-    }
-    else if ('mapError' in e) {
+      showError(
+        'The server met an unexpected error. You should download or save the map, then reload the page.',
+        'closable'
+      )
+    } else if ('mapError' in e) {
       console.error('map error', e)
-      showError('The server met an unexpected error and the map got corrupted. Reload the page to rollback to last save.', 'closable')
+      showError(
+        'The server met an unexpected error and the map got corrupted. Reload the page to rollback to last save.',
+        'closable'
+      )
     }
   }
 
   function updateOutlines() {
     const { scale, pos } = viewport
     let { x, y } = viewport.mousePos
-    let [ offX, offY ] = activeRgroup.offset()
+    let [offX, offY] = activeRgroup.offset()
     x = Math.floor(x - offX)
     y = Math.floor(y - offY)
 
     let color = 'black'
-    if (activeLayer instanceof AnyTilesLayer && (x < 0 || y < 0 || x >= activeLayer.width || y >= activeLayer.height)) {
+    if (
+      activeLayer instanceof AnyTilesLayer &&
+      (x < 0 || y < 0 || x >= activeLayer.width || y >= activeLayer.height)
+    ) {
       color = 'red'
     }
-    
-      if (boxSelect || boxFill) {
-        const range = Editor.normalizeRange(boxRange)
-        let [ x1, y1 ] = viewport.worldToPixel(range.start.x - offX, range.start.y)
-        let [ x2, y2 ] = viewport.worldToPixel(range.end.x + 1 - offX, range.end.y + 1)
-        hoverTileStyle = `
+
+    if (boxSelect || boxFill) {
+      const range = Editor.normalizeRange(boxRange)
+      let [x1, y1] = viewport.worldToPixel(range.start.x - offX, range.start.y)
+      let [x2, y2] = viewport.worldToPixel(range.end.x + 1 - offX, range.end.y + 1)
+      hoverTileStyle = `
           width: ${x2 - x1}px;
           height: ${y2 - y1}px;
           top: ${y1}px;
@@ -309,17 +317,16 @@
           border-width: ${scale / 16}px;
           border-color: ${color};
         `
-        boxStyle = `
+      boxStyle = `
           width: ${x2 - x1}px;
           height: ${y2 - y1}px;
           top: ${y1}px;
           left: ${x1}px;
           background: ${boxFill ? 'orange' : shiftKey ? 'red' : 'blue'};
         `
-      }
-      else {
-        if (selectedTiles.length)
-          hoverTileStyle = `
+    } else {
+      if (selectedTiles.length)
+        hoverTileStyle = `
             width: ${scale * selectedTiles[0].length}px;
             height: ${scale * selectedTiles.length}px;
             top: ${(y + offY - pos.y) * scale}px;
@@ -327,15 +334,15 @@
             border-width: ${scale / 16}px;
             border-color: ${color};
           `
-        else
-          hoverTileStyle = `
+      else
+        hoverTileStyle = `
           display: none;
         `
-        boxStyle = `
+      boxStyle = `
           display: none;
         `
-      }
-    
+    }
+
     if (activeRgroup.group.clipping) {
       let { clipX, clipY, clipW, clipH } = activeRgroup.group
       clipX /= 32
@@ -348,8 +355,7 @@
         top: ${(clipY - pos.y) * scale}px;
         left: ${(clipX - pos.x) * scale}px;
       `
-    }
-    else {
+    } else {
       clipOutlineStyle = `
         display: none;
       `
@@ -362,16 +368,15 @@
         top: ${(-pos.y + offY) * scale}px;
         left: ${-(pos.x - offX) * scale}px;
       `
-    }
-    else {
+    } else {
       layerOutlineStyle = `
         display: none;
       `
     }
   }
-  
+
   function updateEnvelopes(t: number) {
-    for(let env of map.envelopes) {
+    for (let env of map.envelopes) {
       env.update(t)
     }
     for (const rgroup of rmap.groups) {
@@ -411,7 +416,7 @@
 
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
-    
+
     let lastTime: DOMHighResTimeStamp = 0
 
     const renderLoop = (t: DOMHighResTimeStamp) => {
@@ -422,8 +427,7 @@
       renderer.render(viewport, rmap)
       updateOutlines()
       lastTime = t
-      if (!destroyed)
-        requestAnimationFrame(renderLoop)
+      if (!destroyed) requestAnimationFrame(renderLoop)
     }
     renderLoop(0)
   })
@@ -456,8 +460,7 @@
     if (layerPaneSize < closedPaneThreshold || propsPaneSize < closedPaneThreshold) {
       layerPaneSize = lastLayerPaneSize
       propsPaneSize = lastPropsPaneSize
-    }
-    else {
+    } else {
       lastLayerPaneSize = layerPaneSize
       lastPropsPaneSize = propsPaneSize
       layerPaneSize = 0
@@ -468,8 +471,7 @@
   function onToggleTopPane() {
     if (envPaneSize < closedPaneThreshold) {
       envPaneSize = lastTopPaneSize
-    }
-    else {
+    } else {
       lastTopPaneSize = envPaneSize
       envPaneSize = 0
     }
@@ -477,8 +479,7 @@
 
   function onToggleAnim() {
     animEnabled = !animEnabled
-    if (!animEnabled)
-      updateEnvelopes(0)
+    if (!animEnabled) updateEnvelopes(0)
   }
 
   async function onSaveMap() {
@@ -486,8 +487,7 @@
       showInfo('Saving map...', 'none')
       await server.query('savemap', { name: map.name })
       showInfo('Map saved on server.', 'closable')
-    }
-    catch (e) {
+    } catch (e) {
       showError('Failed to save map: ' + e)
     }
   }
@@ -495,31 +495,28 @@
   function onDownloadMap() {
     Editor.downloadMap(map.name)
   }
-  
+
   let ctrlKey = false
   let shiftKey = false
 
   function onKeyDown(e: KeyboardEvent) {
     ctrlKey = e.ctrlKey
     shiftKey = e.shiftKey
-  
+
     const target = e.target as HTMLElement
-    if (!target.contains(canvas))
-      return
-      
+    if (!target.contains(canvas)) return
+
     Editor.fire('keydown', e)
 
     if (e.ctrlKey && ['s', 'd', ' '].includes(e.key)) {
       e.preventDefault()
-      
+
       if (e.key === 's') {
         onSaveMap()
-      }
-      else if (e.key === ' ') {
+      } else if (e.key === ' ') {
         onToggleAnim()
       }
-    }
-    else if (['Tab'].includes(e.key)) {
+    } else if (['Tab'].includes(e.key)) {
       e.preventDefault()
 
       if (e.key === 'Tab') {
@@ -531,22 +528,20 @@
   function onKeyUp(e: KeyboardEvent) {
     ctrlKey = e.ctrlKey
     shiftKey = e.shiftKey
-  
+
     const target = e.target as HTMLElement
-    if (!target.contains(canvas))
-      return
-    
+    if (!target.contains(canvas)) return
+
     Editor.fire('keyup', e)
   }
-  
+
   function onKeyPress(e: KeyboardEvent) {
     const target = e.target as HTMLElement
-    if (!target.contains(canvas))
-      return
-    
+    if (!target.contains(canvas)) return
+
     Editor.fire('keypress', e)
   }
-  
+
   let hoverTileStyle = ''
   let layerOutlineStyle = ''
   let clipOutlineStyle = ''
@@ -559,9 +554,9 @@
     end: { x: 0, y: 0 },
   }
   let lastPos = { x: 0, y: 0 }
-  
+
   function worldPosToTileCoord(pos: Coord): Coord {
-    const [ offX, offY ] = activeRgroup.offset()
+    const [offX, offY] = activeRgroup.offset()
     return {
       x: Math.floor(pos.x - offX),
       y: Math.floor(pos.y - offY),
@@ -574,13 +569,11 @@
       if (e.buttons === 1) {
         if (!e.ctrlKey && !e.shiftKey && selectedTiles.length !== 0) {
           Editor.placeTiles(rmap, g, l, curPos, selectedTiles)
-        }
-        else if (e.shiftKey && selectedTiles.length !== 0) {
+        } else if (e.shiftKey && selectedTiles.length !== 0) {
           boxRange.start = curPos
           boxRange.end = curPos
           boxFill = true
-        }
-        else if (selectedTiles.length === 0) {
+        } else if (selectedTiles.length === 0) {
           boxRange.start = curPos
           boxRange.end = curPos
           boxSelect = true
@@ -589,22 +582,21 @@
       lastPos = curPos
     }
   }
-  
+
   function onMouseMove(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
       if (e.buttons === 1 && !e.ctrlKey) {
         if (!boxFill && !boxSelect && !e.shiftKey) {
           Editor.drawLine(rmap, g, l, lastPos, curPos, selectedTiles)
-        }
-        else if (boxFill || boxSelect) {
+        } else if (boxFill || boxSelect) {
           boxRange.end = curPos
         }
       }
       lastPos = curPos
     }
   }
-  
+
   function onMouseUp(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
       if (boxSelect || boxFill) {
@@ -615,14 +607,12 @@
         if (boxSelect && !e.shiftKey) {
           selectedTiles = Editor.makeBoxSelection(activeLayer, boxRange)
           boxSelect = false
-        }
-        else if (boxSelect && e.shiftKey) {
+        } else if (boxSelect && e.shiftKey) {
           const brush = Editor.makeEmptySelection(activeLayer, boxRange)
           Editor.placeTiles(rmap, g, l, boxRange.start, brush)
           selectedTiles = []
           boxSelect = false
-        }
-        else if (boxFill) {
+        } else if (boxFill) {
           Editor.fill(rmap, g, l, boxRange, selectedTiles)
           boxFill = false
         }
@@ -634,17 +624,17 @@
     e.preventDefault()
     selectedTiles = []
   }
-  
+
   function onEditInfo() {
     infoEditorVisible = !infoEditorVisible
   }
-  
+
   async function onInfoClose() {
     infoEditorVisible = false
     try {
       showInfo('Please wait…')
       const change: EditMap = {
-        info: map.info
+        info: map.info,
       }
       const res = await server.query('editmap', change)
       map.info = res.info
@@ -653,23 +643,37 @@
       showError('Failed to edit map info: ' + e)
     }
   }
-  
 </script>
 
 <svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:keypress={onKeyPress} />
 
 <div id="editor">
-
   <div id="menu">
     <div class="left">
-      <button id="nav-toggle" on:click={onToggleLayerPanes}><LayersIcon size={20} title="Layers" /></button>
-      <button id="env-toggle" on:click={onToggleTopPane}><EnvelopesIcon size={20} title="Envelopes" /></button>
+      <button id="nav-toggle" on:click={onToggleLayerPanes}
+        ><LayersIcon size={20} title="Layers" /></button
+      >
+      <button id="env-toggle" on:click={onToggleTopPane}
+        ><EnvelopesIcon size={20} title="Envelopes" /></button
+      >
       <button id="images-toggle" disabled><ImagesIcon size={20} title="Images" /></button>
       <button id="sounds-toggle" disabled><SoundsIcon size={20} title="Sounds" /></button>
-      <button id="info-toggle" on:click={onEditInfo}><EditInfoIcon size={20} title="Map properties" /></button>
-      <button id="save" on:click={onSaveMap}><SaveIcon size={20} title="Save map on server" /></button>
-      <button id="download" on:click={onDownloadMap}><DownloadIcon size={20} title="Download this map on your computer" /></button>
-      <button id="anim-toggle" on:click={onToggleAnim}><svelte:component size={20} this={animEnabled ? PauseIcon : PlayIcon} title="Play/Pause envelopes animations" /></button>
+      <button id="info-toggle" on:click={onEditInfo}
+        ><EditInfoIcon size={20} title="Map properties" /></button
+      >
+      <button id="save" on:click={onSaveMap}
+        ><SaveIcon size={20} title="Save map on server" /></button
+      >
+      <button id="download" on:click={onDownloadMap}
+        ><DownloadIcon size={20} title="Download this map on your computer" /></button
+      >
+      <button id="anim-toggle" on:click={onToggleAnim}
+        ><svelte:component
+          this={animEnabled ? PauseIcon : PlayIcon}
+          size={20}
+          title="Play/Pause envelopes animations"
+        /></button
+      >
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
@@ -691,16 +695,23 @@
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>
-          <div id="canvas-container" bind:this={cont} on:mousedown={onMouseDown} on:mouseup={onMouseUp} on:mousemove={onMouseMove} on:contextmenu={onContextMenu}>
+          <div
+            id="canvas-container"
+            bind:this={cont}
+            on:mousedown={onMouseDown}
+            on:mouseup={onMouseUp}
+            on:mousemove={onMouseMove}
+            on:contextmenu={onContextMenu}
+          >
             <!-- Here goes the canvas on mount() -->
-            <div id="clip-outline" style={clipOutlineStyle}></div>
+            <div id="clip-outline" style={clipOutlineStyle} />
             {#if activeLayer instanceof AnyTilesLayer}
-              <div id="hover-tile" style={hoverTileStyle}></div>
-              <div id="layer-outline" style={layerOutlineStyle}></div>
+              <div id="hover-tile" style={hoverTileStyle} />
+              <div id="layer-outline" style={layerOutlineStyle} />
             {:else if activeLayer instanceof QuadsLayer}
               <QuadsView {rmap} layer={activeLayer} />
             {/if}
-            <div class="box-select" style={boxStyle}></div>
+            <div class="box-select" style={boxStyle} />
             <!-- <Statusbar /> -->
           </div>
           {#if activeRlayer instanceof RenderAnyTilesLayer}
@@ -710,17 +721,22 @@
 
         <Pane class="properties" bind:size={propsPaneSize}>
           {#if activeLayer !== null}
-            <LayerEditor {rmap} {g} {l}
-              on:deletelayer={(e) => onDeleteLayer(e.detail)}
-              on:editlayer={(e) => onEditLayer(e.detail)}
-              on:reorderlayer={(e) => onReorderLayer(e.detail)}
+            <LayerEditor
+              {rmap}
+              {g}
+              {l}
+              on:deletelayer={e => onDeleteLayer(e.detail)}
+              on:editlayer={e => onEditLayer(e.detail)}
+              on:reorderlayer={e => onReorderLayer(e.detail)}
             />
           {:else if activeGroup !== null}
-            <GroupEditor {rmap} {g}
-              on:createlayer={(e) => onCreateLayer(e.detail)}
-              on:deletegroup={(e) => onDeleteGroup(e.detail)}
-              on:editgroup={(e) => onEditGroup(e.detail)}
-              on:reordergroup={(e) => onReorderGroup(e.detail)}
+            <GroupEditor
+              {rmap}
+              {g}
+              on:createlayer={e => onCreateLayer(e.detail)}
+              on:deletegroup={e => onDeleteGroup(e.detail)}
+              on:editgroup={e => onEditGroup(e.detail)}
+              on:reordergroup={e => onReorderGroup(e.detail)}
             />
           {:else}
             <span>Select a group or a layer in the left bar.</span>
@@ -734,12 +750,14 @@
     </Pane>
   </Splitpanes>
 
-
-  <ComposedModal open={infoEditorVisible} on:close={onInfoClose} selectorPrimaryFocus=".bx--modal-close">
+  <ComposedModal
+    open={infoEditorVisible}
+    on:close={onInfoClose}
+    selectorPrimaryFocus=".bx--modal-close"
+  >
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
-      <InfoEditor info={map.info}/>
+      <InfoEditor info={map.info} />
     </ModalBody>
   </ComposedModal>
-
 </div>

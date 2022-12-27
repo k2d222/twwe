@@ -27,23 +27,21 @@ export class QuadsLayer extends Layer {
   }
 
   load(map: Map, df: DataFile, info: Info.QuadsLayer) {
-    if ('name' in info)
-      this.name = info.name
+    if ('name' in info) this.name = info.name
 
     const quadData = df.getData(info.data)
-    this.quads = parseQuads(quadData, info.numQuads)
-      .map(q => {
-        const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = q
-        return {
-          points,
-          colors,
-          texCoords,
-          posEnv: posEnv === -1 ? null : map.envelopes[posEnv] as PositionEnvelope,
-          posEnvOffset,
-          colorEnv: colorEnv === -1 ? null : map.envelopes[colorEnv] as ColorEnvelope,
-          colorEnvOffset,
-        }
-      })
+    this.quads = parseQuads(quadData, info.numQuads).map(q => {
+      const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = q
+      return {
+        points,
+        colors,
+        texCoords,
+        posEnv: posEnv === -1 ? null : (map.envelopes[posEnv] as PositionEnvelope),
+        posEnvOffset,
+        colorEnv: colorEnv === -1 ? null : (map.envelopes[colorEnv] as ColorEnvelope),
+        colorEnvOffset,
+      }
+    })
 
     this.image = null
     if (info.image !== -1) {

@@ -6,37 +6,38 @@
   box-sizing: border-box;
 }
 
-body, html {
+body,
+html {
   font-family: sans-serif;
   margin: 0;
   padding: 0;
 }
 
-ol, ul {
+ol,
+ul {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-input[type=number],
-input[type=text],
-input[type=button],
-input[type=color],
+input[type='number'],
+input[type='text'],
+input[type='button'],
+input[type='color'],
 select,
 textarea,
 button.danger,
 button.default,
-button.primary
-{
+button.primary {
   border: none;
-  padding: .25rem .4rem;
+  padding: 0.25rem 0.4rem;
   text-overflow: ellipsis;
   overflow: hidden;
   background-color: #f2f2f2;
 
   outline: 1px solid #aaaaaa;
   outline-offset: -1px;
-  
+
   &:hover {
     outline: 1px solid #393939;
     outline-offset: -1px;
@@ -48,7 +49,7 @@ button.primary
 }
 
 button.large {
-  padding: .5rem .8rem;
+  padding: 0.5rem 0.8rem;
 }
 
 button.danger {
@@ -65,22 +66,23 @@ $menu_h: 3rem;
 
 #panes {
   height: calc(100vh - $menu-h);
-  
+
   .splitpanes__splitter {
     border: 0;
     margin: 0;
     // background-color: #f2f2f2;
     z-index: unset;
-    
-    &:before, &:after {
+
+    &:before,
+    &:after {
       background-color: #888;
     }
   }
-  
+
   > .splitpanes__splitter {
     background-color: white;
   }
-  
+
   .splitpanes__pane.viewport {
     position: relative;
 
@@ -92,7 +94,8 @@ $menu_h: 3rem;
     }
   }
 
-  .splitpanes__pane.layers, .splitpanes__pane.properties {
+  .splitpanes__pane.layers,
+  .splitpanes__pane.properties {
     overflow: auto;
   }
 }
@@ -100,7 +103,7 @@ $menu_h: 3rem;
 canvas {
   position: fixed;
   top: 0;
-  left:0;
+  left: 0;
   background-image: url('/editor/checker.png');
   background-repeat: repeat;
 }
@@ -114,18 +117,20 @@ canvas {
   background: #161616;
   color: white;
 
-  > .left, > .right, > .middle {
+  > .left,
+  > .right,
+  > .middle {
     display: flex;
     align-items: center;
     flex-direction: row;
     flex-basis: 0;
     flex-grow: 1;
   }
-  
+
   .middle {
     justify-content: center;
   }
-  
+
   .right {
     justify-content: flex-end;
     margin-right: 1rem;
@@ -134,7 +139,7 @@ canvas {
   button {
     width: $menu_h;
     height: $menu_h;
-    display:flex;
+    display: flex;
     justify-content: center;
     align-items: center;
     background: transparent;
@@ -142,18 +147,19 @@ canvas {
     outline: none;
     margin: 0;
     padding: 0;
-    
+
     > svg {
       fill: white;
     }
     &[disabled] > svg {
       fill: grey;
     }
-    
-    &:hover, &:focus {
+
+    &:hover,
+    &:focus {
       background: #393939;
     }
-    
+
     &:focus {
       outline: 2px solid #0f62fe;
       outline-offset: -2px;
@@ -168,7 +174,7 @@ canvas {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, .5);
+  background: rgba(0, 0, 0, 0.5);
   padding: 5rem;
   z-index: 10000;
 
@@ -178,7 +184,7 @@ canvas {
     border-radius: 15px;
     background: white;
     border: 1px solid black;
-  
+
     > img {
       position: absolute;
       top: calc(50% - 1rem);
@@ -186,14 +192,15 @@ canvas {
       width: 2rem;
     }
   }
-  
-  > button, > .buttons {
+
+  > button,
+  > .buttons {
     position: relative;
     bottom: 2.5rem;
     height: 2rem;
     padding: 0 1rem;
   }
-  
+
   &.hidden {
     display: none;
   }
@@ -203,7 +210,7 @@ canvas {
   display: flex;
   flex-direction: column;
   color: #161616;
-  
+
   .node {
     position: relative;
     display: flex;
@@ -211,21 +218,23 @@ canvas {
     width: 100%;
     height: 2rem;
     padding-left: 1rem;
-    
-    &:hover, &.selected, &.active {
+
+    &:hover,
+    &.selected,
+    &.active {
       background: #e0e0e0;
     }
-    
+
     &.active::before {
-      content: "";
+      content: '';
       position: absolute;
       top: 0;
       left: 0;
       height: 100%;
-      width: .25rem;
+      width: 0.25rem;
       background: #0f62fe;
     }
-    
+
     &:focus {
       outline: 2px solid #0f62fe;
       outline-offset: -2px;
@@ -236,48 +245,51 @@ canvas {
       overflow: hidden;
       white-space: nowrap;
       flex-grow: 1;
-      padding-right: .5rem;
+      padding-right: 0.5rem;
       height: 100%;
       display: flex;
       align-items: center;
     }
   }
-  
+
   .layer .node {
     padding-left: 3.5rem;
   }
-  
+
   .group {
     display: flex;
     flex-direction: column;
-    
+
     &.folded > ul {
       display: none;
     }
-    
+
     &.folded > .node > .toggle > svg {
       transform: rotate(-90deg);
     }
   }
-  
-  .toggle, .icon, .eye {
-    margin-right: .5rem;
+
+  .toggle,
+  .icon,
+  .eye {
+    margin-right: 0.5rem;
   }
-  
-  .toggle, .eye {
+
+  .toggle,
+  .eye {
     cursor: pointer;
   }
-  
+
   li.visible:not(:hover) > .node > .eye {
     display: none;
   }
-  
+
   .toggle > svg {
-    transition: transform .2s;
+    transition: transform 0.2s;
   }
-  
+
   .group:not(.visible) .layer {
-    opacity: .5;
+    opacity: 0.5;
   }
 }
 
@@ -294,7 +306,7 @@ canvas {
   font-size: 1rem;
 
   > .icon {
-    margin-right: .5rem;
+    margin-right: 0.5rem;
     stroke: black;
   }
 
@@ -304,10 +316,12 @@ canvas {
     overflow: hidden;
     white-space: nowrap;
     flex-grow: 1;
-    padding-right: .5rem;
+    padding-right: 0.5rem;
   }
 
-  &:hover, &.selected, &.active {
+  &:hover,
+  &.selected,
+  &.active {
     background: #e0e0e0;
   }
 }
@@ -320,7 +334,7 @@ canvas {
 
   #tooltip {
     float: right;
-    padding: .2rem 1rem;
+    padding: 0.2rem 1rem;
     height: 100%;
     background-color: white;
   }
@@ -336,7 +350,7 @@ canvas {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
   }
-  
+
   .tiles button {
     width: 100%;
     height: 100%;
@@ -350,10 +364,10 @@ canvas {
 
     &:hover {
       outline: 2px solid black;
-      background: rgba(255, 255, 255, .4);
+      background: rgba(255, 255, 255, 0.4);
     }
   }
-  
+
   .tile.selected {
     position: absolute;
     bottom: 2rem;
@@ -376,19 +390,20 @@ canvas {
       }
     }
   }
-  
-  .tiles, .settings {
+
+  .tiles,
+  .settings {
     position: fixed;
     bottom: 7rem;
     left: 50%;
     transform: translateX(-50%);
     border: 3px solid black;
-    
+
     &.hidden {
       display: none;
     }
   }
-  
+
   .tiles {
     z-index: 1;
     display: grid;
@@ -399,14 +414,14 @@ canvas {
     grid-gap: 1px;
     overflow: auto;
   }
-  
+
   .settings {
     background: white;
     padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: .5rem;
-    
+    gap: 0.5rem;
+
     label {
       display: flex;
       justify-content: space-between;
@@ -414,10 +429,10 @@ canvas {
       gap: 1rem;
     }
 
-    input[type=number] {
+    input[type='number'] {
       width: 4rem;
     }
-    
+
     .buttons {
       text-align: center;
 
@@ -442,21 +457,22 @@ canvas {
   align-items: center;
   background: white;
   padding: 3rem;
-  
+
   &.hidden {
     display: none;
   }
-  
+
   .buttons {
     display: flex;
     gap: 1rem;
-    
-    > input[type=text] {
+
+    > input[type='text'] {
       width: 5rem;
       flex-grow: 1;
     }
 
-    > button, > input[type=text] {
+    > button,
+    > input[type='text'] {
       font-size: 1.5rem;
     }
 
@@ -464,22 +480,23 @@ canvas {
       justify-content: flex-end;
     }
   }
-  
+
   #new-map {
     & > *:first-child {
       flex-grow: 1;
     }
 
-    button, input {
+    button,
+    input {
       font-size: 1rem;
     }
-    
+
     label.file {
       border: 1px solid grey;
       border-radius: 3px;
-      padding: .5rem 1rem;
+      padding: 0.5rem 1rem;
 
-      > input[type="file"] {
+      > input[type='file'] {
         display: none;
       }
     }
@@ -492,15 +509,16 @@ canvas {
   button {
     border: none;
     border-radius: 3px;
-    padding: .4rem 1rem;
+    padding: 0.4rem 1rem;
     color: black;
     background: lightgrey;
 
     &:hover {
       background: #a8a8a8;
     }
-    
-    &.refresh img, &.delete img {
+
+    &.refresh img,
+    &.delete img {
       width: 100%;
       height: 100%;
     }
@@ -514,7 +532,7 @@ canvas {
       }
     }
   }
-  
+
   .content {
     background: white;
     display: flex;
@@ -531,10 +549,10 @@ canvas {
     .row {
       display: flex;
       align-items: center;
-      padding: .5rem 0;
+      padding: 0.5rem 0;
       border-bottom: 1px solid lightgrey;
       gap: 1rem;
-    
+
       > *:nth-child(1) {
         width: 3rem;
         margin: 0;
@@ -546,22 +564,22 @@ canvas {
         margin-right: 1rem;
       }
     }
-    
+
     .header {
       font-weight: bold;
       border: 1px solid grey;
     }
   }
-  
+
   .settings {
     display: grid;
     grid-template-columns: auto auto;
     gap: 1rem;
-    
+
     > span:nth-child(2n) {
       display: flex;
       flex-direction: column;
-      gap: .5rem;
+      gap: 0.5rem;
     }
   }
 }
@@ -574,20 +592,24 @@ canvas {
 
   .content {
     position: absolute;
-    padding: .5rem;
+    padding: 0.5rem;
     background: white;
     border: 1px solid lightgrey;
     box-shadow: 5px 5px 20px -15px black;
     border-radius: 5px;
   }
 }
- 
-.edit-layer, .edit-group, .edit-quad, .edit-info, .edit-env-point {
+
+.edit-layer,
+.edit-group,
+.edit-quad,
+.edit-info,
+.edit-env-point {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
-  
+
   label {
     display: flex;
     justify-content: space-between;
@@ -595,8 +617,8 @@ canvas {
     width: 100%;
     gap: 1rem;
   }
-  
-  input[type=number] {
+
+  input[type='number'] {
     width: 4rem;
   }
 
@@ -611,7 +633,7 @@ nav.hidden .context {
 }
 
 #hover-tile {
-  background: #FFFFFF55;
+  background: #ffffff55;
   position: fixed;
   border: 4px solid black;
   pointer-events: none;
@@ -639,29 +661,29 @@ nav.hidden .context {
   flex-direction: column;
   height: 100%;
   gap: 1rem;
-  
+
   $img-size: 10rem;
-  
+
   > .footer {
     // background: white;
     // border: 1px solid black;
     // border-top: none;
     width: 100%;
-    padding: .5rem;
+    padding: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
-  
+
   > .images {
     overflow: auto;
-    
+
     .list {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
       gap: 1rem;
-      
+
       .image {
         width: $img-size;
         height: $img-size;
@@ -670,12 +692,12 @@ nav.hidden .context {
         position: relative;
         overflow: hidden;
         padding: 0;
-        
+
         &:hover > button {
           position: absolute;
           top: 0;
           right: 0;
-          padding: .25rem;
+          padding: 0.25rem;
           line-height: 1rem;
           width: 2rem;
           height: 2rem;
@@ -684,27 +706,27 @@ nav.hidden .context {
           background: white;
           border: none;
           font-size: 1.5rem;
-          
+
           &:hover {
             color: darkred;
             font-size: 1.5rem;
             font-size: 2rem;
           }
         }
-        
+
         &.selected {
           border: 4px solid #0f62fe;
         }
-        
+
         .hover {
           position: absolute;
           width: 100%;
           bottom: -2.1rem;
           overflow: hidden;
           text-overflow: ellipsis;
-          padding: .3rem;
+          padding: 0.3rem;
           background: white;
-          transition: all .2s;
+          transition: all 0.2s;
           text-align: center;
           border-top: 1px solid grey;
           font-weight: bold;
@@ -719,11 +741,9 @@ nav.hidden .context {
           width: 100%;
           height: 100%;
           object-fit: contain;
-          filter:
-            drop-shadow( 1px  0px 0px rgba(0, 0, 0, .4))
-            drop-shadow( 0px  1px 0px rgba(0, 0, 0, .4))
-            drop-shadow(-1px  0px 0px rgba(0, 0, 0, .4))
-            drop-shadow( 0px -1px 0px rgba(0, 0, 0, .4));
+          filter: drop-shadow(1px 0px 0px rgba(0, 0, 0, 0.4))
+            drop-shadow(0px 1px 0px rgba(0, 0, 0, 0.4)) drop-shadow(-1px 0px 0px rgba(0, 0, 0, 0.4))
+            drop-shadow(0px -1px 0px rgba(0, 0, 0, 0.4));
         }
       }
     }
@@ -733,35 +753,35 @@ nav.hidden .context {
 #edit-quads {
   position: fixed;
   inset: 0;
-  
+
   svg {
     position: absolute;
   }
-  
+
   svg > * {
     pointer-events: auto;
     vector-effect: non-scaling-stroke;
   }
-  
+
   polygon {
     fill: transparent;
-    
+
     &:hover {
       stroke-width: 5px;
       fill: rgba(255, 255, 255, 0.2);
     }
   }
-  
+
   line {
     stroke: black;
     stroke-width: 2px;
-    
+
     &:hover {
       stroke-width: 5px;
       fill: rgba(255, 255, 255, 0.2);
     }
   }
-  
+
   circle {
     stroke: black;
 
@@ -807,18 +827,18 @@ nav.hidden .context {
     display: flex;
     flex-direction: row;
     gap: 1rem;
-    
+
     > :nth-child(3) {
       flex-grow: 1;
     }
   }
-  
+
   .graph {
     flex-grow: 1;
     position: relative;
     background: white;
   }
-  
+
   svg {
     position: absolute;
     width: 100%;
@@ -835,7 +855,7 @@ nav.hidden .context {
       stroke-width: 5px;
     }
   }
-  
+
   .axis {
     vector-effect: non-scaling-stroke;
     pointer-events: none;
@@ -852,7 +872,7 @@ nav.hidden .context {
       stroke-width: 10px;
     }
   }
-  
+
   .channels {
     display: flex;
     // gap: .5rem;
@@ -864,7 +884,7 @@ nav.hidden .context {
       width: 1.5rem;
       height: 1.5rem;
       user-select: none;
-      
+
       &.red span {
         color: red;
       }
@@ -899,12 +919,12 @@ nav.hidden .context {
         opacity: 0;
         inset: 0;
       }
-      
+
       span {
         position: absolute;
         inset: 0;
         text-align: center;
-        padding: .25rem;
+        padding: 0.25rem;
       }
     }
   }
@@ -913,7 +933,7 @@ nav.hidden .context {
 .box-select {
   position: fixed;
   background: blue;
-  opacity: .5;
+  opacity: 0.5;
   pointer-events: none;
 }
 

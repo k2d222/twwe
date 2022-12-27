@@ -1,7 +1,7 @@
 import type { Layer } from '../twmap/layer'
 import type { Texture } from './texture'
 
-export type ViewBox = { x1: number, x2: number, y1: number, y2: number }
+export type ViewBox = { x1: number; x2: number; y1: number; y2: number }
 
 export abstract class RenderLayer {
   abstract layer: Layer
@@ -11,4 +11,3 @@ export abstract class RenderLayer {
 
   abstract render(viewport: ViewBox): void
 }
-

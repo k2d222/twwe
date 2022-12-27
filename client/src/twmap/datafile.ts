@@ -4,15 +4,15 @@ import { inflate } from 'pako' // zlib
 import { DataReader } from './dataReader'
 
 type ItemType = {
-  type: number,
-  start: number,
-  num: number,
+  type: number
+  start: number
+  num: number
 }
 
 type DataInfo = {
-  offset: number,
-  size: number,
-  compSize: number,
+  offset: number
+  size: number
+  compSize: number
 }
 
 export class DataFile {
@@ -57,10 +57,8 @@ export class DataFile {
     var signature = reader.uint32()
 
     // signature 'DATA' or 'ATAD'
-    if (signature == 0x41544144 || signature == 0x44415441)
-      console.log('valid signature')
-    else
-      return false
+    if (signature == 0x41544144 || signature == 0x44415441) console.log('valid signature')
+    else return false
 
     this.version = reader.uint32()
 
@@ -96,7 +94,7 @@ export class DataFile {
       this.itemTypes.push({
         type: reader.uint32(),
         start: reader.uint32(),
-        num: reader.uint32()
+        num: reader.uint32(),
       })
     }
 
@@ -148,8 +146,7 @@ export class DataFile {
   }
 
   getItemSize(index: number) {
-    if (index === this.numItems - 1)
-      return this.itemSize - this.itemOffsets[index]
+    if (index === this.numItems - 1) return this.itemSize - this.itemOffsets[index]
     return this.itemOffsets[index + 1] - this.itemOffsets[index]
   }
 
@@ -161,7 +158,7 @@ export class DataFile {
       type: (typeAndId >> 16) & 0xffff,
       id: typeAndId & 0xffff,
       size: this.reader.getUint32(offset + 4, true),
-      data: this.data.slice(offset + 8, offset + 8 + this.getItemSize(index))
+      data: this.data.slice(offset + 8, offset + 8 + this.getItemSize(index)),
     }
 
     return item
@@ -180,8 +177,7 @@ export class DataFile {
 
     for (let i = 0; i < t.num; i++) {
       const item = this.getItem(t.start)
-      if (item.id === id)
-        return item
+      if (item.id === id) return item
     }
   }
 }

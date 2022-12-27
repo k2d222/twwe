@@ -1,4 +1,4 @@
-<script lang='ts'>
+<script lang="ts">
   const { VITE_WEBSOCKET_URL } = import.meta.env
   import { Router, Route } from 'svelte-routing'
   import Lobby from './routes/lobby.svelte'
@@ -7,7 +7,7 @@
   import Dialog from './lib/dialog.svelte'
   import { pServer } from './global'
 
-  export let url = ""
+  export let url = ''
 
   import 'carbon-components/scss/components/modal/_modal.scss'
   import 'carbon-components/scss/components/tabs/_tabs.scss'
@@ -17,9 +17,9 @@
 {#await pServer}
   <Dialog>Connecting to server…</Dialog>
 {:then}
-  <Router url="{url}">
+  <Router {url}>
     <div>
-      <Route path="edit/*mapName" let:params><Edit mapName={params.mapName}/></Route>
+      <Route path="edit/*mapName" let:params><Edit mapName={params.mapName} /></Route>
       <Route path="/"><Lobby /></Route>
       <Route path="create/"><CreateMap /></Route>
     </div>

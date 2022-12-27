@@ -1,20 +1,18 @@
 <script type="ts">
   import type { MapInfo } from '../../server/protocol'
   import Dialog from '../lib/dialog.svelte'
-  import { navigate } from "svelte-routing"
+  import { navigate } from 'svelte-routing'
   import { pServer } from '../global'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
-  import Fuse from 'fuse.js';
+  import Fuse from 'fuse.js'
 
   let selected: string
   let searchTerm: string = ''
-  
+
   function sortMapInfos(mapInfos: MapInfo[]) {
     mapInfos.sort((a, b) => {
-      if (a.users === b.users)
-        return a.name.localeCompare(b.name)
-      else
-        return b.users - a.users
+      if (a.users === b.users) return a.name.localeCompare(b.name)
+      else return b.users - a.users
     })
   }
 
@@ -27,7 +25,7 @@
       return
     }
     const fuse = new Fuse(mapList, {
-      keys: ['name']
+      keys: ['name'],
     })
     filteredMaps = fuse.search(searchTerm).map(map => map.item)
   }
@@ -44,7 +42,7 @@
   }
 
   async function refresh() {
-    showInfo("Updating maps infos…", 'none')
+    showInfo('Updating maps infos…', 'none')
     const server = await pServer
     let { maps } = await server.query('listmaps', null)
     sortMapInfos(maps)
@@ -62,15 +60,14 @@
   async function onDelete() {
     const server = await pServer
     const res = await showWarning('Are you sure you want to delete "' + selected + '"?', 'yesno')
-    
+
     if (res) {
       showInfo('Deleting map…', 'none')
       try {
         await server.query('deletemap', { name: selected })
-          clearDialog()
-          refresh()
-      }
-      catch (e) {
+        clearDialog()
+        refresh()
+      } catch (e) {
         showError('Map deletion failed: ' + e)
       }
     }
@@ -80,7 +77,7 @@
     const options = document.querySelectorAll('input')
     let currentIndex = 0
     let counter = 0
-    options.forEach((option) => {
+    options.forEach(option => {
       if (option.checked) {
         currentIndex = counter
       }
@@ -107,7 +104,6 @@
       }
     })
   }
-
 </script>
 
 {#if !filteredMaps}
@@ -117,7 +113,7 @@
     <div class="content">
       <h2>Join Room</h2>
       <div class="header row">
-        <span></span>
+        <span />
         <span>Map Name</span>
         <span>Users</span>
       </div>
@@ -133,11 +129,23 @@
       </div>
 
       <div id="join-map" class="buttons right">
-        <button class="default refresh" on:click={refresh}><img src="/assets/refresh.svg" alt="refresh"/></button>
+        <button class="default refresh" on:click={refresh}
+          ><img src="/assets/refresh.svg" alt="refresh" /></button
+        >
         <button class="default create" on:click={() => navigate('/create/')}>New…</button>
-        <button class="danger delete" on:click={onDelete}><img src="/assets/trash.svg" alt="delete"/></button>
+        <button class="danger delete" on:click={onDelete}
+          ><img src="/assets/trash.svg" alt="delete" /></button
+        >
         <button class="primary join" on:click={() => navigate('/edit/' + selected)}>Join</button>
-        <input on:input={updateSearch} value="{searchTerm}" type="text" name="search" id="search" placeholder="search" use:onload>
+        <input
+          on:input={updateSearch}
+          value={searchTerm}
+          type="text"
+          name="search"
+          id="search"
+          placeholder="search"
+          use:onload
+        />
       </div>
     </div>
   </div>
