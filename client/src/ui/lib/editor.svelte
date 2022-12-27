@@ -265,7 +265,7 @@
       image.name = e.name
       rmap.addImage(image)
     } else {
-      const image = await queryImage({ index: e.index })
+      const image = await queryImage(server, { index: e.index })
       rmap.addImage(image)
     }
   }

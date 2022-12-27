@@ -1,6 +1,5 @@
 import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { RenderMap } from '../../gl/renderMap'
-import type { RenderGroup } from '../../gl/renderGroup'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
 import {
@@ -13,7 +12,6 @@ import {
   TuneLayer,
 } from '../../twmap/tilesLayer'
 import { server } from '../global'
-import { viewport } from '../../gl/global'
 import { queryMapBinary } from '../lib/util'
 
 export type Brush = EditTileParams[][]
@@ -24,7 +22,7 @@ export type Range = {
 }
 
 export async function downloadMap(mapName: string) {
-  const buf = await queryMapBinary({ name: mapName })
+  const buf = await queryMapBinary(server, { name: mapName })
   const blob = new Blob([buf], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
 

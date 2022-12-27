@@ -117,7 +117,7 @@
           const file = await resp.arrayBuffer()
           await server.uploadFile(file)
           await server.query('createimage', { name: image, index, external: false })
-          const img = await queryImage({ index })
+          const img = await queryImage(server, { index })
           rmap.addImage(img)
           onEditLayer({ group: g, layer: l, image: index })
           clearDialog()

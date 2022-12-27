@@ -2,7 +2,7 @@
   import type { MapInfo } from '../../server/protocol'
   import Dialog from '../lib/dialog.svelte'
   import { navigate } from 'svelte-routing'
-  import { pServer } from '../global'
+  import { server } from '../global'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
   import Fuse from 'fuse.js'
 
@@ -43,7 +43,6 @@
 
   async function refresh() {
     showInfo('Updating maps infos…', 'none')
-    const server = await pServer
     let { maps } = await server.query('listmaps', null)
     sortMapInfos(maps)
     filteredMaps = mapList = maps
@@ -58,7 +57,6 @@
   refresh()
 
   async function onDelete() {
-    const server = await pServer
     const res = await showWarning('Are you sure you want to delete "' + selected + '"?', 'yesno')
 
     if (res) {

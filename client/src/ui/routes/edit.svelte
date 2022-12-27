@@ -8,7 +8,7 @@
 
   async function loadMap(name: string) {
     await server.query('joinmap', { name })
-    const map = await queryMap({ name })
+    const map = await queryMap(server, { name })
     return map
   }
 

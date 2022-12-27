@@ -19,17 +19,39 @@ function isBroadcast(data: any): data is Broadcast<any> {
   return 'content' in data
 }
 
-export class Server {
+export interface Server {
+  // subscribe to a server event with a callback function
+  on<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>): void
+
+  // unsubscribe to a server event
+  off<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>): void
+
+  // send a request to the server
+  send<K extends keyof RequestContent>(type: K, content?: RequestContent[K]): void
+
+  // send a request to the server and capture the reply
+  query<K extends Query>(type: K, content: RequestContent[K], timeout?: number): Promise<ResponseContent[K]>
+
+  uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void>
+}
+
+
+// a server using a websocket
+export class WebSocketServer implements Server {
   socket: WebSocket
   queryListeners: { [key: number]: QueryListener<any> }
   broadcastListeners: { [K in keyof ResponseContent]: BroadcastListener<K>[] }
   binaryListeners: BinaryListener[]
 
-  private constructor(wsUrl: string) {
+  private socketSend: (data: any) => void
+  private deferredData: any[]
+
+  constructor(wsUrl: string) {
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = e => this.onMessage(e)
     this.queryListeners = {}
+    this.binaryListeners = []
     this.broadcastListeners = {
       createmap: [],
       joinmap: [],
@@ -67,29 +89,21 @@ export class Server {
 
       error: [],
     }
-    this.binaryListeners = []
+
+    this.socketSend = this.socketDeferredSend.bind(this)
+    this.deferredData = []
+    this.socket.addEventListener('open', () => {
+      for (const data of this.deferredData) this.socket.send(data)
+      this.socketSend = this.socket.send.bind(this.socket)
+    }, { once: true })
+  }
+
+  private socketDeferredSend(data: any) {
+    this.deferredData.push(data)
   }
 
   private generateID() {
     return Math.floor(Math.random() * Math.pow(2, 16))
-  }
-
-  static create(wsUrl: string): Promise<Server> {
-    return new Promise((resolve, reject) => {
-      const server = new Server(wsUrl)
-
-      const onopen = () => {
-        server.socket.removeEventListener('error', onerror)
-        resolve(server)
-      }
-
-      const onerror = (e: Event) => {
-        reject(e)
-      }
-
-      server.socket.addEventListener('open', onopen, { once: true })
-      server.socket.addEventListener('error', onerror, { once: true })
-    })
   }
 
   // to help typescript a little
@@ -179,7 +193,7 @@ export class Server {
       content,
     }
     const message = JSON.stringify(req)
-    this.socket.send(message)
+    this.socketSend(message)
   }
 
   send<K extends keyof RequestContent>(type: K, content?: RequestContent[K]) {
@@ -190,13 +204,13 @@ export class Server {
       content,
     }
     const message = JSON.stringify(req)
-    this.socket.send(message)
+    this.socketSend(message)
   }
 
-  sendBinaryBlocking(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void> {
+  private sendBinary(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void> {
     const bytes = data.byteLength
     return new Promise(resolve => {
-      this.socket.send(data)
+      this.socketSend(data)
       const interval = setInterval(() => {
         if (this.socket.bufferedAmount === 0) {
           clearInterval(interval)
@@ -208,15 +222,15 @@ export class Server {
     })
   }
 
-  uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any) {
-    return new Promise<void>((resolve, reject) => {
+  uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void> {
+    return new Promise((resolve, reject) => {
       const listener = (x: Response<'uploadcomplete'>) => {
         delete this.queryListeners[1]
         if ('ok' in x) resolve()
         else reject(x.err)
       }
       this.queryListeners[1] = listener
-      this.sendBinaryBlocking(data, onProgress)
+      this.sendBinary(data, onProgress)
     })
   }
 }
