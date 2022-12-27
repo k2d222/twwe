@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Image } from '../../twmap/image'
   import { createEventDispatcher } from 'svelte'
-import { FileUploader, Tab, TabContent, Tabs } from 'carbon-components-svelte';
+  import { FileUploader, Tab, TabContent, Tabs } from 'carbon-components-svelte';
 
   export let images: Image[] = []
   export let image: Image | null = null

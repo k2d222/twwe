@@ -46,7 +46,7 @@
     Music as SoundsIcon,
     Add as CreateGroupIcon,
   } from 'carbon-icons-svelte'
-import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte';
+  import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte';
   
   type Coord = {
     x: number,

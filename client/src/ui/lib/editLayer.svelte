@@ -14,7 +14,7 @@
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
   import { createEventDispatcher } from 'svelte'
-import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte';
+  import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte';
 
   type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
   type EventMap = { [K in Events]: RequestContent[K] }
