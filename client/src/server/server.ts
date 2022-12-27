@@ -30,11 +30,14 @@ export interface Server {
   send<K extends keyof RequestContent>(type: K, content?: RequestContent[K]): void
 
   // send a request to the server and capture the reply
-  query<K extends Query>(type: K, content: RequestContent[K], timeout?: number): Promise<ResponseContent[K]>
+  query<K extends Query>(
+    type: K,
+    content: RequestContent[K],
+    timeout?: number
+  ): Promise<ResponseContent[K]>
 
   uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void>
 }
-
 
 // a server using a websocket
 export class WebSocketServer implements Server {
@@ -92,10 +95,14 @@ export class WebSocketServer implements Server {
 
     this.socketSend = this.socketDeferredSend.bind(this)
     this.deferredData = []
-    this.socket.addEventListener('open', () => {
-      for (const data of this.deferredData) this.socket.send(data)
-      this.socketSend = this.socket.send.bind(this.socket)
-    }, { once: true })
+    this.socket.addEventListener(
+      'open',
+      () => {
+        for (const data of this.deferredData) this.socket.send(data)
+        this.socketSend = this.socket.send.bind(this.socket)
+      },
+      { once: true }
+    )
   }
 
   private socketDeferredSend(data: any) {
