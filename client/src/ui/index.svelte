@@ -5,10 +5,6 @@
   import CreateMap from './routes/create.svelte'
 
   export let url = ''
-
-  import 'carbon-components/scss/components/modal/_modal.scss'
-  import 'carbon-components/scss/components/tabs/_tabs.scss'
-  import 'carbon-components/scss/components/file-uploader/_file-uploader.scss'
 </script>
 
 <Router {url}>
