@@ -49,7 +49,7 @@ export class WebSocketServer implements Server {
   private socketSend: (data: any) => void
   private deferredData: any[]
 
-  constructor(wsUrl: string) {
+  constructor(wsUrl: string | URL) {
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = e => this.onMessage(e)

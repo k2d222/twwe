@@ -1,0 +1,59 @@
+const { VITE_WEBSOCKET_URL } = import.meta.env
+
+interface ServerConfig {
+  name: string,
+  url: URL,
+}
+
+interface StorageSpec {
+  servers: ServerConfig[],
+  defaultServer: ServerConfig,
+}
+
+interface StorageEntry<T> {
+  clone: (inst: T) => T
+  default: T
+}
+
+type StorageEntries = { [K in keyof StorageSpec]: StorageEntry<StorageSpec[K]> }
+
+function cloneServerConf(conf: ServerConfig) {
+  const { url, name } = conf
+  return { url, name }
+}
+
+const entries: StorageEntries = {
+  servers: {
+    clone: function (confs: ServerConfig[]) {
+      return confs.map(cloneServerConf)
+    },
+    default: []
+  },
+  defaultServer: {
+    clone: cloneServerConf,
+    default: { url: new URL(VITE_WEBSOCKET_URL), name: 'Default server' }
+  }
+}
+
+const storage = {
+  version: 0,
+  init: function() {
+    const storedVersion = parseInt(localStorage.getItem('version'))
+    if (storedVersion !== storage.version) {
+      localStorage.clear()
+      for (const [key, entry] of Object.entries(entries)) {
+        localStorage.setItem(key, JSON.stringify(entry.default))
+      }
+    }
+  },
+  load: function<K extends keyof StorageSpec> (key: K): StorageSpec[K] {
+    return JSON.parse(localStorage.getItem(key))
+  },
+
+  save: function<K extends keyof StorageSpec> (key: K, val: StorageSpec[K]) {
+    localStorage.setItem(key, JSON.stringify(val))
+  }
+}
+
+storage.init()
+export default storage

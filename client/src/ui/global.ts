@@ -1,5 +1,5 @@
 import { WebSocketServer } from '../server/server'
-const { VITE_WEBSOCKET_URL } = import.meta.env
+import storage from '../storage'
 
-export const webSocketUrl: string = localStorage.getItem('websocket-url') || VITE_WEBSOCKET_URL
-export const server = new WebSocketServer(webSocketUrl)
+const conf = storage.load('defaultServer')
+export const server = new WebSocketServer(conf.url)
