@@ -4,13 +4,17 @@
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
   import Fuse from 'fuse.js'
-  import { Column, Row, RadioTile, TileGroup, Grid, StructuredList, StructuredListHead, StructuredListCell, StructuredListBody, StructuredListRow, StructuredListInput, Tile, InlineLoading } from 'carbon-components-svelte'
+  import { Column, Row, RadioTile, TileGroup, Grid, StructuredList, StructuredListHead, StructuredListCell, StructuredListBody, StructuredListRow, StructuredListInput, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, FormGroup, Tooltip, DataTable, Pagination, Toolbar, ToolbarContent, ToolbarSearch } from 'carbon-components-svelte'
   import storage from '../../storage'
   import { CheckmarkFilled } from 'carbon-icons-svelte'
-  import { Help as AboutIcon, LogoGithub as GitHubIcon } from 'carbon-icons-svelte'
+  import {
+    Help as AboutIcon,
+    LogoGithub as GitHubIcon,
+    Add as AddIcon
+  } from 'carbon-icons-svelte'
   import { WebSocketServer } from '../../server/server'
   import { server } from '../global'
-import { onMount } from 'svelte';
+  import { onMount } from 'svelte'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'
@@ -154,10 +158,35 @@ import { onMount } from 'svelte';
   //     }
   //   })
   // }
+
+  let addServerModalOpen = false
+  let modalAddServer = {
+    open: false,
+    url: '',
+    port: 16900,
+    encrypted: false,
+  }
+
+  function onAddServer() {
+
+  }
+
+  let pageSize = 15
+  let page = 1
+
 </script>
 
 <style>
-  h2 {
+  .head-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     margin-bottom: 1rem;
   }
 </style>
@@ -199,7 +228,10 @@ import { onMount } from 'svelte';
   </Row>
   <Row>
     <Column>
-      <h2>Servers</h2>
+      <div class="head-row">
+        <h2>Servers</h2>
+        <Button kind="tertiary" on:click={() => addServerModalOpen = true} icon={AddIcon}>Add server</Button>
+      </div>
       <TileGroup bind:selected={selectedServer} on:select={onSelectServer}>
         {#each serverConfs as server, i}
           {@const url = new URL(server.url)}
@@ -214,36 +246,63 @@ import { onMount } from 'svelte';
     </Column>
 
     <Column>
-      <h2>Maps</h2>
-      <StructuredList selection bind:selected={selectedMap}>
-        <StructuredListHead>
-          <StructuredListRow head>
-            <StructuredListCell head>Map name</StructuredListCell>
-            <StructuredListCell head>Users online</StructuredListCell>
-            <StructuredListCell head>Last modified</StructuredListCell>
-          </StructuredListRow>
-        </StructuredListHead>
-        <StructuredListBody>
-          {#each filteredMaps as map, i}
-            <StructuredListRow>
-              <StructuredListCell>{map.name}</StructuredListCell>
-              <StructuredListCell>{map.users}</StructuredListCell>
-              <StructuredListCell>N/A</StructuredListCell>
-              <StructuredListInput
-                id="row-{i}"
-                value={map.name}
-                title="row-{i}-title"
-                name="row-{i}-name"
-              />
-              <StructuredListCell>
-                <CheckmarkFilled
-                  class="bx--structured-list-svg"
-                />
-              </StructuredListCell>
-            </StructuredListRow>
-          {/each}
-        </StructuredListBody>
-      </StructuredList>
+      <div class="head-row">
+        <h2>Maps</h2>
+        <Button kind="tertiary" on:click={() => addServerModalOpen = true} icon={AddIcon}>Add map</Button>
+      </div>
+      <DataTable
+        sortable
+        size="short"
+        {pageSize}
+        {page}
+        headers={[
+          { key: 'name', value: 'Name' },
+          { key: 'users', value: 'Users online' },
+          { key: 'date', value: 'Last modified' },
+        ]}
+        rows={
+          filteredMaps.map((row, i) => ({
+            id: i,
+            name: row.name,
+            users: row.users,
+            date: 'N/A',
+          }))
+        }
+      >
+        <Toolbar>
+          <ToolbarContent>
+            <ToolbarSearch
+              persistent
+              value=""
+              shouldFilterRows
+            />
+          </ToolbarContent>
+        </Toolbar>
+      </DataTable>
+      <Pagination
+        bind:pageSize
+        bind:page
+        totalItems={filteredMaps.length}
+        pageSizeInputDisabled
+      />
     </Column>
   </Row>
 </Grid>
+
+<Modal
+  hasForm
+  modalHeading="Add a server"
+  primaryButtonText="Save"
+  secondaryButtonText="Cancel"
+  primaryButtonDisabled={modalAddServer.url === ''}
+  on:submit={onAddServer}
+  on:click:button--secondary={() => addServerModalOpen = false}
+  bind:open={addServerModalOpen}
+  size="sm"
+>
+  <div class="form">
+    <TextInput labelText="Server ip or url" placeholder="example.com" bind:value={modalAddServer.url} />
+    <NumberInput label="Port" bind:value={modalAddServer.port} />
+    <Toggle labelText="Encrypted server" bind:checked={modalAddServer.encrypted} />
+  </div>
+</Modal>

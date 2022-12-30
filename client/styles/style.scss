@@ -25,47 +25,47 @@ ul {
   padding: 0;
 }
 
-input[type='number'],
-input[type='text'],
-input[type='button'],
-input[type='color'],
-select,
-textarea,
-button.danger,
-button.default,
-button.primary {
-  border: none;
-  padding: 0.25rem 0.4rem;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  background-color: #f2f2f2;
+// input[type='number'],
+// input[type='text'],
+// input[type='button'],
+// input[type='color'],
+// select,
+// textarea,
+// button.danger,
+// button.default,
+// button.primary {
+//   border: none;
+//   padding: 0.25rem 0.4rem;
+//   text-overflow: ellipsis;
+//   overflow: hidden;
+//   background-color: #f2f2f2;
 
-  outline: 1px solid #aaaaaa;
-  outline-offset: -1px;
+//   outline: 1px solid #aaaaaa;
+//   outline-offset: -1px;
 
-  &:hover {
-    outline: 1px solid #393939;
-    outline-offset: -1px;
-  }
-  &:focus {
-    outline: 2px solid #0f62fe;
-    outline-offset: -2px;
-  }
-}
+//   &:hover {
+//     outline: 1px solid #393939;
+//     outline-offset: -1px;
+//   }
+//   &:focus {
+//     outline: 2px solid #0f62fe;
+//     outline-offset: -2px;
+//   }
+// }
 
-button.large {
-  padding: 0.5rem 0.8rem;
-}
+// button.large {
+//   padding: 0.5rem 0.8rem;
+// }
 
-button.danger {
-  color: white;
-  background-color: #da1e28;
-}
+// button.danger {
+//   color: white;
+//   background-color: #da1e28;
+// }
 
-button.primary {
-  color: white;
-  background-color: #0f62fe;
-}
+// button.primary {
+//   color: white;
+//   background-color: #0f62fe;
+// }
 
 $menu_h: 3rem;
 
