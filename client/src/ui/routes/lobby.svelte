@@ -1,11 +1,9 @@
 <script type="ts">
   import type { MapInfo } from '../../server/protocol'
-  import Dialog from '../lib/dialog.svelte'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
-  import { Column, Row, RadioTile, TileGroup, Grid, StructuredList, StructuredListHead, StructuredListCell, StructuredListBody, StructuredListRow, StructuredListInput, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, FormGroup, Tooltip, DataTable, Pagination, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem } from 'carbon-components-svelte'
-  import storage from '../../storage'
-  import { CheckmarkFilled } from 'carbon-icons-svelte'
+  import { Column, Row, RadioTile, TileGroup, Grid, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, DataTable, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem } from 'carbon-components-svelte'
+  import storage, { ServerConfig } from '../../storage'
   import {
     Help as AboutIcon,
     LogoGithub as GitHubIcon,
@@ -27,10 +25,10 @@
   let maps: MapInfo[] = []
 
   // add server modal
-  let addServerModalOpen = false
   let modalAddServer = {
     open: false,
-    url: '',
+    name: 'My Server',
+    hostname: '',
     port: 16900,
     encrypted: false,
   }
@@ -43,7 +41,7 @@
     online: ['finished', 'Online'],
   }
 
-  let serverStatus = serverConfs.map(_ => {
+  $: serverStatus = serverConfs.map(_ => {
     return 'unknown' as ServerStatus
   })
     
@@ -62,6 +60,7 @@
     sortMaps(maps)
     return maps
   }
+  serverConfs = serverConfs
 
   function sortMaps(maps: MapInfo[]): MapInfo[] {
     return maps.sort((a, b) => {
@@ -86,7 +85,12 @@
     $server.socket.addEventListener('error', () => {
       setServerStatus(id, 'error')
     }, { once: true })
-    queryMaps($server).then(res => maps = res)
+    queryMaps($server).then(res => {
+      if (id === serverId) {
+        storage.save('currentServer', id)
+        maps = res
+      }
+    })
   }
 
   function onSelectServer(e: Event & { detail: string }) {
@@ -122,7 +126,22 @@
   }
 
   function onAddServer() {
+    const { name, hostname, encrypted, port } = modalAddServer
+    const url = (encrypted ? 'wss://' : 'ws://') + hostname + ':' + port
+    const conf: ServerConfig = {
+      name,
+      url,
+    }
+    serverConfs.push(conf)
+    storage.save('servers', serverConfs)
+    serverConfs = serverConfs
+    modalAddServer.open = false
+  }
 
+  function onDeleteServer(id: number) {
+    serverConfs.splice(id, 1)
+    storage.save('servers', serverConfs)
+    serverConfs = serverConfs
   }
 
   // TODO: restore this
@@ -178,6 +197,12 @@
     gap: 1rem;
     margin-bottom: 1rem;
   }
+
+  .delete {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+  }
 </style>
 
 <div id="menu">
@@ -220,7 +245,7 @@
     <Column>
       <div class="head-row">
         <h3>Servers</h3>
-        <Button kind="tertiary" on:click={() => addServerModalOpen = true} icon={AddIcon}>Add server</Button>
+        <Button kind="tertiary" on:click={() => modalAddServer.open = true} icon={AddIcon}>Add server</Button>
       </div>
       <TileGroup bind:selected={selectedServer} on:select={onSelectServer}>
         {#each serverConfs as server, i}
@@ -230,6 +255,11 @@
             <div style='font-weight: bold'>{server.name}</div>
             <div>({url.host}{url.protocol === 'ws:' ? ', unencrypted': ''})</div>
             <div><InlineLoading status={statusString[status][0]} description={statusString[status][1]} /></div>
+            {#if i !== 0}
+              <div class='delete'>
+                <Button kind="danger-ghost" icon={DeleteIcon} on:click={() => onDeleteServer(i)} />
+              </div>
+            {/if}
           </RadioTile>
         {/each}
       </TileGroup>
@@ -238,7 +268,7 @@
     <Column lg={8} max={8}>
       <div class="head-row">
         <h3>Maps</h3>
-        <Button kind="tertiary" on:click={() => addServerModalOpen = true} icon={AddIcon}>Add map</Button>
+        <Button kind="tertiary" on:click={() => modalAddServer.open = true} icon={AddIcon}>Add map</Button>
       </div>
       <div class="table-wrapper">
         <DataTable
@@ -298,15 +328,16 @@
   modalHeading="Add a server"
   primaryButtonText="Save"
   secondaryButtonText="Cancel"
-  primaryButtonDisabled={modalAddServer.url === ''}
+  primaryButtonDisabled={modalAddServer.hostname === '' || modalAddServer.name === ''}
   on:submit={onAddServer}
-  on:click:button--secondary={() => addServerModalOpen = false}
-  bind:open={addServerModalOpen}
+  on:click:button--secondary={() => modalAddServer.open = false}
+  bind:open={modalAddServer.open}
   size="sm"
 >
   <div class="form">
-    <TextInput labelText="Server ip or url" placeholder="example.com" bind:value={modalAddServer.url} />
+    <TextInput required labelText="Display name" bind:value={modalAddServer.name} />
+    <TextInput required labelText="Server ip or address" placeholder="example.com" bind:value={modalAddServer.hostname} />
     <NumberInput label="Port" bind:value={modalAddServer.port} />
-    <Toggle labelText="Encrypted server" bind:checked={modalAddServer.encrypted} />
+    <Toggle labelText="Encrypted server" bind:toggled={modalAddServer.encrypted} />
   </div>
 </Modal>

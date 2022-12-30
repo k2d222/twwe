@@ -1,6 +1,6 @@
 const { VITE_WEBSOCKET_URL } = import.meta.env
 
-interface ServerConfig {
+export interface ServerConfig {
   name: string,
   url: string,
 }
