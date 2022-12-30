@@ -1,8 +1,8 @@
 <script type="ts">
-  import type { MapInfo } from '../../server/protocol'
+  import type { CreateMap, MapInfo } from '../../server/protocol'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
-  import { Column, Row, RadioTile, TileGroup, Grid, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, DataTable, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem } from 'carbon-components-svelte'
+  import { Column, Row, RadioTile, TileGroup, Grid, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, DataTable, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem, Dropdown, FileUploader, FormGroup, FileUploaderButton, FileUploaderItem, FileUploaderDropContainer, RadioButtonGroup, RadioButton, ComboBox } from 'carbon-components-svelte'
   import storage, { ServerConfig } from '../../storage'
   import {
     Help as AboutIcon,
@@ -24,13 +24,50 @@
   let selectedServer = '' + serverId
   let maps: MapInfo[] = []
 
-  // add server modal
-  let modalAddServer = {
+  interface ModalAddServer {
+    open: boolean,
+    name: string,
+    hostname: string,
+    port: number
+    encrypted: boolean,
+  }
+
+  let modalAddServer: ModalAddServer = {
     open: false,
     name: 'My Server',
     hostname: '',
     port: 16900,
     encrypted: false,
+  }
+
+  interface ModalCreateMap {
+    open: boolean,
+    name: string,
+    public: boolean,
+    method: 'upload' | 'blank' | 'clone'
+    clone: number | undefined,
+    cloneItems: { id: number, text: string }[],
+    uploading: boolean,
+    uploadFile: File | null,
+    uploadInvalid: boolean,
+    uploadStatus: 'uploading' | 'complete'
+    blankWidth: number,
+    blankHeight: number,
+  }
+
+  let modalCreateMap: ModalCreateMap = {
+    open: false,
+    name: 'My Map',
+    public: true,
+    method: 'upload',
+    clone: undefined,
+    cloneItems: [],
+    uploading: false,
+    uploadFile: null,
+    uploadInvalid: false,
+    uploadStatus: 'uploading',
+    blankWidth: 100,
+    blankHeight: 100,
   }
 
   const statusString: { [k in ServerStatus]: [SpinnerStatus, string] } = {
@@ -50,6 +87,16 @@
   onMount(() => {
     selectServer(0)
   })
+
+  function resetMapModal() {
+    modalCreateMap.uploading = false
+    modalCreateMap.clone = undefined
+    modalCreateMap.cloneItems = maps.map((m, i) => ({
+      id: i,
+      text: m.name
+    }))
+  }
+
 
   function setServerStatus(id: number, state: ServerStatus) {
     serverStatus[id] = state
@@ -89,6 +136,7 @@
       if (id === serverId) {
         storage.save('currentServer', id)
         maps = res
+        resetMapModal()
       }
     })
   }
@@ -97,29 +145,6 @@
     const id = parseInt(e.detail)
     selectServer(id)
   }
-
-  async function onRefresh() {
-    showInfo('Updating maps infos…', 'none')
-    maps = await queryMaps($server)
-    clearDialog()
-  }
-
-  // async function onDelete() {
-  //   if (selectedMap === null) return
-    
-  //   const res = await showWarning('Are you sure you want to delete "' + selectedMap + '"?', 'yesno')
-
-  //   if (res) {
-  //     showInfo('Deleting map…', 'none')
-  //     try {
-  //       await $server.query('deletemap', { name: selectedMap.name })
-  //       clearDialog()
-  //       onRefresh()
-  //     } catch (e) {
-  //       showError('Map deletion failed: ' + e)
-  //     }
-  //   }
-  // }
 
   function onJoinMap(name: string) {
     navigate('/edit/' + name)
@@ -144,44 +169,73 @@
     serverConfs = serverConfs
   }
 
-  // TODO: restore this
-  // function onKeyPress(e: Event & { currentTarget: HTMLInputElement }) {
-  //   searchTerm = e.currentTarget.value
-  // }
+  async function onCreateMap() {
+    let create: CreateMap
+    const { name, method } = modalCreateMap
+    const access = modalCreateMap.public ? 'public' : 'unlisted'
 
-  // function updateSelection(offset: number) {
-  //   const options = document.querySelectorAll('input')
-  //   let currentIndex = 0
-  //   let counter = 0
-  //   options.forEach(option => {
-  //     if (option.checked) {
-  //       currentIndex = counter
-  //     }
-  //     counter++
-  //   })
-  //   const nextOption = currentIndex + offset
-  //   if (nextOption >= 0 && nextOption < options.length) {
-  //     options[currentIndex].checked = false
-  //     options[nextOption].checked = true
-  //     selectedMap = options[nextOption].value
-  //   }
-  // }
+    if (method === 'upload') {
+      create = {
+        name,
+        access,
+        upload: {}
+      }
+    } else if (method === 'blank') {
+      create = {
+        name,
+        access,
+        blank: {
+          width: modalCreateMap.blankWidth,
+          height: modalCreateMap.blankHeight,
+          defaultLayers: false, // TODO
+        }
+      }
+    } else if (method === 'clone') {
+      create = {
+        name,
+        access,
+        clone: { clone: maps[modalCreateMap.clone].name }
+      }
+    }
 
-  // function onload(element: HTMLElement) {
-  //   // auto focus search box on page load
-  //   element.focus()
-  //   element.addEventListener('keydown', (event: KeyboardEvent) => {
-  //     if (event.key === 'ArrowDown') {
-  //       updateSelection(1)
-  //     } else if (event.key === 'ArrowUp') {
-  //       updateSelection(-1)
-  //     } else if (event.key === 'Enter') {
-  //       navigate('/edit/' + selectedMap)
-  //     }
-  //   })
-  // }
+    showInfo('Querying the server…', 'none')
+    try {
+      await $server.query('createmap', create)
+      clearDialog()
+      if (access === 'unlisted') {
+        const url = window.location.origin + '/edit/' + encodeURIComponent(create.name)
+        showWarning(
+          "You created a private map that won't be publicly listed. To access it in the future, use this URL: " +
+            url
+        )
+      }
 
-  
+      navigate('/edit/' + name)
+    } catch (e) {
+      showError('Map creation failed: ' + e)
+    }
+  }
+
+  async function onUploadMap(e: Event & { detail: readonly File[] }) {
+    const file = e.detail[0]
+    modalCreateMap.uploadFile = file
+    modalCreateMap.uploading = true
+    modalCreateMap.uploadInvalid = false
+    try {
+      await $server.uploadFile(await file.arrayBuffer())
+    }
+    catch (e) {
+      modalCreateMap.uploadInvalid = true
+    }
+    finally {
+      modalCreateMap.uploadStatus = 'complete'
+    }
+  }
+
+  function shouldFilterItem(item, value) {
+    if (!value) return true;
+    return item.text.toLowerCase().includes(value.toLowerCase());
+  }
 </script>
 
 <style>
@@ -202,6 +256,10 @@
     position: absolute;
     bottom: 0;
     right: 0;
+  }
+
+  .spacer {
+    height: 15rem;
   }
 </style>
 
@@ -268,7 +326,10 @@
     <Column lg={8} max={8}>
       <div class="head-row">
         <h3>Maps</h3>
-        <Button kind="tertiary" on:click={() => modalAddServer.open = true} icon={AddIcon}>Add map</Button>
+        <Button
+          kind="tertiary"
+          on:click={() => modalCreateMap.open = true}
+          icon={AddIcon}>Add map</Button>
       </div>
       <div class="table-wrapper">
         <DataTable
@@ -335,9 +396,89 @@
   size="sm"
 >
   <div class="form">
-    <TextInput required labelText="Display name" bind:value={modalAddServer.name} />
-    <TextInput required labelText="Server ip or address" placeholder="example.com" bind:value={modalAddServer.hostname} />
+    <TextInput
+      required
+      invalid={modalAddServer.name === ''}
+      invalidText="This field is required"
+      labelText="Display name"
+      bind:value={modalAddServer.name}
+    />
+    <TextInput
+      required
+      invalid={modalAddServer.hostname === ''}
+      invalidText="This field is required"
+      labelText="Server ip or address"
+      placeholder="example.com"
+      bind:value={modalAddServer.hostname}
+    />
     <NumberInput label="Port" bind:value={modalAddServer.port} />
-    <Toggle labelText="Encrypted server" bind:toggled={modalAddServer.encrypted} />
+    <Toggle labelText="Encrypted server (https/tls)" bind:toggled={modalAddServer.encrypted} />
+  </div>
+</Modal>
+
+<Modal
+  hasForm
+  modalHeading="Create a map"
+  primaryButtonText="Create"
+  secondaryButtonText="Cancel"
+  primaryButtonDisabled={
+    modalCreateMap.method === 'upload' && modalCreateMap.uploadStatus !== 'complete' ||
+    modalCreateMap.method === 'clone' && typeof modalCreateMap.clone !== 'number' ||
+    modalCreateMap.name === '' ||
+    maps.findIndex(m => m.name === modalCreateMap.name) !== -1
+  }
+  on:submit={onCreateMap}
+  on:click:button--secondary={() => modalCreateMap.open = false}
+  bind:open={modalCreateMap.open}
+  size="sm"
+>
+  <div class="form">
+
+    <TextInput
+      required
+      labelText="Map name"
+      invalid={modalCreateMap.name === '' || maps.findIndex(m => m.name === modalCreateMap.name) !== -1}
+      invalidText={modalCreateMap.name === '' ? 'This field is required.' : 'This name is already taken.'}
+      bind:value={modalCreateMap.name}
+    />
+    <RadioButtonGroup bind:selected={modalCreateMap.method} legendText="Creation method">
+      <RadioButton value="upload" labelText="Upload" />
+      <RadioButton value="blank" labelText="Blank" />
+      <RadioButton value="clone" labelText="Clone" />
+    </RadioButtonGroup>
+    {#if modalCreateMap.method === 'upload'}
+      <FormGroup legendText="Upload a .map file" style="margin-bottom: 0">
+        <FileUploaderDropContainer
+          accept={['.map']}
+          labelText="Drag and drop files here or click to upload"
+          on:change={onUploadMap}
+        />
+        {#if modalCreateMap.uploading}
+          <FileUploaderItem
+            invalid={modalCreateMap.uploadInvalid}
+            errorSubject="File rejected by the server"
+            errorBody="Please select another file."
+            bind:status={modalCreateMap.uploadStatus}
+            size="field"
+            name={modalCreateMap.uploadFile === null ? '' : modalCreateMap.uploadFile.name}
+          />
+        {/if}
+      </FormGroup>
+    {:else if modalCreateMap.method === 'clone'}
+      <ComboBox
+        titleText="Map to clone"
+        placeholder="Select a map to clone on the server"
+        invalid={typeof modalCreateMap.clone !== 'number'}
+        invalidText="This field is required"
+        {shouldFilterItem}
+        direction="top"
+        bind:selectedId={modalCreateMap.clone}
+        items={modalCreateMap.cloneItems}
+      />
+    {:else if modalCreateMap.method === 'blank'}
+      <NumberInput min={0} bind:value={modalCreateMap.blankWidth} label="Width" />
+      <NumberInput min={0} bind:value={modalCreateMap.blankHeight} label="Height" />
+    {/if}
+    <Toggle labelText="Visibility" labelA="unlisted" labelB="public" bind:toggled={modalCreateMap.public} />
   </div>
 </Modal>
