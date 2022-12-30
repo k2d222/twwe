@@ -102,7 +102,7 @@
   async function onCreateLayer(e: CreateLayer) {
     showInfo('Creating layer…')
     try {
-      await server.query('createlayer', e)
+      await $server.query('createlayer', e)
       serverOnCreateLayer(e)
       clearDialog()
     } catch (e) {
@@ -112,7 +112,7 @@
   async function onDeleteLayer(e: DeleteLayer) {
     showInfo('Deleting layer…')
     try {
-      await server.query('deletelayer', e)
+      await $server.query('deletelayer', e)
       serverOnDeleteLayer(e)
       clearDialog()
     } catch (e) {
@@ -122,7 +122,7 @@
   async function onEditLayer(e: EditLayer) {
     showInfo('Please wait…')
     try {
-      await server.query('editlayer', e)
+      await $server.query('editlayer', e)
       serverOnEditLayer(e)
       clearDialog()
     } catch (e) {
@@ -132,7 +132,7 @@
   async function onReorderLayer(e: ReorderLayer) {
     showInfo('Please wait…')
     try {
-      await server.query('reorderlayer', e)
+      await $server.query('reorderlayer', e)
       serverOnReorderLayer(e)
       clearDialog()
     } catch (e) {
@@ -143,7 +143,7 @@
     const e: CreateGroup = { name: '' }
     showInfo('Creating group…')
     try {
-      await server.query('creategroup', e)
+      await $server.query('creategroup', e)
       serverOnCreateGroup(e)
       active = [map.groups.length - 1, -1]
       selected = [active]
@@ -155,7 +155,7 @@
   async function onDeleteGroup(e: DeleteGroup) {
     showInfo('Deleting group…')
     try {
-      await server.query('deletegroup', e)
+      await $server.query('deletegroup', e)
       serverOnDeleteGroup(e)
       clearDialog()
     } catch (e) {
@@ -165,7 +165,7 @@
   async function onEditGroup(e: EditGroup) {
     showInfo('Please wait…')
     try {
-      await server.query('editgroup', e)
+      await $server.query('editgroup', e)
       serverOnEditGroup(e)
       clearDialog()
     } catch (e) {
@@ -175,7 +175,7 @@
   async function onReorderGroup(e: ReorderGroup) {
     showInfo('Please wait…')
     try {
-      await server.query('reordergroup', e)
+      await $server.query('reordergroup', e)
       serverOnReorderGroup(e)
       clearDialog()
     } catch (e) {
@@ -265,7 +265,7 @@
       image.name = e.name
       rmap.addImage(image)
     } else {
-      const image = await queryImage(server, { index: e.index })
+      const image = await queryImage($server, { index: e.index })
       rmap.addImage(image)
     }
   }
@@ -392,27 +392,27 @@
 
   onMount(() => {
     cont.prepend(canvas)
-    server.on('listusers', serverOnUsers)
-    server.on('edittile', serverOnEditTile)
-    server.on('createquad', serverOnCreateQuad)
-    server.on('editquad', serverOnEditQuad)
-    server.on('deletequad', serverOnDeleteQuad)
-    server.on('createenvelope', serverOnCreateEnvelope)
-    server.on('editenvelope', serverOnEditEnvelope)
-    server.on('deleteenvelope', serverOnDeleteEnvelope)
-    server.on('editlayer', serverOnEditLayer)
-    server.on('editgroup', serverOnEditGroup)
-    server.on('creategroup', serverOnCreateGroup)
-    server.on('createlayer', serverOnCreateLayer)
-    server.on('reordergroup', serverOnReorderGroup)
-    server.on('reorderlayer', serverOnReorderLayer)
-    server.on('deletegroup', serverOnDeleteGroup)
-    server.on('deletelayer', serverOnDeleteLayer)
-    server.on('createimage', serverOnCreateImage)
-    server.on('deleteimage', serverOnDeleteImage)
-    server.on('editmap', serverOnEditMap)
-    server.on('error', serverOnError)
-    server.send('listusers')
+    $server.on('listusers', serverOnUsers)
+    $server.on('edittile', serverOnEditTile)
+    $server.on('createquad', serverOnCreateQuad)
+    $server.on('editquad', serverOnEditQuad)
+    $server.on('deletequad', serverOnDeleteQuad)
+    $server.on('createenvelope', serverOnCreateEnvelope)
+    $server.on('editenvelope', serverOnEditEnvelope)
+    $server.on('deleteenvelope', serverOnDeleteEnvelope)
+    $server.on('editlayer', serverOnEditLayer)
+    $server.on('editgroup', serverOnEditGroup)
+    $server.on('creategroup', serverOnCreateGroup)
+    $server.on('createlayer', serverOnCreateLayer)
+    $server.on('reordergroup', serverOnReorderGroup)
+    $server.on('reorderlayer', serverOnReorderLayer)
+    $server.on('deletegroup', serverOnDeleteGroup)
+    $server.on('deletelayer', serverOnDeleteLayer)
+    $server.on('createimage', serverOnCreateImage)
+    $server.on('deleteimage', serverOnDeleteImage)
+    $server.on('editmap', serverOnEditMap)
+    $server.on('error', serverOnError)
+    $server.send('listusers')
 
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
@@ -433,26 +433,26 @@
   })
 
   onDestroy(() => {
-    server.off('listusers', serverOnUsers)
-    server.off('edittile', serverOnEditTile)
-    server.off('createquad', serverOnCreateQuad)
-    server.off('editquad', serverOnEditQuad)
-    server.off('deletequad', serverOnDeleteQuad)
-    server.off('createenvelope', serverOnCreateEnvelope)
-    server.off('editenvelope', serverOnEditEnvelope)
-    server.off('deleteenvelope', serverOnDeleteEnvelope)
-    server.off('editlayer', serverOnEditLayer)
-    server.off('editgroup', serverOnEditGroup)
-    server.off('creategroup', serverOnCreateGroup)
-    server.off('createlayer', serverOnCreateLayer)
-    server.off('reordergroup', serverOnReorderGroup)
-    server.off('reorderlayer', serverOnReorderLayer)
-    server.off('deletegroup', serverOnDeleteGroup)
-    server.off('deletelayer', serverOnDeleteLayer)
-    server.off('createimage', serverOnCreateImage)
-    server.off('deleteimage', serverOnDeleteImage)
-    server.off('editmap', serverOnEditMap)
-    server.off('error', serverOnError)
+    $server.off('listusers', serverOnUsers)
+    $server.off('edittile', serverOnEditTile)
+    $server.off('createquad', serverOnCreateQuad)
+    $server.off('editquad', serverOnEditQuad)
+    $server.off('deletequad', serverOnDeleteQuad)
+    $server.off('createenvelope', serverOnCreateEnvelope)
+    $server.off('editenvelope', serverOnEditEnvelope)
+    $server.off('deleteenvelope', serverOnDeleteEnvelope)
+    $server.off('editlayer', serverOnEditLayer)
+    $server.off('editgroup', serverOnEditGroup)
+    $server.off('creategroup', serverOnCreateGroup)
+    $server.off('createlayer', serverOnCreateLayer)
+    $server.off('reordergroup', serverOnReorderGroup)
+    $server.off('reorderlayer', serverOnReorderLayer)
+    $server.off('deletegroup', serverOnDeleteGroup)
+    $server.off('deletelayer', serverOnDeleteLayer)
+    $server.off('createimage', serverOnCreateImage)
+    $server.off('deleteimage', serverOnDeleteImage)
+    $server.off('editmap', serverOnEditMap)
+    $server.off('error', serverOnError)
     destroyed = true
   })
 
@@ -485,15 +485,15 @@
   async function onSaveMap() {
     try {
       showInfo('Saving map...', 'none')
-      await server.query('savemap', { name: map.name })
-      showInfo('Map saved on server.', 'closable')
+      await $server.query('savemap', { name: map.name })
+      showInfo('Map saved on $server.', 'closable')
     } catch (e) {
       showError('Failed to save map: ' + e)
     }
   }
 
   function onDownloadMap() {
-    Editor.downloadMap(map.name)
+    Editor.downloadMap($server, map.name)
   }
 
   let ctrlKey = false
@@ -568,7 +568,7 @@
       const curPos = worldPosToTileCoord(viewport.mousePos)
       if (e.buttons === 1) {
         if (!e.ctrlKey && !e.shiftKey && selectedTiles.length !== 0) {
-          Editor.placeTiles(rmap, g, l, curPos, selectedTiles)
+          Editor.placeTiles($server, rmap, g, l, curPos, selectedTiles)
         } else if (e.shiftKey && selectedTiles.length !== 0) {
           boxRange.start = curPos
           boxRange.end = curPos
@@ -588,7 +588,7 @@
       const curPos = worldPosToTileCoord(viewport.mousePos)
       if (e.buttons === 1 && !e.ctrlKey) {
         if (!boxFill && !boxSelect && !e.shiftKey) {
-          Editor.drawLine(rmap, g, l, lastPos, curPos, selectedTiles)
+          Editor.drawLine($server, rmap, g, l, lastPos, curPos, selectedTiles)
         } else if (boxFill || boxSelect) {
           boxRange.end = curPos
         }
@@ -609,11 +609,11 @@
           boxSelect = false
         } else if (boxSelect && e.shiftKey) {
           const brush = Editor.makeEmptySelection(activeLayer, boxRange)
-          Editor.placeTiles(rmap, g, l, boxRange.start, brush)
+          Editor.placeTiles($server, rmap, g, l, boxRange.start, brush)
           selectedTiles = []
           boxSelect = false
         } else if (boxFill) {
-          Editor.fill(rmap, g, l, boxRange, selectedTiles)
+          Editor.fill($server, rmap, g, l, boxRange, selectedTiles)
           boxFill = false
         }
       }
@@ -636,7 +636,7 @@
       const change: EditMap = {
         info: map.info,
       }
-      const res = await server.query('editmap', change)
+      const res = await $server.query('editmap', change)
       map.info = res.info
       clearDialog()
     } catch (e) {

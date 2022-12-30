@@ -146,7 +146,7 @@
   function onChange(q: number) {
     const change = editQuad(q)
     rmap.editQuad(change)
-    server.send('editquad', change)
+    $server.send('editquad', change)
     quadPoints = quadPoints // hack to redraw
   }
 
@@ -154,7 +154,7 @@
     try {
       showInfo('Please wait…')
       const change = { group: g, layer: l, quad: q }
-      server.query('deletequad', change)
+      $server.query('deletequad', change)
       rmap.deleteQuad(change)
       hideCM()
       layer = layer
@@ -201,7 +201,7 @@
 
     try {
       showInfo('Please wait…')
-      server.query('createquad', change)
+      $server.query('createquad', change)
       rmap.createQuad(change)
       layer = layer
       clearDialog()
@@ -270,7 +270,7 @@
 
     try {
       showInfo('Please wait…')
-      server.query('createquad', change)
+      $server.query('createquad', change)
       rmap.createQuad(change)
       hideCM()
       layer = layer

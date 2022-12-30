@@ -115,9 +115,9 @@
           showInfo('Uploading image...', 'none')
           const resp = await fetch(url)
           const file = await resp.arrayBuffer()
-          await server.uploadFile(file)
-          await server.query('createimage', { name: image, index, external: false })
-          const img = await queryImage(server, { index })
+          await $server.uploadFile(file)
+          await $server.query('createimage', { name: image, index, external: false })
+          const img = await queryImage($server, { index })
           rmap.addImage(img)
           onEditLayer({ group: g, layer: l, image: index })
           clearDialog()
@@ -128,7 +128,7 @@
         try {
           showInfo('Creating image...', 'none')
           const index = rmap.map.images.length
-          await server.query('createimage', { name: image, index, external: true })
+          await $server.query('createimage', { name: image, index, external: true })
           const img = new Image()
           img.loadExternal(url)
           img.name = image
@@ -148,8 +148,8 @@
       showInfo('Uploading image…', 'none')
       const name = image.name.replace(/\.[^\.]+$/, '')
       const index = rmap.map.images.length
-      await server.uploadFile(await image.arrayBuffer())
-      await server.query('createimage', { name, index, external: false })
+      await $server.uploadFile(await image.arrayBuffer())
+      await $server.query('createimage', { name, index, external: false })
       const data = await decodePng(image)
       const img = new Image()
       img.loadEmbedded(data)
@@ -167,7 +167,7 @@
 
     try {
       const index = rmap.map.images.indexOf(image)
-      await server.query('deleteimage', { index })
+      await $server.query('deleteimage', { index })
       rmap.removeImage(index)
       images = images // update the component
     } catch (e) {

@@ -1,6 +1,50 @@
 // carbon design stylesheets
  @import './carbon-style-compiled.css';
 
+#lobby {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 3rem);
+  overflow: auto;
+
+  > :nth-child(2) {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+
+  // make scrollbars fit nicely with page viewport size
+  // carbon's stickyheader property on datatables is shit
+  // this is quite complicated, idk of better ways
+  .bx--row > * {
+    display: flex;
+    flex-direction: column;
+
+    .table-wrapper {
+      min-height: 25rem;
+      flex-grow: 1;
+      position: relative;
+      overflow: hidden;
+
+      .bx--data-table-container {
+        overflow-y: scroll;
+        padding: 0;
+        position: absolute;
+        inset: 0;
+      
+        .bx--table-toolbar {
+          position: sticky;
+          top: 0;
+        }
+
+        thead {
+          position: sticky;
+          top: 3rem;
+          z-index: 1;
+        }
+      }
+    }
+  }
+}
 
 
 .bx--modal-content {
@@ -25,47 +69,49 @@ ul {
   padding: 0;
 }
 
-// input[type='number'],
-// input[type='text'],
-// input[type='button'],
-// input[type='color'],
-// select,
-// textarea,
-// button.danger,
-// button.default,
-// button.primary {
-//   border: none;
-//   padding: 0.25rem 0.4rem;
-//   text-overflow: ellipsis;
-//   overflow: hidden;
-//   background-color: #f2f2f2;
+#editor {
+  input[type='number'],
+  input[type='text'],
+  input[type='button'],
+  input[type='color'],
+  select,
+  textarea,
+  button.danger,
+  button.default,
+  button.primary {
+    border: none;
+    padding: 0.25rem 0.4rem;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    background-color: #f2f2f2;
 
-//   outline: 1px solid #aaaaaa;
-//   outline-offset: -1px;
+    outline: 1px solid #aaaaaa;
+    outline-offset: -1px;
 
-//   &:hover {
-//     outline: 1px solid #393939;
-//     outline-offset: -1px;
-//   }
-//   &:focus {
-//     outline: 2px solid #0f62fe;
-//     outline-offset: -2px;
-//   }
-// }
+    &:hover {
+      outline: 1px solid #393939;
+      outline-offset: -1px;
+    }
+    &:focus {
+      outline: 2px solid #0f62fe;
+      outline-offset: -2px;
+    }
+  }
 
-// button.large {
-//   padding: 0.5rem 0.8rem;
-// }
+  button.large {
+    padding: 0.5rem 0.8rem;
+  }
 
-// button.danger {
-//   color: white;
-//   background-color: #da1e28;
-// }
+  button.danger {
+    color: white;
+    background-color: #da1e28;
+  }
 
-// button.primary {
-//   color: white;
-//   background-color: #0f62fe;
-// }
+  button.primary {
+    color: white;
+    background-color: #0f62fe;
+  }
+}
 
 $menu_h: 3rem;
 
@@ -450,141 +496,6 @@ canvas {
           height: 100%;
         }
       }
-    }
-  }
-}
-
-#lobby {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: white;
-  padding: 3rem;
-
-  &.hidden {
-    display: none;
-  }
-
-  .buttons {
-    display: flex;
-    gap: 1rem;
-
-    > input[type='text'] {
-      width: 5rem;
-      flex-grow: 1;
-    }
-
-    > button,
-    > input[type='text'] {
-      font-size: 1.5rem;
-    }
-
-    &.right {
-      justify-content: flex-end;
-    }
-  }
-
-  #new-map {
-    & > *:first-child {
-      flex-grow: 1;
-    }
-
-    button,
-    input {
-      font-size: 1rem;
-    }
-
-    label.file {
-      border: 1px solid grey;
-      border-radius: 3px;
-      padding: 0.5rem 1rem;
-
-      > input[type='file'] {
-        display: none;
-      }
-    }
-  }
-
-  #join-map {
-    margin-top: 1rem;
-  }
-
-  button {
-    border: none;
-    border-radius: 3px;
-    padding: 0.4rem 1rem;
-    color: black;
-    background: lightgrey;
-
-    &:hover {
-      background: #a8a8a8;
-    }
-
-    &.refresh img,
-    &.delete img {
-      width: 100%;
-      height: 100%;
-    }
-
-    &.join {
-      color: white;
-      background: teal;
-
-      &:hover {
-        background: #006262;
-      }
-    }
-  }
-
-  .content {
-    background: white;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 30rem;
-    max-width: 100%;
-
-    .list {
-      overflow: auto;
-      width: 100%;
-    }
-
-    .row {
-      display: flex;
-      align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid lightgrey;
-      gap: 1rem;
-
-      > *:nth-child(1) {
-        width: 3rem;
-        margin: 0;
-      }
-      > *:nth-child(2) {
-        flex-grow: 1;
-      }
-      > *:nth-child(3) {
-        margin-right: 1rem;
-      }
-    }
-
-    .header {
-      font-weight: bold;
-      border: 1px solid grey;
-    }
-  }
-
-  .settings {
-    display: grid;
-    grid-template-columns: auto auto;
-    gap: 1rem;
-
-    > span:nth-child(2n) {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
     }
   }
 }

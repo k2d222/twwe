@@ -3,14 +3,15 @@
   import Dialog from '../lib/dialog.svelte'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
-  import Fuse from 'fuse.js'
-  import { Column, Row, RadioTile, TileGroup, Grid, StructuredList, StructuredListHead, StructuredListCell, StructuredListBody, StructuredListRow, StructuredListInput, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, FormGroup, Tooltip, DataTable, Pagination, Toolbar, ToolbarContent, ToolbarSearch } from 'carbon-components-svelte'
+  import { Column, Row, RadioTile, TileGroup, Grid, StructuredList, StructuredListHead, StructuredListCell, StructuredListBody, StructuredListRow, StructuredListInput, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, FormGroup, Tooltip, DataTable, Pagination, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem } from 'carbon-components-svelte'
   import storage from '../../storage'
   import { CheckmarkFilled } from 'carbon-icons-svelte'
   import {
     Help as AboutIcon,
     LogoGithub as GitHubIcon,
-    Add as AddIcon
+    Add as AddIcon,
+    Login as JoinIcon,
+    TrashCan as DeleteIcon,
   } from 'carbon-icons-svelte'
   import { WebSocketServer } from '../../server/server'
   import { server } from '../global'
@@ -23,10 +24,16 @@
   let serverId = storage.load('currentServer')
 
   let selectedServer = '' + serverId
-  let selectedMap: string | null = null
-
-  let searchTerm: string = ''
   let maps: MapInfo[] = []
+
+  // add server modal
+  let addServerModalOpen = false
+  let modalAddServer = {
+    open: false,
+    url: '',
+    port: 16900,
+    encrypted: false,
+  }
 
   const statusString: { [k in ServerStatus]: [SpinnerStatus, string] } = {
     unknown: ['inactive', ''],
@@ -37,13 +44,10 @@
   }
 
   let serverStatus = serverConfs.map(_ => {
-      return 'unknown' as ServerStatus
-    })
+    return 'unknown' as ServerStatus
+  })
     
   $: serverId = parseInt(selectedServer)
-  $: filteredMaps = filterMaps(maps, searchTerm)
-  $: selectedMap = filteredMaps.length ? filteredMaps[0].name : null
-  $: console.log(selectedMap)
 
   onMount(() => {
     selectServer(0)
@@ -64,15 +68,6 @@
       if (a.users === b.users) return a.name.localeCompare(b.name)
       else return b.users - a.users
     })
-  }
-
-  function filterMaps(maps: MapInfo[], term: string): MapInfo[] {
-    if (term == '') return maps
-
-    const fuse = new Fuse(maps, {
-      keys: ['name'],
-    })
-    return fuse.search(term).map(elt => elt.item)
   }
 
   function selectServer(id: number) {
@@ -105,21 +100,29 @@
     clearDialog()
   }
 
-  async function onDelete() {
-    if (selectedMap === null) return
+  // async function onDelete() {
+  //   if (selectedMap === null) return
     
-    const res = await showWarning('Are you sure you want to delete "' + selectedMap + '"?', 'yesno')
+  //   const res = await showWarning('Are you sure you want to delete "' + selectedMap + '"?', 'yesno')
 
-    if (res) {
-      showInfo('Deleting map…', 'none')
-      try {
-        await $server.query('deletemap', { name: selectedMap })
-        clearDialog()
-        onRefresh()
-      } catch (e) {
-        showError('Map deletion failed: ' + e)
-      }
-    }
+  //   if (res) {
+  //     showInfo('Deleting map…', 'none')
+  //     try {
+  //       await $server.query('deletemap', { name: selectedMap.name })
+  //       clearDialog()
+  //       onRefresh()
+  //     } catch (e) {
+  //       showError('Map deletion failed: ' + e)
+  //     }
+  //   }
+  // }
+
+  function onJoinMap(name: string) {
+    navigate('/edit/' + name)
+  }
+
+  function onAddServer() {
+
   }
 
   // TODO: restore this
@@ -159,21 +162,7 @@
   //   })
   // }
 
-  let addServerModalOpen = false
-  let modalAddServer = {
-    open: false,
-    url: '',
-    port: 16900,
-    encrypted: false,
-  }
-
-  function onAddServer() {
-
-  }
-
-  let pageSize = 15
-  let page = 1
-
+  
 </script>
 
 <style>
@@ -209,7 +198,7 @@
   </div>
 </div>
 
-<Grid padding>
+<Grid padding id="lobby">
   <Row>
     <Column>
       <Tile>
@@ -226,10 +215,11 @@
       </Tile>
     </Column>
   </Row>
+
   <Row>
     <Column>
       <div class="head-row">
-        <h2>Servers</h2>
+        <h3>Servers</h3>
         <Button kind="tertiary" on:click={() => addServerModalOpen = true} icon={AddIcon}>Add server</Button>
       </div>
       <TileGroup bind:selected={selectedServer} on:select={onSelectServer}>
@@ -245,46 +235,60 @@
       </TileGroup>
     </Column>
 
-    <Column>
+    <Column lg={8} max={8}>
       <div class="head-row">
-        <h2>Maps</h2>
+        <h3>Maps</h3>
         <Button kind="tertiary" on:click={() => addServerModalOpen = true} icon={AddIcon}>Add map</Button>
       </div>
-      <DataTable
-        sortable
-        size="short"
-        {pageSize}
-        {page}
-        headers={[
-          { key: 'name', value: 'Name' },
-          { key: 'users', value: 'Users online' },
-          { key: 'date', value: 'Last modified' },
-        ]}
-        rows={
-          filteredMaps.map((row, i) => ({
-            id: i,
-            name: row.name,
-            users: row.users,
-            date: 'N/A',
-          }))
-        }
-      >
-        <Toolbar>
-          <ToolbarContent>
-            <ToolbarSearch
-              persistent
-              value=""
-              shouldFilterRows
-            />
-          </ToolbarContent>
-        </Toolbar>
-      </DataTable>
-      <Pagination
-        bind:pageSize
-        bind:page
-        totalItems={filteredMaps.length}
-        pageSizeInputDisabled
-      />
+      <div class="table-wrapper">
+        <DataTable
+          sortable
+          headers={[
+            { key: 'name', value: 'Name' },
+            { key: 'users', value: 'Users online' },
+            { key: 'date', value: 'Last modified' },
+            { key: "join", empty: true },
+            { key: "overflow", empty: true },
+          ]}
+          rows={
+            maps.map((row, i) => ({
+              id: i,
+              name: row.name,
+              users: row.users,
+              date: 'N/A',
+              join: row.name,
+              overflow: row.name,
+            }))
+          }
+        >
+          <Toolbar>
+            <ToolbarContent>
+              <ToolbarSearch
+                persistent
+                value=""
+                shouldFilterRows
+              />
+            </ToolbarContent>
+          </Toolbar>
+          <svelte:fragment slot="cell" let:cell>
+            {#if cell.key === "overflow"}
+              <OverflowMenu flipped>
+                <OverflowMenuItem text="Join" on:click={() => onJoinMap(cell.value)} />
+                <OverflowMenuItem danger text="Delete" on:click={() => alert("TODO: Not implemented")} />
+              </OverflowMenu>
+            {:else if cell.key === "join"}
+              <Button
+                kind="ghost"
+                icon={JoinIcon}
+                iconDescription="Join map"
+                on:click={() => onJoinMap(cell.value)}
+              />
+            {:else}
+              {cell.value}
+            {/if}
+          </svelte:fragment>
+        </DataTable>
+      </div>
     </Column>
   </Row>
 </Grid>

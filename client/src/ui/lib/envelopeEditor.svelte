@@ -261,7 +261,7 @@
     }
     try {
       showInfo('Please wait…')
-      await server.query('editenvelope', change)
+      await $server.query('editenvelope', change)
       rmap.editEnvelope(change)
       rmap = rmap // hack to redraw
       clearDialog()
@@ -279,7 +279,7 @@
     }
     try {
       showInfo('Please wait…')
-      await server.query('createenvelope', change)
+      await $server.query('createenvelope', change)
       rmap.createEnvelope(change)
       selected = rmap.map.envelopes[rmap.map.envelopes.length - 1]
       rmap = rmap // hack to redraw
@@ -295,7 +295,7 @@
     }
     try {
       showInfo('Please wait…')
-      await server.query('deleteenvelope', change)
+      await $server.query('deleteenvelope', change)
       rmap.removeEnvelope(change.index)
       selected = rmap.map.envelopes[change.index - 1] || null
       rmap = rmap // hack to redraw
@@ -321,7 +321,7 @@
   function onMouseUp() {
     if (activePath !== -1 && activePoint !== -1) {
       const change = makeEnvEdit()
-      server.send('editenvelope', change)
+      $server.send('editenvelope', change)
 
       activePath = -1
       activePoint = -1
@@ -420,7 +420,7 @@
     selected = selected // hack to redraw
 
     const change = makeEnvEdit()
-    server.send('editenvelope', change)
+    $server.send('editenvelope', change)
   }
 
   function onEditTime(e: InputEvent) {
@@ -440,7 +440,7 @@
     selected = selected // hack to redraw
 
     const change = makeEnvEdit()
-    server.send('editenvelope', change)
+    $server.send('editenvelope', change)
   }
 
   function onDeletePoint() {
@@ -450,7 +450,7 @@
     selected = selected // hack to redraw
 
     const change = makeEnvEdit()
-    server.send('editenvelope', change)
+    $server.send('editenvelope', change)
   }
 
   function onEditCurve(e: FormEvent<HTMLSelectElement>) {
@@ -460,7 +460,7 @@
     selected = selected // hack to redraw
 
     const change = makeEnvEdit()
-    server.send('editenvelope', change)
+    $server.send('editenvelope', change)
   }
 
   function onMouseWheel(e: WheelEvent) {
@@ -502,7 +502,7 @@
     selected = selected // hack to redraw
 
     const change = makeEnvEdit()
-    server.send('editenvelope', change)
+    $server.send('editenvelope', change)
   }
 </script>
 
