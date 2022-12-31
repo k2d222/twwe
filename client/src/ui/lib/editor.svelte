@@ -44,7 +44,7 @@
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl, px2vw, rem2px } from './util'
+  import { queryImage, externalImageUrl, px2vw, rem2px, downloadMap } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
@@ -493,7 +493,7 @@
   }
 
   function onDownloadMap() {
-    Editor.downloadMap($server, map.name)
+    downloadMap($server, map.name)
   }
 
   let ctrlKey = false

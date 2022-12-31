@@ -2,7 +2,6 @@
   import { Router, Route } from 'svelte-routing'
   import Lobby from './routes/lobby.svelte'
   import Edit from './routes/edit.svelte'
-  import CreateMap from './routes/create.svelte'
   import JoinServer from './lib/joinServer.svelte'
 
   export let url = ''
@@ -15,9 +14,6 @@
     </Route>
     <Route path="/">
       <Lobby />
-    </Route>
-    <Route path="create/">
-      <JoinServer><CreateMap /></JoinServer>
     </Route>
   </div>
 </Router>

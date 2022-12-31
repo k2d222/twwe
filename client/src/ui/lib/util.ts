@@ -11,6 +11,20 @@ export type Ctor<T> = new (...args: any[]) => T
 export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
+export async function downloadMap(server: WebSocketServer, mapName: string) {
+  const buf = await queryMapBinary(server, { name: mapName })
+  const blob = new Blob([buf], { type: 'application/octet-stream' })
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = mapName + '.map'
+
+  document.body.append(link)
+  link.click()
+  link.remove()
+}
+
 export async function decodePng(file: File): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
     const img = document.createElement('img')

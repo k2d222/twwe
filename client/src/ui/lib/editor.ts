@@ -21,20 +21,6 @@ export type Range = {
   end: Coord
 }
 
-export async function downloadMap(server: WebSocketServer, mapName: string) {
-  const buf = await queryMapBinary(server, { name: mapName })
-  const blob = new Blob([buf], { type: 'application/octet-stream' })
-  const url = URL.createObjectURL(blob)
-
-  const link = document.createElement('a')
-  link.href = url
-  link.download = mapName + '.map'
-
-  document.body.append(link)
-  link.click()
-  link.remove()
-}
-
 export function getLayerImage(rmap: RenderMap, g: number, l: number) {
   return rmap.groups[g].layers[l].texture.image
 }

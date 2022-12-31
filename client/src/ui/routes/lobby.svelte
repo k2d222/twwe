@@ -14,6 +14,7 @@
   import { WebSocketServer } from '../../server/server'
   import { server } from '../global'
   import { onMount } from 'svelte'
+import { downloadMap } from '../lib/util';
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'
@@ -70,6 +71,12 @@
     blankHeight: 100,
   }
 
+  let modalConfirmDelete = {
+    open: false,
+    name: '',
+    onConfirm: () => {},
+  }
+
   const statusString: { [k in ServerStatus]: [SpinnerStatus, string] } = {
     unknown: ['inactive', ''],
     connecting: ['active', 'Connecting…'],
@@ -85,7 +92,7 @@
   $: serverId = parseInt(selectedServer)
 
   onMount(() => {
-    selectServer(0)
+    selectServer(serverId)
   })
 
   function resetMapModal() {
@@ -96,7 +103,6 @@
       text: m.name
     }))
   }
-
 
   function setServerStatus(id: number, state: ServerStatus) {
     serverStatus[id] = state
@@ -124,21 +130,30 @@
     serverId = id
     const conf = serverConfs[id]
 
+    if ($server === null || $server.socket.url !== conf.url) {
+      if($server) $server.socket.close()
+      $server = new WebSocketServer(conf.url)
+    }
+
     setServerStatus(id, 'connecting')
-    $server = new WebSocketServer(conf.url)
     $server.socket.addEventListener('open', () => {
       setServerStatus(id, id === serverId ? 'connected' : 'online')
     }, { once: true })
     $server.socket.addEventListener('error', () => {
       setServerStatus(id, 'error')
     }, { once: true })
-    queryMaps($server).then(res => {
-      if (id === serverId) {
-        storage.save('currentServer', id)
-        maps = res
-        resetMapModal()
-      }
-    })
+
+    refreshMapList()
+  }
+
+  async function refreshMapList() {
+    const id = serverId // ensure the same server is selected when request completes
+    const res = await queryMaps($server);
+    if (id === serverId) {
+      storage.save('currentServer', id);
+      maps = res;
+      resetMapModal();
+    }
   }
 
   function onSelectServer(e: Event & { detail: string }) {
@@ -148,6 +163,28 @@
 
   function onJoinMap(name: string) {
     navigate('/edit/' + name)
+  }
+
+  function onDeleteMap(name: string) {
+    modalConfirmDelete.name = name
+    modalConfirmDelete.open = true
+    modalConfirmDelete.onConfirm = async () => {
+      try {
+        await $server.query('deletemap', { name })
+      } catch (e) {
+        showError('Map deletion failed: ' + e)
+      }
+      modalConfirmDelete.open = false
+      await refreshMapList()
+    }
+  }
+
+  function onRenameMap(name: string) {
+    alert('TODO not implemented yet.')
+  }
+
+  function onDownloadMap(name: string) {
+    downloadMap($server, name)
   }
 
   function onAddServer() {
@@ -315,7 +352,7 @@
             <div><InlineLoading status={statusString[status][0]} description={statusString[status][1]} /></div>
             {#if i !== 0}
               <div class='delete'>
-                <Button kind="danger-ghost" icon={DeleteIcon} on:click={() => onDeleteServer(i)} />
+                <Button kind="danger-ghost" iconDescription="Remove server" icon={DeleteIcon} on:click={() => onDeleteServer(i)} />
               </div>
             {/if}
           </RadioTile>
@@ -338,8 +375,8 @@
             { key: 'name', value: 'Name' },
             { key: 'users', value: 'Users online' },
             { key: 'date', value: 'Last modified' },
-            { key: "join", empty: true },
             { key: "overflow", empty: true },
+            { key: "join", empty: true },
           ]}
           rows={
             maps.map((row, i) => ({
@@ -365,7 +402,9 @@
             {#if cell.key === "overflow"}
               <OverflowMenu flipped>
                 <OverflowMenuItem text="Join" on:click={() => onJoinMap(cell.value)} />
-                <OverflowMenuItem danger text="Delete" on:click={() => alert("TODO: Not implemented")} />
+                <OverflowMenuItem text="Rename" on:click={() => onRenameMap(cell.value)} />
+                <OverflowMenuItem text="Download" on:click={() => onDownloadMap(cell.value)} />
+                <OverflowMenuItem danger text="Delete" on:click={() => onDeleteMap(cell.value)} />
               </OverflowMenu>
             {:else if cell.key === "join"}
               <Button
@@ -481,4 +520,17 @@
     {/if}
     <Toggle labelText="Visibility" labelA="unlisted" labelB="public" bind:toggled={modalCreateMap.public} />
   </div>
+</Modal>
+
+<Modal
+  danger
+  modalHeading="Confirm deletion"
+  primaryButtonText="Delete"
+  primaryButtonIcon={DeleteIcon}
+  secondaryButtonText="Cancel"
+  on:click:button--secondary={() => modalConfirmDelete.open = false}
+  bind:open={modalConfirmDelete.open}
+  on:submit={modalConfirmDelete.onConfirm}
+>
+  <p>The map "{modalConfirmDelete.name}" will be permanently deleted from the server. Make sure you made a backup.</p>
 </Modal>
