@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "sass styles/carbon-style.scss styles/carbon-style-compiled.css && vite build",
+    "build": "sass --load-path=node_modules  styles/carbon-style.scss styles/carbon-style-compiled.css && vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "format": "prettier --plugin-search-dir . --write .",
-    "preprocess": "sass styles/carbon-style.scss styles/carbon-style-compiled.css"
+    "preprocess": "sass --load-path=node_modules styles/carbon-style.scss styles/carbon-style-compiled.css"
   },
   "repository": {
     "type": "git",
@@ -24,7 +24,6 @@
     "@sveltejs/vite-plugin-svelte": "^1.0.0-next.30",
     "@tsconfig/svelte": "^2.0.1",
     "@types/pako": "^2.0.0",
-    "carbon-components": "^10.58.3",
     "carbon-components-svelte": "^0.70.12",
     "carbon-icons-svelte": "^11.4.0",
     "carbon-preprocess-svelte": "^0.9.1",
@@ -45,5 +44,9 @@
     "tslib": "^2.3.1",
     "typescript": "^4.5.4",
     "vite": "^2.9.9"
+  },
+  "dependencies": {
+    "@carbon/styles": "^1.19.0",
+    "carbon-components": "^10.58.3"
   }
 }

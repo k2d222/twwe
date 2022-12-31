@@ -60,7 +60,7 @@
     Music as SoundsIcon,
     Add as CreateGroupIcon,
   } from 'carbon-icons-svelte'
-  import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
+  import { Button, ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 
   type Coord = {
     x: number
@@ -486,7 +486,7 @@
     try {
       showInfo('Saving map...', 'none')
       await $server.query('savemap', { name: map.name })
-      showInfo('Map saved on $server.', 'closable')
+      showInfo('Map saved on the server.', 'closable')
     } catch (e) {
       showError('Failed to save map: ' + e)
     }
@@ -688,10 +688,13 @@
       <Splitpanes dblClickSplitter={false}>
         <Pane class="layers" bind:size={layerPaneSize}>
           <TreeView {rmap} bind:active bind:selected />
-          <button id="create-group" on:click={onCreateGroup}>
-            <span class="icon"><CreateGroupIcon /></span>
-            <span class="label">Add group</span>
-          </button>
+          <Button
+            id="create-group"
+            size="field"
+            kind="ghost"
+            icon={CreateGroupIcon}
+            on:click={onCreateGroup}
+          >Add group</Button>
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>

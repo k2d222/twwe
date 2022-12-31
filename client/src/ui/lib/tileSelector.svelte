@@ -16,6 +16,11 @@
   } from '../../twmap/tilesLayer'
   import * as Editor from './editor'
   import { onMount, onDestroy } from 'svelte'
+  import { Button } from 'carbon-components-svelte'
+  import {
+    ColorPalette as PaletteIcon,
+    Tools as ToolsIcon,
+  } from 'carbon-icons-svelte'
 
   type Range = {
     start: Coord
@@ -347,13 +352,23 @@
 </script>
 
 <div id="tile-selector">
-  <div class="tile selected">
-    <button class="default" on:click={() => (tilesVisible = !tilesVisible)}
-      ><img src="/assets/palette.svg" alt="tile picker" /></button
-    >
-    <button class="default" on:click={() => (settingsVisible = !settingsVisible)}
-      ><img src="/assets/tune.svg" alt="tile options" /></button
-    >
+  <div class="controls">
+    <Button
+      expressive
+      on:click={() => (tilesVisible = !tilesVisible)}
+      icon={PaletteIcon}
+      iconDescription="Tile picker"
+      tooltipPosition="top"
+      kind="secondary"
+    />
+    <Button
+      expressive
+      on:click={() => (settingsVisible = !settingsVisible)}
+      icon={ToolsIcon}
+      iconDescription="Tile options"
+      tooltipPosition="top"
+      kind="secondary"
+    />
   </div>
   <div class="tiles" class:hidden={!tilesVisible}>
     <canvas

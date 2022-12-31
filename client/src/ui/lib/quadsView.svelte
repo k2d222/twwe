@@ -10,6 +10,11 @@
   import { server } from '../global'
   import { layerIndex } from './util'
   import { showInfo, showError, clearDialog } from './dialog'
+  import { Button } from 'carbon-components-svelte'
+  import {
+    Add as AddIcon,
+  } from 'carbon-icons-svelte'
+
 
   export let rmap: RenderMap
   export let layer: QuadsLayer
@@ -373,7 +378,14 @@
       />
     </ContextMenu>
   {/if}
-  <button class="default" on:click={onCreateQuad}
-    ><img src="/assets/plus.svg" alt="add quad" /></button
-  >
+  <div class="controls">
+    <Button
+      expressive
+      on:click={onCreateQuad}
+      icon={AddIcon}
+      iconDescription="Tile picker"
+      tooltipPosition="top"
+      kind="secondary"
+    />
+  </div>
 </div>

@@ -1,5 +1,5 @@
 // carbon design stylesheets
- @import './carbon-style-compiled.css';
+@import './carbon-style-compiled.css';
 
 #lobby {
   display: flex;
@@ -270,10 +270,13 @@ canvas {
     height: 2rem;
     padding-left: 1rem;
 
-    &:hover,
+    &:hover {
+      background-color: var(--bx-layer-hover);
+    }
+
     &.selected,
     &.active {
-      background: #e0e0e0;
+      background-color: var(--bx-layer-selected);
     }
 
     &.active::before {
@@ -346,35 +349,7 @@ canvas {
 
 #create-group {
   width: 100%;
-  background: none;
-  border: none;
-  // border-top: 1px solid lightgrey;
-  height: 2rem;
-  padding: 0;
-  padding-left: 1rem;
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-
-  > .icon {
-    margin-right: 0.5rem;
-    stroke: black;
-  }
-
-  > .label {
-    text-align: left;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    flex-grow: 1;
-    padding-right: 0.5rem;
-  }
-
-  &:hover,
-  &.selected,
-  &.active {
-    background: #e0e0e0;
-  }
+  max-width: unset;
 }
 
 #statusbar {
@@ -419,27 +394,14 @@ canvas {
     }
   }
 
-  .tile.selected {
+  .controls {
+    background: white;
+    display: flex;
     position: absolute;
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%);
-    display: flex;
-    gap: 2rem;
-
-    > button {
-      padding: 0;
-      margin: 0;
-      border: 0;
-      outline: 0;
-      width: 3rem;
-      height: 3rem;
-      outline: 3px solid black;
-      > img {
-        width: 100%;
-        height: 100%;
-      }
-    }
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px 0px;
   }
 
   .tiles,
@@ -670,61 +632,53 @@ nav.hidden .context {
   position: fixed;
   inset: 0;
 
-  svg {
+  > svg {
     position: absolute;
-  }
+    > * {
+      pointer-events: auto;
+      vector-effect: non-scaling-stroke;
+    }
 
-  svg > * {
-    pointer-events: auto;
-    vector-effect: non-scaling-stroke;
-  }
+    polygon {
+      fill: transparent;
 
-  polygon {
-    fill: transparent;
+      &:hover {
+        stroke-width: 5px;
+        fill: rgba(255, 255, 255, 0.2);
+      }
+    }
 
-    &:hover {
-      stroke-width: 5px;
-      fill: rgba(255, 255, 255, 0.2);
+    line {
+      stroke: black;
+      stroke-width: 2px;
+
+      &:hover {
+        stroke-width: 5px;
+        fill: rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    circle {
+      stroke: black;
+
+      &.center {
+        fill: green;
+        stroke: green;
+      }
+
+      &:hover {
+        stroke-width: 5px;
+      }
     }
   }
 
-  line {
-    stroke: black;
-    stroke-width: 2px;
-
-    &:hover {
-      stroke-width: 5px;
-      fill: rgba(255, 255, 255, 0.2);
-    }
-  }
-
-  circle {
-    stroke: black;
-
-    &.center {
-      fill: green;
-      stroke: green;
-    }
-
-    &:hover {
-      stroke-width: 5px;
-    }
-  }
-
-  > button {
+  .controls {
+    background: white;
     position: absolute;
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%);
-    width: 3rem;
-    height: 3rem;
-    outline: 3px solid black;
-    padding: 0;
-    margin: 0;
-    border: 0;
-    > img {
-      width: 100%;
-    }
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px 0px;
   }
 }
 
