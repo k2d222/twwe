@@ -17,10 +17,7 @@
   import * as Editor from './editor'
   import { onMount, onDestroy } from 'svelte'
   import { Button } from 'carbon-components-svelte'
-  import {
-    ColorPalette as PaletteIcon,
-    Tools as ToolsIcon,
-  } from 'carbon-icons-svelte'
+  import { ColorPalette as PaletteIcon, Tools as ToolsIcon } from 'carbon-icons-svelte'
 
   type Range = {
     start: Coord

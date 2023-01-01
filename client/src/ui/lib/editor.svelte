@@ -693,8 +693,8 @@
             size="field"
             kind="ghost"
             icon={CreateGroupIcon}
-            on:click={onCreateGroup}
-          >Add group</Button>
+            on:click={onCreateGroup}>Add group</Button
+          >
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>

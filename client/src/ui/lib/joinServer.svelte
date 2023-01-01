@@ -13,13 +13,12 @@
   let error = false
 
   $server = new WebSocketServer(serverConf.url)
-  $server.socket.addEventListener('open', () => connected = true, { once: true })
-  $server.socket.addEventListener('error', () => error = true, { once: true })
-
+  $server.socket.addEventListener('open', () => (connected = true), { once: true })
+  $server.socket.addEventListener('error', () => (error = true), { once: true })
 </script>
 
 {#if connected}
-  <slot></slot>
+  <slot />
 {:else if error}
   <InlineNotification
     kind="error"

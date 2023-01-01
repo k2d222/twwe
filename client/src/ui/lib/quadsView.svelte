@@ -11,10 +11,7 @@
   import { layerIndex } from './util'
   import { showInfo, showError, clearDialog } from './dialog'
   import { Button } from 'carbon-components-svelte'
-  import {
-    Add as AddIcon,
-  } from 'carbon-icons-svelte'
-
+  import { Add as AddIcon } from 'carbon-icons-svelte'
 
   export let rmap: RenderMap
   export let layer: QuadsLayer

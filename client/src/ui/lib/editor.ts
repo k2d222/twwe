@@ -118,7 +118,14 @@ export function makeEmptySelection(layer: AnyTilesLayer<any>, sel: Range): Brush
   return res
 }
 
-export function placeTiles(server: WebSocketServer, rmap: RenderMap, g: number, l: number, pos: Coord, tiles: Brush) {
+export function placeTiles(
+  server: WebSocketServer,
+  rmap: RenderMap,
+  g: number,
+  l: number,
+  pos: Coord,
+  tiles: Brush
+) {
   let [i, j] = [0, 0]
   let changes: EditTile[] = []
 
@@ -146,7 +153,14 @@ export function placeTiles(server: WebSocketServer, rmap: RenderMap, g: number, 
   }
 }
 
-export function fill(server: WebSocketServer, rmap: RenderMap, g: number, l: number, range: Range, tiles: Brush) {
+export function fill(
+  server: WebSocketServer,
+  rmap: RenderMap,
+  g: number,
+  l: number,
+  range: Range,
+  tiles: Brush
+) {
   let changes: EditTile[] = []
 
   for (let j = range.start.y; j <= range.end.y; j++) {
