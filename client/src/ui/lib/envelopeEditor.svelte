@@ -14,7 +14,7 @@
   import { ColorEnvelope, PositionEnvelope, SoundEnvelope, EnvPoint } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
   import { onMount } from 'svelte'
-  import { showInfo, showError, clearDialog } from './dialog'
+  import { showError, clearDialog } from './dialog'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
   type InputEvent = FormEvent<HTMLInputElement>
@@ -260,7 +260,7 @@
       name: e.currentTarget.value,
     }
     try {
-      showInfo('Please wait…')
+      // showInfo('Please wait…')
       await $server.query('editenvelope', change)
       rmap.editEnvelope(change)
       rmap = rmap // hack to redraw
@@ -278,7 +278,7 @@
       name: '',
     }
     try {
-      showInfo('Please wait…')
+      // showInfo('Please wait…')
       await $server.query('createenvelope', change)
       rmap.createEnvelope(change)
       selected = rmap.map.envelopes[rmap.map.envelopes.length - 1]
@@ -294,7 +294,7 @@
       index: rmap.map.envelopes.indexOf(selected),
     }
     try {
-      showInfo('Please wait…')
+      // showInfo('Please wait…')
       await $server.query('deleteenvelope', change)
       rmap.removeEnvelope(change.index)
       selected = rmap.map.envelopes[change.index - 1] || null

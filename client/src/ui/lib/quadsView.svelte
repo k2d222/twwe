@@ -9,7 +9,7 @@
   import QuadEditor from './editQuad.svelte'
   import { server } from '../global'
   import { layerIndex } from './util'
-  import { showInfo, showError, clearDialog } from './dialog'
+  import { showError, clearDialog } from './dialog'
   import { Button } from 'carbon-components-svelte'
   import { Add as AddIcon } from 'carbon-icons-svelte'
 
@@ -45,7 +45,7 @@
   onMount(() => {
     const updateForever = () => {
       viewBox = makeViewBox()
-      circleRadius = 100 / viewport.scale + 1
+      circleRadius = 100 / viewport.scale
       if (!destroyed) requestAnimationFrame(updateForever)
     }
     updateForever()
@@ -154,7 +154,7 @@
 
   function onDelete(q: number) {
     try {
-      showInfo('Please wait…')
+      // showInfo('Please wait…')
       const change = { group: g, layer: l, quad: q }
       $server.query('deletequad', change)
       rmap.deleteQuad(change)
@@ -202,7 +202,7 @@
     }
 
     try {
-      showInfo('Please wait…')
+      // showInfo('Please wait…')
       $server.query('createquad', change)
       rmap.createQuad(change)
       layer = layer
@@ -271,7 +271,7 @@
     }
 
     try {
-      showInfo('Please wait…')
+      // showInfo('Please wait…')
       $server.query('createquad', change)
       rmap.createQuad(change)
       hideCM()
@@ -380,7 +380,7 @@
       expressive
       on:click={onCreateQuad}
       icon={AddIcon}
-      iconDescription="Tile picker"
+      iconDescription="New quad"
       tooltipPosition="top"
       kind="secondary"
     />

@@ -40,7 +40,7 @@
         padding: 0;
         position: absolute;
         inset: 0;
-
+      
         .bx--table-toolbar {
           position: sticky;
           top: 0;
@@ -55,6 +55,7 @@
     }
   }
 }
+
 
 .bx--modal-content {
   margin-bottom: 1rem !important;
@@ -104,10 +105,10 @@
   }
 }
 
-$menu_h: 3rem;
+$header-h: 3rem;
 
 #panes {
-  height: calc(100vh - $menu-h);
+  height: calc(100vh - $header-h);
 
   .splitpanes__splitter {
     border: 0;
@@ -149,9 +150,9 @@ canvas {
   background-repeat: repeat;
 }
 
-#menu {
+#header {
   width: 100%;
-  height: $menu_h;
+  height: $header-h;
   justify-content: space-between;
   display: flex;
   flex-direction: row;
@@ -178,8 +179,8 @@ canvas {
   }
 
   button {
-    width: $menu_h;
-    height: $menu_h;
+    width: $header-h;
+    height: $header-h;
     display: flex;
     justify-content: center;
     align-items: center;

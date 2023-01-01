@@ -2,32 +2,7 @@
   import type { CreateMap, MapInfo } from '../../server/protocol'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
-  import {
-    Column,
-    Row,
-    RadioTile,
-    TileGroup,
-    Grid,
-    Tile,
-    InlineLoading,
-    Button,
-    Modal,
-    TextInput,
-    NumberInput,
-    Toggle,
-    DataTable,
-    Toolbar,
-    ToolbarContent,
-    ToolbarSearch,
-    OverflowMenu,
-    OverflowMenuItem,
-    FormGroup,
-    FileUploaderItem,
-    FileUploaderDropContainer,
-    RadioButtonGroup,
-    RadioButton,
-    ComboBox,
-  } from 'carbon-components-svelte'
+  import { Column, Row, RadioTile, TileGroup, Grid, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, DataTable, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem, FormGroup, FileUploaderItem, FileUploaderDropContainer, RadioButtonGroup, RadioButton, ComboBox } from 'carbon-components-svelte'
   import storage, { ServerConfig } from '../../storage'
   import {
     Help as AboutIcon,
@@ -52,11 +27,11 @@
   let maps: MapInfo[] = []
 
   interface ModalAddServer {
-    open: boolean
-    name: string
-    hostname: string
+    open: boolean,
+    name: string,
+    hostname: string,
     port: number
-    encrypted: boolean
+    encrypted: boolean,
   }
 
   let modalAddServer: ModalAddServer = {
@@ -68,18 +43,18 @@
   }
 
   interface ModalCreateMap {
-    open: boolean
-    name: string
-    public: boolean
+    open: boolean,
+    name: string,
+    public: boolean,
     method: 'upload' | 'blank' | 'clone'
-    clone: number | undefined
-    cloneItems: { id: number; text: string }[]
-    uploading: boolean
-    uploadFile: File | null
-    uploadInvalid: boolean
+    clone: number | undefined,
+    cloneItems: { id: number, text: string }[],
+    uploading: boolean,
+    uploadFile: File | null,
+    uploadInvalid: boolean,
     uploadStatus: 'uploading' | 'complete'
-    blankWidth: number
-    blankHeight: number
+    blankWidth: number,
+    blankHeight: number,
   }
 
   let modalCreateMap: ModalCreateMap = {
@@ -114,7 +89,7 @@
   $: serverStatus = serverConfs.map(_ => {
     return 'unknown' as ServerStatus
   })
-
+    
   $: serverId = parseInt(selectedServer)
 
   onMount(() => {
@@ -126,7 +101,7 @@
     modalCreateMap.clone = undefined
     modalCreateMap.cloneItems = maps.map((m, i) => ({
       id: i,
-      text: m.name,
+      text: m.name
     }))
   }
 
@@ -157,36 +132,28 @@
     const conf = serverConfs[id]
 
     if ($server === null || $server.socket.url !== conf.url) {
-      if ($server) $server.socket.close()
+      if($server) $server.socket.close()
       $server = new WebSocketServer(conf.url)
     }
 
     setServerStatus(id, 'connecting')
-    $server.socket.addEventListener(
-      'open',
-      () => {
-        setServerStatus(id, id === serverId ? 'connected' : 'online')
-      },
-      { once: true }
-    )
-    $server.socket.addEventListener(
-      'error',
-      () => {
-        setServerStatus(id, 'error')
-      },
-      { once: true }
-    )
+    $server.socket.addEventListener('open', () => {
+      setServerStatus(id, id === serverId ? 'connected' : 'online')
+    }, { once: true })
+    $server.socket.addEventListener('error', () => {
+      setServerStatus(id, 'error')
+    }, { once: true })
 
     refreshMapList()
   }
 
   async function refreshMapList() {
     const id = serverId // ensure the same server is selected when request completes
-    const res = await queryMaps($server)
+    const res = await queryMaps($server);
     if (id === serverId) {
-      storage.save('currentServer', id)
-      maps = res
-      resetMapModal()
+      storage.save('currentServer', id);
+      maps = res;
+      resetMapModal();
     }
   }
 
@@ -213,7 +180,7 @@
     }
   }
 
-  function onRenameMap(name: string) {
+  function onRenameMap(_name: string) {
     alert('TODO not implemented yet.')
   }
 
@@ -249,7 +216,7 @@
       create = {
         name,
         access,
-        upload: {},
+        upload: {}
       }
     } else if (method === 'blank') {
       create = {
@@ -259,13 +226,13 @@
           width: modalCreateMap.blankWidth,
           height: modalCreateMap.blankHeight,
           defaultLayers: false, // TODO
-        },
+        }
       }
     } else if (method === 'clone') {
       create = {
         name,
         access,
-        clone: { clone: maps[modalCreateMap.clone].name },
+        clone: { clone: maps[modalCreateMap.clone].name }
       }
     }
 
@@ -294,33 +261,57 @@
     modalCreateMap.uploadInvalid = false
     try {
       await $server.uploadFile(await file.arrayBuffer())
-    } catch (e) {
+    }
+    catch (e) {
       modalCreateMap.uploadInvalid = true
-    } finally {
+    }
+    finally {
       modalCreateMap.uploadStatus = 'complete'
     }
   }
 
   function shouldFilterItem(item: ComboBoxItem, value: string) {
-    if (!value) return true
-    return item.text.toLowerCase().includes(value.toLowerCase())
+    if (!value) return true;
+    return item.text.toLowerCase().includes(value.toLowerCase());
   }
 </script>
 
-<div id="menu">
-  <div class="left" />
+<style>
+  .head-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .delete {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+  }
+</style>
+
+<div id="header">
+  <div class="left">
+  </div>
   <div class="middle">
     <span>Teeworlds Web Editor</span>
   </div>
   <div class="right">
-    <button id="about" disabled>
-      <AboutIcon size={20} title="About" />
-    </button>
-    <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/">
-      <button id="about">
-        <GitHubIcon size={20} title="Github" />
+      <button id="about" disabled>
+        <AboutIcon size={20} title="About" />
       </button>
-    </a>
+      <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/">
+        <button id="about">
+          <GitHubIcon size={20} title="Github" />
+        </button>
+      </a>
   </div>
 </div>
 
@@ -334,9 +325,9 @@
           <a href="https://www.teeworlds.com/">Teeworlds</a>.
         </p>
         <p>
-          The project is currently in beta, expect some bugs and missing features! Please report
-          your bugs and make suggestions on the
-          <a href="https://github.com/k2d222/twwe/issues">GitHub issues page</a>. Have fun!
+          The project is currently in beta, expect some bugs and missing features! Please report your bugs and make suggestions on the
+          <a href="https://github.com/k2d222/twwe/issues">GitHub issues page</a>.
+          Have fun!
         </p>
       </Tile>
     </Column>
@@ -346,31 +337,19 @@
     <Column>
       <div class="head-row">
         <h3>Servers</h3>
-        <Button kind="tertiary" on:click={() => (modalAddServer.open = true)} icon={AddIcon}
-          >Add server</Button
-        >
+        <Button kind="tertiary" on:click={() => modalAddServer.open = true} icon={AddIcon}>Add server</Button>
       </div>
       <TileGroup bind:selected={selectedServer} on:select={onSelectServer}>
         {#each serverConfs as server, i}
           {@const url = new URL(server.url)}
           {@const status = serverStatus[i]}
           <RadioTile value={'' + i}>
-            <div style="font-weight: bold">{server.name}</div>
-            <div>({url.host}{url.protocol === 'ws:' ? ', unencrypted' : ''})</div>
-            <div>
-              <InlineLoading
-                status={statusString[status][0]}
-                description={statusString[status][1]}
-              />
-            </div>
+            <div style='font-weight: bold'>{server.name}</div>
+            <div>({url.host}{url.protocol === 'ws:' ? ', unencrypted': ''})</div>
+            <div><InlineLoading status={statusString[status][0]} description={statusString[status][1]} /></div>
             {#if i !== 0}
-              <div class="delete">
-                <Button
-                  kind="danger-ghost"
-                  iconDescription="Remove server"
-                  icon={DeleteIcon}
-                  on:click={() => onDeleteServer(i)}
-                />
+              <div class='delete'>
+                <Button kind="danger-ghost" iconDescription="Remove server" icon={DeleteIcon} on:click={() => onDeleteServer(i)} />
               </div>
             {/if}
           </RadioTile>
@@ -381,9 +360,10 @@
     <Column lg={8} max={8}>
       <div class="head-row">
         <h3>Maps</h3>
-        <Button kind="tertiary" on:click={() => (modalCreateMap.open = true)} icon={AddIcon}
-          >Add map</Button
-        >
+        <Button
+          kind="tertiary"
+          on:click={() => modalCreateMap.open = true}
+          icon={AddIcon}>Add map</Button>
       </div>
       <div class="table-wrapper">
         <DataTable
@@ -392,32 +372,38 @@
             { key: 'name', value: 'Name' },
             { key: 'users', value: 'Users online' },
             { key: 'date', value: 'Last modified' },
-            { key: 'overflow', empty: true },
-            { key: 'join', empty: true },
+            { key: "overflow", empty: true },
+            { key: "join", empty: true },
           ]}
-          rows={maps.map((row, i) => ({
-            id: i,
-            name: row.name,
-            users: row.users,
-            date: 'N/A',
-            join: row.name,
-            overflow: row.name,
-          }))}
+          rows={
+            maps.map((row, i) => ({
+              id: i,
+              name: row.name,
+              users: row.users,
+              date: 'N/A',
+              join: row.name,
+              overflow: row.name,
+            }))
+          }
         >
           <Toolbar>
             <ToolbarContent>
-              <ToolbarSearch persistent value="" shouldFilterRows />
+              <ToolbarSearch
+                persistent
+                value=""
+                shouldFilterRows
+              />
             </ToolbarContent>
           </Toolbar>
           <svelte:fragment slot="cell" let:cell>
-            {#if cell.key === 'overflow'}
+            {#if cell.key === "overflow"}
               <OverflowMenu flipped>
                 <OverflowMenuItem text="Join" on:click={() => onJoinMap(cell.value)} />
                 <OverflowMenuItem text="Rename" on:click={() => onRenameMap(cell.value)} />
                 <OverflowMenuItem text="Download" on:click={() => onDownloadMap(cell.value)} />
                 <OverflowMenuItem danger text="Delete" on:click={() => onDeleteMap(cell.value)} />
               </OverflowMenu>
-            {:else if cell.key === 'join'}
+            {:else if cell.key === "join"}
               <Button
                 kind="ghost"
                 icon={JoinIcon}
@@ -441,7 +427,7 @@
   secondaryButtonText="Cancel"
   primaryButtonDisabled={modalAddServer.hostname === '' || modalAddServer.name === ''}
   on:submit={onAddServer}
-  on:click:button--secondary={() => (modalAddServer.open = false)}
+  on:click:button--secondary={() => modalAddServer.open = false}
   bind:open={modalAddServer.open}
   size="sm"
 >
@@ -471,25 +457,24 @@
   modalHeading="Create a map"
   primaryButtonText="Create"
   secondaryButtonText="Cancel"
-  primaryButtonDisabled={(modalCreateMap.method === 'upload' &&
-    modalCreateMap.uploadStatus !== 'complete') ||
-    (modalCreateMap.method === 'clone' && typeof modalCreateMap.clone !== 'number') ||
+  primaryButtonDisabled={
+    modalCreateMap.method === 'upload' && modalCreateMap.uploadStatus !== 'complete' ||
+    modalCreateMap.method === 'clone' && typeof modalCreateMap.clone !== 'number' ||
     modalCreateMap.name === '' ||
-    maps.findIndex(m => m.name === modalCreateMap.name) !== -1}
+    maps.findIndex(m => m.name === modalCreateMap.name) !== -1
+  }
   on:submit={onCreateMap}
-  on:click:button--secondary={() => (modalCreateMap.open = false)}
+  on:click:button--secondary={() => modalCreateMap.open = false}
   bind:open={modalCreateMap.open}
   size="sm"
 >
   <div class="form">
+
     <TextInput
       required
       labelText="Map name"
-      invalid={modalCreateMap.name === '' ||
-        maps.findIndex(m => m.name === modalCreateMap.name) !== -1}
-      invalidText={modalCreateMap.name === ''
-        ? 'This field is required.'
-        : 'This name is already taken.'}
+      invalid={modalCreateMap.name === '' || maps.findIndex(m => m.name === modalCreateMap.name) !== -1}
+      invalidText={modalCreateMap.name === '' ? 'This field is required.' : 'This name is already taken.'}
       bind:value={modalCreateMap.name}
     />
     <RadioButtonGroup bind:selected={modalCreateMap.method} legendText="Creation method">
@@ -530,12 +515,7 @@
       <NumberInput min={0} bind:value={modalCreateMap.blankWidth} label="Width" />
       <NumberInput min={0} bind:value={modalCreateMap.blankHeight} label="Height" />
     {/if}
-    <Toggle
-      labelText="Visibility"
-      labelA="unlisted"
-      labelB="public"
-      bind:toggled={modalCreateMap.public}
-    />
+    <Toggle labelText="Visibility" labelA="unlisted" labelB="public" bind:toggled={modalCreateMap.public} />
   </div>
 </Modal>
 
@@ -545,33 +525,9 @@
   primaryButtonText="Delete"
   primaryButtonIcon={DeleteIcon}
   secondaryButtonText="Cancel"
-  on:click:button--secondary={() => (modalConfirmDelete.open = false)}
+  on:click:button--secondary={() => modalConfirmDelete.open = false}
   bind:open={modalConfirmDelete.open}
   on:submit={modalConfirmDelete.onConfirm}
 >
-  <p>
-    The map "{modalConfirmDelete.name}" will be permanently deleted from the server. Make sure you
-    made a backup.
-  </p>
+  <p>The map "{modalConfirmDelete.name}" will be permanently deleted from the server. Make sure you made a backup.</p>
 </Modal>
-
-<style>
-  .head-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-  }
-
-  .form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .delete {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-  }
-</style>

@@ -120,7 +120,7 @@
     }
   }
   async function onEditLayer(e: EditLayer) {
-    showInfo('Please wait…')
+    // showInfo('Please wait…')
     try {
       await $server.query('editlayer', e)
       serverOnEditLayer(e)
@@ -130,7 +130,7 @@
     }
   }
   async function onReorderLayer(e: ReorderLayer) {
-    showInfo('Please wait…')
+    // showInfo('Please wait…')
     try {
       await $server.query('reorderlayer', e)
       serverOnReorderLayer(e)
@@ -163,7 +163,7 @@
     }
   }
   async function onEditGroup(e: EditGroup) {
-    showInfo('Please wait…')
+    // showInfo('Please wait…')
     try {
       await $server.query('editgroup', e)
       serverOnEditGroup(e)
@@ -173,7 +173,7 @@
     }
   }
   async function onReorderGroup(e: ReorderGroup) {
-    showInfo('Please wait…')
+    // showInfo('Please wait…')
     try {
       await $server.query('reordergroup', e)
       serverOnReorderGroup(e)
@@ -496,11 +496,11 @@
     downloadMap($server, map.name)
   }
 
-  let ctrlKey = false
+  // let ctrlKey = false
   let shiftKey = false
 
   function onKeyDown(e: KeyboardEvent) {
-    ctrlKey = e.ctrlKey
+    // ctrlKey = e.ctrlKey
     shiftKey = e.shiftKey
 
     const target = e.target as HTMLElement
@@ -526,7 +526,7 @@
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    ctrlKey = e.ctrlKey
+    // ctrlKey = e.ctrlKey
     shiftKey = e.shiftKey
 
     const target = e.target as HTMLElement
@@ -632,7 +632,7 @@
   async function onInfoClose() {
     infoEditorVisible = false
     try {
-      showInfo('Please wait…')
+      // showInfo('Please wait…')
       const change: EditMap = {
         info: map.info,
       }
@@ -648,7 +648,7 @@
 <svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:keypress={onKeyPress} />
 
 <div id="editor">
-  <div id="menu">
+  <div id="header">
     <div class="left">
       <button id="nav-toggle" on:click={onToggleLayerPanes}
         ><LayersIcon size={20} title="Layers" /></button
