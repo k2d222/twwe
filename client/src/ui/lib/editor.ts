@@ -11,7 +11,6 @@ import {
   SpeedupLayer,
   TuneLayer,
 } from '../../twmap/tilesLayer'
-import { queryMapBinary } from '../lib/util'
 import type { WebSocketServer } from 'src/server/server'
 
 export type Brush = EditTileParams[][]

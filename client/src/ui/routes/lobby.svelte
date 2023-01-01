@@ -2,7 +2,7 @@
   import type { CreateMap, MapInfo } from '../../server/protocol'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
-  import { Column, Row, RadioTile, TileGroup, Grid, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, DataTable, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem, Dropdown, FileUploader, FormGroup, FileUploaderButton, FileUploaderItem, FileUploaderDropContainer, RadioButtonGroup, RadioButton, ComboBox } from 'carbon-components-svelte'
+  import { Column, Row, RadioTile, TileGroup, Grid, Tile, InlineLoading, Button, Modal, TextInput, NumberInput, Toggle, DataTable, Toolbar, ToolbarContent, ToolbarSearch, OverflowMenu, OverflowMenuItem, FormGroup, FileUploaderItem, FileUploaderDropContainer, RadioButtonGroup, RadioButton, ComboBox } from 'carbon-components-svelte'
   import storage, { ServerConfig } from '../../storage'
   import {
     Help as AboutIcon,
@@ -14,7 +14,8 @@
   import { WebSocketServer } from '../../server/server'
   import { server } from '../global'
   import { onMount } from 'svelte'
-import { downloadMap } from '../lib/util';
+  import { downloadMap } from '../lib/util'
+  import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'
@@ -269,7 +270,7 @@ import { downloadMap } from '../lib/util';
     }
   }
 
-  function shouldFilterItem(item, value) {
+  function shouldFilterItem(item: ComboBoxItem, value: string) {
     if (!value) return true;
     return item.text.toLowerCase().includes(value.toLowerCase());
   }
@@ -293,10 +294,6 @@ import { downloadMap } from '../lib/util';
     position: absolute;
     bottom: 0;
     right: 0;
-  }
-
-  .spacer {
-    height: 15rem;
   }
 </style>
 

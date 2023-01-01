@@ -1,2 +1,31 @@
-@use '@carbon/styles' with ($prefix: 'bx');
-// @import 'carbon-components-svelte/css/_popover.scss'
+// carbon v11
+// @use '@carbon/styles/scss/config' with (
+//   $css--default-type: true,
+//   $css--reset: true,
+//   $prefix: 'bx',
+//   $font-path: '@ibm/plex'
+// );
+// @use '@carbon/styles/scss/spacing';
+// @use '@carbon/styles/scss/colors';
+// @use '@carbon/styles/scss/motion';
+// @use '@carbon/styles/scss/type';
+
+// @use '@carbon/themes/scss/themes';
+// @use '@carbon/themes/scss/compat/themes' as compat;
+// @use '@carbon/styles/scss/theme' with
+//   ($fallback: compat.$white, $theme: themes.$white);
+
+// @use '@carbon/styles/scss/reset';
+// @use '@carbon/styles/scss/fonts';
+// @use '@carbon/styles/scss/grid';
+// @use '@carbon/styles/scss/layer';
+// @use '@carbon/styles/scss/zone';
+// @use '@carbon/styles/scss/components';
+
+// @use '@carbon/styles/scss/grid/flexbox';
+
+// carbon v10
+// @import 'carbon-components/scss/globals/scss/styles.scss';
+
+// carbon v10 svelte
+@import "carbon-components-svelte/css/white.css";

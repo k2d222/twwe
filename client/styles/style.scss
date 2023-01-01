@@ -1,6 +1,16 @@
 // carbon design stylesheets
+
+@use '@carbon/themes/scss/themes' as *;
+@use '@carbon/themes' with (
+  $theme: $white
+);
+
 @import './carbon-style-compiled.css';
 
+:root {
+  // Emit CSS Custom Properties for the current theme
+  @include themes.theme();
+}
 #lobby {
   display: flex;
   flex-direction: column;
@@ -49,24 +59,6 @@
 
 .bx--modal-content {
   margin-bottom: 1rem !important;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body,
-html {
-  font-family: sans-serif;
-  margin: 0;
-  padding: 0;
-}
-
-ol,
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
 }
 
 #editor {
@@ -121,7 +113,6 @@ $menu_h: 3rem;
   .splitpanes__splitter {
     border: 0;
     margin: 0;
-    // background-color: #f2f2f2;
     z-index: unset;
 
     &:before,
@@ -260,7 +251,6 @@ canvas {
 #tree {
   display: flex;
   flex-direction: column;
-  color: #161616;
 
   .node {
     position: relative;
@@ -270,13 +260,23 @@ canvas {
     height: 2rem;
     padding-left: 1rem;
 
+    color: themes.$text-secondary;
+    background-color: themes.$layer-01;
+
     &:hover {
-      background-color: var(--bx-layer-hover);
+      color: themes.$text-primary;
+      background-color: themes.$layer-hover-01;
     }
 
     &.selected,
     &.active {
-      background-color: var(--bx-layer-selected);
+      color: themes.$text-primary;
+      background-color: themes.$layer-selected-01;
+    }
+
+    &:focus {
+      outline: 2px solid themes.$focus;
+      outline-offset: -2px;
     }
 
     &.active::before {
@@ -286,12 +286,7 @@ canvas {
       left: 0;
       height: 100%;
       width: 0.25rem;
-      background: #0f62fe;
-    }
-
-    &:focus {
-      outline: 2px solid #0f62fe;
-      outline-offset: -2px;
+      background: themes.$focus;
     }
 
     > .label {
