@@ -378,66 +378,46 @@
   </div>
   <div class="settings" class:hidden={!settingsVisible}>
     <div class="buttons">
-      <button class="default" on:click={onFlipV}
-        ><img alt="Flip Vertically" src="/assets/flip-v.svg" /></button
-      >
-      <button class="default" on:click={onFlipH}
-        ><img alt="Flip Horizontally" src="/assets/flip-h.svg" /></button
-      >
-      <button class="default" on:click={onRotateCW}
-        ><img alt="Rotate Clockwise" src="/assets/rotate-cw.svg" /></button
-      >
-      <button class="default" on:click={onRotateCCW}
-        ><img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg" /></button
-      >
+      <button class="default" on:click={onFlipV}>
+        <img alt="Flip Vertically" src="/assets/flip-v.svg" />
+      </button>
+      <button class="default" on:click={onFlipH}>
+        <img alt="Flip Horizontally" src="/assets/flip-h.svg" />
+      </button>
+      <button class="default" on:click={onRotateCW}>
+        <img alt="Rotate Clockwise" src="/assets/rotate-cw.svg" />
+      </button>
+      <button class="default" on:click={onRotateCCW}>
+        <img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg" />
+      </button>
     </div>
     {#if rlayer.layer instanceof TeleLayer}
-      <label
-        >Teleport target <input
-          type="number"
-          min={0}
-          max={255}
-          bind:value={currentTele.number}
-        /></label
-      >
+      <label>
+        Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number} />
+      </label>
     {:else if rlayer.layer instanceof SwitchLayer}
-      <label
-        >Switch delay <input
-          type="number"
-          min={0}
-          max={255}
-          bind:value={currentSwitch.delay}
-        /></label
-      >
+      <label>
+        Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay} />
+      </label>
     {:else if rlayer.layer instanceof SpeedupLayer}
-      <label
-        >Speedup force <input
-          type="number"
-          min={0}
-          max={255}
-          bind:value={currentSpeedup.force}
-        /></label
-      >
-      <label
-        >Speedup max speed <input
+      <label>
+        Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force} />
+      </label>
+      <label>
+        Speedup max speed <input
           type="number"
           min={0}
           max={255}
           bind:value={currentSpeedup.maxSpeed}
-        /></label
-      >
-      <label
-        >Speedup angle <input
-          type="number"
-          min={0}
-          max={359}
-          bind:value={currentSpeedup.angle}
-        /></label
-      >
+        />
+      </label>
+      <label>
+        Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle} />
+      </label>
     {:else if rlayer.layer instanceof TuneLayer}
-      <label
-        >Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} /></label
-      >
+      <label>
+        Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} />
+      </label>
     {/if}
   </div>
 </div>

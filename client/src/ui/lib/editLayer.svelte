@@ -231,88 +231,84 @@
 <div class="edit-layer">
   <h3 class="bx--modal-header__heading">{layerName(layer)}</h3>
   {#if !isPhysicsLayer(layer)}
-    <label
-      >Group <input
+    <label>
+      Group <input
         type="number"
         min={0}
         max={rmap.groups.length - 1}
         value={g}
         on:change={onEditGroup}
-      /></label
-    >
+      />
+    </label>
   {/if}
-  <label
-    >Order <input
+  <label>
+    Order <input
       type="number"
       min={0}
       max={group.layers.length - 1}
       value={l}
       on:change={onEditOrder}
-    /></label
-  >
+    />
+  </label>
   {#if layer instanceof AnyTilesLayer}
-    <label
-      >Width <input
-        type="number"
-        min={2}
-        max={10000}
-        value={layer.width}
-        on:change={onEditWidth}
-      /></label
-    >
-    <label
-      >Height <input
+    <label>
+      Width <input type="number" min={2} max={10000} value={layer.width} on:change={onEditWidth} />
+    </label>
+    <label>
+      Height <input
         type="number"
         min={2}
         max={10000}
         value={layer.height}
         on:change={onEditHeight}
-      /></label
-    >
+      />
+    </label>
   {/if}
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
-    <label>Detail <input type="checkbox" checked={layer.detail} on:change={onEditDetail} /></label>
+    <label>
+      Detail <input type="checkbox" checked={layer.detail} on:change={onEditDetail} />
+    </label>
     {@const img = layer.image ? layer.image.name : '<none>'}
-    <label
-      >Image <input type="button" value={img} on:click={() => (imagePickerOpen = true)} /></label
-    >
+    <label>
+      Image <input type="button" value={img} on:click={() => (imagePickerOpen = true)} />
+    </label>
   {/if}
   {#if layer instanceof TilesLayer}
-    <label
-      >Color <input type="color" value={colorToStr(layer.color)} on:change={onEditColor} /></label
-    >
-    <label
-      >Opacity <input
+    <label>
+      Color <input type="color" value={colorToStr(layer.color)} on:change={onEditColor} />
+    </label>
+    <label>
+      Opacity <input
         type="range"
         min={0}
         max={255}
         value={layer.color.a}
         on:change={onEditOpacity}
-      /></label
-    >
-    <label
-      >Color Envelope <select on:change={onEditColorEnv}>
+      />
+    </label>
+    <label>
+      Color Envelope <select on:change={onEditColorEnv}>
         <option selected={layer.colorEnv === null} value={null}>None</option>
         {#each colorEnvelopes as env}
           {@const i = rmap.map.envelopes.indexOf(env)}
-          <option selected={layer.colorEnv === env} value={i}
-            >{'#' + i + ' ' + (env.name || '(unnamed)')}</option
-          >
+          <option selected={layer.colorEnv === env} value={i}>
+            {'#' + i + ' ' + (env.name || '(unnamed)')}
+          </option>
         {/each}
-      </select></label
-    >
-    <label
-      >Color Env. Offset <input
+      </select>
+    </label>
+    <label>
+      Color Env. Offset <input
         type="number"
         value={layer.colorEnvOffset}
         on:change={onEditColorEnvOffset}
-      /></label
-    >
+      />
+    </label>
   {/if}
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
-    <label
-      >Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName} /></label
-    >
+    <label>
+      Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName} />
+    </label>
   {/if}
   {#if !(layer instanceof GameLayer)}
     <button class="danger large" on:click={onDelete}>Delete layer</button>

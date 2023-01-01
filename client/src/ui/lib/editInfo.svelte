@@ -9,24 +9,24 @@
 </script>
 
 <div class="edit-info">
-  <label
-    >Author(s)
+  <label>
+    Author(s)
     <input type="text" bind:value={info.author} maxlength="31" />
   </label>
-  <label
-    >Version
+  <label>
+    Version
     <input type="text" bind:value={info.version} maxlength="15" />
   </label>
-  <label
-    >Credits
+  <label>
+    Credits
     <input type="text" bind:value={info.credits} maxlength="127" />
   </label>
-  <label
-    >License
+  <label>
+    License
     <input type="text" bind:value={info.license} maxlength="31" />
   </label>
-  <label
-    >Server Settings
+  <label>
+    Server Settings
     <textarea
       rows="5"
       cols="50"

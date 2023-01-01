@@ -514,47 +514,50 @@
       <select on:change={e => (selected = rmap.map.envelopes[e.currentTarget.value])}>
         {#each rmap.map.envelopes as env}
           {@const i = rmap.map.envelopes.indexOf(env)}
-          <option selected={env === selected} value={i}
-            >{`#${i} ${env.name || ''} (${envTypes[env.type]})`}</option
-          >
+          <option selected={env === selected} value={i}>
+            {`#${i} ${env.name || ''} (${envTypes[env.type]})`}
+          </option>
         {/each}
       </select>
-      <label
-        ><input
-          type="text"
-          value={selected.name}
-          placeholder="(unnamed)"
-          on:change={onRename}
-        /></label
-      >
+      <label>
+        <input type="text" value={selected.name} placeholder="(unnamed)" on:change={onRename} />
+      </label>
       <div class="channels">
         {#if selected instanceof ColorEnvelope}
-          <label class="red"
-            ><input type="checkbox" bind:checked={channelEnabled.color_r} /><span>R</span></label
-          >
-          <label class="green"
-            ><input type="checkbox" bind:checked={channelEnabled.color_g} /><span>G</span></label
-          >
-          <label class="blue"
-            ><input type="checkbox" bind:checked={channelEnabled.color_b} /><span>B</span></label
-          >
-          <label class="orange"
-            ><input type="checkbox" bind:checked={channelEnabled.color_a} /><span>A</span></label
-          >
+          <label class="red">
+            <input type="checkbox" bind:checked={channelEnabled.color_r} />
+            <span>R</span>
+          </label>
+          <label class="green">
+            <input type="checkbox" bind:checked={channelEnabled.color_g} />
+            <span>G</span>
+          </label>
+          <label class="blue">
+            <input type="checkbox" bind:checked={channelEnabled.color_b} />
+            <span>B</span>
+          </label>
+          <label class="orange">
+            <input type="checkbox" bind:checked={channelEnabled.color_a} />
+            <span>A</span>
+          </label>
         {:else if selected instanceof PositionEnvelope}
-          <label class="red"
-            ><input type="checkbox" bind:checked={channelEnabled.pos_x} /><span>X</span></label
-          >
-          <label class="green"
-            ><input type="checkbox" bind:checked={channelEnabled.pos_y} /><span>Y</span></label
-          >
-          <label class="blue"
-            ><input type="checkbox" bind:checked={channelEnabled.pos_r} /><span>R</span></label
-          >
+          <label class="red">
+            <input type="checkbox" bind:checked={channelEnabled.pos_x} />
+            <span>X</span>
+          </label>
+          <label class="green">
+            <input type="checkbox" bind:checked={channelEnabled.pos_y} />
+            <span>Y</span>
+          </label>
+          <label class="blue">
+            <input type="checkbox" bind:checked={channelEnabled.pos_r} />
+            <span>R</span>
+          </label>
         {:else if selected instanceof SoundEnvelope}
-          <label class="red"
-            ><input type="checkbox" bind:checked={channelEnabled.sound_v} /><span>V</span></label
-          >
+          <label class="red">
+            <input type="checkbox" bind:checked={channelEnabled.sound_v} />
+            <span>V</span>
+          </label>
         {/if}
       </div>
       <button class="default" on:click={onRescale}>Rescale</button>
@@ -616,8 +619,12 @@
   {@const p = paths[cm_i][cm_j]}
   <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
     <div class="edit-env-point">
-      <label>Time <input type="number" min={0} value={p.x / 1000} on:change={onEditTime} /></label>
-      <label>Value <input type="number" value={-p.y / 1024} on:change={onEditValue} /></label>
+      <label>
+        Time <input type="number" min={0} value={p.x / 1000} on:change={onEditTime} />
+      </label>
+      <label>
+        Value <input type="number" value={-p.y / 1024} on:change={onEditValue} />
+      </label>
       <button class="danger" on:click={onDeletePoint}>Delete</button>
     </div>
   </ContextMenu>
@@ -625,13 +632,13 @@
   {@const p = paths[cm_i][cm_k]}
   <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
     <div class="edit-env-point">
-      <label
-        >Curve <select on:change={onEditCurve}>
+      <label>
+        Curve <select on:change={onEditCurve}>
           {#each curves as c, i}
             <option value={i} selected={i === p.curve}>{c}</option>
           {/each}
-        </select></label
-      >
+        </select>
+      </label>
     </div>
   </ContextMenu>
 {/if}

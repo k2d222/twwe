@@ -121,61 +121,57 @@
 
 <div class="edit-quad">
   <span>Quad {pointName(p)}</span>
-  <label
-    >Pos X <input type="number" value={Math.floor(point.x / 1024)} on:change={onEditPosX} /></label
-  >
-  <label
-    >Pos Y <input type="number" value={Math.floor(point.y / 1024)} on:change={onEditPosY} /></label
-  >
+  <label>
+    Pos X <input type="number" value={Math.floor(point.x / 1024)} on:change={onEditPosX} />
+  </label>
+  <label>
+    Pos Y <input type="number" value={Math.floor(point.y / 1024)} on:change={onEditPosY} />
+  </label>
   {#if p !== 4}
     {@const col = quad.colors[p]}
-    <label>Color <input type="color" value={colorToStr(col)} on:change={onEditColor} /></label>
-    <label
-      >Opacity <input
-        type="range"
-        min={0}
-        max={255}
-        value={col.a}
-        on:change={onEditOpacity}
-      /></label
-    >
+    <label>
+      Color <input type="color" value={colorToStr(col)} on:change={onEditColor} />
+    </label>
+    <label>
+      Opacity <input type="range" min={0} max={255} value={col.a} on:change={onEditOpacity} />
+    </label>
   {:else}
-    <label
-      >Position Envelope <select on:change={onEditPosEnv}>
+    <label>
+      Position Envelope <select on:change={onEditPosEnv}>
         <option selected={quad.posEnv === null} value={-1}>None</option>
         {#each positionEnvelopes as env}
           {@const i = rmap.map.envelopes.indexOf(env)}
-          <option selected={quad.posEnv === env} value={i}
-            >{'#' + i + ' ' + (env.name || '(unnamed)')}</option
-          >
+          <option selected={quad.posEnv === env} value={i}>
+            {'#' + i + ' ' + (env.name || '(unnamed)')}
+          </option>
         {/each}
-      </select></label
-    >
-    <label
-      >Position Env. Offset <input
+      </select>
+    </label>
+    <label>
+      Position Env. Offset <input
         type="number"
         value={quad.posEnvOffset}
         on:change={onEditPosEnvOff}
-      /></label
-    >
-    <label
-      >Color Env. <select on:change={onEditColEnv}>
+      />
+    </label>
+    <label>
+      Color Env. <select on:change={onEditColEnv}>
         <option selected={quad.colorEnv === null} value={-1}>None</option>
         {#each colorEnvelopes as env}
           {@const i = rmap.map.envelopes.indexOf(env)}
-          <option selected={quad.colorEnv === env} value={i}
-            >{'#' + i + ' ' + (env.name || '(unnamed)')}</option
-          >
+          <option selected={quad.colorEnv === env} value={i}>
+            {'#' + i + ' ' + (env.name || '(unnamed)')}
+          </option>
         {/each}
-      </select></label
-    >
-    <label
-      >Color Env. Offset <input
+      </select>
+    </label>
+    <label>
+      Color Env. Offset <input
         type="number"
         value={quad.colorEnvOffset}
         on:change={onEditColEnvOff}
-      /></label
-    >
+      />
+    </label>
     <button class="default" on:click={onRecenter}>Recenter</button>
     <button class="default" on:click={onDuplicate}>Duplicate</button>
     <button class="danger" on:click={onDelete}>Delete</button>

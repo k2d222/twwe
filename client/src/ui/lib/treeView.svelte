@@ -131,9 +131,9 @@
         on:click={() => select(g, -1)}
         on:keydown={e => onKeyDown(g, -1, e)}
       >
-        <span class="toggle" aria-hidden="true" on:click={() => (folded[g] = !folded[g])}
-          ><CaretDown /></span
-        >
+        <span class="toggle" aria-hidden="true" on:click={() => (folded[g] = !folded[g])}>
+          <CaretDown />
+        </span>
         <span class="icon"><GroupIcon /></span>
         <span class="label">{groupName(group)}</span>
         <span class="eye" aria-hidden="true" on:click={() => (rgroup.visible = !rgroup.visible)}>

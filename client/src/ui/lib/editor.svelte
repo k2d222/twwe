@@ -650,36 +650,38 @@
 <div id="editor">
   <div id="header">
     <div class="left">
-      <button id="nav-toggle" on:click={onToggleLayerPanes}
-        ><LayersIcon size={20} title="Layers" /></button
-      >
-      <button id="env-toggle" on:click={onToggleTopPane}
-        ><EnvelopesIcon size={20} title="Envelopes" /></button
-      >
+      <button id="nav-toggle" on:click={onToggleLayerPanes}>
+        <LayersIcon size={20} title="Layers" />
+      </button>
+      <button id="env-toggle" on:click={onToggleTopPane}>
+        <EnvelopesIcon size={20} title="Envelopes" />
+      </button>
       <button id="images-toggle" disabled><ImagesIcon size={20} title="Images" /></button>
       <button id="sounds-toggle" disabled><SoundsIcon size={20} title="Sounds" /></button>
-      <button id="info-toggle" on:click={onEditInfo}
-        ><EditInfoIcon size={20} title="Map properties" /></button
-      >
-      <button id="save" on:click={onSaveMap}
-        ><SaveIcon size={20} title="Save map on server" /></button
-      >
-      <button id="download" on:click={onDownloadMap}
-        ><DownloadIcon size={20} title="Download this map on your computer" /></button
-      >
-      <button id="anim-toggle" on:click={onToggleAnim}
-        ><svelte:component
+      <button id="info-toggle" on:click={onEditInfo}>
+        <EditInfoIcon size={20} title="Map properties" />
+      </button>
+      <button id="save" on:click={onSaveMap}>
+        <SaveIcon size={20} title="Save map on server" />
+      </button>
+      <button id="download" on:click={onDownloadMap}>
+        <DownloadIcon size={20} title="Download this map on your computer" />
+      </button>
+      <button id="anim-toggle" on:click={onToggleAnim}>
+        <svelte:component
           this={animEnabled ? PauseIcon : PlayIcon}
           size={20}
           title="Play/Pause envelopes animations"
-        /></button
-      >
+        />
+      </button>
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>
     </div>
     <div class="right">
-      <div id="users">Users online: <span>{peerCount}</span></div>
+      <div id="users">
+        Users online: <span>{peerCount}</span>
+      </div>
     </div>
   </div>
 
@@ -693,8 +695,10 @@
             size="field"
             kind="ghost"
             icon={CreateGroupIcon}
-            on:click={onCreateGroup}>Add group</Button
+            on:click={onCreateGroup}
           >
+            Add group
+          </Button>
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>
