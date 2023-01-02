@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/k2d222/twwe#readme",
   "devDependencies": {
+    "@carbon/styles": "^1.19.0",
+    "carbon-components": "^10.58.3",
     "@sveltejs/vite-plugin-svelte": "^1.0.0-next.30",
     "@tsconfig/svelte": "^2.0.1",
     "@types/pako": "^2.0.0",
@@ -28,7 +30,6 @@
     "carbon-icons-svelte": "^11.4.0",
     "carbon-preprocess-svelte": "^0.9.1",
     "crc": "^4.1.1",
-    "fuse.js": "^6.6.2",
     "gl-matrix": "^3.4.3",
     "pako": "^2.0.4",
     "prettier": "^2.8.1",
@@ -46,7 +47,5 @@
     "vite": "^2.9.9"
   },
   "dependencies": {
-    "@carbon/styles": "^1.19.0",
-    "carbon-components": "^10.58.3"
   }
 }
