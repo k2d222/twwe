@@ -177,7 +177,11 @@ canvas {
     margin-right: 1rem;
   }
 
-  button {
+  .bx--overflow-menu ul::after {
+    width: $header-h;
+  }
+
+  .header-btn {
     width: $header-h;
     height: $header-h;
     display: flex;

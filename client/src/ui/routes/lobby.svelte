@@ -214,7 +214,7 @@
   }
 
   function onRenameMap(_name: string) {
-    alert('TODO not implemented yet.')
+    alert('TODO renaming maps is not yet implemented.')
   }
 
   function onDownloadMap(name: string) {
@@ -313,11 +313,11 @@
     <span>Teeworlds Web Editor</span>
   </div>
   <div class="right">
-    <button id="about" disabled>
+    <button class="header-btn" id="about" disabled>
       <AboutIcon size={20} title="About" />
     </button>
     <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/">
-      <button id="about">
+      <button class="header-btn" id="about">
         <GitHubIcon size={20} title="Github" />
       </button>
     </a>

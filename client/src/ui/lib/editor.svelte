@@ -39,7 +39,7 @@
   import { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
   import TreeView from './treeView.svelte'
   import TileSelector from './tileSelector.svelte'
-  import { showInfo, showError, clearDialog } from './dialog'
+  import { showInfo, showError, clearDialog, showDialog } from './dialog'
   import QuadsView from './quadsView.svelte'
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
@@ -52,15 +52,21 @@
     Layers as LayersIcon,
     Activity as EnvelopesIcon,
     Save as SaveIcon,
-    Download as DownloadIcon,
     Play as PlayIcon,
     Pause as PauseIcon,
-    SettingsAdjust as EditInfoIcon,
     Image as ImagesIcon,
     Music as SoundsIcon,
     Add as CreateGroupIcon,
   } from 'carbon-icons-svelte'
-  import { Button, ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
+  import {
+    Button,
+    ComposedModal,
+    ModalBody,
+    ModalHeader,
+    OverflowMenu,
+    OverflowMenuItem,
+  } from 'carbon-components-svelte'
+  import { navigate } from 'svelte-routing'
 
   type Coord = {
     x: number
@@ -388,10 +394,16 @@
     }
   }
 
+  function onServerClosed() {
+    showError('You have been disconnected from the server.')
+    navigate('/')
+  }
+
   let destroyed = false
 
   onMount(() => {
     cont.prepend(canvas)
+    $server.socket.addEventListener('close', onServerClosed, { once: true })
     $server.on('listusers', serverOnUsers)
     $server.on('edittile', serverOnEditTile)
     $server.on('createquad', serverOnCreateQuad)
@@ -433,6 +445,7 @@
   })
 
   onDestroy(() => {
+    $server.socket.removeEventListener('error', onServerClosed)
     $server.off('listusers', serverOnUsers)
     $server.off('edittile', serverOnEditTile)
     $server.off('createquad', serverOnCreateQuad)
@@ -494,6 +507,32 @@
 
   function onDownloadMap() {
     downloadMap($server, map.name)
+  }
+
+  function onRenameMap() {
+    alert('TODO renaming maps is not yet implemented.')
+  }
+
+  function onLeaveMap() {
+    navigate('/')
+  }
+
+  async function onDeleteMap() {
+    if (peerCount !== 1) {
+      showError('Cannot delete map: other users are connected')
+      return
+    }
+
+    const res = await showDialog('warning', 'Are you sure you want to delete this map?', 'yesno')
+
+    if (res)
+      try {
+        await $server.query('leavemap', null)
+        await $server.query('deletemap', { name: map.name })
+        navigate('/')
+      } catch (e) {
+        showError('Map deletion failed: ' + e)
+      }
   }
 
   // let ctrlKey = false
@@ -650,30 +689,35 @@
 <div id="editor">
   <div id="header">
     <div class="left">
-      <button id="nav-toggle" on:click={onToggleLayerPanes}>
+      <button class="header-btn" id="nav-toggle" on:click={onToggleLayerPanes}>
         <LayersIcon size={20} title="Layers" />
       </button>
-      <button id="env-toggle" on:click={onToggleTopPane}>
+      <button class="header-btn" id="env-toggle" on:click={onToggleTopPane}>
         <EnvelopesIcon size={20} title="Envelopes" />
       </button>
-      <button id="images-toggle" disabled><ImagesIcon size={20} title="Images" /></button>
-      <button id="sounds-toggle" disabled><SoundsIcon size={20} title="Sounds" /></button>
-      <button id="info-toggle" on:click={onEditInfo}>
-        <EditInfoIcon size={20} title="Map properties" />
+      <button class="header-btn" id="images-toggle" disabled>
+        <ImagesIcon size={20} title="Images" />
       </button>
-      <button id="save" on:click={onSaveMap}>
+      <button class="header-btn" id="sounds-toggle" disabled>
+        <SoundsIcon size={20} title="Sounds" />
+      </button>
+      <button class="header-btn" id="save" on:click={onSaveMap}>
         <SaveIcon size={20} title="Save map on server" />
       </button>
-      <button id="download" on:click={onDownloadMap}>
-        <DownloadIcon size={20} title="Download this map on your computer" />
-      </button>
-      <button id="anim-toggle" on:click={onToggleAnim}>
+      <button class="header-btn" id="anim-toggle" on:click={onToggleAnim}>
         <svelte:component
           this={animEnabled ? PauseIcon : PlayIcon}
           size={20}
           title="Play/Pause envelopes animations"
         />
       </button>
+      <OverflowMenu class="header-btn" iconDescription="Map settings">
+        <OverflowMenuItem text="Properties" hasDivider on:click={onEditInfo} />
+        <OverflowMenuItem text="Rename" on:click={onRenameMap} />
+        <OverflowMenuItem text="Download" on:click={onDownloadMap} />
+        <OverflowMenuItem text="Leave" on:click={onLeaveMap} />
+        <OverflowMenuItem danger text="Delete" hasDivider on:click={onDeleteMap} />
+      </OverflowMenu>
     </div>
     <div class="middle">
       <span id="map-name">{map.name}</span>

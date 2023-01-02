@@ -263,6 +263,7 @@ export type ServerError =
 export interface RequestContent {
   createmap: CreateMap
   joinmap: JoinMap
+  leavemap: null
   editmap: EditMap
   savemap: SaveMap
   deletemap: DeleteMap
@@ -300,6 +301,7 @@ export interface RequestContent {
 export interface ResponseContent {
   createmap: CreateMap
   joinmap: JoinMap
+  leavemap: null
   editmap: EditMap
   savemap: SaveMap
   deletemap: DeleteMap

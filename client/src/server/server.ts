@@ -61,6 +61,7 @@ export class WebSocketServer implements Server {
       editmap: [],
       savemap: [],
       deletemap: [],
+      leavemap: [],
 
       creategroup: [],
       editgroup: [],
