@@ -80,14 +80,17 @@ export class RenderMap {
   blankTexture: Texture // texture displayed when the layer has no image
   groups: RenderGroup[]
   physicsGroup: RenderGroup
-  brushGroup: RenderGroup
-  brushPos: Info.Coord
+
   gameLayer: RenderGameLayer
   teleLayer: RenderTeleLayer | null
   speedupLayer: RenderSpeedupLayer | null
   frontLayer: RenderFrontLayer | null
   switchLayer: RenderSwitchLayer | null
   tuneLayer: RenderTuneLayer | null
+
+  brushGroup: RenderGroup
+  brushPos: Info.Coord
+  brushEnv: ColorEnvelope
 
   constructor(map: Map) {
     this.map = map
@@ -100,6 +103,7 @@ export class RenderMap {
 
     this.brushGroup = new RenderGroup(this, new Group())
     this.brushPos = { x: 0, y: 0 }
+    this.brushEnv = this.createBrushEnvelope()
 
     this.gameLayer = this.physicsGroup.layers[l] as RenderTilesLayer
 
@@ -112,6 +116,26 @@ export class RenderMap {
 
   private physicsLayer<T extends PhysicsLayer, U extends RenderAnyTilesLayer<T>>(ctor: Ctor<U>): U {
     return this.physicsGroup.layers.find(l => l.layer instanceof ctor) as U
+  }
+
+  private createBrushEnvelope(): ColorEnvelope {
+    const env = new ColorEnvelope()
+    env.points = [
+      {
+        time: 0,
+        content: { r: 1024, g: 1024, b: 1024, a: 1024 },
+        type: Info.CurveType.BEZIER,
+      }, {
+        time: 500,
+        content: { r: 1024, g: 1024, b: 1024, a: 512 },
+        type: Info.CurveType.BEZIER,
+      }, {
+        time: 1000,
+        content: { r: 1024, g: 1024, b: 1024, a: 1024 },
+        type: Info.CurveType.BEZIER,
+      }
+    ]
+    return env
   }
 
   setBrush(g: number, l: number, buffer: Brush) {
@@ -144,14 +168,11 @@ export class RenderMap {
 
     // COMBAK: these properties wont be reactive if source layer is changed.
     if (layer instanceof TilesLayer) {
-      brushLayer.image = rlayer.texture.image
       brushLayer.color = layer.color
-      brushLayer.colorEnv = layer.colorEnv
-      brushLayer.colorEnvOffset = layer.colorEnvOffset
-      brushRlayer = new RenderTilesLayer(this, brushLayer)
-    } else {
-      brushRlayer = new RenderAnyTilesLayer(brushLayer, rlayer.texture)
     }
+    brushLayer.colorEnv = this.brushEnv
+    brushRlayer = new RenderTilesLayer(this, brushLayer)
+    brushRlayer.texture = rlayer.texture
 
     this.brushGroup.layers = [brushRlayer]
   }
@@ -379,6 +400,7 @@ export class RenderMap {
   private instLayer(kind: CreateLayer['kind']): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
     if (kind === 'tiles') return new RenderTilesLayer(this, new TilesLayer())
     else if (kind === 'quads') return new RenderQuadsLayer(this, new QuadsLayer())
+    else if (kind === 'front') return new RenderFrontLayer(this, new FrontLayer())
     else if (kind === 'tele') return new RenderTeleLayer(this, new TeleLayer())
     else if (kind === 'speedup') return new RenderSpeedupLayer(this, new SpeedupLayer())
     else if (kind === 'switch') return new RenderSwitchLayer(this, new SwitchLayer())
@@ -426,6 +448,7 @@ export class RenderMap {
     )
 
     // render the brush at last.
+    this.brushEnv.update(Date.now())
     this.brushGroup.render()
 
     gl.bindTexture(gl.TEXTURE_2D, null)
