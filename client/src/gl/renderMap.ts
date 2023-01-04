@@ -139,10 +139,21 @@ export class RenderMap {
 
     // clone the type of the brush layer
     const brushLayer = new TilesLayer()
+    let brushRlayer: RenderLayer
     brushLayer.init(w, h, fill)
-    const brushRLayer = new RenderAnyTilesLayer(brushLayer, rlayer.texture)
 
-    this.brushGroup.layers = [brushRLayer]
+    // COMBAK: these properties wont be reactive if source layer is changed.
+    if (layer instanceof TilesLayer) {
+      brushLayer.image = rlayer.texture.image
+      brushLayer.color = layer.color
+      brushLayer.colorEnv = layer.colorEnv
+      brushLayer.colorEnvOffset = layer.colorEnvOffset
+      brushRlayer = new RenderTilesLayer(this, brushLayer)
+    } else {
+      brushRlayer = new RenderAnyTilesLayer(brushLayer, rlayer.texture)
+    }
+
+    this.brushGroup.layers = [brushRlayer]
   }
 
   moveBrush(pos: Info.Coord) {

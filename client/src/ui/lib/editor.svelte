@@ -352,9 +352,6 @@
 
       let x: number, y: number, w: number, h: number
 
-      const brushValid = x >= 0 && y >= 0 && x < activeLayer.width && y < activeLayer.height
-
-      const strokeColor = brushValid ? 'black' : 'red'
       const fillColor =
         brushState === BrushState.Fill ? 'orange' :
         brushState === BrushState.Erase ? 'red' :
@@ -375,6 +372,14 @@
         w = x2 - x1
         h = y2 - y1
       }
+
+      const brushValid =
+        brushPos.x >= 0 &&
+        brushPos.y >= 0 &&
+        brushPos.x + (brushRange.end.x - brushRange.start.x) < activeLayer.width &&
+        brushPos.y + (brushRange.end.y - brushRange.start.y) < activeLayer.height
+
+      const strokeColor = brushValid ? 'black' : 'red'
 
       brushOutlineStyle = `
           width: ${w}px;
