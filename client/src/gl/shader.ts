@@ -1,8 +1,4 @@
-export const AttributeLocations = [
-  'aPosition',
-  'aVertexColor',
-  'aTexCoord'
-] as const
+export const AttributeLocations = ['aPosition', 'aVertexColor', 'aTexCoord'] as const
 
 export const UniformLocations = [
   'uPMatrix',
@@ -10,12 +6,12 @@ export const UniformLocations = [
   'uSampler',
   'uColorMask',
   'uTexCoord',
-  'uVertexColor'
+  'uVertexColor',
 ] as const
 
 type ProgLocations = {
-  attrs: { [k in typeof AttributeLocations[number]]: number },
-  unifs: { [k in typeof UniformLocations[number]]: WebGLUniformLocation },
+  attrs: { [k in typeof AttributeLocations[number]]: number }
+  unifs: { [k in typeof UniformLocations[number]]: WebGLUniformLocation }
 }
 
 export class Shader {
@@ -34,8 +30,8 @@ export class Shader {
     gl.linkProgram(this.prog)
     gl.useProgram(this.prog)
     this.locs = this.initLocations(gl)
-    this.initAttributes(gl);
-    this.initUniforms(gl);
+    this.initAttributes(gl)
+    this.initUniforms(gl)
   }
 
   private initLocations(gl: WebGL2RenderingContext) {
@@ -52,13 +48,13 @@ export class Shader {
         uColorMask: gl.getUniformLocation(this.prog, 'uColorMask'),
         uTexCoord: gl.getUniformLocation(this.prog, 'uTexCoord'),
         uVertexColor: gl.getUniformLocation(this.prog, 'uVertexColor'),
-      }
+      },
     }
     return locs
   }
 
   private initAttributes(gl: WebGL2RenderingContext) {
-    gl.enableVertexAttribArray(this.locs.attrs.aPosition);
+    gl.enableVertexAttribArray(this.locs.attrs.aPosition)
   }
 
   private initUniforms(gl: WebGL2RenderingContext) {

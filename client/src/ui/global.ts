@@ -1,6 +1,4 @@
-import { Server } from "../server/server"
-const { VITE_WEBSOCKET_URL } = import.meta.env
+import type { WebSocketServer } from 'src/server/server'
+import { writable, Writable } from 'svelte/store'
 
-export const pServer = Server.create(VITE_WEBSOCKET_URL)
-export let server: Server
-pServer.then(s => server = s)
+export const server: Writable<WebSocketServer> = writable(null)

@@ -4,7 +4,7 @@ import { DataReader } from './dataReader'
 export function parseInfo(infoData: ArrayBuffer): Info.MapInfo {
   const d = new DataReader(infoData)
   d.reset()
-  
+
   /* version */ d.uint32()
 
   const data: Info.MapInfo = {
@@ -37,12 +37,12 @@ export function parseGroup(groupData: ArrayBuffer): Info.Group {
     clipW: d.int32(),
     clipH: d.int32(),
   }
-  
+
   // version 3 extension
   if (data.version >= 3) {
     data.name = d.int32Str(3)
   }
-  
+
   return data
 }
 
@@ -74,7 +74,7 @@ export function parseQuadsLayer(layerData: ArrayBuffer): Info.QuadsLayer {
   if (data.version >= 2) {
     data.name = d.int32Str(3)
   }
-  
+
   return data
 }
 
@@ -104,12 +104,12 @@ export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
     image: d.int32(),
     data: d.int32(),
   }
-  
+
   // version 3 extension
   if (data.version >= 3) {
     data.name = d.int32Str(3)
   }
-  
+
   // ddnet extension
   if (data.flags !== Info.TilesLayerFlags.TILES && data.flags !== Info.TilesLayerFlags.GAME) {
     data.dataTele = d.int32()
@@ -118,7 +118,7 @@ export function parseTilesLayer(layerData: ArrayBuffer): Info.TilesLayer {
     data.dataSwitch = d.int32()
     data.dataTune = d.int32()
   }
-  
+
   return data
 }
 
@@ -141,7 +141,6 @@ export function parseQuads(layerData: ArrayBuffer, num: number): Info.Quad[] {
   const d = new DataReader(layerData)
 
   for (let q = 0; q < num; q++) {
-
     const points = []
     for (let i = 0; i < 5; i++) {
       points.push({
@@ -156,7 +155,7 @@ export function parseQuads(layerData: ArrayBuffer, num: number): Info.Quad[] {
         r: d.uint32() & 0xff,
         g: d.uint32() & 0xff,
         b: d.uint32() & 0xff,
-        a: d.uint32() & 0xff
+        a: d.uint32() & 0xff,
       })
     }
 
@@ -271,17 +270,17 @@ export function parseEnvelope(envelopeData: ArrayBuffer): Info.Envelope {
     startPoint: d.uint32(),
     numPoints: d.uint32(),
   }
-  
+
   // extension without version change
   if (d.bytesLeft() >= 8) {
     data.name = d.int32Str(8)
   }
-  
+
   // version 2 extension
   if (data.version >= 2) {
     data.synchronized = d.int32() === 1
   }
-  
+
   return data
 }
 
@@ -295,7 +294,7 @@ export function parseSoundEnvPoint(envPointData: ArrayBuffer): Info.SoundEnvPoin
   }
 
   d.int32() // skip reserved
-  
+
   return data
 }
 
@@ -311,7 +310,7 @@ export function parsePositionEnvPoint(envPointData: ArrayBuffer): Info.PositionE
   }
 
   d.int32() // skip reserved
-  
+
   return data
 }
 
@@ -335,9 +334,7 @@ export function parseString(data: ArrayBuffer) {
 
   let len = 0
 
-  for (; len < buf.byteLength; len++)
-    if (buf[len] === 0)
-      break
+  for (; len < buf.byteLength; len++) if (buf[len] === 0) break
 
   return String.fromCharCode.apply(null, buf.subarray(0, len))
 }

@@ -7,13 +7,17 @@ type DialogControls = 'closable' | 'yesno' | 'none'
 let dialog: Dialog | null = null
 
 export function clearDialog() {
-  if(dialog) {
+  if (dialog) {
     dialog.$destroy()
     dialog = null
   }
 }
 
-export function showDialog(type: DialogType, message: string, controls: DialogControls = 'none'): Promise<boolean> {
+export function showDialog(
+  type: DialogType,
+  message: string,
+  controls: DialogControls = 'none'
+): Promise<boolean> {
   clearDialog()
   dialog = new Dialog({
     target: document.body,
@@ -21,17 +25,16 @@ export function showDialog(type: DialogType, message: string, controls: DialogCo
       type,
       message,
       controls,
-    }
+    },
   })
-  
-  return new Promise((resolve) => {
-    dialog.$on('close', (e) => {
+
+  return new Promise(resolve => {
+    dialog.$on('close', e => {
       clearDialog()
       resolve(e.detail)
     })
   })
 }
-
 
 export function showInfo(msg: string, controls: DialogControls = 'closable') {
   return showDialog('info', msg, controls)

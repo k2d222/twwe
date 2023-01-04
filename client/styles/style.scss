@@ -1,0 +1,810 @@
+// carbon design stylesheets
+
+@use '@carbon/themes/scss/themes' as *;
+@use '@carbon/themes' with (
+  $theme: $white
+);
+
+@import './carbon-style-compiled.css';
+
+:root {
+  // Emit CSS Custom Properties for the current theme
+  @include themes.theme();
+}
+#lobby {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 3rem);
+  overflow: auto;
+
+  > :nth-child(2) {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+
+  // make scrollbars fit nicely with page viewport size
+  // carbon's stickyheader property on datatables is shit
+  // this is quite complicated, idk of better ways
+  .bx--row > * {
+    display: flex;
+    flex-direction: column;
+
+    .table-wrapper {
+      min-height: 25rem;
+      flex-grow: 1;
+      position: relative;
+      overflow: hidden;
+
+      .bx--data-table-container {
+        overflow-y: scroll;
+        padding: 0;
+        position: absolute;
+        inset: 0;
+
+        .bx--table-toolbar {
+          position: sticky;
+          top: 0;
+        }
+
+        thead {
+          position: sticky;
+          top: 3rem;
+          z-index: 1;
+        }
+      }
+    }
+  }
+}
+
+.bx--modal-content {
+  margin-bottom: 1rem !important;
+}
+
+#editor {
+  input[type='number'],
+  input[type='text'],
+  input[type='button'],
+  input[type='color'],
+  select,
+  textarea,
+  button.danger,
+  button.default,
+  button.primary {
+    border: none;
+    padding: 0.25rem 0.4rem;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    background-color: #f2f2f2;
+
+    outline: 1px solid #aaaaaa;
+    outline-offset: -1px;
+
+    &:hover {
+      outline: 1px solid #393939;
+      outline-offset: -1px;
+    }
+    &:focus {
+      outline: 2px solid #0f62fe;
+      outline-offset: -2px;
+    }
+  }
+
+  button.large {
+    padding: 0.5rem 0.8rem;
+  }
+
+  button.danger {
+    color: white;
+    background-color: #da1e28;
+  }
+
+  button.primary {
+    color: white;
+    background-color: #0f62fe;
+  }
+}
+
+$header-h: 3rem;
+
+#panes {
+  height: calc(100vh - $header-h);
+
+  .splitpanes__splitter {
+    border: 0;
+    margin: 0;
+    z-index: unset;
+
+    &:before,
+    &:after {
+      background-color: #888;
+    }
+  }
+
+  > .splitpanes__splitter {
+    background-color: white;
+  }
+
+  .splitpanes__pane.viewport {
+    position: relative;
+
+    #canvas-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      clip: rect(0, auto, auto, 0);
+    }
+  }
+
+  .splitpanes__pane.layers,
+  .splitpanes__pane.properties {
+    overflow: auto;
+  }
+}
+
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-image: url('/editor/checker.png');
+  background-repeat: repeat;
+}
+
+#header {
+  width: 100%;
+  height: $header-h;
+  justify-content: space-between;
+  display: flex;
+  flex-direction: row;
+  background: #161616;
+  color: white;
+
+  > .left,
+  > .right,
+  > .middle {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    flex-basis: 0;
+    flex-grow: 1;
+  }
+
+  .middle {
+    justify-content: center;
+  }
+
+  .right {
+    justify-content: flex-end;
+    margin-right: 1rem;
+  }
+
+  .bx--overflow-menu ul::after {
+    width: $header-h;
+  }
+
+  .header-btn {
+    width: $header-h;
+    height: $header-h;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+    border: none;
+    outline: none;
+    margin: 0;
+    padding: 0;
+
+    > svg {
+      fill: white;
+    }
+    &[disabled] > svg {
+      fill: grey;
+    }
+
+    &:hover,
+    &:focus {
+      background: #393939;
+    }
+
+    &:focus {
+      outline: 2px solid #0f62fe;
+      outline-offset: -2px;
+    }
+  }
+}
+
+#dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 5rem;
+  z-index: 10000;
+
+  > .content {
+    position: relative;
+    padding: 3rem 5rem;
+    border-radius: 15px;
+    background: white;
+    border: 1px solid black;
+
+    > img {
+      position: absolute;
+      top: calc(50% - 1rem);
+      left: 1.5rem;
+      width: 2rem;
+    }
+  }
+
+  > button,
+  > .buttons {
+    position: relative;
+    bottom: 2.5rem;
+    height: 2rem;
+    padding: 0 1rem;
+  }
+
+  &.hidden {
+    display: none;
+  }
+}
+
+#tree {
+  display: flex;
+  flex-direction: column;
+
+  .node {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 2rem;
+    padding-left: 1rem;
+
+    color: themes.$text-secondary;
+    background-color: themes.$layer-01;
+
+    &:hover {
+      color: themes.$text-primary;
+      background-color: themes.$layer-hover-01;
+    }
+
+    &.selected,
+    &.active {
+      color: themes.$text-primary;
+      background-color: themes.$layer-selected-01;
+    }
+
+    &:focus {
+      outline: 2px solid themes.$focus;
+      outline-offset: -2px;
+    }
+
+    &.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0.25rem;
+      background: themes.$focus;
+    }
+
+    > .label {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+      flex-grow: 1;
+      padding-right: 0.5rem;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .layer .node {
+    padding-left: 3.5rem;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+
+    &.folded > ul {
+      display: none;
+    }
+
+    &.folded > .node > .toggle > svg {
+      transform: rotate(-90deg);
+    }
+  }
+
+  .toggle,
+  .icon,
+  .eye {
+    margin-right: 0.5rem;
+  }
+
+  .toggle,
+  .eye {
+    cursor: pointer;
+  }
+
+  li.visible:not(:hover) > .node > .eye {
+    display: none;
+  }
+
+  .toggle > svg {
+    transition: transform 0.2s;
+  }
+
+  .group:not(.visible) .layer {
+    opacity: 0.5;
+  }
+}
+
+#create-group {
+  width: 100%;
+  max-width: unset;
+}
+
+#statusbar {
+  position: fixed;
+  left: 15rem;
+  right: 0;
+  bottom: 0;
+
+  #tooltip {
+    float: right;
+    padding: 0.2rem 1rem;
+    height: 100%;
+    background-color: white;
+  }
+}
+
+#tile-selector {
+  canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .tiles button {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    z-index: 1;
+    outline: 1px solid black;
+
+    &:hover {
+      outline: 2px solid black;
+      background: rgba(255, 255, 255, 0.4);
+    }
+  }
+
+  .controls {
+    background: white;
+    display: flex;
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px 0px;
+  }
+
+  .tiles,
+  .settings {
+    position: fixed;
+    bottom: 7rem;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 3px solid black;
+
+    &.hidden {
+      display: none;
+    }
+  }
+
+  .tiles {
+    z-index: 1;
+    display: grid;
+    width: min(calc(100vh - 11rem), calc(100vw - 4rem));
+    height: min(calc(100vh - 11rem), calc(100vw - 4rem));
+    grid-template-rows: repeat(16, auto);
+    grid-template-columns: repeat(16, auto);
+    grid-gap: 1px;
+    overflow: auto;
+  }
+
+  .settings {
+    background: white;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      gap: 1rem;
+    }
+
+    input[type='number'] {
+      width: 4rem;
+    }
+
+    .buttons {
+      text-align: center;
+
+      button {
+        width: 2rem;
+        height: 2rem;
+
+        > img {
+          width: 100%;
+          height: 100%;
+        }
+      }
+    }
+  }
+}
+
+.context {
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+
+  .content {
+    position: absolute;
+    padding: 0.5rem;
+    background: white;
+    border: 1px solid lightgrey;
+    box-shadow: 5px 5px 20px -15px black;
+    border-radius: 5px;
+  }
+}
+
+.edit-layer,
+.edit-group,
+.edit-quad,
+.edit-info,
+.edit-env-point {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 1rem;
+  }
+
+  input[type='number'] {
+    width: 4rem;
+  }
+
+  input {
+    min-width: 4rem;
+    max-width: 8rem;
+  }
+}
+
+nav.hidden .context {
+  display: none;
+}
+
+#hover-tile {
+  background: #ffffff55;
+  position: fixed;
+  border: 4px solid black;
+  pointer-events: none;
+  // transition: top .1s, left .1s;
+}
+
+#layer-outline {
+  position: fixed;
+  border: 2px solid white;
+  outline: 2px solid black;
+  box-shadow: 0 0 10px 1px;
+  pointer-events: none;
+}
+
+#clip-outline {
+  position: fixed;
+  border: 1px solid white;
+  outline: 1px solid red;
+  box-shadow: 0 0 5px 1px;
+  pointer-events: none;
+}
+
+#image-picker {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 1rem;
+
+  $img-size: 10rem;
+
+  > .footer {
+    // background: white;
+    // border: 1px solid black;
+    // border-top: none;
+    width: 100%;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  > .images {
+    overflow: auto;
+
+    .list {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+
+      .image {
+        width: $img-size;
+        height: $img-size;
+        border: 1px solid grey;
+        border-radius: 3px;
+        position: relative;
+        overflow: hidden;
+        padding: 0;
+
+        &:hover > button {
+          position: absolute;
+          top: 0;
+          right: 0;
+          padding: 0.25rem;
+          line-height: 1rem;
+          width: 2rem;
+          height: 2rem;
+          text-align: center;
+          font-weight: bold;
+          background: white;
+          border: none;
+          font-size: 1.5rem;
+
+          &:hover {
+            color: darkred;
+            font-size: 1.5rem;
+            font-size: 2rem;
+          }
+        }
+
+        &.selected {
+          border: 4px solid #0f62fe;
+        }
+
+        .hover {
+          position: absolute;
+          width: 100%;
+          bottom: -2.1rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          padding: 0.3rem;
+          background: white;
+          transition: all 0.2s;
+          text-align: center;
+          border-top: 1px solid grey;
+          font-weight: bold;
+          white-space: nowrap;
+        }
+
+        &:hover .hover {
+          bottom: 0;
+        }
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: drop-shadow(1px 0px 0px rgba(0, 0, 0, 0.4))
+            drop-shadow(0px 1px 0px rgba(0, 0, 0, 0.4)) drop-shadow(-1px 0px 0px rgba(0, 0, 0, 0.4))
+            drop-shadow(0px -1px 0px rgba(0, 0, 0, 0.4));
+        }
+      }
+    }
+  }
+}
+
+#edit-quads {
+  position: fixed;
+  inset: 0;
+
+  > svg {
+    position: absolute;
+    > * {
+      pointer-events: auto;
+      vector-effect: non-scaling-stroke;
+    }
+
+    polygon {
+      fill: transparent;
+
+      &:hover {
+        stroke-width: 5px;
+        fill: rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    line {
+      stroke: black;
+      stroke-width: 2px;
+
+      &:hover {
+        stroke-width: 5px;
+        fill: rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    circle {
+      stroke: black;
+
+      &.center {
+        fill: green;
+        stroke: green;
+      }
+
+      &:hover {
+        stroke-width: 5px;
+      }
+    }
+  }
+
+  .controls {
+    background: white;
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 6px 0px;
+  }
+}
+
+#envelope-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &.hidden {
+    transform: translateY(100%);
+  }
+
+  .header {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid lightgrey;
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+
+    > :nth-child(3) {
+      flex-grow: 1;
+    }
+  }
+
+  .graph {
+    flex-grow: 1;
+    position: relative;
+    background: white;
+  }
+
+  svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+
+  path {
+    vector-effect: non-scaling-stroke;
+    stroke-width: 2px;
+    stroke: black;
+    fill: none;
+
+    &:hover {
+      stroke-width: 5px;
+    }
+  }
+
+  .axis {
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+    stroke-width: 1px;
+    stroke: black;
+    stroke-dasharray: 2px;
+  }
+
+  path.point {
+    stroke-width: 5px;
+    stroke-linecap: round;
+
+    &:hover {
+      stroke-width: 10px;
+    }
+  }
+
+  .channels {
+    display: flex;
+    // gap: .5rem;
+    align-items: center;
+
+    label {
+      position: relative;
+      display: block;
+      width: 1.5rem;
+      height: 1.5rem;
+      user-select: none;
+
+      &.red span {
+        color: red;
+      }
+      &.green span {
+        color: green;
+      }
+      &.blue span {
+        color: blue;
+      }
+      &.orange span {
+        color: orange;
+      }
+      &.red input:checked ~ span {
+        background-color: red;
+        color: white;
+      }
+      &.green input:checked ~ span {
+        background-color: green;
+        color: white;
+      }
+      &.blue input:checked ~ span {
+        background-color: blue;
+        color: white;
+      }
+      &.orange input:checked ~ span {
+        background-color: orange;
+        color: white;
+      }
+
+      input {
+        position: absolute;
+        opacity: 0;
+        inset: 0;
+      }
+
+      span {
+        position: absolute;
+        inset: 0;
+        text-align: center;
+        padding: 0.25rem;
+      }
+    }
+  }
+}
+
+.box-select {
+  position: fixed;
+  background: blue;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#tile-selector .box-select {
+  position: absolute;
+}

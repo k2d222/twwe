@@ -1,94 +1,92 @@
 <script lang="ts">
   import type { Image } from '../../twmap/image'
   import { createEventDispatcher } from 'svelte'
+  import { FileUploader, Tab, TabContent, Tabs } from 'carbon-components-svelte'
+
+  export let images: Image[] = []
+  export let image: Image | null = null
 
   const dispatch = createEventDispatcher()
 
   const externalImages = [
-    "basic_freeze",
-    "bg_cloud1",
-    "bg_cloud2",
-    "bg_cloud3",
-    "ddmax_freeze",
-    "ddnet_start",
-    "ddnet_tiles",
-    "ddnet_walls",
-    "desert_background",
-    "desert_doodads",
-    "desert_main",
-    "desert_mountains2",
-    "desert_mountains_new_background",
-    "desert_mountains_new_foreground",
-    "desert_mountains",
-    "desert_sun",
-    "entities",
-    "fadeout",
-    "font_teeworlds_alt",
-    "font_teeworlds",
-    "generic_clear",
-    "generic_deathtiles",
-    "generic_lamps",
-    "generic_unhookable_0.7",
-    "generic_unhookable",
-    "grass_doodads_0.7",
-    "grass_doodads",
-    "grass_main_0.7",
-    "grass_main",
-    "jungle_background",
-    "jungle_deathtiles",
-    "jungle_doodads",
-    "jungle_main",
-    "jungle_midground",
-    "jungle_unhookables",
-    "light",
-    "mixed_tiles",
-    "moon",
-    "mountains",
-    "round_tiles",
-    "snow_mountain",
-    "snow",
-    "stars",
-    "sun",
-    "water",
-    "winter_doodads",
-    "winter_main",
-    "winter_mountains2",
-    "winter_mountains3",
-    "winter_mountains",
+    'basic_freeze',
+    'bg_cloud1',
+    'bg_cloud2',
+    'bg_cloud3',
+    'ddmax_freeze',
+    'ddnet_start',
+    'ddnet_tiles',
+    'ddnet_walls',
+    'desert_background',
+    'desert_doodads',
+    'desert_main',
+    'desert_mountains2',
+    'desert_mountains_new_background',
+    'desert_mountains_new_foreground',
+    'desert_mountains',
+    'desert_sun',
+    'entities',
+    'fadeout',
+    'font_teeworlds_alt',
+    'font_teeworlds',
+    'generic_clear',
+    'generic_deathtiles',
+    'generic_lamps',
+    'generic_unhookable_0.7',
+    'generic_unhookable',
+    'grass_doodads_0.7',
+    'grass_doodads',
+    'grass_main_0.7',
+    'grass_main',
+    'jungle_background',
+    'jungle_deathtiles',
+    'jungle_doodads',
+    'jungle_main',
+    'jungle_midground',
+    'jungle_unhookables',
+    'light',
+    'mixed_tiles',
+    'moon',
+    'mountains',
+    'round_tiles',
+    'snow_mountain',
+    'snow',
+    'stars',
+    'sun',
+    'water',
+    'winter_doodads',
+    'winter_main',
+    'winter_mountains2',
+    'winter_mountains3',
+    'winter_mountains',
   ]
 
-  export let images: Image[] = []
-  
-  export let image: Image | null = null
   let external = -1
   $: external = image && image.img ? externalImages.indexOf(image.name) : external
 
   function onConfirm() {
     if (image) {
       dispatch('pick', image)
-    }
-    else if (external !== -1) {
+    } else if (external !== -1) {
       dispatch('pick', externalImages[external])
-    }
-    else {
+    } else {
       dispatch('pick', null)
     }
   }
 
   function onCancel() {
-      dispatch('cancel')
+    dispatch('cancel')
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Escape')
-      onCancel()
+    if (e.key === 'Escape') onCancel()
   }
 
-  function onFileChange(e: Event) {
-    const file = (e.target as HTMLInputElement).files[0]
+  function onFileChange(e: CustomEvent<readonly File[]>) {
+    const file = e.detail[0]
     dispatch('upload', file)
   }
-  
+
   function onDeleteImage(image: Image) {
     dispatch('delete', image)
   }
@@ -106,63 +104,85 @@
   function getImgURL(image: Image) {
     if (image.img !== null) {
       return image.img.src
-    }
-    else if (image.data instanceof ImageData) {
+    } else if (image.data instanceof ImageData) {
       const canvas = document.createElement('canvas')
       canvas.width = image.data.width
       canvas.height = image.data.height
       const ctx = canvas.getContext('2d')
       ctx.putImageData(image.data, 0, 0)
       return canvas.toDataURL()
-    }
-    else {
+    } else {
       console.warn('unsupported image data type:', image)
-      return ""
+      return ''
     }
   }
 
-  $: selectedName = external !== -1 ? externalImages[external] + ' (external)' : image ? image.name + ' (embedded)' : 'none'
-  
-
+  $: selectedName =
+    external !== -1
+      ? externalImages[external] + ' (external)'
+      : image
+      ? image.name + ' (embedded)'
+      : 'none'
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
 
 <div id="image-picker">
-  <div class="content">
-    <h3>Upload</h3>
-    <label>Select a file:&nbsp;
-      <input type="file" placeholder="upload png file…" accept=".png,image/png" on:change={onFileChange}/>
-    </label>
-    <h3>Embedded images</h3>
-    <div class="images">
-      {#each images.filter(i => !i.img) as img}
-        <div class="image" class:selected={image === img} on:click={() => selectEmbedded(img)}>
-          <img src={getImgURL(img)} alt={img.name}>
-          <div class="hover">
-            <span>{img.name}</span>
-          </div>
-          <button on:click={() => onDeleteImage(img)}>&times;</button>
+  <Tabs>
+    <Tab label="Upload image" />
+    <Tab label="Embedded images" />
+    <Tab label="External images" />
+    <svelte:fragment slot="content">
+      <TabContent>
+        <FileUploader
+          labelTitle="Upload an image"
+          buttonLabel="Pick a file"
+          labelDescription="Only png files are accepted."
+          accept={['.png']}
+          status="complete"
+          on:change={onFileChange}
+        />
+      </TabContent>
+      <TabContent class="images">
+        <div class="list">
+          {#each images.filter(i => !i.img) as img}
+            <button
+              class="default image"
+              class:selected={image === img}
+              on:click={() => selectEmbedded(img)}
+            >
+              <img src={getImgURL(img)} alt={img.name} />
+              <div class="hover">
+                <span>{img.name}</span>
+              </div>
+              <button on:click={() => onDeleteImage(img)}>&times;</button>
+            </button>
+          {/each}
         </div>
-      {/each}
-    </div>
-    <h3>External images</h3>
-    <div class="images">
-      {#each externalImages as img, i}
-        <div class="image" class:selected={external === i} on:click={() => selectExternal(i)}>
-          <img src="/mapres/{img}.png" alt={img}>
-          <div class="hover">
-            <span>{img}</span>
-          </div>
+      </TabContent>
+      <TabContent class="images">
+        <div class="list">
+          {#each externalImages as img, i}
+            <button
+              class="default image"
+              class:selected={external === i}
+              on:click={() => selectExternal(i)}
+            >
+              <img src="/mapres/{img}.png" alt={img} />
+              <div class="hover">
+                <span>{img}</span>
+              </div>
+            </button>
+          {/each}
         </div>
-      {/each}
-    </div>
-  </div>
+      </TabContent>
+    </svelte:fragment>
+  </Tabs>
   <div class="footer">
     <span>Selected: {selectedName}</span>
     <div>
-      <button class="cancel" on:click={onCancel}>Cancel</button>
-      <button class="confirm" on:click={onConfirm}>Confirm</button>
+      <button class="default large" on:click={onCancel}>Cancel</button>
+      <button class="primary large" on:click={onConfirm}>Confirm</button>
     </div>
   </div>
 </div>

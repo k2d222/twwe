@@ -44,9 +44,8 @@ export class Group {
 
   private loadLayers(map: Map, df: DataFile, startLayer: number, numLayers: number) {
     const layersInfo = df.getType(Info.ItemType.LAYER)
-    
-    if (!layersInfo)
-      return []
+
+    if (!layersInfo) return []
 
     const layers = []
 
@@ -60,19 +59,17 @@ export class Group {
         layer.load(map, df, tilesLayerInfo)
         layer.detail = (layerInfo.flags & Info.LayerFlags.DETAIL) === 1
         layers.push(layer)
-      }
-      else if (layerInfo.type === Info.LayerType.QUADS) {
+      } else if (layerInfo.type === Info.LayerType.QUADS) {
         const quadsLayerInfo = parseQuadsLayer(layerItem.data)
         const layer = new QuadsLayer()
         layer.load(map, df, quadsLayerInfo)
         layer.detail = (layerInfo.flags & Info.LayerFlags.DETAIL) === 1
         layers.push(layer)
-      }
-      else {
+      } else {
         console.warn('unsupported layer type:', layerInfo.type, layerInfo)
       }
     }
-    
+
     return layers
   }
 }

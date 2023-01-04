@@ -1,7 +1,7 @@
 export enum TileFlags {
-  NONE   = 0,
-  VFLIP  = 1,
-  HFLIP  = 2,
+  NONE = 0,
+  VFLIP = 1,
+  HFLIP = 2,
   OPAQUE = 4,
   ROTATE = 8,
 }
@@ -13,24 +13,24 @@ export enum LayerFlags {
 
 export enum LayerType {
   INVALID = 0,
-  TILES   = 2,
-  QUADS   = 3,
+  TILES = 2,
+  QUADS = 3,
 }
 
 export enum EnvType {
-  INVALID  = 0,
-  SOUND    = 1,
+  INVALID = 0,
+  SOUND = 1,
   POSITION = 3,
-  COLOR    = 4,
+  COLOR = 4,
 }
 
 export enum CurveType {
-  STEP    = 0,
-  LINEAR  = 1,
-  SLOW    = 2,
-  FAST    = 3,
-  SMOOTH  = 4,
-  BEZIER  = 5,
+  STEP = 0,
+  LINEAR = 1,
+  SLOW = 2,
+  FAST = 3,
+  SMOOTH = 4,
+  BEZIER = 5,
 }
 
 export enum TilesLayerFlags {
@@ -44,86 +44,86 @@ export enum TilesLayerFlags {
 }
 
 export enum ItemType {
-  VERSION   = 0,
-  INFO      = 1,
-  IMAGE     = 2,
-  ENVELOPE  = 3,
-  GROUP     = 4,
-  LAYER     = 5,
+  VERSION = 0,
+  INFO = 1,
+  IMAGE = 2,
+  ENVELOPE = 3,
+  GROUP = 4,
+  LAYER = 5,
   ENVPOINTS = 6,
 }
 
 export type Color = {
-  r: number,
-  g: number,
-  b: number,
-  a: number,
+  r: number
+  g: number
+  b: number
+  a: number
 }
 
 export type Coord = {
-  x: number,
-  y: number,
+  x: number
+  y: number
 }
 
 export type MapObj = {
-  version: number,
+  version: number
 }
 
 export type MapInfo = {
   // version: number, // we don't need that, and the name conflicts
-  author: number,
-  version: number,
-  credits: number,
-  license: number,
-  settings: number,
+  author: number
+  version: number
+  credits: number
+  license: number
+  settings: number
 }
 
 export type Group = MapObj & {
-  version: number,
-  offX: number,
-  offY: number,
-  paraX: number,
-  paraY: number,
-  startLayer: number,
-  numLayers: number,
-  clipping: boolean,
-  clipX: number,
-  clipY: number,
-  clipW: number,
-  clipH: number,
+  version: number
+  offX: number
+  offY: number
+  paraX: number
+  paraY: number
+  startLayer: number
+  numLayers: number
+  clipping: boolean
+  clipX: number
+  clipY: number
+  clipW: number
+  clipH: number
 
   // version 3 extension
-  name?: string,
+  name?: string
 }
 
 export type Layer = MapObj & {
-  type: LayerType,
-  flags: number,
+  type: LayerType
+  flags: number
 }
 
 export type QuadsLayer = MapObj & {
-  numQuads: number,
-  data: number,
-  image: number,
-  
+  numQuads: number
+  data: number
+  image: number
+
   // version 3 extension
-  name?: string,
+  name?: string
 }
 
 export type TilesLayer = MapObj & {
-  version: number,
-  width: number,
-  height: number,
-  flags: TilesLayerFlags,
-  color: Color,
-  colorEnv: number,
-  colorEnvOffset: number,
-  image: number,
-  data: number,
-  
+  version: number
+  width: number
+  height: number
+  flags: TilesLayerFlags
+  color: Color
+  colorEnv: number
+  colorEnvOffset: number
+  image: number
+  data: number
+
   // version 3 extension
   name?: string
-  
+
   // ddnet extension
   dataTele?: number
   dataSpeedup?: number
@@ -133,82 +133,82 @@ export type TilesLayer = MapObj & {
 }
 
 export type Image = MapObj & {
-  width: number,
-  height: number,
-  external: number,
-  name: number,
-  data: number,
+  width: number
+  height: number
+  external: number
+  name: number
+  data: number
 }
 
 export type Quad = {
-  points: Coord[],
-  colors: Color[],
-  texCoords: Coord[],
-  posEnv: number,
-  posEnvOffset: number,
-  colorEnv: number,
-  colorEnvOffset: number,
+  points: Coord[]
+  colors: Color[]
+  texCoords: Coord[]
+  posEnv: number
+  posEnvOffset: number
+  colorEnv: number
+  colorEnvOffset: number
 }
 
 export type Tile = {
-  id: number,
-  flags: number,
+  id: number
+  flags: number
 }
 
 export type Tele = {
-  number: number,
-  id: number,
+  number: number
+  id: number
 }
 
 export type Speedup = {
-  force: number,
-  maxSpeed: number,
-  id: number,
-  angle: number,
+  force: number
+  maxSpeed: number
+  id: number
+  angle: number
 }
 
 export type Switch = {
-  number: number,
-  id: number,
-  flags: number,
-  delay: number,
+  number: number
+  id: number
+  flags: number
+  delay: number
 }
 
 export type Tune = {
-  number: number,
-  id: number,
+  number: number
+  id: number
 }
 
 export type AnyTile = Tile | Tele | Speedup | Switch | Tune
 
 export type Envelope = {
-    version: number,
-    type: EnvType,
-    startPoint: number,
-    numPoints: number,
-    
-    // extension without version change
-    name?: string,
-    
-    // version 2 extension
-    synchronized?: boolean,
+  version: number
+  type: EnvType
+  startPoint: number
+  numPoints: number
+
+  // extension without version change
+  name?: string
+
+  // version 2 extension
+  synchronized?: boolean
 }
 
 export type EnvPoint = {
-  time: number,
-  curve: CurveType,
+  time: number
+  curve: CurveType
 }
 
 export type SoundEnvPoint = EnvPoint & {
-  volume: number,
+  volume: number
 }
 
 export type PositionEnvPoint = EnvPoint & {
-  x: number,
-  y: number,
-  rotation: number,
+  x: number
+  y: number
+  rotation: number
 }
 
 export type ColorEnvPoint = EnvPoint & {
-  color: Color,
+  color: Color
 }

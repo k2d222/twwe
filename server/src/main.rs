@@ -180,9 +180,15 @@ impl Server {
                     peer.room.clone().unwrap().send_map(&peer).unwrap();
                     self.broadcast_users(peer);
                 }
+                ResponseContent::LeaveMap => self.broadcast_users(peer),
                 ResponseContent::SaveMap(_) => (),
                 ResponseContent::EditMap(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::DeleteMap(_) => (),
+                ResponseContent::RenameMap(content) => {
+                    self.room(&content.new_name).map(|room| {
+                        self.broadcast_to_room(&room, ResponseContent::RenameMap(content))
+                    });
+                }
                 ResponseContent::CreateGroup(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::EditGroup(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::ReorderGroup(_) => self.broadcast_to_others(peer, content),
@@ -293,6 +299,16 @@ impl Server {
         Ok(ResponseContent::JoinMap(join_map))
     }
 
+    fn handle_leave_map(&self, peer: &Peer) -> Res {
+        if let Some(room) = &peer.room {
+            room.remove_peer(peer);
+            self.broadcast_users(peer);
+            Ok(ResponseContent::LeaveMap)
+        } else {
+            Err("user is not connected to a map")
+        }
+    }
+
     fn handle_save_map(&self, _peer: &mut Peer, save_map: SaveMap) -> Res {
         let room = self.room(&save_map.name).ok_or("map does not exist")?;
         room.save_map()?;
@@ -315,6 +331,10 @@ impl Server {
             }
             None => Err("no map found with the given name"),
         }
+    }
+
+    fn handle_rename_map(&self, _rename_map: RenameMap) -> Res {
+        Err("TODO: renaming map is not yet implemented")
     }
 
     fn handle_create_group(&self, peer: &mut Peer, create_group: CreateGroup) -> Res {
@@ -479,8 +499,10 @@ impl Server {
             RequestContent::CreateMap(content) => self.handle_create_map(peer, content),
             RequestContent::EditMap(content) => self.handle_edit_map(peer, content),
             RequestContent::JoinMap(content) => self.handle_join_map(peer, content),
+            RequestContent::LeaveMap => self.handle_leave_map(peer),
             RequestContent::SaveMap(content) => self.handle_save_map(peer, content),
             RequestContent::DeleteMap(content) => self.handle_delete_map(peer, content),
+            RequestContent::RenameMap(content) => self.handle_rename_map(content),
             RequestContent::CreateGroup(content) => self.handle_create_group(peer, content),
             RequestContent::EditGroup(content) => self.handle_edit_group(peer, content),
             RequestContent::ReorderGroup(content) => self.handle_reorder_group(peer, content),

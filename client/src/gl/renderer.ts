@@ -39,6 +39,4 @@ export class Renderer {
     mat4.ortho(this.proj, x1, x2, y2, y1, 1, -1)
     this.gl.uniformMatrix4fv(this.shader.locs.unifs.uPMatrix, false, this.proj)
   }
-
 }
-

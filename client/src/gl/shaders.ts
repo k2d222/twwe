@@ -1,4 +1,3 @@
-
 export const TW_VERT = `
   attribute vec2 aPosition;
   attribute vec4 aVertexColor;
@@ -43,4 +42,3 @@ export const TW_FRAG = `
     gl_FragColor.rgb *= gl_FragColor.a;
   }
 ` as const
-
