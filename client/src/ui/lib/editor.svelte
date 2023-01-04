@@ -5,7 +5,6 @@
     ServerError,
     EditMap,
     EditTile,
-    EditTileParams,
     CreateQuad,
     EditQuad,
     DeleteQuad,
@@ -107,6 +106,11 @@
   let brushBuffer: Editor.Brush = []
   $: rmap.setBrush(g, l, brushBuffer)
   $: rmap.moveBrush(brushPos)
+
+  // imput state
+  let shiftKey = false
+  $: if (shiftKey && brushState === BrushState.Select) brushState = BrushState.Erase
+  $: if (!shiftKey && brushState === BrushState.Erase)brushState = BrushState.Select
 
   // computed (readonly)
   let g: number, l: number
@@ -561,6 +565,8 @@
     const target = e.target as HTMLElement
     if (!target.contains(canvas)) return
 
+    shiftKey = e.shiftKey
+
     Editor.fire('keydown', e)
 
     if (e.ctrlKey && ['s', 'd', ' '].includes(e.key)) {
@@ -583,6 +589,8 @@
   function onKeyUp(e: KeyboardEvent) {
     const target = e.target as HTMLElement
     if (!target.contains(canvas)) return
+
+    shiftKey = e.shiftKey
 
     Editor.fire('keyup', e)
   }
@@ -640,7 +648,7 @@
     }
   }
 
-  function onMouseUp(e: MouseEvent) {
+  function onMouseUp(_e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
 
