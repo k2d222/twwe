@@ -27,6 +27,7 @@ import {
   SpeedupLayer,
   TeleLayer,
   TuneLayer,
+  AnyTilesLayer,
 } from '../twmap/tilesLayer'
 import {
   RenderAnyTilesLayer,
@@ -47,6 +48,12 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
 import { envPointFromJson } from '../server/convert'
+import type { Brush } from 'src/ui/lib/editor'
+
+export type Range = {
+  start: Info.Coord
+  end: Info.Coord
+}
 
 export type RenderPhysicsLayer =
   | RenderGameLayer
@@ -73,6 +80,8 @@ export class RenderMap {
   blankTexture: Texture // texture displayed when the layer has no image
   groups: RenderGroup[]
   physicsGroup: RenderGroup
+  brushGroup: RenderGroup
+  brushPos: Info.Coord
   gameLayer: RenderGameLayer
   teleLayer: RenderTeleLayer | null
   speedupLayer: RenderSpeedupLayer | null
@@ -89,6 +98,9 @@ export class RenderMap {
     const [g, l] = this.map.physicsLayerIndex(GameLayer)
     this.physicsGroup = this.groups[g]
 
+    this.brushGroup = new RenderGroup(this, new Group())
+    this.brushPos = { x: 0, y: 0 }
+
     this.gameLayer = this.physicsGroup.layers[l] as RenderTilesLayer
 
     this.teleLayer = this.physicsLayer(RenderTeleLayer) || null
@@ -100,6 +112,49 @@ export class RenderMap {
 
   private physicsLayer<T extends PhysicsLayer, U extends RenderAnyTilesLayer<T>>(ctor: Ctor<U>): U {
     return this.physicsGroup.layers.find(l => l.layer instanceof ctor) as U
+  }
+
+  setBrush(g: number, l: number, buffer: Brush) {
+    if (buffer.length === 0 || buffer[0].length === 0) {
+      this.clearBrush()
+      return
+    }
+
+    const rgroup = this.groups[g]
+    const rlayer = rgroup.layers[l]
+    const layer = rlayer.layer as AnyTilesLayer<any>
+    const w = buffer[0].length
+    const h = buffer.length
+
+    this.brushGroup.group.offX = rgroup.group.offX - this.brushPos.x * 32
+    this.brushGroup.group.offY = rgroup.group.offY - this.brushPos.y * 32
+    this.brushGroup.group.paraX = rgroup.group.paraX
+    this.brushGroup.group.paraY = rgroup.group.paraY
+
+    const fill = (i: number) => {
+      const x = i % w
+      const y = Math.floor(i / w)
+      return buffer[y][x] || layer.defaultTile()
+    }
+
+    // clone the type of the brush layer
+    const brushLayer = new TilesLayer()
+    brushLayer.init(w, h, fill)
+    const brushRLayer = new RenderAnyTilesLayer(brushLayer, rlayer.texture)
+
+    this.brushGroup.layers = [brushRLayer]
+  }
+
+  moveBrush(pos: Info.Coord) {
+    const group = this.brushGroup.group
+    group.offX = group.offX + this.brushPos.x * 32 - pos.x * 32
+    group.offY = group.offY + this.brushPos.y * 32 - pos.y * 32
+    this.brushPos.x = pos.x
+    this.brushPos.y = pos.y
+  }
+
+  clearBrush() {
+    this.brushGroup.layers = []
   }
 
   addImage(image: Image) {
@@ -310,53 +365,26 @@ export class RenderMap {
     return rgroup
   }
 
+  private instLayer(kind: CreateLayer['kind']): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
+    if (kind === 'tiles') return new RenderTilesLayer(this, new TilesLayer())
+    else if (kind === 'quads') return new RenderQuadsLayer(this, new QuadsLayer())
+    else if (kind === 'tele') return new RenderTeleLayer(this, new TeleLayer())
+    else if (kind === 'speedup') return new RenderSpeedupLayer(this, new SpeedupLayer())
+    else if (kind === 'switch') return new RenderSwitchLayer(this, new SwitchLayer())
+    else if (kind === 'tune') return new RenderTuneLayer(this, new TuneLayer())
+    else throw 'cannot create layer kind ' + kind
+  }
+
   createLayer(create: CreateLayer) {
     const group = this.map.groups[create.group]
     const rgroup = this.groups[create.group]
 
-    let rlayer: RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer
+    const rlayer = this.instLayer(create.kind)
+    const layer = rlayer.layer
 
-    if (create.kind === 'tiles') {
+    if (layer instanceof AnyTilesLayer) {
       const { width, height } = this.gameLayer.layer
-      const layer = new TilesLayer()
-      const fill = () => {
-        return { id: 0, flags: 0 }
-      }
-      layer.init(width, height, fill)
-      rlayer = new RenderTilesLayer(this, layer)
-    } else if (create.kind === 'quads') {
-      const layer = new QuadsLayer()
-      rlayer = new RenderQuadsLayer(this, layer)
-    } else if (create.kind === 'front') {
-      const { width, height } = this.gameLayer.layer
-      const layer = new FrontLayer()
-      const fill = () => {
-        return { id: 0, flags: 0 }
-      }
-      layer.init(width, height, fill)
-      rlayer = new RenderFrontLayer(this, layer)
-    } else if (create.kind === 'tele') {
-      const { width, height } = this.gameLayer.layer
-      const layer = new TeleLayer()
-      layer.init(width, height, layer.defaultTile)
-      rlayer = new RenderTeleLayer(this, layer)
-    } else if (create.kind === 'speedup') {
-      const { width, height } = this.gameLayer.layer
-      const layer = new SpeedupLayer()
-      layer.init(width, height, layer.defaultTile)
-      rlayer = new RenderSpeedupLayer(this, layer)
-    } else if (create.kind === 'switch') {
-      const { width, height } = this.gameLayer.layer
-      const layer = new SwitchLayer()
-      layer.init(width, height, layer.defaultTile)
-      rlayer = new RenderSwitchLayer(this, layer)
-    } else if (create.kind === 'tune') {
-      const { width, height } = this.gameLayer.layer
-      const layer = new TuneLayer()
-      layer.init(width, height, layer.defaultTile)
-      rlayer = new RenderTuneLayer(this, layer)
-    } else {
-      throw 'cannot create layer kind ' + create.kind
+      layer.init(width, height, layer.defaultTile as any)
     }
 
     rlayer.layer.name = create.name
@@ -385,6 +413,9 @@ export class RenderMap {
         return isPhysicsLayer(l.layer)
       })
     )
+
+    // render the brush at last.
+    this.brushGroup.render()
 
     gl.bindTexture(gl.TEXTURE_2D, null)
   }

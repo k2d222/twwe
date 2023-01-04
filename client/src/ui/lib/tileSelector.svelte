@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte'
   import type * as Info from '../../twmap/types'
   import type { EditTileParams } from '../../server/protocol'
   import type { Image } from '../../twmap/image'
@@ -28,6 +29,9 @@
 
   export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
   export let selected: EditTileParams[][] = []
+
+  const dispatch = createEventDispatcher()
+  $: dispatch('select', selected)
 
   let tilesVisible = false
   let settingsVisible = false

@@ -44,6 +44,20 @@ export function normalizeRange(range: Range): Range {
   }
 }
 
+export function cloneRange(range: Range): Range {
+  return {
+    start: { x: range.start.x, y: range.start.y },
+    end: { x: range.end.x, y: range.end.y },
+  }
+}
+
+export function createRange(): Range {
+  return {
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 0 },
+  }
+}
+
 // export function endBoxSelect(activeRgroup: RenderGroup) {
 //   let off = activeRgroup.offset()
 //   const x = Math.floor(viewport.mousePos.x - off[0])
