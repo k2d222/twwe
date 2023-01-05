@@ -5,13 +5,13 @@
   import Editor from '../lib/editor.svelte'
 
   export let mapName: string
-  
+
   async function loadMap(name: string) {
-    await server.query('joinmap', { name })
-    const map = await queryMap({ name })
+    await $server.query('joinmap', { name })
+    const map = await queryMap($server, { name })
     return map
   }
-  
+
   const pLoadMap = loadMap(mapName)
 </script>
 
@@ -23,4 +23,3 @@
   {console.error(e)}
   <Dialog type="error">Failed to join the map "{mapName}".</Dialog>
 {/await}
-

@@ -1,4 +1,13 @@
-import type { AnyTilesLayer, TilesLayer, FrontLayer, GameLayer, TeleLayer, TuneLayer, SpeedupLayer, SwitchLayer } from '../twmap/tilesLayer'
+import type {
+  AnyTilesLayer,
+  TilesLayer,
+  FrontLayer,
+  GameLayer,
+  TeleLayer,
+  TuneLayer,
+  SpeedupLayer,
+  SwitchLayer,
+} from '../twmap/tilesLayer'
 import type { RenderMap } from './renderMap'
 import { RenderLayer, ViewBox } from './renderLayer'
 import { gl, shader } from './global'
@@ -6,15 +15,17 @@ import { TileFlags } from '../twmap/types'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
-export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: number }>> extends RenderLayer {
+export class RenderAnyTilesLayer<
+  T extends AnyTilesLayer<{ id: number; flags?: number }>
+> extends RenderLayer {
   layer: T
   texture: Texture
   initialized: boolean
 
   buffers: {
-    tileCount: number,
-    vertex: WebGLBuffer,
-    texCoord: WebGLBuffer,
+    tileCount: number
+    vertex: WebGLBuffer
+    texCoord: WebGLBuffer
   }[][]
 
   chunkSize: number
@@ -28,9 +39,8 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     this.initialized = false
 
     this.createBuffers()
-    
-    if (this.texture.loaded)
-      this.initBuffers()
+
+    if (this.texture.loaded) this.initBuffers()
   }
 
   recomputeChunk(x: number, y: number) {
@@ -38,15 +48,14 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     const chunkY = Math.floor(y / this.chunkSize)
     this.initChunkBuffer(chunkX, chunkY)
   }
-  
+
   recompute() {
     this.deleteBuffers()
     this.createBuffers()
 
-    if (this.texture.loaded)
-      this.initBuffers()
+    if (this.texture.loaded) this.initBuffers()
   }
-  
+
   protected preRender() {
     // Enable texture
     gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
@@ -58,9 +67,9 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
 
     // white color
-    gl.uniform4fv(shader.locs.unifs.uColorMask, [ 1.0, 1.0, 1.0, 1.0 ])
+    gl.uniform4fv(shader.locs.unifs.uColorMask, [1.0, 1.0, 1.0, 1.0])
   }
-  
+
   protected postRender() {
     // keep textures disabled by default
     gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
@@ -68,17 +77,14 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
   }
 
   render(viewBox: ViewBox) {
-    if (!this.visible)
-      return
-    
-    if(!this.initialized) {
-      if (this.texture.loaded)
-        this.initBuffers()
-      else
-        this.texture.load()
+    if (!this.visible) return
+
+    if (!this.initialized) {
+      if (this.texture.loaded) this.initBuffers()
+      else this.texture.load()
       return
     }
-    
+
     this.preRender()
 
     const { x1, x2, y1, y2 } = viewBox
@@ -86,7 +92,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     const minY = Math.max(0, Math.floor(y1 / this.chunkSize))
     const maxX = Math.min(this.buffers[0].length, Math.ceil(x2 / this.chunkSize))
     const maxY = Math.min(this.buffers.length, Math.ceil(y2 / this.chunkSize))
-    
+
     for (let y = minY; y < maxY; y++) {
       for (let x = minX; x < maxX; x++) {
         const { tileCount, vertex, texCoord } = this.buffers[y][x]
@@ -101,7 +107,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
         gl.drawArrays(gl.TRIANGLES, 0, tileCount * 6)
       }
     }
-    
+
     this.postRender()
   }
 
@@ -119,10 +125,10 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
         }
       }
     }
-    
+
     this.initialized = false
   }
-  
+
   private deleteBuffers() {
     for (let row of this.buffers) {
       for (let buf of row) {
@@ -145,8 +151,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
     for (let x = startX; x < endX; x++) {
       for (let y = startY; y < endY; y++) {
         const tile = this.layer.getTile(x, y)
-        if (tile.id !== 0)
-          tileCount++
+        if (tile.id !== 0) tileCount++
       }
     }
 
@@ -169,10 +174,10 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
 
     for (let y = startY; y < endY; y++) {
       for (let x = startX; x < endX; x++) {
-
         const tile = this.layer.getTile(x, y)
 
-        if (tile.id === 0) // skip tiles with id 0
+        if (tile.id === 0)
+          // skip tiles with id 0
           continue
 
         const vertices = makeVertices(x, y)
@@ -195,8 +200,7 @@ export class RenderAnyTilesLayer<T extends AnyTilesLayer<{ id: number, flags?: n
 
   private initBuffers() {
     for (let y = 0; y < this.buffers.length; y++)
-      for (let x = 0; x < this.buffers[0].length; x++)
-        this.initChunkBuffer(x, y)
+      for (let x = 0; x < this.buffers[0].length; x++) this.initChunkBuffer(x, y)
   }
 }
 
@@ -208,20 +212,20 @@ const fontImage: Image = (() => {
 })()
 
 type TextBuffer = {
-  vertex: WebGLBuffer,
-  texCoord: WebGLBuffer,
-  tileCount: number,
+  vertex: WebGLBuffer
+  texCoord: WebGLBuffer
+  tileCount: number
 }
 
 function createTextBuffer(): TextBuffer {
   return {
     vertex: gl.createBuffer(),
     texCoord: gl.createBuffer(),
-    tileCount: 0
+    tileCount: 0,
   }
 }
 
-function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ id: number, number: number }>) {
+function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ id: number; number: number }>) {
   buffer.tileCount = layer.tileCount()
 
   const vertexArr = new Float32Array(buffer.tileCount * 12 * 3)
@@ -230,10 +234,10 @@ function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ id: number, n
 
   for (let y = 0; y < layer.height; y++) {
     for (let x = 0; x < layer.width; x++) {
-
       const tile = layer.getTile(x, y)
 
-      if (tile.id === 0) // skip tiles with id 0
+      if (tile.id === 0)
+        // skip tiles with id 0
         continue
 
       const split = splitNumber(tile.number)
@@ -283,7 +287,7 @@ function textRender(buffer: TextBuffer, texture: Texture) {
   gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0)
 
   gl.drawArrays(gl.TRIANGLES, 0, buffer.tileCount * 6 * 3)
-  
+
   textPostRender()
 }
 
@@ -293,15 +297,14 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
       if (layer.image !== null) {
         const index = rmap.map.images.indexOf(layer.image)
         return rmap.textures[index]
-      }
-      else {
+      } else {
         return rmap.blankTexture
       }
     })()
 
     super(layer, texture)
   }
-  
+
   preRender() {
     super.preRender()
     // Set color mask
@@ -310,7 +313,9 @@ export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
     if (this.layer.colorEnv) {
       let env = this.layer.colorEnv.current.point
       if (this.layer.colorEnvOffset)
-        env = this.layer.colorEnv.computePoint(this.layer.colorEnv.current.time + this.layer.colorEnvOffset)
+        env = this.layer.colorEnv.computePoint(
+          this.layer.colorEnv.current.time + this.layer.colorEnvOffset
+        )
       const { r, g, b, a } = env
       const envCol = [r, g, b, a].map(x => x / 1024)
       col = col.map((c, i) => Math.min(Math.max(0, c * envCol[i]), 1))
@@ -368,7 +373,7 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
     super.recomputeChunk(x, y)
     textBufferInit(this.textBuffer, this.layer)
   }
-  
+
   recompute() {
     super.recompute()
     textBufferInit(this.textBuffer, this.layer)
@@ -376,14 +381,13 @@ export class RenderTeleLayer extends RenderAnyTilesLayer<TeleLayer> {
 
   render(viewBox: ViewBox) {
     super.render(viewBox)
-    
+
     if (!this.fontTexture.loaded) {
       this.fontTexture.load()
       return
     }
 
-    if (this.visible && this.active)
-      textRender(this.textBuffer, this.fontTexture)
+    if (this.visible && this.active) textRender(this.textBuffer, this.fontTexture)
   }
 }
 
@@ -409,7 +413,7 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
     super.recomputeChunk(x, y)
     this.initBuffer()
   }
-  
+
   recompute() {
     super.recompute()
     this.initBuffer()
@@ -424,10 +428,10 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
 
     for (let y = 0; y < this.layer.height; y++) {
       for (let x = 0; x < this.layer.width; x++) {
-
         const tile = this.layer.getTile(x, y)
 
-        if (tile.id === 0) // skip tiles with id 0
+        if (tile.id === 0)
+          // skip tiles with id 0
           continue
 
         const split = splitNumber(tile.force)
@@ -456,8 +460,7 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
       return
     }
 
-    if (this.visible && this.active)
-      textRender(this.textBuffer, this.fontTexture)
+    if (this.visible && this.active) textRender(this.textBuffer, this.fontTexture)
   }
 }
 
@@ -483,7 +486,7 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
     super.recomputeChunk(x, y)
     textBufferInit(this.textBuffer, this.layer)
   }
-  
+
   recompute() {
     super.recompute()
     textBufferInit(this.textBuffer, this.layer)
@@ -497,8 +500,7 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
       return
     }
 
-    if (this.visible && this.active)
-      textRender(this.textBuffer, this.fontTexture)
+    if (this.visible && this.active) textRender(this.textBuffer, this.fontTexture)
   }
 }
 
@@ -524,7 +526,7 @@ export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
     super.recomputeChunk(x, y)
     textBufferInit(this.textBuffer, this.layer)
   }
-  
+
   recompute() {
     super.recompute()
     textBufferInit(this.textBuffer, this.layer)
@@ -538,27 +540,19 @@ export class RenderTuneLayer extends RenderAnyTilesLayer<TuneLayer> {
       return
     }
 
-    if (this.visible && this.active)
-      textRender(this.textBuffer, this.fontTexture)
+    if (this.visible && this.active) textRender(this.textBuffer, this.fontTexture)
   }
 }
 
 function makeVertices(x: number, y: number) {
-  return [
-    x, y,
-    x, y + 1.0,
-    x + 1.0, y + 1.0,
-    x, y,
-    x + 1.0, y + 1.0,
-    x + 1.0, y
-  ]
+  return [x, y, x, y + 1.0, x + 1.0, y + 1.0, x, y, x + 1.0, y + 1.0, x + 1.0, y]
 }
 
-function makeTexCoords(tile: { id: number, flags?: number }, atlasSize: number) {
+function makeTexCoords(tile: { id: number; flags?: number }, atlasSize: number) {
   const tileCount = 16
   const tx = tile.id % tileCount
   const ty = Math.floor(tile.id / tileCount)
-  
+
   const half_pix = 0.5 / atlasSize
   // const half_pix = 0
 
@@ -601,22 +595,15 @@ function makeTexCoords(tile: { id: number, flags?: number }, atlasSize: number) 
     x2 = tmp
   }
 
-  return [
-    x0, y0,
-    x3, y1,
-    x1, y2,
-    x0, y0,
-    x1, y2,
-    x2, y3,
-  ]
+  return [x0, y0, x3, y1, x1, y2, x0, y0, x1, y2, x2, y3]
 }
 
 // num must be 999 <= num <= 0
 function splitNumber(num: number): [number, number, number] {
   return [
-    Math.floor(num / 100),     // hundreds
+    Math.floor(num / 100), // hundreds
     Math.floor(num / 10) % 10, // tens
-    num % 10,                  // ones
+    num % 10, // ones
   ]
 }
 
@@ -626,33 +613,26 @@ function makeNumberVertices(x: number, y: number, digits: [number, number, numbe
   const spacing = -0.4 // distance beetween numbers
   y -= 0.05
   x -= 0.17
-  
+
   let verts = []
-  
+
   for (const _ of digits) {
-    verts.push(
-      x, y,
-      x, y + w,
-      x + w, y + w,
-      x, y,
-      x + w, y + w,
-      x + w, y
-    )
+    verts.push(x, y, x, y + w, x + w, y + w, x, y, x + w, y + w, x + w, y)
     x += w + spacing
   }
-  
+
   return verts
 }
 
 function makeNumberTexCoords(digits: [number, number, number]) {
   const tileCount = 16
-  
+
   // number offset (0 is at x=0, y=3 on the tex atlas)
   const offX = 0
   const offY = 3
-  
+
   const texCoords = []
-  
+
   for (const digit of digits) {
     const tx = offX + digit
     const ty = offY
@@ -661,17 +641,9 @@ function makeNumberTexCoords(digits: [number, number, number]) {
     const x1 = (tx + 1) / tileCount
     const y0 = ty / tileCount
     const y1 = (ty + 1) / tileCount
-    
-    texCoords.push(
-      x0, y0,
-      x0, y1,
-      x1, y1,
-      x0, y0,
-      x1, y1,
-      x1, y0
-    )
+
+    texCoords.push(x0, y0, x0, y1, x1, y1, x0, y0, x1, y1, x1, y0)
   }
 
   return texCoords
 }
-

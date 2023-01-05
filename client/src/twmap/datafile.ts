@@ -5,21 +5,21 @@ import { UUID, compare as compareUUID } from './uuid'
 import { DataReader } from './dataReader'
 
 type ItemType = {
-  type: number,
-  start: number,
-  num: number,
+  type: number
+  start: number
+  num: number
 }
 
 type DataInfo = {
-  offset: number,
-  size: number,
-  compSize: number,
+  offset: number
+  size: number
+  compSize: number
 }
 
 type Item = {
-  type: number,
-  id: number,
-  size: number,
+  type: number
+  id: number
+  size: number
   data: ArrayBuffer
 }
 
@@ -102,7 +102,7 @@ export class DataFile {
       this.itemTypes.push({
         type: reader.uint32(),
         start: reader.uint32(),
-        num: reader.uint32()
+        num: reader.uint32(),
       })
     }
 
@@ -145,7 +145,7 @@ export class DataFile {
       const arrayBuf = infl.buffer.slice(0, infl.length)
       this.decData.push(arrayBuf)
     }
-    
+
     return true
   }
 
@@ -154,8 +154,7 @@ export class DataFile {
   }
 
   getItemSize(index: number) {
-    if (index === this.numItems - 1)
-      return this.itemSize - this.itemOffsets[index]
+    if (index === this.numItems - 1) return this.itemSize - this.itemOffsets[index]
     return this.itemOffsets[index + 1] - this.itemOffsets[index]
   }
 
@@ -167,7 +166,7 @@ export class DataFile {
       type: (typeAndId >> 16) & 0xffff,
       id: typeAndId & 0xffff,
       size: this.reader.getUint32(offset + 4, true),
-      data: this.data.slice(offset + 8, offset + 8 + this.getItemSize(index))
+      data: this.data.slice(offset + 8, offset + 8 + this.getItemSize(index)),
     }
 
     return item
@@ -180,10 +179,10 @@ export class DataFile {
       }
     }
   }
-  
+
   findUuidType(uuid: UUID): ItemType | null {
     const uuidIndex = this.getType(0xffff)
-    
+
     for (let i = 0; i < uuidIndex.num; i++) {
       const item = this.getItem(uuidIndex.start + i)
 
@@ -195,8 +194,7 @@ export class DataFile {
       view.setUint32(12, view.getUint32(12, true))
       const thisUuid = new Uint8Array(view.buffer)
 
-      if(compareUUID(uuid, thisUuid))
-        return this.getType(item.id)
+      if (compareUUID(uuid, thisUuid)) return this.getType(item.id)
     }
 
     return null
@@ -207,8 +205,7 @@ export class DataFile {
 
     for (let i = 0; i < t.num; i++) {
       const item = this.getItem(t.start + i)
-      if (item.id === id)
-        return item
+      if (item.id === id) return item
     }
 
     return null

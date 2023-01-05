@@ -1,16 +1,16 @@
 import * as Info from './types'
 import type { DataFile } from './datafile'
 import type { Map } from './map'
-import {  parseColorEnvPoint, parsePositionEnvPoint, parseSoundEnvPoint } from './parser'
+import { parseColorEnvPoint, parsePositionEnvPoint, parseSoundEnvPoint } from './parser'
 
-export type EnvPos = { x: number, y: number, rotation: number }
+export type EnvPos = { x: number; y: number; rotation: number }
 export type EnvColor = Info.Color
 export type EnvSound = number
 
 export interface EnvPoint<T> {
-  time: number,
-  content: T,
-  type: Info.CurveType,
+  time: number
+  content: T
+  type: Info.CurveType
 }
 
 export abstract class Envelope<T> {
@@ -18,8 +18,8 @@ export abstract class Envelope<T> {
   name: string
   synchronized: boolean
   points: EnvPoint<T>[]
-  current: { point: T, time: number }
-  
+  current: { point: T; time: number }
+
   constructor(type: Info.EnvType) {
     this.type = type
     this.name = ''
@@ -27,16 +27,15 @@ export abstract class Envelope<T> {
     this.points = []
     this.current = { point: this.default(), time: 0 }
   }
-  
+
   abstract load(map: Map, df: DataFile, info: Info.Envelope): void
   abstract default(): T
   protected abstract interpolate(from: T, to: T, factor: number): T
   abstract clone(point: T): T
-  
+
   computePoint(time: number) {
-    if (!this.points.length)
-      return this.default()
-    
+    if (!this.points.length) return this.default()
+
     const minTime = this.points[0].time
     const maxTime = this.points[this.points.length - 1].time
     const duration = maxTime - minTime
@@ -45,11 +44,10 @@ export abstract class Envelope<T> {
     if (duration) {
       time = ((time - minTime) % duration) + minTime
       if (time < minTime) time = maxTime + (time - minTime)
-    }
-    else {
+    } else {
       time = minTime
     }
-    
+
     for (let i = 0; i < this.points.length - 1; i++) {
       const p1 = this.points[i]
       const p2 = this.points[i + 1]
@@ -58,10 +56,10 @@ export abstract class Envelope<T> {
         return this.interpolate(p1.content, p2.content, this.applyCurve(factor, p1.type))
       }
     }
-    
+
     return this.clone(this.points[0].content)
   }
-  
+
   applyCurve(t: number, curve: Info.CurveType) {
     switch (curve) {
       case Info.CurveType.STEP:
@@ -78,18 +76,17 @@ export abstract class Envelope<T> {
         return t // TODO
     }
   }
-  
+
   update(time: number) {
     this.current = { point: this.computePoint(time), time }
   }
 }
 
 export class ColorEnvelope extends Envelope<EnvColor> {
-  
   constructor() {
     super(Info.EnvType.COLOR)
   }
-  
+
   load(_map: Map, df: DataFile, info: Info.Envelope) {
     this.points = []
     this.name = info.name
@@ -108,20 +105,23 @@ export class ColorEnvelope extends Envelope<EnvColor> {
       }
       this.points.push(point)
     }
-    
+
     this.update(this.current.time)
   }
-  
+
   default(): EnvColor {
     return {
-      r: 0, g: 0, b: 0, a: 0
+      r: 0,
+      g: 0,
+      b: 0,
+      a: 0,
     }
   }
-  
+
   clone(point: EnvColor): EnvColor {
     return { ...point }
   }
-  
+
   protected interpolate(from: EnvColor, to: EnvColor, factor: number) {
     return {
       r: from.r * (1 - factor) + to.r * factor,
@@ -133,21 +133,22 @@ export class ColorEnvelope extends Envelope<EnvColor> {
 }
 
 export class PositionEnvelope extends Envelope<EnvPos> {
-  
   constructor() {
     super(Info.EnvType.POSITION)
   }
 
   default(): EnvPos {
     return {
-      x: 0, y: 0, rotation: 0
+      x: 0,
+      y: 0,
+      rotation: 0,
     }
   }
 
   clone(point: EnvPos): EnvPos {
     return { ...point }
   }
-  
+
   load(_map: Map, df: DataFile, info: Info.Envelope) {
     this.points = []
     this.name = info.name
@@ -180,11 +181,10 @@ export class PositionEnvelope extends Envelope<EnvPos> {
 }
 
 export class SoundEnvelope extends Envelope<EnvSound> {
-  
   constructor() {
     super(Info.EnvType.SOUND)
   }
-  
+
   load(_map: Map, df: DataFile, info: Info.Envelope) {
     this.points = []
     this.name = info.name
@@ -210,7 +210,7 @@ export class SoundEnvelope extends Envelope<EnvSound> {
   default(): EnvSound {
     return 0
   }
-  
+
   clone(point: EnvSound): EnvSound {
     return point
   }

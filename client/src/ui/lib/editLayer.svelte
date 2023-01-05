@@ -1,8 +1,9 @@
 <script lang="ts">
-  import type { EditLayer, DeleteLayer, ReorderLayer } from '../../server/protocol'
+  import type { EditLayer, DeleteLayer, ReorderLayer, RequestContent } from '../../server/protocol'
   import type { RenderMap } from '../../gl/renderMap'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
+  import type { FormEvent, FormInputEvent } from './util'
   import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
@@ -14,12 +15,13 @@
   import ImagePicker from './imagePicker.svelte'
   import AutomapperPicker from './automapper.svelte'
   import { createEventDispatcher } from 'svelte'
+  import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 
-  type FormEvent<T> = Event & { currentTarget: EventTarget & T }
-  type FormInputEvent = FormEvent<HTMLInputElement>
+  type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
+  type EventMap = { [K in Events]: RequestContent[K] }
 
-  const dispatch = createEventDispatcher()
-  
+  const dispatch = createEventDispatcher<EventMap>()
+
   export let rmap: RenderMap
   export let g: number
   export let l: number
@@ -27,8 +29,11 @@
   $: rgroup = rmap.groups[g]
   $: group = rgroup.group
   $: rlayer = rgroup.layers[l]
-  $: layer = rlayer.layer
+  $: layer = rlayer.layer as TilesLayer | QuadsLayer
   $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
+
+  $: images = rmap.map.images
+  $: image = layer.image
 
   function parseI32(str: string) {
     return clamp(parseInt(str), -2_147_483_648, 2_147_483_647)
@@ -52,178 +57,99 @@
     }
   }
 
-  async function onEditLayer(change: EditLayer) {
-    try {
-      showInfo('Please wait…')
-      await server.query('editlayer', change)
-      rmap.editLayer(change)
-      clearDialog()
-      dispatch('change')
-    } catch (e) {
-      showError('Failed to edit layer: ' + e)
-    }
+  function onEditLayer(change: EditLayer) {
+    dispatch('editlayer', change)
   }
-  async function onReorderLayer(change: ReorderLayer) {
-    try {
-      showInfo('Please wait…')
-      await server.query('reorderlayer', change)
-      rmap.reorderLayer(change)
-      clearDialog()
-      dispatch('change')
-    } catch (e) {
-      showError('Failed to reorder layer: ' + e)
-    }
+  function onReorderLayer(change: ReorderLayer) {
+    dispatch('reorderlayer', change)
   }
-  async function onDeleteLayer(change: DeleteLayer) {
-    try {
-      showInfo('Please wait…')
-      await server.query('deletelayer', change)
-      rmap.deleteLayer(change)
-      clearDialog()
-      dispatch('change')
-    } catch (e) {
-      showError('Failed to delete layer: ' + e)
-    }
+  function onDeleteLayer(change: DeleteLayer) {
+    dispatch('deletelayer', change)
   }
 
   function layerName(layer: Layer) {
-    const quotedName = layer.name ? " '" + layer.name + "'" : ""
+    const quotedName = layer.name ? " '" + layer.name + "'" : ''
     if (layer instanceof AnyTilesLayer) {
       switch (layer.flags) {
         case TilesLayerFlags.FRONT:
-          return "Front Layer"
+          return 'Front Layer'
         case TilesLayerFlags.GAME:
-          return "Game Layer"
+          return 'Game Layer'
         case TilesLayerFlags.SPEEDUP:
-          return "Speedup Layer"
+          return 'Speedup Layer'
         case TilesLayerFlags.SWITCH:
-          return "Switch Layer"
+          return 'Switch Layer'
         case TilesLayerFlags.TELE:
-          return "Tele Layer"
+          return 'Tele Layer'
         case TilesLayerFlags.TILES:
-          return "Tile Layer" + quotedName
+          return 'Tile Layer' + quotedName
         case TilesLayerFlags.TUNE:
-          return "Tune Layer"
+          return 'Tune Layer'
       }
-    }
-    else if (layer instanceof QuadsLayer) {
-      return "Quad Layer" + quotedName
-    }
-    else {
-      return "Layer" + quotedName
+    } else if (layer instanceof QuadsLayer) {
+      return 'Quad Layer' + quotedName
+    } else {
+      return 'Layer' + quotedName
     }
   }
 
-  function openFilePicker() {
-    if (!(layer instanceof TilesLayer) && !(layer instanceof QuadsLayer))
-      return
+  let imagePickerOpen = false
 
-    const picker = new ImagePicker({
-      target: document.body,
-      props: {
-        images: rmap.map.images,
-        image: layer.image
-      },
-    })
+  async function onImagePick(e: Event & { detail: Image | string | null }) {
+    imagePickerOpen = false
+    const image = e.detail
 
-    picker.$on('pick', async (e: Event & { detail: Image | string | null }) => {
-      picker.$destroy()
-      const image = e.detail
-
-      if (image === null) { // no image used
-        onEditLayer({ group: g, layer: l, image: null })
-      }
-      else if (image instanceof Image) { // use embedded image
-        const index = rmap.map.images.indexOf(image)
-        onEditLayer({ group: g, layer: l, image: index })
-      }
-      else { // new external image
-        const index = rmap.map.images.length
-        const url = externalImageUrl(image)
-        const embed = await showInfo('Do you wish to embed this image?', 'yesno');
-        if (embed) {
-          try {
-            showInfo('Uploading image...', 'none')
-            const resp = await fetch(url)
-            const file = await resp.arrayBuffer()
-            await server.uploadFile(file)
-            await server.query('createimage', { name: image, index, external: false })
-            const img = await queryImage({ index })
-            rmap.addImage(img)
-            onEditLayer({ group: g, layer: l, image: index })
-            clearDialog()
-          }
-          catch (e) {
-            showError('Failed to upload image: ' + e)
-          }
+    if (image === null) {
+      // no image used
+      onEditLayer({ group: g, layer: l, image: null })
+    } else if (image instanceof Image) {
+      // use embedded image
+      const index = rmap.map.images.indexOf(image)
+      onEditLayer({ group: g, layer: l, image: index })
+    } else {
+      // new external image
+      const index = rmap.map.images.length
+      const url = externalImageUrl(image)
+      const embed = await showInfo('Do you wish to embed this image?', 'yesno')
+      if (embed) {
+        try {
+          showInfo('Uploading image...', 'none')
+          const resp = await fetch(url)
+          const file = await resp.arrayBuffer()
+          await $server.uploadFile(file)
+          await $server.query('createimage', { name: image, index, external: false })
+          const img = await queryImage($server, { index })
+          rmap.addImage(img)
+          onEditLayer({ group: g, layer: l, image: index })
+          clearDialog()
+        } catch (e) {
+          showError('Failed to upload image: ' + e)
         }
-        else {
-          try {
-            showInfo('Creating image...', 'none')
-            const index = rmap.map.images.length
-            await server.query('createimage', { name: image, index, external: true })
-            const img = new Image()
-            img.loadExternal(url)
-            img.name = image
-            rmap.addImage(img)
-            onEditLayer({ group: g, layer: l, image: index })
-            clearDialog()
-          }
-          catch (e) {
-            showError('Failed to create external image: ' + e)
-          }
+      } else {
+        try {
+          showInfo('Creating image...', 'none')
+          const index = rmap.map.images.length
+          await $server.query('createimage', { name: image, index, external: true })
+          const img = new Image()
+          img.loadExternal(url)
+          img.name = image
+          rmap.addImage(img)
+          onEditLayer({ group: g, layer: l, image: index })
+          clearDialog()
+        } catch (e) {
+          showError('Failed to create external image: ' + e)
         }
       }
-    })
-
-    picker.$on('upload', async (e: Event & { detail: File }) => {
-      const image = e.detail
-      try {
-        showInfo('Uploading image...', 'none')
-        const name = image.name.replace(/\.[^\.]+$/, '')
-        const index = rmap.map.images.length
-        await server.uploadFile(await image.arrayBuffer())
-        await server.query('createimage', { name, index, external: false })
-        const data = await decodePng(image)
-        const img = new Image()
-        img.loadEmbedded(data)
-        img.name = name
-        rmap.addImage(img)
-        picker.$set({ images: rmap.map.images })
-        clearDialog()
-      }
-      catch (e) {
-        showError('Failed to upload image: ' + e)
-      }
-    })
-
-    picker.$on('delete', async (e: Event & { detail: Image }) => {
-      const image = e.detail
-
-      try {
-        const index = rmap.map.images.indexOf(image)
-        await server.query('deleteimage', { index })
-        rmap.removeImage(index)
-        picker.$set({ images: rmap.map.images })
-      }
-      catch (e) {
-        showError('Failed to delete image: ' + e)
-      }
-    })
-
-    picker.$on('cancel', () => {
-      picker.$destroy()
-    })
+    }
   }
-  
+
   function openAutomapper() {
-    if (!(layer instanceof TilesLayer))
-      return
+    if (!(layer instanceof TilesLayer)) return
 
     const picker = new AutomapperPicker({
       target: document.body,
       props: {
-        layer
+        layer,
       },
     })
 
@@ -231,26 +157,55 @@
       picker.$destroy()
     })
   }
-  
+
+  async function onImageUpload(e: Event & { detail: File }) {
+    const image = e.detail
+    try {
+      showInfo('Uploading image…', 'none')
+      const name = image.name.replace(/\.[^\.]+$/, '')
+      const index = rmap.map.images.length
+      await $server.uploadFile(await image.arrayBuffer())
+      await $server.query('createimage', { name, index, external: false })
+      const data = await decodePng(image)
+      const img = new Image()
+      img.loadEmbedded(data)
+      img.name = name
+      rmap.addImage(img)
+      images = images // update the component
+      showInfo('Image available in the Embedded section.')
+    } catch (e) {
+      showError('Failed to upload image: ' + e)
+    }
+  }
+
+  async function onImageDelete(e: Event & { detail: Image }) {
+    const image = e.detail
+
+    try {
+      const index = rmap.map.images.indexOf(image)
+      await $server.query('deleteimage', { index })
+      rmap.removeImage(index)
+      images = images // update the component
+    } catch (e) {
+      showError('Failed to delete image: ' + e)
+    }
+  }
+
   function onEditGroup(e: FormInputEvent) {
     const newGroup = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
-    if (!isNaN(newGroup))
-      onReorderLayer({ group: g, layer: l, newGroup, newLayer: 0 })
+    if (!isNaN(newGroup)) onReorderLayer({ group: g, layer: l, newGroup, newLayer: 0 })
   }
   function onEditOrder(e: FormInputEvent) {
-    const newLayer = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
-    if (!isNaN(newLayer))
-      onReorderLayer({ group: g, layer: l, newGroup: g, newLayer })
+    const newLayer = clamp(parseInt(e.currentTarget.value), 0, group.layers.length - 1)
+    if (!isNaN(newLayer)) onReorderLayer({ group: g, layer: l, newGroup: g, newLayer })
   }
   function onEditWidth(e: FormInputEvent) {
     const width = clamp(parseInt(e.currentTarget.value), 2, 10000)
-    if (!isNaN(width))
-      onEditLayer({ group: g, layer: l, width })
+    if (!isNaN(width)) onEditLayer({ group: g, layer: l, width })
   }
   function onEditHeight(e: FormInputEvent) {
     const height = clamp(parseInt(e.currentTarget.value), 2, 10000)
-    if (!isNaN(height))
-      onEditLayer({ group: g, layer: l, height })
+    if (!isNaN(height)) onEditLayer({ group: g, layer: l, height })
   }
   function onEditDetail(_: FormInputEvent) {
     const flags = layer.detail ? LayerFlags.NONE : LayerFlags.DETAIL
@@ -277,8 +232,7 @@
   function onEditColorEnvOffset(e: FormInputEvent) {
     if (layer instanceof TilesLayer) {
       const colorEnvOffset = parseI32(e.currentTarget.value)
-      if (!isNaN(colorEnvOffset))
-        onEditLayer({ group: g, layer: l, colorEnvOffset })
+      if (!isNaN(colorEnvOffset)) onEditLayer({ group: g, layer: l, colorEnvOffset })
     }
   }
   function onEditName(e: FormInputEvent) {
@@ -291,44 +245,115 @@
   function onAutomap() {
     alert('TODO')
   }
-
 </script>
 
-
 <div class="edit-layer">
-  <span>{layerName(layer)}</span>
+  <h3 class="bx--modal-header__heading">{layerName(layer)}</h3>
   {#if !isPhysicsLayer(layer)}
-    <label>Group <input type="number" min={0} max={rmap.groups.length - 1} value={g} on:change={onEditGroup} /></label>
+    <label>
+      Group <input
+        type="number"
+        min={0}
+        max={rmap.groups.length - 1}
+        value={g}
+        on:change={onEditGroup}
+      />
+    </label>
   {/if}
-  <label>Order <input type="number" min={0} max={group.layers.length - 1} value={l} on:change={onEditOrder} /></label>
+  <label>
+    Order <input
+      type="number"
+      min={0}
+      max={group.layers.length - 1}
+      value={l}
+      on:change={onEditOrder}
+    />
+  </label>
   {#if layer instanceof AnyTilesLayer}
-    <label>Width <input type="number" min={2} max={10000} value={layer.width} on:change={onEditWidth}></label>
-    <label>Height <input type="number" min={2} max={10000} value={layer.height} on:change={onEditHeight}></label>
+    <label>
+      Width <input type="number" min={2} max={10000} value={layer.width} on:change={onEditWidth} />
+    </label>
+    <label>
+      Height <input
+        type="number"
+        min={2}
+        max={10000}
+        value={layer.height}
+        on:change={onEditHeight}
+      />
+    </label>
   {/if}
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
-    <label>Detail <input type="checkbox" checked={layer.detail} on:change={onEditDetail}></label>
-    {@const img = layer.image ? layer.image.name : "<none>" }
-    <label>Image <input type="button" value={img} on:click={openFilePicker}></label>
+    <label>
+      Detail <input type="checkbox" checked={layer.detail} on:change={onEditDetail} />
+    </label>
+    {@const img = layer.image ? layer.image.name : '<none>'}
+    <label>
+      Image <input type="button" value={img} on:click={() => (imagePickerOpen = true)} />
+    </label>
   {/if}
   {#if layer instanceof TilesLayer}
-    <label>Color <input type="color" value={colorToStr(layer.color)} on:change={onEditColor}></label>
-    <label>Opacity <input type="range" min={0} max={255} value={layer.color.a} on:change={onEditOpacity}></label>
-    <label>Color Envelope <select on:change={onEditColorEnv}>
-      <option selected={layer.colorEnv === null} value={null}>None</option>
-      {#each colorEnvelopes as env}
-        {@const i = rmap.map.envelopes.indexOf(env)}
-        <option selected={layer.colorEnv === env} value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
-      {/each}
-    </select></label>
-    <label>Color Env. Offset <input type="number" value={layer.colorEnvOffset} on:change={onEditColorEnvOffset}></label>
-    {@const automapper = layer.automapper.config ? layer.automapper.config.name : "<none>" }
-    <label>Automapper <input type="button" value={automapper} on:click={openAutomapper}></label>
-    <button disabled={layer.automapper.config === null || layer.automapper.automatic} on:click={onAutomap}>Apply Automapper</button>
+    <label>
+      Color <input type="color" value={colorToStr(layer.color)} on:change={onEditColor} />
+    </label>
+    <label>
+      Opacity <input
+        type="range"
+        min={0}
+        max={255}
+        value={layer.color.a}
+        on:change={onEditOpacity}
+      />
+    </label>
+    <label>
+      Color Envelope <select on:change={onEditColorEnv}>
+        <option selected={layer.colorEnv === null} value={null}>None</option>
+        {#each colorEnvelopes as env}
+          {@const i = rmap.map.envelopes.indexOf(env)}
+          <option selected={layer.colorEnv === env} value={i}>
+            {'#' + i + ' ' + (env.name || '(unnamed)')}
+          </option>
+        {/each}
+      </select>
+    </label>
+    <label>
+      Color Env. Offset <input
+        type="number"
+        value={layer.colorEnvOffset}
+        on:change={onEditColorEnvOffset}
+      />
+    </label>
+    {@const automapper = layer.automapper.config}
+    <label>
+      Automapper <input type="button" value={automapper} on:click={openAutomapper} />
+    </label>
+    <button
+      disabled={layer.automapper.config === null || layer.automapper.automatic}
+      on:click={onAutomap}
+    >
+      Apply Automapper
+    </button>
   {/if}
   {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
-    <label>Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName}></label>
+    <label>
+      Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName} />
+    </label>
   {/if}
   {#if !(layer instanceof GameLayer)}
-    <button on:click={onDelete}>Delete layer</button>
+    <button class="danger large" on:click={onDelete}>Delete layer</button>
   {/if}
 </div>
+
+<ComposedModal bind:open={imagePickerOpen} size="lg">
+  <ModalHeader title="Pick an image" />
+  <ModalBody hasForm>
+    <ImagePicker
+      {images}
+      {image}
+      on:pick={onImagePick}
+      on:cancel={() => (imagePickerOpen = false)}
+      on:upload={onImageUpload}
+      on:delete={onImageDelete}
+    />
+  </ModalBody>
+</ComposedModal>

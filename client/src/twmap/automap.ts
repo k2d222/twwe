@@ -1,6 +1,5 @@
-import { TilesLayer } from "./tilesLayer"
-import * as Info from "./types"
-
+import { TilesLayer } from './tilesLayer'
+import * as Info from './types'
 
 /// This file contains parsing and linting of automapper files, and application to tileslayers.
 
@@ -15,30 +14,30 @@ export interface Run {
 }
 
 export interface IndexRule {
-  tile: Info.Tile,
-  rules: Rule[],
-  defaultRule: boolean,
+  tile: Info.Tile
+  rules: Rule[]
+  defaultRule: boolean
 }
 
 export type Rule = PosRule | RandomRule
 
 export interface PosRule {
-  offset: Info.Coord,
-  states: TileState[],
-  invert: boolean, // whether to invert state matches, e.g. state.id = 0 will match all tiles with id != 0.
+  offset: Info.Coord
+  states: TileState[]
+  invert: boolean // whether to invert state matches, e.g. state.id = 0 will match all tiles with id != 0.
 }
 
 export const defaultPosRule: PosRule = {
   offset: { x: 0, y: 0 },
   states: [{ id: 0 }],
-  invert: true
+  invert: true,
 }
 
 export interface TileState {
-  id: number,
-  vFlip?: boolean,
-  hFlip?: boolean,
-  rotate?: boolean,
+  id: number
+  vFlip?: boolean
+  hFlip?: boolean
+  rotate?: boolean
 }
 
 export interface RandomRule {
@@ -47,13 +46,15 @@ export interface RandomRule {
 
 // monadic result type à la rust.
 
-type Result<T, E> = {
-  success: true,
-  content: T,
-} | {
-  success: false,
-  content: E,
-}
+type Result<T, E> =
+  | {
+      success: true
+      content: T
+    }
+  | {
+      success: false
+      content: E
+    }
 
 function ok<T>(content: T): Result<T, any> {
   return { success: true, content }
@@ -78,33 +79,38 @@ enum TokenErrorKind {
 }
 
 interface TokenError {
-  range: Range,
-  line: number,
-  reason: TokenErrorKind,
-  note?: string,
+  range: Range
+  line: number
+  reason: TokenErrorKind
+  note?: string
 }
 
 function tokError(reason: TokenErrorKind, line: number, range: Range, note?: string): TokenError {
   return { range, line, reason, note }
 }
-  
+
 // export enum Keyword {
 //   NewRun,
 //   XFLIP, YFLIP, ROTATE,
 //   Pos,
-//   EMPTY, FULL, 
+//   EMPTY, FULL,
 //   INDEX, NOTINDEX,
 //   NONE, OR,
 //   NoDefaultRule,
 //   NoLayerCopy,
 // }
 
-type Token = { line: number, range: Range } & ({ word: string } | { header: string } | { float: number } | { int: number })
+type Token = { line: number; range: Range } & (
+  | { word: string }
+  | { header: string }
+  | { float: number }
+  | { int: number }
+)
 
 class FileReader {
   state: {
-    line: number,
-    token: number,
+    line: number
+    token: number
   }
   lines: string[]
 
@@ -113,12 +119,11 @@ class FileReader {
       line: -1, // call to nextline() follows
       token: 0,
     }
-    this.lines = content
-      .split(/\r?\n/)
+    this.lines = content.split(/\r?\n/)
 
     this.nextLine()
   }
-  
+
   nextLine() {
     this.state.line++
     this.state.token = 0
@@ -126,100 +131,97 @@ class FileReader {
     // ignore comments, newlines etc.
     while (this.state.line < this.lines.length) {
       const line = this.lines[this.state.line]
-      if (line === '' || /^\s*#/.test(line) || /^\s+$/.test(line))
-        this.state.line++
-      else
-        break
+      if (line === '' || /^\s*#/.test(line) || /^\s+$/.test(line)) this.state.line++
+      else break
     }
   }
-  
+
   token(): Result<Token, TokenError> {
     if (this.state.line >= this.lines.length) {
       return err(tokError(TokenErrorKind.MissingToken, this.state.line, [0, 0]))
     }
 
     const line = this.lines[this.state.line].substring(this.state.token)
-    
+
     if (line === '' || /^\s*#/.test(line)) {
       const range: Range = [this.state.token, this.state.token]
       return err(tokError(TokenErrorKind.MissingToken, this.state.line, range))
-    }
-    
-    else if (line[0] === '[') {
+    } else if (line[0] === '[') {
       const end = line.indexOf(']')
 
       if (end === -1) {
         const range: Range = [this.state.token, this.state.token + line.length]
         this.state.token = range[1]
-        return err(tokError(TokenErrorKind.InvalidHeader, this.state.line, range, 'Missing closing bracket "]"'))
-      }
-      else {
+        return err(
+          tokError(
+            TokenErrorKind.InvalidHeader,
+            this.state.line,
+            range,
+            'Missing closing bracket "]"'
+          )
+        )
+      } else {
         const range: Range = [this.state.token, this.state.token + end + 1]
         this.state.token = range[1]
         return ok({ header: line.substring(1, end), line: this.state.line, range })
       }
-    }
-    
-    else if (/^[-+]?[\d\.]+%?/.test(line)) {
+    } else if (/^[-+]?[\d\.]+%?/.test(line)) {
       let str = line.split(/\s/)[0]
       const range: Range = [this.state.token, this.state.token + str.length]
       this.state.token = range[1] + 1 // add a single space
-      
+
       if (str[str.length - 1] === '%') {
         const num = Number(str.substring(0, str.length - 1))
-        if (isNaN(num))
-          return err(tokError(TokenErrorKind.InvalidNumber, this.state.line, range))
-        else
-          return ok({ float: num / 100.0, line: this.state.line, range })
-      }
-      else {
+        if (isNaN(num)) return err(tokError(TokenErrorKind.InvalidNumber, this.state.line, range))
+        else return ok({ float: num / 100.0, line: this.state.line, range })
+      } else {
         const num = Number(str)
-        if (isNaN(num))
-          return err(tokError(TokenErrorKind.InvalidNumber, this.state.line, range))
-        else if (str.indexOf('.') === -1)
-          return ok({ int: num, line: this.state.line, range })
-        else
-          return ok({ float: num, line: this.state.line, range })
+        if (isNaN(num)) return err(tokError(TokenErrorKind.InvalidNumber, this.state.line, range))
+        else if (str.indexOf('.') === -1) return ok({ int: num, line: this.state.line, range })
+        else return ok({ float: num, line: this.state.line, range })
       }
-    }
-    
-    else {
+    } else {
       const word = line.split(/\s/)[0]
       const range: Range = [this.state.token, this.state.token + word.length]
       this.state.token = range[1] + 1 // add a single space
       return ok({ range, line: this.state.line, word })
     }
   }
-  
+
   peek() {
     const tok = this.state.token
     const res = this.token()
     this.state.token = tok
     return res
   }
-  
+
   lineEmpty() {
     const tok = this.peek()
     return tok.success === false && tok.content.reason === TokenErrorKind.MissingToken
   }
-  
+
   empty() {
-    return this.state.line >= this.lines.length
-        || this.state.line === this.lines.length - 1
-        && this.lines[this.state.line].length <= this.state.token
+    return (
+      this.state.line >= this.lines.length ||
+      (this.state.line === this.lines.length - 1 &&
+        this.lines[this.state.line].length <= this.state.token)
+    )
   }
 }
 
 /// linting
 
-export enum LintLevel { Warning, Error }
+export enum LintLevel {
+  Warning,
+  Error,
+}
 
 export interface Lint {
-  line: number,
-  range: Range,
-  level: LintLevel,
-  reason: string,
-  note?: string,
+  line: number
+  range: Range
+  level: LintLevel
+  reason: string
+  note?: string
 }
 
 function lintWarn(reason: string, line: number, range: Range, note?: string): Lint {
@@ -239,7 +241,14 @@ function lintHeader(reader: FileReader): Lint[] {
   const tok = reader.token()
 
   if (!tok.success || !('header' in tok.content))
-    errs.push(lintErr('Expected a configuration name', reader.state.line, tok.content.range, 'Configuration name are written in square brackets, e.g. "[my config]"'))
+    errs.push(
+      lintErr(
+        'Expected a configuration name',
+        reader.state.line,
+        tok.content.range,
+        'Configuration name are written in square brackets, e.g. "[my config]"'
+      )
+    )
 
   return errs
 }
@@ -247,7 +256,7 @@ function lintHeader(reader: FileReader): Lint[] {
 function lintIndex(reader: FileReader): Lint[] {
   const errs: Lint[] = []
   let tok = reader.token()
-  
+
   if (!tok.success || !('word' in tok.content) || tok.content.word !== 'Index') {
     errs.push(lintErr('Expected "Index"', reader.state.line, tok.content.range))
     return errs
@@ -258,30 +267,36 @@ function lintIndex(reader: FileReader): Lint[] {
     errs.push(lintErr('Expected a tile id', reader.state.line, tok.content.range))
     return errs
   }
-  
-  let xflip = false, yflip = false, rotate = false
-  
+
+  let xflip = false,
+    yflip = false,
+    rotate = false
+
   while (!reader.lineEmpty()) {
     tok = reader.token()
     const validToks = ['XFLIP', 'YFLIP', 'ROTATE']
 
     if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word)) {
-      errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
-    }
-    else if (tok.content.word === 'XFLIP') {
+      errs.push(
+        lintErr(
+          'Unexpected token',
+          reader.state.line,
+          tok.content.range,
+          'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')
+        )
+      )
+    } else if (tok.content.word === 'XFLIP') {
       if (xflip) errs.push(lintWarn('Duplicate "XFLIP"', reader.state.line, tok.content.range))
       else xflip = true
-    }
-    else if (tok.content.word === 'YFLIP') {
+    } else if (tok.content.word === 'YFLIP') {
       if (yflip) errs.push(lintWarn('Duplicate "YFLIP"', reader.state.line, tok.content.range))
       else yflip = true
-    }
-    else if (tok.content.word === 'ROTATE') {
+    } else if (tok.content.word === 'ROTATE') {
       if (rotate) errs.push(lintWarn('Duplicate "ROTATE"', reader.state.line, tok.content.range))
       else rotate = true
     }
   }
-  
+
   return errs
 }
 
@@ -297,65 +312,128 @@ function lintPos(reader: FileReader): Lint[] {
   // offset
   tok = reader.token()
   if (!tok.success || !('int' in tok.content))
-    errs.push(lintErr('Expected position x-offset', reader.state.line, tok.content.range, '"Pos" must be followed by a x-offset, then a y-offset, e.g. "Pos -1 1"'))
+    errs.push(
+      lintErr(
+        'Expected position x-offset',
+        reader.state.line,
+        tok.content.range,
+        '"Pos" must be followed by a x-offset, then a y-offset, e.g. "Pos -1 1"'
+      )
+    )
   tok = reader.token()
   if (!tok.success || !('int' in tok.content))
-    errs.push(lintErr('Expected position y-offset', reader.state.line, tok.content.range, '"Pos" must be followed by a x-offset, then a y-offset, e.g. "Pos -1 1"'))
+    errs.push(
+      lintErr(
+        'Expected position y-offset',
+        reader.state.line,
+        tok.content.range,
+        '"Pos" must be followed by a x-offset, then a y-offset, e.g. "Pos -1 1"'
+      )
+    )
 
   // rule
   tok = reader.token()
   const validToks = ['EMPTY', 'FULL', 'INDEX', 'NOTINDEX']
 
   if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word))
-    errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
-
+    errs.push(
+      lintErr(
+        'Unexpected token',
+        reader.state.line,
+        tok.content.range,
+        'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')
+      )
+    )
   else if (tok.content.word === 'INDEX' || tok.content.word === 'NOTINDEX') {
     tok = reader.token()
     if (!tok.success || !('int' in tok.content))
-      errs.push(lintErr('Expected a tile index', reader.state.line, tok.content.range, '"INDEX" or "NOTINDEX" must be followed by a tile index, e.g. "INDEX 10"'))
-    
-    let none = false, xflip = false, yflip = false, rotate = false
-  
+      errs.push(
+        lintErr(
+          'Expected a tile index',
+          reader.state.line,
+          tok.content.range,
+          '"INDEX" or "NOTINDEX" must be followed by a tile index, e.g. "INDEX 10"'
+        )
+      )
+
+    let none = false,
+      xflip = false,
+      yflip = false,
+      rotate = false
+
     while (!reader.lineEmpty()) {
       tok = reader.token()
       const validToks = ['XFLIP', 'YFLIP', 'ROTATE', 'OR', 'NONE']
 
       if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word)) {
-        errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
-      }
-      else if (tok.content.word === 'XFLIP') {
-        if (xflip)
-          errs.push(lintWarn('Duplicate "XFLIP"', reader.state.line, tok.content.range))
+        errs.push(
+          lintErr(
+            'Unexpected token',
+            reader.state.line,
+            tok.content.range,
+            'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')
+          )
+        )
+      } else if (tok.content.word === 'XFLIP') {
+        if (xflip) errs.push(lintWarn('Duplicate "XFLIP"', reader.state.line, tok.content.range))
         else if (none)
-          errs.push(lintWarn('"ROTATE" after a "NONE"', reader.state.line, tok.content.range, '"NONE" conflicts with other flags'))
+          errs.push(
+            lintWarn(
+              '"ROTATE" after a "NONE"',
+              reader.state.line,
+              tok.content.range,
+              '"NONE" conflicts with other flags'
+            )
+          )
         xflip = true
-      }
-      else if (tok.content.word === 'YFLIP') {
-        if (yflip)
-          errs.push(lintWarn('Duplicate "YFLIP"', reader.state.line, tok.content.range))
+      } else if (tok.content.word === 'YFLIP') {
+        if (yflip) errs.push(lintWarn('Duplicate "YFLIP"', reader.state.line, tok.content.range))
         else if (none)
-          errs.push(lintWarn('"ROTATE" after a "NONE"', reader.state.line, tok.content.range, '"NONE" conflicts with other flags'))
+          errs.push(
+            lintWarn(
+              '"ROTATE" after a "NONE"',
+              reader.state.line,
+              tok.content.range,
+              '"NONE" conflicts with other flags'
+            )
+          )
         yflip = true
-      }
-      else if (tok.content.word === 'ROTATE') {
-        if (rotate)
-          errs.push(lintWarn('Duplicate "ROTATE"', reader.state.line, tok.content.range))
+      } else if (tok.content.word === 'ROTATE') {
+        if (rotate) errs.push(lintWarn('Duplicate "ROTATE"', reader.state.line, tok.content.range))
         else if (none)
-          errs.push(lintWarn('"ROTATE" after a "NONE"', reader.state.line, tok.content.range, '"NONE" conflicts with other flags'))
+          errs.push(
+            lintWarn(
+              '"ROTATE" after a "NONE"',
+              reader.state.line,
+              tok.content.range,
+              '"NONE" conflicts with other flags'
+            )
+          )
         rotate = true
-      }
-      else if (tok.content.word === 'NONE') {
-        if (none)
-          errs.push(lintWarn('Duplicate "NONE"', reader.state.line, tok.content.range))
+      } else if (tok.content.word === 'NONE') {
+        if (none) errs.push(lintWarn('Duplicate "NONE"', reader.state.line, tok.content.range))
         else if (xflip || yflip || rotate)
-          errs.push(lintWarn('"NONE" preceded by a "XFLIP", "YFLIP" or "ROTATE"', reader.state.line, tok.content.range, '"NONE" conflicts with the previous flags'))
+          errs.push(
+            lintWarn(
+              '"NONE" preceded by a "XFLIP", "YFLIP" or "ROTATE"',
+              reader.state.line,
+              tok.content.range,
+              '"NONE" conflicts with the previous flags'
+            )
+          )
         none = true
         xflip = yflip = rotate = false
-      }
-      else if (tok.content.word === 'OR') {
+      } else if (tok.content.word === 'OR') {
         tok = reader.token()
         if (!tok.success || !('int' in tok.content))
-          errs.push(lintErr('Expected a tile index', reader.state.line, tok.content.range, '"OR" must be followed by a tile index, e.g. "INDEX 3 OR 4"'))
+          errs.push(
+            lintErr(
+              'Expected a tile index',
+              reader.state.line,
+              tok.content.range,
+              '"OR" must be followed by a tile index, e.g. "INDEX 3 OR 4"'
+            )
+          )
         xflip = yflip = rotate = none = false
       }
     }
@@ -374,7 +452,7 @@ function lintRandom(reader: FileReader): Lint[] {
   }
 
   tok = reader.token()
-  if (!tok.success || !('int' in tok.content) && !('float' in tok.content)) {
+  if (!tok.success || (!('int' in tok.content) && !('float' in tok.content))) {
     errs.push(lintErr('Expected a number', reader.state.line, tok.content.range))
     return errs
   }
@@ -398,8 +476,9 @@ function lintAutomapper(reader: FileReader): Lint[] {
 
   while (!reader.empty()) {
     let tok = reader.token()
-    
-    if (tok.success && 'header' in tok.content) { // finished config
+
+    if (tok.success && 'header' in tok.content) {
+      // finished config
       if (!indexRule)
         errs.push(lintWarn('Previous config is empty', reader.state.line, tok.content.range))
       reader.state.token = 0
@@ -407,34 +486,36 @@ function lintAutomapper(reader: FileReader): Lint[] {
     }
 
     const validToks = ['NoLayerCopy', 'Index']
-    if (indexRule)
-      validToks.push('NewRun', 'Pos', 'Random', 'NoDefaultRule')
+    if (indexRule) validToks.push('NewRun', 'Pos', 'Random', 'NoDefaultRule')
 
     if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word))
-      errs.push(lintErr('Unexpected token', reader.state.line, tok.content.range, 'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')))
-
+      errs.push(
+        lintErr(
+          'Unexpected token',
+          reader.state.line,
+          tok.content.range,
+          'Expected one of ' + validToks.map(t => '"' + t + '"').join(', ')
+        )
+      )
     else if (tok.content.word === 'NoLayerCopy') {
-      if (noLayerCopy) errs.push(lintWarn('Duplicate "NoLayerCopy"', reader.state.line, tok.content.range))
+      if (noLayerCopy)
+        errs.push(lintWarn('Duplicate "NoLayerCopy"', reader.state.line, tok.content.range))
       else noLayerCopy = true
-    }
-    else if (tok.content.word === 'Index') {
+    } else if (tok.content.word === 'Index') {
       reader.state.token = 0
       errs.push(...lintIndex(reader))
       indexRule = true
-    }
-    else if (tok.content.word === 'NewRun') {
+    } else if (tok.content.word === 'NewRun') {
       // TODO
-    }
-    else if (tok.content.word === 'Pos') {
+    } else if (tok.content.word === 'Pos') {
       reader.state.token = 0
       errs.push(...lintPos(reader))
-    }
-    else if (tok.content.word === 'Random') {
+    } else if (tok.content.word === 'Random') {
       reader.state.token = 0
       errs.push(...lintRandom(reader))
-    }
-    else if (tok.content.word === 'NoDefaultRule') {
-      if (noDefaultRule) errs.push(lintWarn('Duplicate "NoDefaultRule"', reader.state.line, tok.content.range))
+    } else if (tok.content.word === 'NoDefaultRule') {
+      if (noDefaultRule)
+        errs.push(lintWarn('Duplicate "NoDefaultRule"', reader.state.line, tok.content.range))
       else noDefaultRule = true
     }
 
@@ -451,11 +532,11 @@ function lintAutomapper(reader: FileReader): Lint[] {
 export function lint(content: string): Lint[] {
   const reader = new FileReader(content)
   const errs: Lint[] = []
-  
-  while(!reader.empty()) {
+
+  while (!reader.empty()) {
     errs.push(...lintAutomapper(reader))
   }
-  
+
   return errs
 }
 
@@ -463,12 +544,12 @@ export function lint(content: string): Lint[] {
 
 export function parse(content: string): Automapper[] | null {
   const reader = new FileReader(content)
-  
+
   const automappers: Automapper[] = []
   let automapper: Automapper | null = null
-  let run: Run | null = null 
+  let run: Run | null = null
   let indexRule: IndexRule | null = null
-  
+
   while (!reader.empty()) {
     let tok = reader.token()
     if ('header' in tok.content) {
@@ -477,20 +558,17 @@ export function parse(content: string): Automapper[] | null {
       run = { layerCopy: true, indexRules: [] }
       automapper = { name, runs: [run] }
       automappers.push(automapper)
-    }
-    else if (!('word' in tok.content) || !automapper) { // invalid line, skip
+    } else if (!('word' in tok.content) || !automapper) {
+      // invalid line, skip
       continue
-    }
-    else if (tok.content.word === 'NewRun') {
+    } else if (tok.content.word === 'NewRun') {
       run = { layerCopy: true, indexRules: [] }
       automapper.runs.push(run)
       indexRule = null
-    }
-    else if (tok.content.word === 'Index') {
+    } else if (tok.content.word === 'Index') {
       // id
       tok = reader.token()
-      if (!tok.success || !('int' in tok.content))
-        return null
+      if (!tok.success || !('int' in tok.content)) return null
       const id = tok.content.int
 
       // flags
@@ -503,48 +581,42 @@ export function parse(content: string): Automapper[] | null {
           else if (tok.content.word === 'ROTATE') flags &= Info.TileFlags.ROTATE
         }
       } while (tok.success)
-      
+
       const tile: Info.Tile = { id, flags }
       indexRule = { tile, rules: [], defaultRule: true }
       run.indexRules.push(indexRule)
-    }
-    else if (indexRule !== null && tok.content.word === 'Pos') {
+    } else if (indexRule !== null && tok.content.word === 'Pos') {
       // offset
       tok = reader.token()
-      if (!tok.success || !('int' in tok.content))
-        return null
+      if (!tok.success || !('int' in tok.content)) return null
       const x = tok.content.int
       tok = reader.token()
-      if (!tok.success || !('int' in tok.content))
-        return null
+      if (!tok.success || !('int' in tok.content)) return null
       const y = tok.content.int
       const offset = { x, y }
-  
+
       // rule
       tok = reader.token()
-      if (!tok.success || !('word' in tok.content))
-        return null
+      if (!tok.success || !('word' in tok.content)) return null
 
       if (['EMPTY', 'FULL'].includes(tok.content.word)) {
         const rule: PosRule = {
           offset: { x, y },
           states: [{ id: 0 }],
-          invert: tok.content.word === 'FULL'
+          invert: tok.content.word === 'FULL',
         }
         indexRule.rules.push(rule)
-      }
-      else if (['INDEX', 'NOTINDEX'].includes(tok.content.word)) {
+      } else if (['INDEX', 'NOTINDEX'].includes(tok.content.word)) {
         const invert = tok.content.word === 'NOTINDEX'
 
         // id
         tok = reader.token()
-        if (!tok.success || !('int' in tok.content))
-          return null
+        if (!tok.success || !('int' in tok.content)) return null
         const id = tok.content.int
-    
+
         let state: TileState = { id }
-        const states = [ state ]
-    
+        const states = [state]
+
         // flags
         do {
           tok = reader.token()
@@ -553,27 +625,22 @@ export function parse(content: string): Automapper[] | null {
               state.vFlip = true
               if (!('hFlip' in state)) state.hFlip = false
               if (!('rotate' in state)) state.rotate = false
-            }
-            else if (tok.content.word === 'YFLIP') {
+            } else if (tok.content.word === 'YFLIP') {
               if (!('vFlip' in state)) state.vFlip = false
               state.hFlip = true
               if (!('rotate' in state)) state.rotate = false
-            }
-            else if (tok.content.word === 'ROTATE') {
+            } else if (tok.content.word === 'ROTATE') {
               if (!('vFlip' in state)) state.vFlip = false
               if (!('hFlip' in state)) state.hFlip = false
               state.rotate = true
-            }
-            else if (tok.content.word === 'NONE') {
+            } else if (tok.content.word === 'NONE') {
               state.vFlip = false
               state.hFlip = false
               state.rotate = false
-            }
-            else if (tok.content.word === 'OR') {
+            } else if (tok.content.word === 'OR') {
               // id
               tok = reader.token()
-              if (!tok.success || !('int' in tok.content))
-                return null
+              if (!tok.success || !('int' in tok.content)) return null
               const id = tok.content.int
               state = { id }
               states.push(state)
@@ -584,27 +651,22 @@ export function parse(content: string): Automapper[] | null {
         const rule: PosRule = { offset, states, invert }
         indexRule.rules.push(rule)
       }
-    }
-    else if (indexRule !== null && tok.content.word === 'Random') {
+    } else if (indexRule !== null && tok.content.word === 'Random') {
       tok = reader.token()
       let coef = 1.0
-      if (tok.success && 'float' in tok.content)
-        coef = tok.content.float
-      else if (tok.success && 'int' in tok.content)
-        coef = 1.0 / tok.content.int
+      if (tok.success && 'float' in tok.content) coef = tok.content.float
+      else if (tok.success && 'int' in tok.content) coef = 1.0 / tok.content.int
       const rule: RandomRule = { coef }
       indexRule.rules.push(rule)
-    }
-    else if (indexRule !== null && tok.content.word === 'NoDefaultRule') {
+    } else if (indexRule !== null && tok.content.word === 'NoDefaultRule') {
       indexRule.defaultRule = false
-    }
-    else if (run !== null && tok.content.word === 'NoLayerCopy') {
+    } else if (run !== null && tok.content.word === 'NoLayerCopy') {
       run.layerCopy = false
     }
 
     reader.nextLine()
   }
-  
+
   return automappers
 }
 
@@ -642,7 +704,7 @@ function hashLocation(seed: number, run: number, rule: number, x: number, y: num
 
 function cloneLayer(layer: TilesLayer) {
   const clone = new TilesLayer()
-  clone.init(layer.width, layer.height, (i) => TilesLayer.cloneTile(layer.tiles[i]))
+  clone.init(layer.width, layer.height, i => TilesLayer.cloneTile(layer.tiles[i]))
   return clone
 }
 
@@ -651,9 +713,9 @@ function tileMatches(tile: Info.Tile, test: TileState) {
   const vFlip = (tile.flags & Info.TileFlags.VFLIP) !== 0
   const hFlip = (tile.flags & Info.TileFlags.HFLIP) !== 0
   const rotate = (tile.flags & Info.TileFlags.ROTATE) !== 0
-  if (('vFlip' in test) && test.vFlip !== vFlip) return false
-  else if (('hFlip' in test) && test.hFlip !== hFlip) return false
-  else if (('rotate' in test) && test.rotate !== rotate) return false
+  if ('vFlip' in test && test.vFlip !== vFlip) return false
+  else if ('hFlip' in test && test.hFlip !== hFlip) return false
+  else if ('rotate' in test && test.rotate !== rotate) return false
   return true
 }
 
@@ -665,36 +727,32 @@ function posRuleMatches(rule: PosRule, layer: TilesLayer, x: number, y: number) 
 }
 
 export function automap(layer: TilesLayer, automapper: Automapper, seed: number) {
-  if (seed === 0)
-    seed = Math.floor(Math.random() * RAND_MAX)
-  
+  if (seed === 0) seed = Math.floor(Math.random() * RAND_MAX)
+
   let r1 = 0
   for (const run of automapper.runs) {
     let srcLayer = run.layerCopy ? cloneLayer(layer) : layer
-    
+
     for (let y = 0; y < layer.height; y++) {
       for (let x = 0; x < layer.height; x++) {
-        
         let r2 = 0
         for (const irule of run.indexRules) {
           let match = true
-          
+
           for (const rule of irule.rules) {
             if ('coef' in rule) {
               match = match && hashLocation(seed, r1, r2, x, y) < HASH_MAX * rule.coef
-            }
-            else {
+            } else {
               match = match && posRuleMatches(rule, srcLayer, x, y)
             }
           }
-          
+
           if (match) {
             layer.setTile(x, y, irule.tile)
           }
-          
+
           r2++
         }
-        
       }
     }
     r1++

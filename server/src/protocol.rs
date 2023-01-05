@@ -83,6 +83,13 @@ pub struct DeleteMap {
     pub name: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameMap {
+    pub name: String,
+    pub new_name: String,
+}
+
 // GROUPS
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -410,9 +417,11 @@ pub enum Error {
 pub enum RequestContent {
     CreateMap(CreateMap),
     JoinMap(JoinMap),
+    LeaveMap,
     EditMap(EditMap),
     SaveMap(SaveMap),
     DeleteMap(DeleteMap),
+    RenameMap(RenameMap),
 
     CreateGroup(CreateGroup),
     EditGroup(EditGroup),
@@ -451,9 +460,11 @@ pub enum RequestContent {
 pub enum ResponseContent {
     CreateMap(CreateMap),
     JoinMap(JoinMap),
+    LeaveMap,
     EditMap(EditMap),
     SaveMap(SaveMap),
     DeleteMap(DeleteMap),
+    RenameMap(RenameMap),
 
     CreateGroup(CreateGroup),
     EditGroup(EditGroup),

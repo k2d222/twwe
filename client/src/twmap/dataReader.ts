@@ -1,5 +1,4 @@
 export class DataReader extends DataView {
-
   private off: number
 
   constructor(data: ArrayBuffer) {
@@ -41,25 +40,23 @@ export class DataReader extends DataView {
     for (let i = 0; i < len; i++) {
       const start = this.off + 4 * i
       const end = this.off + 4 * (i + 1)
-      const arr = new Uint8Array(this.buffer.slice(start, end))
-        .map((x) => x - 128)
+      const arr = new Uint8Array(this.buffer.slice(start, end)).map(x => x - 128)
       slices.push(arr)
     }
 
     this.off += len * 4
 
     let buf = slices
-      .map((s) => s.reverse())
-      .map((s) => [...s])
+      .map(s => s.reverse())
+      .map(s => [...s])
       .flat()
-    let nullterm = buf.findIndex((x) => x === 0)
+    let nullterm = buf.findIndex(x => x === 0)
     if (nullterm === -1) nullterm = buf.length
     buf = buf.slice(0, nullterm)
     return String.fromCharCode.apply(null, buf)
   }
-  
+
   bytesLeft() {
     return this.byteLength - this.off
   }
 }
-
