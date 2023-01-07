@@ -100,9 +100,9 @@
 
   // brush settings
   enum BrushState { Empty, Select, Fill, Erase, Paste }
-  let mouseRange = Editor.createRange()
-  let brushRange = Editor.createRange()
   let brushState = BrushState.Empty
+  let mouseRange = Editor.createRange() // start and end pos of visible brush outline
+  let brushRange = Editor.createRange() // start and end pos of copied buffer (if any)
   let brushBuffer: Editor.Brush = []
   $: rmap.setBrush(g, l, brushBuffer)
   $: rmap.moveBrush(mouseRange.start)
@@ -678,6 +678,8 @@
         start: { x: 0, y : 0 },
         end: { x: brushBuffer[0].length - 1, y: brushBuffer.length - 1 }
       }
+      mouseRange.end.x = mouseRange.start.x + brushRange.end.x
+      mouseRange.end.y = mouseRange.start.y + brushRange.end.y
     }
   }
 

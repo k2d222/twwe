@@ -332,14 +332,11 @@
     else if (e.key === 'h' || e.key === 'n') onFlipH()
   }
 
-  let spaceKeyDown = false
-
   function onKeyDown(e: KeyboardEvent) {
     if (e.ctrlKey || e.shiftKey || e.altKey) return
 
-    if (!spaceKeyDown && e.key == ' ') {
+    if (e.key == ' ') {
       tilesVisible = true
-      spaceKeyDown = true
     }
   }
   function onKeyUp(e: KeyboardEvent) {
@@ -347,7 +344,6 @@
 
     if (e.key == ' ') {
       tilesVisible = false
-      spaceKeyDown = false
     }
   }
 </script>
@@ -371,7 +367,7 @@
       kind="secondary"
     />
   </div>
-  <div class="tiles" class:hidden={!tilesVisible}>
+  <div class="tiles" class:hidden={!tilesVisible && !boxSelect}>
     <canvas
       bind:this={canvas}
       on:mousedown={onMouseDown}
