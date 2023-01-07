@@ -99,7 +99,13 @@
   let clipOutlineStyle = ''
 
   // brush settings
-  enum BrushState { Empty, Select, Fill, Erase, Paste }
+  enum BrushState {
+    Empty,
+    Select,
+    Fill,
+    Erase,
+    Paste,
+  }
   let brushState = BrushState.Empty
   let mouseRange = Editor.createRange() // start and end pos of visible brush outline
   let brushRange = Editor.createRange() // start and end pos of copied buffer (if any)
@@ -110,7 +116,7 @@
   // imput state
   let shiftKey = false
   $: if (shiftKey && brushState === BrushState.Select) brushState = BrushState.Erase
-  $: if (!shiftKey && brushState === BrushState.Erase)brushState = BrushState.Select
+  $: if (!shiftKey && brushState === BrushState.Erase) brushState = BrushState.Select
 
   // computed (readonly)
   let g: number, l: number
@@ -353,12 +359,14 @@
 
   function updateBrushOutline() {
     if (activeLayer instanceof AnyTilesLayer && brushState !== BrushState.Empty) {
-
       const fillColor =
-        brushState === BrushState.Fill ? 'orange' :
-        brushState === BrushState.Erase ? 'red' :
-        brushState === BrushState.Select ? 'blue' :
-        'white'
+        brushState === BrushState.Fill
+          ? 'orange'
+          : brushState === BrushState.Erase
+          ? 'red'
+          : brushState === BrushState.Select
+          ? 'blue'
+          : 'white'
 
       const range = Editor.normalizeRange(mouseRange)
       const [x, y] = viewport.worldToPixel(range.start.x, range.start.y)
@@ -612,19 +620,22 @@
 
   function onMouseDown(e: MouseEvent) {
     if (activeLayer instanceof AnyTilesLayer) {
-
       updateMouseRange()
 
-      if (e.buttons === 1) { // left click
-        if (brushState === BrushState.Empty) { // start a selection
+      if (e.buttons === 1) {
+        // left click
+        if (brushState === BrushState.Empty) {
+          // start a selection
           mouseRange.start = mouseRange.end
           brushRange.start = mouseRange.end
           brushState = e.shiftKey ? BrushState.Erase : BrushState.Select
-        } else if (brushState === BrushState.Paste && !e.ctrlKey && !e.shiftKey) { // paste current selection
+        } else if (brushState === BrushState.Paste && !e.ctrlKey && !e.shiftKey) {
+          // paste current selection
           Editor.placeTiles($server, rmap, g, l, mouseRange.start, brushBuffer)
-        } else if (brushState === BrushState.Paste && e.shiftKey) { // start a fill selection
+        } else if (brushState === BrushState.Paste && e.shiftKey) {
+          // start a fill selection
           brushState = BrushState.Fill
-        } 
+        }
       }
     }
   }
@@ -633,7 +644,8 @@
     if (activeLayer instanceof AnyTilesLayer) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
 
-      if (e.buttons === 1) { // left click
+      if (e.buttons === 1) {
+        // left click
         if (brushState === BrushState.Paste) {
           Editor.drawLine($server, rmap, g, l, mouseRange.start, curPos, brushBuffer)
         }
@@ -647,18 +659,19 @@
     if (activeLayer instanceof AnyTilesLayer) {
       updateMouseRange()
 
-      if (brushState === BrushState.Select) { // end selection
+      if (brushState === BrushState.Select) {
+        // end selection
         brushRange.end = mouseRange.end
         brushRange = Editor.normalizeRange(brushRange)
         brushBuffer = Editor.makeBoxSelection(activeLayer, brushRange)
         brushState = BrushState.Paste
         updateMouseRange()
-      }
-      else if (brushState === BrushState.Fill) { // fill selection with brush buffer
+      } else if (brushState === BrushState.Fill) {
+        // fill selection with brush buffer
         Editor.fill($server, rmap, g, l, Editor.normalizeRange(mouseRange), brushBuffer)
         brushState = BrushState.Paste
-      }
-      else if (brushState === BrushState.Erase) { // erase selection
+      } else if (brushState === BrushState.Erase) {
+        // erase selection
         const range = Editor.normalizeRange(mouseRange)
         const buffer = Editor.makeEmptySelection(activeLayer, range)
         Editor.fill($server, rmap, g, l, range, buffer)
@@ -675,8 +688,8 @@
     } else {
       brushState = BrushState.Paste
       brushRange = {
-        start: { x: 0, y : 0 },
-        end: { x: brushBuffer[0].length - 1, y: brushBuffer.length - 1 }
+        start: { x: 0, y: 0 },
+        end: { x: brushBuffer[0].length - 1, y: brushBuffer.length - 1 },
       }
       mouseRange.end.x = mouseRange.start.x + brushRange.end.x
       mouseRange.end.y = mouseRange.start.y + brushRange.end.y
@@ -790,7 +803,11 @@
             <!-- <Statusbar /> -->
           </div>
           {#if activeRlayer instanceof RenderAnyTilesLayer}
-            <TileSelector rlayer={activeRlayer} bind:selected={brushBuffer} on:select={onTilePick} />
+            <TileSelector
+              rlayer={activeRlayer}
+              bind:selected={brushBuffer}
+              on:select={onTilePick}
+            />
           {/if}
         </Pane>
 

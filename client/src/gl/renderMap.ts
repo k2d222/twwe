@@ -125,15 +125,17 @@ export class RenderMap {
         time: 0,
         content: { r: 1024, g: 1024, b: 1024, a: 1024 },
         type: Info.CurveType.BEZIER,
-      }, {
+      },
+      {
         time: 500,
         content: { r: 1024, g: 1024, b: 1024, a: 512 },
         type: Info.CurveType.BEZIER,
-      }, {
+      },
+      {
         time: 1000,
         content: { r: 1024, g: 1024, b: 1024, a: 1024 },
         type: Info.CurveType.BEZIER,
-      }
+      },
     ]
     return env
   }
@@ -397,7 +399,9 @@ export class RenderMap {
     return rgroup
   }
 
-  private instLayer(kind: CreateLayer['kind']): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
+  private instLayer(
+    kind: CreateLayer['kind']
+  ): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
     if (kind === 'tiles') return new RenderTilesLayer(this, new TilesLayer())
     else if (kind === 'quads') return new RenderQuadsLayer(this, new QuadsLayer())
     else if (kind === 'front') return new RenderFrontLayer(this, new FrontLayer())
