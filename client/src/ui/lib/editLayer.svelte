@@ -14,6 +14,7 @@
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
   import AutomapperPicker from './automapper.svelte'
+  import type { Config as AutomapperConfig } from '../../twmap/automap'
   import { createEventDispatcher } from 'svelte'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 
@@ -93,7 +94,21 @@
     }
   }
 
+  function automapperConfig(layer: TilesLayer): AutomapperConfig | null {
+    if (
+      layer.automapper.config === -1 ||
+      !layer.image ||
+      !(layer.image.name in rmap.map.automappers) ||
+      layer.automapper.config >= rmap.map.automappers[layer.image.name].length
+    ) {
+      return null
+    }
+
+    return rmap.map.automappers[layer.image.name][layer.automapper.config]
+  }
+
   let imagePickerOpen = false
+  let automapperOpen = false
 
   async function onImagePick(e: Event & { detail: Image | string | null }) {
     imagePickerOpen = false
@@ -141,21 +156,6 @@
         }
       }
     }
-  }
-
-  function openAutomapper() {
-    if (!(layer instanceof TilesLayer)) return
-
-    const picker = new AutomapperPicker({
-      target: document.body,
-      props: {
-        layer,
-      },
-    })
-
-    picker.$on('close', async () => {
-      picker.$destroy()
-    })
   }
 
   async function onImageUpload(e: Event & { detail: File }) {
@@ -323,12 +323,21 @@
         on:change={onEditColorEnvOffset}
       />
     </label>
-    {@const automapper = layer.automapper.config}
+    {@const conf = automapperConfig(layer)}
     <label>
-      Automapper <input type="button" value={automapper} on:click={openAutomapper} />
+      Automapper <input type="button" value={conf === null ? 'None' : conf.name} disabled={layer.image === null} on:click={() => automapperOpen = true} />
     </label>
+    <ComposedModal bind:open={automapperOpen} size="sm">
+      <ModalHeader title="Automapper" />
+      <ModalBody hasForm>
+        <AutomapperPicker
+          {layer}
+          on:cancel={() => (automapperOpen = false)}
+        />
+      </ModalBody>
+    </ComposedModal>
     <button
-      disabled={layer.automapper.config === null || layer.automapper.automatic}
+      disabled={conf === null || layer.automapper.automatic}
       on:click={onAutomap}
     >
       Apply Automapper
@@ -357,3 +366,4 @@
     />
   </ModalBody>
 </ComposedModal>
+

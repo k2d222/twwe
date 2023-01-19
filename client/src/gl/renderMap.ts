@@ -47,7 +47,7 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
 import { envPointFromJson } from '../server/convert'
-import { Automapper, automap } from '../twmap/automap'
+import { Config as AutomapperConfig, automap } from '../twmap/automap'
 
 export type RenderPhysicsLayer =
   | RenderGameLayer
@@ -366,7 +366,7 @@ export class RenderMap {
     return rlayer
   }
 
-  automapLayer(g: number, l: number, automapper: Automapper, seed: number) {
+  automapLayer(g: number, l: number, automapper: AutomapperConfig, seed: number) {
     const rgroup = this.groups[g]
     const layer = rgroup.layers[l]
     if (!(layer instanceof RenderTilesLayer)) return

@@ -3,7 +3,9 @@ import * as Info from './types'
 
 /// This file contains parsing and linting of automapper files, and application to tileslayers.
 
-export class Automapper {
+export type Automapper = Config[]
+
+export class Config {
   name: string
   runs: Run[]
 }
@@ -542,11 +544,11 @@ export function lint(content: string): Lint[] {
 
 /// parsing
 
-export function parse(content: string): Automapper[] | null {
+export function parse(content: string): Config[] | null {
   const reader = new FileReader(content)
 
-  const automappers: Automapper[] = []
-  let automapper: Automapper | null = null
+  const automappers: Config[] = []
+  let automapper: Config | null = null
   let run: Run | null = null
   let indexRule: IndexRule | null = null
 
@@ -726,7 +728,7 @@ function posRuleMatches(rule: PosRule, layer: TilesLayer, x: number, y: number) 
     : rule.states.some(s => tileMatches(tile, s))
 }
 
-export function automap(layer: TilesLayer, automapper: Automapper, seed: number) {
+export function automap(layer: TilesLayer, automapper: Config, seed: number) {
   if (seed === 0) seed = Math.floor(Math.random() * RAND_MAX)
 
   let r1 = 0

@@ -7,15 +7,10 @@
     LintLevel,
   } from '../../twmap/automap'
   import { showInfo } from './dialog'
-  import { createEventDispatcher } from 'svelte'
-
-  const dispatch = createEventDispatcher()
 
   export let layer: TilesLayer
-  let configs: { [name: string]: Automapper } = {}
-  let selectedIndex: number = -1
-
-  $: layer.automapper.config = selectedIndex
+  let configs: Automapper[] = []
+  $: config = layer.automapper.config
 
   async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
@@ -36,49 +31,30 @@
       'closable'
     )
   }
-
-  function onClose() {
-    layer = layer
-    dispatch('close')
-  }
-
-  function onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Escape') onClose()
-  }
 </script>
 
-<svelte:window on:keydown={onKeyDown} />
+<div class="edit-automapper">
+  <label>
+    Upload rules
+    <input type="file" placeholder="upload rules…" accept=".rules" on:change={onFileChange} />
+  </label>
 
-<div id="automapper">
-  <div class="content">
-    <div class="edit-automapper">
-      <h3>Automapper configuration</h3>
+  <label>
+    Active rule
+    <select bind:value={config}>
+      <option value={-1}>None</option>
+      {#each Object.keys(configs) as conf, i}
+        <option value={i}>{conf}</option>
+      {/each}
+    </select>
+  </label>
 
-      <label>
-        Upload rules
-        <input type="file" placeholder="upload rules…" accept=".rules" on:change={onFileChange} />
-      </label>
-
-      <label>
-        Active rule
-        <select bind:value={selectedIndex}>
-          <option value={-1}>None</option>
-          {#each Object.keys(configs) as conf, i}
-            <option value={i}>{conf}</option>
-          {/each}
-        </select>
-      </label>
-
-      <label>
-        Seed
-        <input type="number" bind:value={layer.automapper.seed} />
-      </label>
-      <label>
-        Automatic
-        <input type="checkbox" bind:checked={layer.automapper.automatic} />
-      </label>
-
-      <button on:click={onClose}>Close</button>
-    </div>
-  </div>
+  <label>
+    Seed
+    <input type="number" bind:value={layer.automapper.seed} />
+  </label>
+  <label>
+    Automatic
+    <input type="checkbox" bind:checked={layer.automapper.automatic} />
+  </label>
 </div>
