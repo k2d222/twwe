@@ -223,7 +223,7 @@
 
   function onAddServer() {
     const { name, hostname, encrypted, port } = modalAddServer
-    const url = (encrypted ? 'wss://' : 'ws://') + hostname + ':' + port
+    const url = (encrypted ? 'wss://' : 'ws://') + hostname + ':' + port + '/ws'
     const conf: ServerConfig = {
       name,
       url,

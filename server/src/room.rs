@@ -8,12 +8,11 @@ use std::{
     sync::Arc,
 };
 
+use axum::extract::ws::Message;
 use ndarray::Array2;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
-
-use tokio_tungstenite::tungstenite::protocol::Message;
 
 use twmap::{
     constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage, Env,

@@ -1,30 +1,37 @@
 use std::{
     collections::HashMap,
     fs::{self, File},
-    io,
     net::SocketAddr,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
     time::SystemTime,
 };
 
 use std::io::prelude::*;
 
+use axum::{
+    extract::{
+        ws::{Message, WebSocket},
+        ConnectInfo, State, WebSocketUpgrade,
+    },
+    headers,
+    response::IntoResponse,
+    routing::get,
+    Router, TypedHeader,
+};
+use axum_server::tls_rustls::RustlsConfig;
 use clap::Parser;
 use glob::glob;
 use map_cfg::MapAccess;
 use regex::Regex;
+use tower_http::services::ServeDir;
 
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
-    future,
-    stream::FuturesUnordered,
-    StreamExt, TryStreamExt,
+    future, StreamExt, TryStreamExt,
 };
-use tokio::{
-    io::{AsyncRead, AsyncWrite},
-    net::TcpListener,
-};
+
+use twmap::TwMap;
 
 mod room;
 use room::Room;
@@ -35,10 +42,6 @@ use protocol::*;
 
 mod twmap_map_checks;
 mod twmap_map_edit;
-
-use tokio_rustls::{rustls, TlsAcceptor};
-use tokio_tungstenite::tungstenite::Message;
-use twmap::TwMap;
 
 type Tx = UnboundedSender<Message>;
 type Res = Result<ResponseContent, &'static str>;
@@ -528,20 +531,68 @@ impl Server {
         self.respond_and_broadcast(peer, req.id, res);
     }
 
-    async fn handle_connection<S>(&self, raw_stream: S, addr: SocketAddr)
-    where
-        S: AsyncRead + AsyncWrite + Unpin,
-    {
-        log::debug!("Incoming TCP connection from: {}", addr);
+    // async fn handle_connection<S>(&self, raw_stream: S, addr: SocketAddr)
+    // where
+    //     S: AsyncRead + AsyncWrite + Unpin,
+    // {
+    //     log::debug!("Incoming TCP connection from: {}", addr);
 
-        // accept
-        let ws_stream = tokio_tungstenite::accept_async(raw_stream)
-            .await
-            .expect("Error during the websocket handshake occurred");
-        log::info!("WebSocket connection established: {}", addr);
+    //     // accept
+    //     let ws_stream = tokio_tungstenite::accept_async(raw_stream)
+    //         .await
+    //         .expect("Error during the websocket handshake occurred");
+    //     log::info!("WebSocket connection established: {}", addr);
 
+    //     // insert peer in peers
+    //     let (tx, ws_recv) = ws_stream.split();
+    //     let (ws_send, rx) = unbounded();
+    //     let fut_send = rx.map(Ok).forward(tx);
+
+    //     let mut peer = Peer::new(addr, ws_send);
+
+    //     let fut_recv = ws_recv.try_for_each(|msg| {
+    //         match msg {
+    //             Message::Text(text) => {
+    //                 log::debug!("text message received from {}: {}", addr, text);
+
+    //                 match serde_json::from_str(&text) {
+    //                     Ok(req) => {
+    //                         self.handle_request(&mut peer, req);
+    //                     }
+    //                     Err(e) => {
+    //                         log::error!("failed to parse message: {}", e);
+    //                     }
+    //                 };
+    //             }
+    //             Message::Binary(data) => {
+    //                 log::debug!("binary message received from {}", addr);
+    //                 let res = self.handle_upload_file(&peer, &data);
+    //                 self.respond(&peer, 1, res);
+    //             }
+    //             _ => (),
+    //         }
+
+    //         future::ok(())
+    //     });
+
+    //     future::select(fut_send, fut_recv).await;
+
+    //     if let Some(room) = &peer.room {
+    //         room.remove_peer(&peer);
+    //     }
+
+    //     self.broadcast_users(&peer);
+
+    //     // if the peer uploaded a map but did not use it, we want to delete it now.
+    //     let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
+    //     std::fs::remove_file(&upload_path).ok();
+
+    //     log::info!("disconnected {}", &addr);
+    // }
+
+    async fn handle_websocket(&self, socket: WebSocket, addr: SocketAddr) {
         // insert peer in peers
-        let (tx, ws_recv) = ws_stream.split();
+        let (tx, ws_recv) = socket.split();
         let (ws_send, rx) = unbounded();
         let fut_send = rx.map(Ok).forward(tx);
 
@@ -587,30 +638,31 @@ impl Server {
         log::info!("disconnected {}", &addr);
     }
 
-    fn recover_after_panic(&self, addr: SocketAddr) {
-        let rooms = self.rooms();
-        let room = rooms
-            .iter()
-            .find(|(_, room)| room.peers().contains_key(&addr));
-        match room {
-            Some((_, room)) => {
-                room.remove_closed_peers();
-                let map = room.map.get_opt();
-                if let Some(map) = &*map {
-                    let response = if let Err(e) = map.check() {
-                        log::error!("map error is: {}", e);
-                        Error::MapError(e.to_string())
-                    } else {
-                        Error::ServerError
-                    };
-                    self.broadcast_to_room(room, ResponseContent::Error(response));
-                }
-            }
-            None => {
-                log::error!("could not find a room containing the peer that caused the panic");
-            }
-        }
-    }
+    // TODO: see if we need this
+    // fn recover_after_panic(&self, addr: SocketAddr) {
+    //     let rooms = self.rooms();
+    //     let room = rooms
+    //         .iter()
+    //         .find(|(_, room)| room.peers().contains_key(&addr));
+    //     match room {
+    //         Some((_, room)) => {
+    //             room.remove_closed_peers();
+    //             let map = room.map.get_opt();
+    //             if let Some(map) = &*map {
+    //                 let response = if let Err(e) = map.check() {
+    //                     log::error!("map error is: {}", e);
+    //                     Error::MapError(e.to_string())
+    //                 } else {
+    //                     Error::ServerError
+    //                 };
+    //                 self.broadcast_to_room(room, ResponseContent::Error(response));
+    //             }
+    //         }
+    //         None => {
+    //             log::error!("could not find a room containing the peer that caused the panic");
+    //         }
+    //     }
+    // }
 }
 
 fn create_server() -> Server {
@@ -638,17 +690,17 @@ fn create_server() -> Server {
     server
 }
 
-fn load_certs(path: &Path) -> io::Result<Vec<rustls::Certificate>> {
-    rustls_pemfile::certs(&mut io::BufReader::new(File::open(path)?))
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
-        .map(|mut certs| certs.drain(..).map(rustls::Certificate).collect())
-}
+// fn load_certs(path: &Path) -> io::Result<Vec<rustls::Certificate>> {
+//     rustls_pemfile::certs(&mut io::BufReader::new(File::open(path)?))
+//         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
+//         .map(|mut certs| certs.drain(..).map(rustls::Certificate).collect())
+// }
 
-fn load_keys(path: &Path) -> io::Result<Vec<rustls::PrivateKey>> {
-    rustls_pemfile::pkcs8_private_keys(&mut io::BufReader::new(File::open(path)?))
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
-        .map(|mut keys| keys.drain(..).map(rustls::PrivateKey).collect())
-}
+// fn load_keys(path: &Path) -> io::Result<Vec<rustls::PrivateKey>> {
+//     rustls_pemfile::pkcs8_private_keys(&mut io::BufReader::new(File::open(path)?))
+//         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
+//         .map(|mut keys| keys.drain(..).map(rustls::PrivateKey).collect())
+// }
 
 #[derive(Parser)]
 #[clap(name = "TWWE Server")]
@@ -667,77 +719,71 @@ struct Cli {
     /// Path to the TLS certificate private key
     #[clap(value_parser, short, long, requires = "cert")]
     key: Option<PathBuf>,
+
+    /// Directory of static files to serve
+    #[clap(name = "static", value_parser, short, long)]
+    static_dir: Option<PathBuf>,
+}
+
+async fn route_websocket(
+    State(state): State<Arc<Server>>,
+    ws: WebSocketUpgrade,
+    user_agent: Option<TypedHeader<headers::UserAgent>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> impl IntoResponse {
+    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
+        user_agent.to_string()
+    } else {
+        String::from("Unknown browser")
+    };
+    println!("`{user_agent}` at {addr} connected.");
+
+    ws.on_upgrade(move |socket| async move { state.handle_websocket(socket, addr).await })
 }
 
 #[tokio::main]
-async fn main() {
-    let args = Cli::parse();
+async fn run_server(args: Cli) {
+    let state = Arc::new(create_server());
 
+    let addr: SocketAddr = args.addr.parse().expect("not a valid server address");
+    log::info!("Listening on: {}", addr);
+
+    // build the application with routes
+    let mut app: Router<()> = Router::new()
+        .route("/ws", get(route_websocket))
+        .with_state(state);
+
+    // optional endpoint to serve static files
+    if let Some(dir) = args.static_dir {
+        app = app.nest_service("/", ServeDir::new(dir));
+    }
+
+    // run the server (tls or unencrypted)
+    match (args.cert, args.key) {
+        (Some(cert), Some(key)) => {
+            let tls_config = RustlsConfig::from_pem_file(cert, key).await.unwrap();
+
+            axum_server::bind_rustls(addr, tls_config)
+                .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+                .await
+                .unwrap();
+        }
+        _ => {
+            axum_server::bind(addr)
+                .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+                .await
+                .unwrap();
+        }
+    }
+}
+
+fn main() {
     std::fs::remove_dir_all("uploads").ok();
     std::fs::create_dir("uploads").ok();
 
     pretty_env_logger::init();
 
-    let state = Arc::new(create_server());
+    let args = Cli::parse();
 
-    // Setup TLS
-    let tls_acceptor = match (&args.cert, &args.key) {
-        (Some(cert), Some(key)) => {
-            let certs = load_certs(cert).expect("certificate file not found");
-            let mut keys = load_keys(key).expect("private key file not found");
-            let config = rustls::ServerConfig::builder()
-                .with_safe_defaults()
-                .with_no_client_auth()
-                .with_single_cert(certs, keys.remove(0))
-                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))
-                .unwrap();
-            Some(TlsAcceptor::from(Arc::new(config)))
-        }
-        _ => None,
-    };
-
-    // Create the event loop and TCP listener we'll accept connections on.
-    let try_socket = TcpListener::bind(&args.addr).await;
-    let listener = try_socket.expect("Failed to bind");
-    log::info!("Listening on: {}", args.addr);
-
-    let mut connections = FuturesUnordered::new();
-
-    loop {
-        tokio::select! {
-            _ = connections.next(), if connections.len() != 0 => (),
-            Ok((stream, addr)) = listener.accept() => {
-                let tls_acceptor = tls_acceptor.clone();
-                let (state1, state2) = (state.clone(), state.clone());
-                let handle = async move {
-                    // TLS Case
-                    if let Some(acceptor) = tls_acceptor {
-                        match acceptor.accept(stream).await {
-                            Ok(stream) => {
-                                let res = tokio::spawn(async move { state1.handle_connection(stream, addr).await }).await;
-                                if let Err(e) = res {
-                                    log::error!("task for peer {} panicked: {}", addr, e);
-                                    state2.recover_after_panic(addr);
-                                }
-                            }
-                            Err(e) => {
-                                log::error!("tcp connection with peer {} failed: {}", addr, e);
-                            }
-                        }
-                    }
-
-                    // no TLS case
-                    else {
-                        let res = tokio::spawn(async move { state1.handle_connection(stream, addr).await }).await;
-                        if let Err(e) = res {
-                            log::error!("task for peer {} panicked: {}", addr, e);
-                            state2.recover_after_panic(addr);
-                        }
-                    }
-                };
-                connections.push(handle);
-            },
-            else => log::error!("accept() failed")
-        }
-    }
+    run_server(args);
 }
