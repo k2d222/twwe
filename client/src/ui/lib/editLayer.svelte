@@ -3,12 +3,12 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
-  import type { FormEvent, FormInputEvent } from './util'
+  import { FormEvent, FormInputEvent, uploadFile } from './util'
   import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
-  import { server } from '../global'
+  import { server, serverConfig } from '../global'
   import { decodePng, externalImageUrl, queryImage, isPhysicsLayer } from './util'
   import { Image } from '../../twmap/image'
   import { ColorEnvelope } from '../../twmap/envelope'
@@ -114,10 +114,10 @@
         try {
           showInfo('Uploading image...', 'none')
           const resp = await fetch(url)
-          const file = await resp.arrayBuffer()
-          await $server.uploadFile(file)
+          const file = await resp.blob()
+          await uploadFile($serverConfig.httpUrl, file)
           await $server.query('createimage', { name: image, index, external: false })
-          const img = await queryImage($server, { index })
+          const img = await queryImage($server, $serverConfig.httpUrl, rmap.map.name, index)
           rmap.addImage(img)
           onEditLayer({ group: g, layer: l, image: index })
           clearDialog()
@@ -148,7 +148,7 @@
       showInfo('Uploading image…', 'none')
       const name = image.name.replace(/\.[^\.]+$/, '')
       const index = rmap.map.images.length
-      await $server.uploadFile(await image.arrayBuffer())
+      await uploadFile($serverConfig.httpUrl, image)
       await $server.query('createimage', { name, index, external: false })
       const data = await decodePng(image)
       const img = new Image()

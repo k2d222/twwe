@@ -294,7 +294,7 @@
       image.name = e.name
       rmap.addImage(image)
     } else {
-      const image = await queryImage($server, { index: e.index })
+      const image = await queryImage($server, $serverConfig.httpUrl, map.name, e.index)
       rmap.addImage(image)
     }
   }

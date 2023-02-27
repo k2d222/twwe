@@ -38,7 +38,7 @@
   } from 'carbon-icons-svelte'
   import { WebSocketServer } from '../../server/server'
   import { onMount, onDestroy } from 'svelte'
-  import { downloadMap } from '../lib/util'
+  import { downloadMap, uploadFile } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
@@ -295,7 +295,7 @@
     modalCreateMap.uploading = true
     modalCreateMap.uploadInvalid = false
     try {
-      await server.uploadFile(await file.arrayBuffer())
+      await uploadFile(serverConf.httpUrl, file)
     } catch (e) {
       modalCreateMap.uploadInvalid = true
     } finally {

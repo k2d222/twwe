@@ -8,7 +8,7 @@
 
   async function loadMap(name: string) {
     await $server.query('joinmap', { name })
-    const map = await queryMap($serverConfig.httpUrl, { name })
+    const map = await queryMap($serverConfig.httpUrl, name)
     return map
   }
 

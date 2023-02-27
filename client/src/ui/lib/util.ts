@@ -1,4 +1,3 @@
-import type { SendMap, SendImage } from '../../server/protocol'
 import type { Layer } from '../../twmap/layer'
 import { Map, PhysicsLayer } from '../../twmap/map'
 import { Image } from '../../twmap/image'
@@ -12,9 +11,9 @@ export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
 export async function downloadMap(httpRoot: string, mapName: string) {
-  const buf = await queryMapBinary(httpRoot, { name: mapName })
-  const blob = new Blob([buf], { type: 'application/octet-stream' })
-  const url = URL.createObjectURL(blob)
+  const resp = await fetch(`${httpRoot}/map/${mapName}`)
+  const data = await resp.blob()
+  const url = URL.createObjectURL(data)
 
   const link = document.createElement('a')
   link.href = url
@@ -23,6 +22,13 @@ export async function downloadMap(httpRoot: string, mapName: string) {
   document.body.append(link)
   link.click()
   link.remove()
+}
+
+export async function uploadFile(httpRoot: string, file: Blob) {
+  await fetch(`${httpRoot}/upload`, {
+    method: 'POST',
+    body: file
+  })
 }
 
 export async function decodePng(file: File): Promise<ImageData> {
@@ -50,28 +56,18 @@ export function externalImageUrl(name: string) {
   return '/mapres/' + name + '.png'
 }
 
-export async function queryMapBinary(
-  httpRoot: string,
-  sendMap: SendMap
-): Promise<ArrayBuffer> {
-  const resp = await fetch(httpRoot + '/map/' + sendMap.name)
-  return resp.arrayBuffer()
-}
-
-export async function queryMap(httpRoot: string, sendMap: SendMap): Promise<Map> {
-  const data = await queryMapBinary(httpRoot, sendMap)
+export async function queryMap(httpRoot: string, mapName: string): Promise<Map> {
+  const resp = await fetch(`${httpRoot}/map/${mapName}`)
+  const data = await resp.arrayBuffer()
   const map = new Map()
-  map.load(sendMap.name, data)
+  map.load(mapName, data)
   return map
 }
 
-export async function queryImage(server: WebSocketServer, sendImage: SendImage): Promise<Image> {
-  let data: ArrayBuffer
-  const listener = (d: ArrayBuffer) => (data = d)
-  server.binaryListeners.push(listener)
-  const imageInfo = await server.query('sendimage', sendImage)
-  let index = server.binaryListeners.indexOf(listener)
-  server.binaryListeners.splice(index, 1)
+export async function queryImage(server: WebSocketServer, httpRoot: string, mapName: string, imageIndex: number): Promise<Image> {
+  const imageInfo = await server.query('sendimage', { index: imageIndex })
+  const resp = await fetch(`${httpRoot}/map/${mapName}/image/${imageIndex}`)
+  const data = await resp.arrayBuffer()
   const image = new ImageData(new Uint8ClampedArray(data), imageInfo.width, imageInfo.height)
   const img = new Image()
   img.loadEmbedded(image)

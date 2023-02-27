@@ -10,6 +10,7 @@ use std::{
 use std::io::prelude::*;
 
 use axum::{
+    body::Bytes,
     extract::{
         ws::{Message, WebSocket},
         ConnectInfo, Path, State, WebSocketUpgrade,
@@ -17,7 +18,7 @@ use axum::{
     headers,
     http::{header, StatusCode},
     response::{ErrorResponse, IntoResponse},
-    routing::get,
+    routing::{get, post},
     Router, TypedHeader,
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -480,7 +481,7 @@ impl Server {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
         // room.send_image(&send_image)?;
         let image_info = room.image_info(send_image.index)?;
-        room.send_image(peer, send_image.index)?;
+        // room.send_image(peer, send_image.index)?;
         Ok(ResponseContent::SendImage(image_info))
     }
 
@@ -531,65 +532,6 @@ impl Server {
         };
         self.respond_and_broadcast(peer, req.id, res);
     }
-
-    // async fn handle_connection<S>(&self, raw_stream: S, addr: SocketAddr)
-    // where
-    //     S: AsyncRead + AsyncWrite + Unpin,
-    // {
-    //     log::debug!("Incoming TCP connection from: {}", addr);
-
-    //     // accept
-    //     let ws_stream = tokio_tungstenite::accept_async(raw_stream)
-    //         .await
-    //         .expect("Error during the websocket handshake occurred");
-    //     log::info!("WebSocket connection established: {}", addr);
-
-    //     // insert peer in peers
-    //     let (tx, ws_recv) = ws_stream.split();
-    //     let (ws_send, rx) = unbounded();
-    //     let fut_send = rx.map(Ok).forward(tx);
-
-    //     let mut peer = Peer::new(addr, ws_send);
-
-    //     let fut_recv = ws_recv.try_for_each(|msg| {
-    //         match msg {
-    //             Message::Text(text) => {
-    //                 log::debug!("text message received from {}: {}", addr, text);
-
-    //                 match serde_json::from_str(&text) {
-    //                     Ok(req) => {
-    //                         self.handle_request(&mut peer, req);
-    //                     }
-    //                     Err(e) => {
-    //                         log::error!("failed to parse message: {}", e);
-    //                     }
-    //                 };
-    //             }
-    //             Message::Binary(data) => {
-    //                 log::debug!("binary message received from {}", addr);
-    //                 let res = self.handle_upload_file(&peer, &data);
-    //                 self.respond(&peer, 1, res);
-    //             }
-    //             _ => (),
-    //         }
-
-    //         future::ok(())
-    //     });
-
-    //     future::select(fut_send, fut_recv).await;
-
-    //     if let Some(room) = &peer.room {
-    //         room.remove_peer(&peer);
-    //     }
-
-    //     self.broadcast_users(&peer);
-
-    //     // if the peer uploaded a map but did not use it, we want to delete it now.
-    //     let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
-    //     std::fs::remove_file(&upload_path).ok();
-
-    //     log::info!("disconnected {}", &addr);
-    // }
 
     async fn handle_websocket(&self, socket: WebSocket, addr: SocketAddr) {
         // insert peer in peers
@@ -691,18 +633,6 @@ fn create_server() -> Server {
     server
 }
 
-// fn load_certs(path: &Path) -> io::Result<Vec<rustls::Certificate>> {
-//     rustls_pemfile::certs(&mut io::BufReader::new(File::open(path)?))
-//         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
-//         .map(|mut certs| certs.drain(..).map(rustls::Certificate).collect())
-// }
-
-// fn load_keys(path: &Path) -> io::Result<Vec<rustls::PrivateKey>> {
-//     rustls_pemfile::pkcs8_private_keys(&mut io::BufReader::new(File::open(path)?))
-//         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
-//         .map(|mut keys| keys.drain(..).map(rustls::PrivateKey).collect())
-// }
-
 #[derive(Parser)]
 #[clap(name = "TWWE Server")]
 #[clap(author = "Mathis Brossier <mathis.brossier@gmail.com>")]
@@ -767,6 +697,53 @@ async fn route_map(
     Ok((headers, buf))
 }
 
+async fn route_map_image(
+    State(state): State<Arc<Server>>,
+    Path((map_name, image_index)): Path<(String, u16)>,
+) -> Result<impl IntoResponse, ErrorResponse> {
+    let room = state
+        .room(&map_name)
+        .ok_or((StatusCode::NOT_FOUND, "map not found"))?;
+
+    let buf = {
+        let map = room.map.get();
+
+        let image = map
+            .images
+            .get(image_index as usize)
+            .ok_or((StatusCode::NOT_FOUND, "invalid image index"))?;
+
+        match image {
+            twmap::Image::External(_) => Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "cannot send external images",
+            ))?,
+            twmap::Image::Embedded(image) => image.image.unwrap_ref().as_raw().to_owned(),
+        }
+    };
+
+    let headers = [
+        (header::CONTENT_TYPE, "application/octet-stream"),
+        (header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
+    ];
+
+    Ok((headers, buf))
+}
+
+async fn route_upload(
+    State(state): State<Arc<Server>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Path(map_name): Path<String>,
+    body: Bytes,
+) -> Result<impl IntoResponse, ErrorResponse> {
+    let path: PathBuf = format!("uploads/{}", addr).into();
+    let mut file = File::create(path)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "failed to create file"))?;
+    file.write_all(&body)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "failed to write file"))?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn run_server(args: Cli) {
     let state = Arc::new(create_server());
@@ -778,6 +755,8 @@ async fn run_server(args: Cli) {
     let mut app: Router<()> = Router::new()
         .route("/ws", get(route_websocket))
         .route("/map/:map_name", get(route_map))
+        .route("/map/:map_name/image/:image_index", get(route_map_image))
+        .route("/upload", post(route_upload))
         .with_state(state);
 
     // optional endpoint to serve static files
