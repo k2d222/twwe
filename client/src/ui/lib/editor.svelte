@@ -30,7 +30,7 @@
   import { Image } from '../../twmap/image'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { onMount, onDestroy } from 'svelte'
-  import { server } from '../global'
+  import { server, serverConfig } from '../global'
   import { canvas, renderer, setViewport } from '../../gl/global'
   import { Viewport } from '../../gl/viewport'
   import { RenderMap } from '../../gl/renderMap'
@@ -528,7 +528,7 @@
   }
 
   function onDownloadMap() {
-    downloadMap($server, map.name)
+    downloadMap($serverConfig.httpUrl, map.name)
   }
 
   function onRenameMap() {

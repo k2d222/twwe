@@ -11,8 +11,8 @@ export type Ctor<T> = new (...args: any[]) => T
 export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
-export async function downloadMap(server: WebSocketServer, mapName: string) {
-  const buf = await queryMapBinary(server, { name: mapName })
+export async function downloadMap(httpRoot: string, mapName: string) {
+  const buf = await queryMapBinary(httpRoot, { name: mapName })
   const blob = new Blob([buf], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
 
@@ -51,20 +51,15 @@ export function externalImageUrl(name: string) {
 }
 
 export async function queryMapBinary(
-  server: WebSocketServer,
+  httpRoot: string,
   sendMap: SendMap
 ): Promise<ArrayBuffer> {
-  let data: ArrayBuffer
-  const listener = (d: ArrayBuffer) => (data = d)
-  server.binaryListeners.push(listener)
-  await server.query('sendmap', sendMap)
-  let index = server.binaryListeners.indexOf(listener)
-  server.binaryListeners.splice(index, 1)
-  return data
+  const resp = await fetch(httpRoot + '/map/' + sendMap.name)
+  return resp.arrayBuffer()
 }
 
-export async function queryMap(server: WebSocketServer, sendMap: SendMap): Promise<Map> {
-  const data = await queryMapBinary(server, sendMap)
+export async function queryMap(httpRoot: string, sendMap: SendMap): Promise<Map> {
+  const data = await queryMapBinary(httpRoot, sendMap)
   const map = new Map()
   map.load(sendMap.name, data)
   return map

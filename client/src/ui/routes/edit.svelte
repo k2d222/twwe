@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { server } from '../global'
+  import { server, serverConfig } from '../global'
   import { queryMap } from '../lib/util'
   import Dialog from '../lib/dialog.svelte'
   import Editor from '../lib/editor.svelte'
@@ -8,7 +8,7 @@
 
   async function loadMap(name: string) {
     await $server.query('joinmap', { name })
-    const map = await queryMap($server, { name })
+    const map = await queryMap($serverConfig.httpUrl, { name })
     return map
   }
 

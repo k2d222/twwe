@@ -37,8 +37,7 @@
     TrashCan as DeleteIcon,
   } from 'carbon-icons-svelte'
   import { WebSocketServer } from '../../server/server'
-  import { server } from '../global'
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { downloadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
 
@@ -47,8 +46,8 @@
 
   let serverConfs = storage.load('servers')
   let serverId = storage.load('currentServer')
+  let server: WebSocketServer | null = null
 
-  let selectedServer = '' + serverId
   let maps: MapInfo[] = []
 
   interface ModalAddServer {
@@ -115,10 +114,14 @@
     return 'unknown' as ServerStatus
   })
 
-  $: serverId = parseInt(selectedServer)
+  $: serverConf = serverConfs[serverId]
 
   onMount(() => {
     selectServer(serverId)
+  })
+
+  onDestroy(() => {
+    if (server) server.socket.close()
   })
 
   function resetMapModal() {
@@ -154,22 +157,19 @@
 
     maps = []
     serverId = id
-    const conf = serverConfs[id]
 
-    if ($server === null || $server.socket.url !== conf.url) {
-      if ($server) $server.socket.close()
-      $server = new WebSocketServer(conf.url)
-    }
+    if (server) server.socket.close()
+    server = new WebSocketServer(serverConf.wsUrl)
 
     setServerStatus(id, 'connecting')
-    $server.socket.addEventListener(
+    server.socket.addEventListener(
       'open',
       () => {
         setServerStatus(id, id === serverId ? 'connected' : 'online')
       },
       { once: true }
     )
-    $server.socket.addEventListener(
+    server.socket.addEventListener(
       'error',
       () => {
         setServerStatus(id, 'error')
@@ -182,7 +182,7 @@
 
   async function refreshMapList() {
     const id = serverId // ensure the same server is selected when request completes
-    const res = await queryMaps($server)
+    const res = await queryMaps(server)
     if (id === serverId) {
       storage.save('currentServer', id)
       maps = res
@@ -204,7 +204,7 @@
     modalConfirmDelete.open = true
     modalConfirmDelete.onConfirm = async () => {
       try {
-        await $server.query('deletemap', { name })
+        await server.query('deletemap', { name })
       } catch (e) {
         showError('Map deletion failed: ' + e)
       }
@@ -218,15 +218,17 @@
   }
 
   function onDownloadMap(name: string) {
-    downloadMap($server, name)
+    downloadMap(serverConf.httpUrl, name)
   }
 
   function onAddServer() {
     const { name, hostname, encrypted, port } = modalAddServer
-    const url = (encrypted ? 'wss://' : 'ws://') + hostname + ':' + port + '/ws'
+    const wsUrl = (encrypted ? 'wss://' : 'ws://') + hostname + ':' + port + '/ws'
+    const httpUrl = (encrypted ? 'https://' : 'http://') + hostname + ':' + port
     const conf: ServerConfig = {
       name,
-      url,
+      wsUrl,
+      httpUrl,
     }
     serverConfs.push(conf)
     storage.save('servers', serverConfs)
@@ -271,7 +273,7 @@
 
     showInfo('Querying the server…', 'none')
     try {
-      await $server.query('createmap', create)
+      await server.query('createmap', create)
       clearDialog()
       if (access === 'unlisted') {
         const url = window.location.origin + '/edit/' + encodeURIComponent(create.name)
@@ -293,7 +295,7 @@
     modalCreateMap.uploading = true
     modalCreateMap.uploadInvalid = false
     try {
-      await $server.uploadFile(await file.arrayBuffer())
+      await server.uploadFile(await file.arrayBuffer())
     } catch (e) {
       modalCreateMap.uploadInvalid = true
     } finally {
@@ -353,9 +355,9 @@
           Add server
         </Button>
       </div>
-      <TileGroup bind:selected={selectedServer} on:select={onSelectServer}>
+      <TileGroup on:select={onSelectServer}>
         {#each serverConfs as server, i}
-          {@const url = new URL(server.url)}
+          {@const url = new URL(server.wsUrl)}
           {@const status = serverStatus[i]}
           <RadioTile value={'' + i}>
             <div style="font-weight: bold">{server.name}</div>

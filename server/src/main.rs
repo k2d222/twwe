@@ -750,7 +750,10 @@ async fn route_map(
         .room(&map_name)
         .ok_or((StatusCode::NOT_FOUND, "map not found"))?;
 
-    let headers = [(header::CONTENT_TYPE, "application/octet-stream")];
+    let headers = [
+        (header::CONTENT_TYPE, "application/octet-stream"),
+        (header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
+    ];
 
     let buf = {
         let mut buf = Vec::new();
