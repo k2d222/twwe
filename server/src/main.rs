@@ -12,10 +12,11 @@ use std::io::prelude::*;
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        ConnectInfo, State, WebSocketUpgrade,
+        ConnectInfo, Path, State, WebSocketUpgrade,
     },
     headers,
-    response::IntoResponse,
+    http::{header, StatusCode},
+    response::{ErrorResponse, IntoResponse},
     routing::get,
     Router, TypedHeader,
 };
@@ -741,6 +742,28 @@ async fn route_websocket(
     ws.on_upgrade(move |socket| async move { state.handle_websocket(socket, addr).await })
 }
 
+async fn route_map(
+    State(state): State<Arc<Server>>,
+    Path(map_name): Path<String>,
+) -> Result<impl IntoResponse, ErrorResponse> {
+    let room = state
+        .room(&map_name)
+        .ok_or((StatusCode::NOT_FOUND, "map not found"))?;
+
+    let headers = [(header::CONTENT_TYPE, "application/octet-stream")];
+
+    let buf = {
+        let mut buf = Vec::new();
+        // TODO: this is blocking for the server
+        room.map
+            .get()
+            .save(&mut buf)
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "failed to save map"))?;
+        buf
+    };
+    Ok((headers, buf))
+}
+
 #[tokio::main]
 async fn run_server(args: Cli) {
     let state = Arc::new(create_server());
@@ -751,6 +774,7 @@ async fn run_server(args: Cli) {
     // build the application with routes
     let mut app: Router<()> = Router::new()
         .route("/ws", get(route_websocket))
+        .route("/map/:map_name", get(route_map))
         .with_state(state);
 
     // optional endpoint to serve static files
