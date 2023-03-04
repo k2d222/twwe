@@ -1,5 +1,5 @@
 <script type="ts">
-  import type { CreateMap, MapInfo } from '../../server/protocol'
+  import type { MapInfo } from '../../server/protocol'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
   import {
@@ -36,9 +36,7 @@
     Login as JoinIcon,
     TrashCan as DeleteIcon,
   } from 'carbon-icons-svelte'
-  import { WebSocketServer } from '../../server/server'
-  import { onMount, onDestroy } from 'svelte'
-  import { downloadMap, uploadFile } from '../lib/util'
+  import { cloneMap, createMap, downloadMap, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
@@ -46,7 +44,6 @@
 
   let serverConfs = storage.load('servers')
   let serverId = storage.load('currentServer')
-  let server: WebSocketServer | null = null
 
   let maps: MapInfo[] = []
 
@@ -73,10 +70,7 @@
     method: 'upload' | 'blank' | 'clone'
     clone: number | undefined
     cloneItems: { id: number; text: string }[]
-    uploading: boolean
     uploadFile: File | null
-    uploadInvalid: boolean
-    uploadStatus: 'uploading' | 'complete'
     blankWidth: number
     blankHeight: number
   }
@@ -88,10 +82,7 @@
     method: 'upload',
     clone: undefined,
     cloneItems: [],
-    uploading: false,
     uploadFile: null,
-    uploadInvalid: false,
-    uploadStatus: 'uploading',
     blankWidth: 100,
     blankHeight: 100,
   }
@@ -110,22 +101,29 @@
     online: ['finished', 'Online'],
   }
 
-  $: serverStatus = serverConfs.map(_ => {
-    return 'unknown' as ServerStatus
-  })
+  $: serverStatuses = serverConfs.map<ServerStatus>(_ =>  'unknown')
 
-  $: serverConf = serverConfs[serverId]
+  $: {
+    maps = []
+    const id = serverId
+    setServerStatus(id, 'connecting')
 
-  onMount(() => {
-    selectServer(serverId)
-  })
-
-  onDestroy(() => {
-    if (server) server.socket.close()
-  })
+    queryMaps(serverConfs[id].httpUrl)
+      .then(m => {
+        if (serverId === id) {
+          maps = m
+          storage.save('currentServer', id)
+          resetMapModal()
+        }
+        setServerStatus(id, 'online')
+      })
+      .catch(_ => {
+        setServerStatus(id, 'error')
+      })
+  }
 
   function resetMapModal() {
-    modalCreateMap.uploading = false
+    modalCreateMap.uploadFile = null
     modalCreateMap.clone = undefined
     modalCreateMap.cloneItems = maps.map((m, i) => ({
       id: i,
@@ -134,15 +132,15 @@
   }
 
   function setServerStatus(id: number, state: ServerStatus) {
-    serverStatus[id] = state
+    serverStatuses[id] = state
   }
 
-  async function queryMaps(server: WebSocketServer): Promise<MapInfo[]> {
-    let { maps } = await server.query('listmaps', null)
+  async function queryMaps(httpRoot: string): Promise<MapInfo[]> {
+    const resp = await fetch(`${httpRoot}/maps`)
+    const maps: MapInfo[] = await resp.json()
     sortMaps(maps)
     return maps
   }
-  serverConfs = serverConfs
 
   function sortMaps(maps: MapInfo[]): MapInfo[] {
     return maps.sort((a, b) => {
@@ -151,65 +149,28 @@
     })
   }
 
-  function selectServer(id: number) {
-    if (serverStatus[serverId] === 'connected') serverStatus[serverId] = 'online'
-    if (serverStatus[serverId] === 'connecting') serverStatus[serverId] = 'unknown'
-
-    maps = []
-    serverId = id
-
-    if (server) server.socket.close()
-    server = new WebSocketServer(serverConf.wsUrl)
-
-    setServerStatus(id, 'connecting')
-    server.socket.addEventListener(
-      'open',
-      () => {
-        setServerStatus(id, id === serverId ? 'connected' : 'online')
-      },
-      { once: true }
-    )
-    server.socket.addEventListener(
-      'error',
-      () => {
-        setServerStatus(id, 'error')
-      },
-      { once: true }
-    )
-
-    refreshMapList()
-  }
-
-  async function refreshMapList() {
-    const id = serverId // ensure the same server is selected when request completes
-    const res = await queryMaps(server)
-    if (id === serverId) {
-      storage.save('currentServer', id)
-      maps = res
-      resetMapModal()
-    }
-  }
-
   function onSelectServer(e: Event & { detail: string }) {
-    const id = parseInt(e.detail)
-    selectServer(id)
+    serverId = parseInt(e.detail)
   }
 
   function onJoinMap(name: string) {
     navigate('/edit/' + name)
   }
 
-  function onDeleteMap(name: string) {
-    modalConfirmDelete.name = name
+  function onDeleteMap(mapName: string) {
+    const httpRoot = serverConfs[serverId].httpUrl
+    modalConfirmDelete.name = mapName
     modalConfirmDelete.open = true
     modalConfirmDelete.onConfirm = async () => {
       try {
-        await server.query('deletemap', { name })
+        await fetch(`${httpRoot}/maps/${mapName}`, {
+          method: 'DELETE'
+        })
       } catch (e) {
         showError('Map deletion failed: ' + e)
       }
       modalConfirmDelete.open = false
-      await refreshMapList()
+      serverId = serverId
     }
   }
 
@@ -218,7 +179,7 @@
   }
 
   function onDownloadMap(name: string) {
-    downloadMap(serverConf.httpUrl, name)
+    downloadMap(serverConfs[serverId].httpUrl, name)
   }
 
   function onAddServer() {
@@ -243,63 +204,41 @@
   }
 
   async function onCreateMap() {
-    let create: CreateMap
     const { name, method } = modalCreateMap
     const access = modalCreateMap.public ? 'public' : 'unlisted'
 
+    showInfo('Querying the server…', 'none')
+
     if (method === 'upload') {
-      create = {
-        name,
-        access,
-        upload: {},
-      }
+      await uploadMap(serverConfs[serverId].httpUrl, modalCreateMap.uploadFile, { name, access })
     } else if (method === 'blank') {
-      create = {
+      await createMap(serverConfs[serverId].httpUrl, {
         name,
         access,
-        blank: {
-          width: modalCreateMap.blankWidth,
-          height: modalCreateMap.blankHeight,
-          defaultLayers: false, // TODO
-        },
-      }
+        width: modalCreateMap.blankWidth,
+        height: modalCreateMap.blankHeight,
+        defaultLayers: false, // TODO
+      })
     } else if (method === 'clone') {
-      create = {
+      await cloneMap(serverConfs[serverId].httpUrl, {
         name,
         access,
-        clone: { clone: maps[modalCreateMap.clone].name },
-      }
+        clone: maps[modalCreateMap.clone].name
+      })
     }
 
-    showInfo('Querying the server…', 'none')
     try {
-      await server.query('createmap', create)
       clearDialog()
       if (access === 'unlisted') {
-        const url = window.location.origin + '/edit/' + encodeURIComponent(create.name)
+        const url = window.location.origin + '/edit/' + encodeURIComponent(name)
         showWarning(
           "You created a private map that won't be publicly listed. To access it in the future, use this URL: " +
             url
         )
       }
-
       navigate('/edit/' + name)
     } catch (e) {
       showError('Map creation failed: ' + e)
-    }
-  }
-
-  async function onUploadMap(e: Event & { detail: readonly File[] }) {
-    const file = e.detail[0]
-    modalCreateMap.uploadFile = file
-    modalCreateMap.uploading = true
-    modalCreateMap.uploadInvalid = false
-    try {
-      await uploadFile(serverConf.httpUrl, file)
-    } catch (e) {
-      modalCreateMap.uploadInvalid = true
-    } finally {
-      modalCreateMap.uploadStatus = 'complete'
     }
   }
 
@@ -358,7 +297,7 @@
       <TileGroup on:select={onSelectServer}>
         {#each serverConfs as server, i}
           {@const url = new URL(server.wsUrl)}
-          {@const status = serverStatus[i]}
+          {@const status = serverStatuses[i]}
           <RadioTile value={'' + i}>
             <div style="font-weight: bold">{server.name}</div>
             <div>({url.host}{url.protocol === 'ws:' ? ', unencrypted' : ''})</div>
@@ -477,7 +416,7 @@
   primaryButtonText="Create"
   secondaryButtonText="Cancel"
   primaryButtonDisabled={(modalCreateMap.method === 'upload' &&
-    modalCreateMap.uploadStatus !== 'complete') ||
+    modalCreateMap.uploadFile === null) ||
     (modalCreateMap.method === 'clone' && typeof modalCreateMap.clone !== 'number') ||
     modalCreateMap.name === '' ||
     maps.findIndex(m => m.name === modalCreateMap.name) !== -1}
@@ -504,19 +443,20 @@
     </RadioButtonGroup>
     {#if modalCreateMap.method === 'upload'}
       <FormGroup legendText="Upload a .map file" style="margin-bottom: 0">
-        <FileUploaderDropContainer
-          accept={['.map']}
-          labelText="Drag and drop files here or click to upload"
-          on:change={onUploadMap}
-        />
-        {#if modalCreateMap.uploading}
+        {#if modalCreateMap.uploadFile === null}
+          <FileUploaderDropContainer
+            accept={['.map']}
+            labelText="Click to upload"
+            on:change={(e) => modalCreateMap.uploadFile = e.detail.length === 1 ? e.detail[0] : null}
+          />
+        {:else}
           <FileUploaderItem
-            invalid={modalCreateMap.uploadInvalid}
             errorSubject="File rejected by the server"
             errorBody="Please select another file."
-            bind:status={modalCreateMap.uploadStatus}
             size="field"
-            name={modalCreateMap.uploadFile === null ? '' : modalCreateMap.uploadFile.name}
+            status="edit"
+            on:delete={() => modalCreateMap.uploadFile = null}
+            name={modalCreateMap.uploadFile.name}
           />
         {/if}
       </FormGroup>

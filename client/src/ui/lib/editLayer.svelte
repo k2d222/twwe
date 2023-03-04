@@ -3,13 +3,13 @@
   import type { RenderMap } from '../../gl/renderMap'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
-  import { FormEvent, FormInputEvent, uploadFile } from './util'
+  import { FormEvent, FormInputEvent, uploadImage } from './util'
   import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
   import { server, serverConfig } from '../global'
-  import { decodePng, externalImageUrl, queryImage, isPhysicsLayer } from './util'
+  import { decodePng, externalImageUrl, isPhysicsLayer } from './util'
   import { Image } from '../../twmap/image'
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
@@ -94,44 +94,37 @@
 
   let imagePickerOpen = false
 
-  async function onImagePick(e: Event & { detail: Image | string | null }) {
+  async function onImagePick(e: Event & { detail: File | Image | string | null }) {
     imagePickerOpen = false
-    const image = e.detail
 
-    if (image === null) {
+    if (e.detail === null) {
       // no image used
       onEditLayer({ group: g, layer: l, image: null })
-    } else if (image instanceof Image) {
+    } else if (e.detail instanceof Image) {
       // use embedded image
-      const index = rmap.map.images.indexOf(image)
+      const index = rmap.map.images.indexOf(e.detail)
       onEditLayer({ group: g, layer: l, image: index })
+    } else if (e.detail instanceof File) {
+      const name = e.detail.name.replace(/\.[^\.]+$/, '')
+      uploadImageAndPick(e.detail, name)
     } else {
+      const name = e.detail
       // new external image
-      const index = rmap.map.images.length
-      const url = externalImageUrl(image)
+      const url = externalImageUrl(e.detail)
       const embed = await showInfo('Do you wish to embed this image?', 'yesno')
       if (embed) {
-        try {
-          showInfo('Uploading image...', 'none')
-          const resp = await fetch(url)
-          const file = await resp.blob()
-          await uploadFile($serverConfig.httpUrl, file)
-          await $server.query('createimage', { name: image, index, external: false })
-          const img = await queryImage($server, $serverConfig.httpUrl, rmap.map.name, index)
-          rmap.addImage(img)
-          onEditLayer({ group: g, layer: l, image: index })
-          clearDialog()
-        } catch (e) {
-          showError('Failed to upload image: ' + e)
-        }
+        const resp = await fetch(url)
+        const file = await resp.blob()
+        const name = e.detail
+        uploadImageAndPick(file, name)
       } else {
         try {
           showInfo('Creating image...', 'none')
           const index = rmap.map.images.length
-          await $server.query('createimage', { name: image, index, external: true })
+          await $server.query('createimage', { name, index, external: true })
           const img = new Image()
           img.loadExternal(url)
-          img.name = image
+          img.name = name
           rmap.addImage(img)
           onEditLayer({ group: g, layer: l, image: index })
           clearDialog()
@@ -142,24 +135,25 @@
     }
   }
 
-  async function onImageUpload(e: Event & { detail: File }) {
-    const image = e.detail
+  async function uploadImageAndPick(file: Blob, name: string) {
     try {
       showInfo('Uploading image…', 'none')
-      const name = image.name.replace(/\.[^\.]+$/, '')
       const index = rmap.map.images.length
-      await uploadFile($serverConfig.httpUrl, image)
-      await $server.query('createimage', { name, index, external: false })
-      const data = await decodePng(image)
+      await uploadImage($serverConfig.httpUrl, rmap.map.name, file, {
+        name,
+        index,
+      })
+      const data = await decodePng(file)
       const img = new Image()
       img.loadEmbedded(data)
       img.name = name
       rmap.addImage(img)
-      images = images // update the component
-      showInfo('Image available in the Embedded section.')
+      onEditLayer({ group: g, layer: l, image: index })
+      showInfo('Image uploaded and selected.')
     } catch (e) {
       showError('Failed to upload image: ' + e)
     }
+    images = images // update the component
   }
 
   async function onImageDelete(e: Event & { detail: Image }) {
@@ -323,7 +317,6 @@
       {image}
       on:pick={onImagePick}
       on:cancel={() => (imagePickerOpen = false)}
-      on:upload={onImageUpload}
       on:delete={onImageDelete}
     />
   </ModalBody>

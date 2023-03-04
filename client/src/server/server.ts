@@ -52,6 +52,7 @@ export class WebSocketServer implements Server {
     this.queryListeners = {}
     this.broadcastListeners = {
       createmap: [],
+      clonemap: [],
       joinmap: [],
       editmap: [],
       savemap: [],
@@ -161,6 +162,11 @@ export class WebSocketServer implements Server {
   }
 
   private onMessage(e: MessageEvent) {
+    if (e.data instanceof ArrayBuffer) {
+      console.warn('received binary data from the ws server, is the server outdated?')
+      return
+    }
+
     const data = JSON.parse(e.data)
     // this is a query response
     if (isResponse(data)) {

@@ -4,6 +4,7 @@ import { Image } from '../../twmap/image'
 import { AnyTilesLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 import type { WebSocketServer } from 'src/server/server'
+import type { CreateMap, CreateMapBlank, CreateMapClone, ImageConfig, MapConfig } from 'src/server/protocol'
 
 export type Ctor<T> = new (...args: any[]) => T
 
@@ -11,7 +12,7 @@ export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
 export async function downloadMap(httpRoot: string, mapName: string) {
-  const resp = await fetch(`${httpRoot}/map/${mapName}`)
+  const resp = await fetch(`${httpRoot}/maps/${mapName}`)
   const data = await resp.blob()
   const url = URL.createObjectURL(data)
 
@@ -24,14 +25,48 @@ export async function downloadMap(httpRoot: string, mapName: string) {
   link.remove()
 }
 
-export async function uploadFile(httpRoot: string, file: Blob) {
-  await fetch(`${httpRoot}/upload`, {
+export async function uploadMap(httpRoot: string, file: Blob, upload: MapConfig) {
+  const form = new FormData()
+  const json: CreateMap = { upload }
+  form.append('config', JSON.stringify(json))
+  form.append('file', file)
+  await fetch(`${httpRoot}/maps`, {
     method: 'POST',
-    body: file
+    body: form
   })
 }
 
-export async function decodePng(file: File): Promise<ImageData> {
+export async function createMap(httpRoot: string, blank: CreateMapBlank) {
+  const form = new FormData()
+  const json: CreateMap = { blank }
+  form.append('config', JSON.stringify(json))
+  await fetch(`${httpRoot}/maps`, {
+    method: 'POST',
+    body: form
+  })
+}
+
+export async function cloneMap(httpRoot: string, clone: CreateMapClone) {
+  const form = new FormData()
+  const json: CreateMap = { clone }
+  form.append('config', JSON.stringify(json))
+  await fetch(`${httpRoot}/maps`, {
+    method: 'POST',
+    body: form
+  })
+}
+
+export async function uploadImage(httpRoot: string, mapName: string, file: Blob, config: ImageConfig) {
+  const form = new FormData()
+  form.append('config', JSON.stringify(config))
+  form.append('file', file)
+  await fetch(`${httpRoot}/maps/${mapName}/images`, {
+    method: 'POST',
+    body: form
+  })
+}
+
+export async function decodePng(file: Blob): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
     const img = document.createElement('img')
     img.src = URL.createObjectURL(file)
@@ -57,7 +92,7 @@ export function externalImageUrl(name: string) {
 }
 
 export async function queryMap(httpRoot: string, mapName: string): Promise<Map> {
-  const resp = await fetch(`${httpRoot}/map/${mapName}`)
+  const resp = await fetch(`${httpRoot}/maps/${mapName}`)
   const data = await resp.arrayBuffer()
   const map = new Map()
   map.load(mapName, data)
@@ -66,9 +101,9 @@ export async function queryMap(httpRoot: string, mapName: string): Promise<Map> 
 
 export async function queryImage(server: WebSocketServer, httpRoot: string, mapName: string, imageIndex: number): Promise<Image> {
   const imageInfo = await server.query('sendimage', { index: imageIndex })
-  const resp = await fetch(`${httpRoot}/map/${mapName}/image/${imageIndex}`)
-  const data = await resp.arrayBuffer()
-  const image = new ImageData(new Uint8ClampedArray(data), imageInfo.width, imageInfo.height)
+  const resp = await fetch(`${httpRoot}/maps/${mapName}/images/${imageIndex}`)
+  const data = await resp.blob()
+  const image = await decodePng(data)
   const img = new Image()
   img.loadEmbedded(image)
   img.name = imageInfo.name

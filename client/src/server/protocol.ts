@@ -7,23 +7,29 @@ import type * as Info from '../twmap/types'
 
 export type MapAccess = 'public' | 'unlisted'
 
-export interface CreateBlankParams {
+export type MapConfig = {
+  name: string
+  access: MapAccess
+}
+
+export interface CreateMapBlank extends MapConfig {
   // version: MapVersion // TODO
   width: number
   height: number
   defaultLayers: boolean
 }
 
-export interface CreateCloneParams {
+export interface CreateMapClone extends MapConfig {
   clone: string
 }
 
-export interface CreateUploadParams {}
-
 export type CreateMap = {
-  name: string
-  access: MapAccess
-} & ({ blank: CreateBlankParams } | { clone: CreateCloneParams } | { upload: CreateUploadParams })
+  blank: CreateMapBlank
+} | {
+  clone: CreateMapClone
+} | {
+  upload: MapConfig
+}
 
 export interface JoinMap {
   name: string
@@ -230,6 +236,13 @@ export interface ListMaps {
   maps: MapInfo[]
 }
 
+// IMAGES
+
+export interface ImageConfig {
+  name: string
+  index: number
+}
+
 export interface CreateImage {
   name: string
   index: number
@@ -261,7 +274,8 @@ export type ServerError =
 
 // queries (name and content type) that can be sent by the client
 export interface RequestContent {
-  createmap: CreateMap
+  createmap: CreateMapBlank
+  clonemap: CreateMapClone
   joinmap: JoinMap
   leavemap: null
   editmap: EditMap
@@ -299,7 +313,8 @@ export interface RequestContent {
 
 // queries (name and content type) that can be received from the server
 export interface ResponseContent {
-  createmap: CreateMap
+  createmap: CreateMapBlank
+  clonemap: CreateMapClone
   joinmap: JoinMap
   leavemap: null
   editmap: EditMap
