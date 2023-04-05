@@ -8,7 +8,7 @@
     CurveTypeStr,
     envTypes,
   } from '../../server/protocol'
-  import { envPointToJson } from '../../server/convert'
+  import { colorToJson, curveTypeToString, toFixedNum } from '../../server/convert'
   import { server } from '../global'
   import * as Info from '../../twmap/types'
   import { ColorEnvelope, PositionEnvelope, SoundEnvelope, EnvPoint } from '../../twmap/envelope'
@@ -117,6 +117,9 @@
     colors = []
     lastSelected = selected
   }
+
+  // redraw selected when rmap is updated
+  $: rmap, selected = selected
 
   function clampI32(n: number) {
     return clamp(n, -2_147_483_648, 2_147_483_647)
@@ -384,7 +387,11 @@
         index,
         points: {
           type: 'color',
-          content: selected.points.map(envPointToJson),
+          content: selected.points.map(p => ({
+            time: p.time,
+            content: colorToJson(p.content),
+            type: curveTypeToString(p.type),
+          })),
         },
       }
     } else if (selected instanceof PositionEnvelope) {
@@ -392,7 +399,15 @@
         index,
         points: {
           type: 'position',
-          content: selected.points.map(envPointToJson),
+          content: selected.points.map(p => ({
+            time: p.time,
+            content: {
+              x: toFixedNum(p.content.x),
+              y: toFixedNum(p.content.y),
+              rotation: toFixedNum(p.content.rotation),
+            },
+            type: curveTypeToString(p.type),
+          })),
         },
       }
     } else if (selected instanceof SoundEnvelope) {
@@ -400,7 +415,11 @@
         index,
         points: {
           type: 'sound',
-          content: selected.points.map(envPointToJson),
+          content: selected.points.map(p => ({
+            time: p.time,
+            content: toFixedNum(p.content),
+            type: curveTypeToString(p.type),
+          })),
         },
       }
     } else {

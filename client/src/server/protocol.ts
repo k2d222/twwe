@@ -1,9 +1,12 @@
 import type * as Info from '../twmap/types'
+import type * as MapDir from '../twmap/mapdir'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
 
 // MAPS
+
+type FixedNum = string
 
 export type MapAccess = 'public' | 'unlisted'
 
@@ -65,15 +68,15 @@ export interface CreateGroup {
 // must have exactly one of the optional fields
 export interface EditGroup {
   group: number
-  offX?: number
-  offY?: number
+  offX?: FixedNum
+  offY?: FixedNum
   paraX?: number
   paraY?: number
   clipping?: boolean
-  clipX?: number
-  clipY?: number
-  clipW?: number
-  clipH?: number
+  clipX?: FixedNum
+  clipY?: FixedNum
+  clipW?: FixedNum
+  clipH?: FixedNum
   name?: string
 }
 
@@ -146,9 +149,9 @@ export type EditTile = EditTileParams & {
 export type CreateQuad = {
   group: number
   layer: number
-  points: Info.Coord[]
+  points: MapDir.Point<FixedNum>[]
   colors: Info.Color[]
-  texCoords: Info.Coord[]
+  texCoords: MapDir.Point<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -159,9 +162,9 @@ export type EditQuad = {
   group: number
   layer: number
   quad: number
-  points: Info.Coord[]
+  points: MapDir.Point<FixedNum>[]
   colors: Info.Color[]
-  texCoords: Info.Coord[]
+  texCoords: MapDir.Point<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -200,15 +203,15 @@ export interface EditEnvelope {
   points?:
     | {
         type: 'color'
-        content: EnvPoint<Info.Color>[]
+        content: EnvPoint<MapDir.Color<string>>[]
       }
     | {
         type: 'position'
-        content: EnvPoint<{ x: number; y: number; rotation: number }>[]
+        content: EnvPoint<{ x: FixedNum; y: FixedNum; rotation: FixedNum }>[]
       }
     | {
         type: 'sound'
-        content: EnvPoint<number>[]
+        content: EnvPoint<FixedNum>[]
       }
 }
 

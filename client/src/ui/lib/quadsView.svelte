@@ -12,6 +12,7 @@
   import { showError, clearDialog } from './dialog'
   import { Button } from 'carbon-components-svelte'
   import { Add as AddIcon } from 'carbon-icons-svelte'
+  import { coordToJson } from '../../server/convert'
 
   export let rmap: RenderMap
   export let layer: QuadsLayer
@@ -182,7 +183,7 @@
         { x: -w / 2 + mx, y: h / 2 + my }, // bottom left
         { x: w / 2 + mx, y: h / 2 + my }, // bottom right
         { x: mx, y: my }, // center
-      ],
+      ].map(coordToJson),
       colors: [
         { r: 255, g: 255, b: 255, a: 255 },
         { r: 255, g: 255, b: 255, a: 255 },
@@ -194,7 +195,7 @@
         { x: 1024, y: 0 },
         { x: 0, y: 1024 },
         { x: 1024, y: 1024 },
-      ],
+      ].map(coordToJson),
       posEnv: null,
       posEnvOffset: 0,
       colorEnv: null,
@@ -239,9 +240,9 @@
       group: g,
       layer: l,
       quad: q,
-      points,
+      points: points.map(coordToJson),
       colors,
-      texCoords,
+      texCoords: texCoords.map(coordToJson),
       posEnv: posEnv_ === -1 ? null : posEnv_,
       posEnvOffset,
       colorEnv: colorEnv_ === -1 ? null : colorEnv_,
@@ -261,9 +262,9 @@
     const change: CreateQuad = {
       group: g,
       layer: l,
-      points,
+      points: points.map(coordToJson),
       colors,
-      texCoords,
+      texCoords: texCoords.map(coordToJson),
       posEnv: posEnv_ === -1 ? null : posEnv_,
       posEnvOffset,
       colorEnv: colorEnv_ === -1 ? null : colorEnv_,
