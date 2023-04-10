@@ -105,6 +105,10 @@
 
   $: {
     maps = []
+
+    if (serverId >= serverConfs.length)
+      serverId = 0
+
     const id = serverId
     setServerStatus(id, 'connecting')
 

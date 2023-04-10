@@ -966,7 +966,7 @@ fn main() {
     std::fs::remove_dir_all("uploads").ok();
     std::fs::create_dir("uploads").ok();
 
-    pretty_env_logger::init();
+    pretty_env_logger::init_timed();
 
     let args = Cli::parse();
 
