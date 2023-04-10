@@ -322,12 +322,12 @@
       if (0 <= v.group && v.group < rmap.groups.length) {
         const rgroup = rmap.groups[v.group]
         let [ offX, offY ] = rgroup.offset()
-        const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
-        return [k, { x, y }]
+        // const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
+        return [k, { x: v.point.x + offX, y: v.point.y + offY }]
       }
       else {
-        const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
-        return [k, { x, y }]
+        // const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
+        return [k, v.point]
       }
 
     }))
@@ -455,6 +455,9 @@
     }
   }
   async function updateCursors() {
+    if (peerCount < 2)
+      return
+
     let [ offX, offY ] = activeRgroup.offset()
     const cursors = await $server.query('cursors', {
       group: g,
@@ -509,15 +512,20 @@
     let lastTime: DOMHighResTimeStamp = 0
 
     const renderLoop = (t: DOMHighResTimeStamp) => {
-      if (animEnabled) {
-        currentTime += t - lastTime
-        updateEnvelopes(currentTime)
+      if (!destroyed) {
+        if (animEnabled) {
+          currentTime += t - lastTime
+          updateEnvelopes(currentTime)
+        }
+        renderer.render(viewport, rmap)
+        updateOutlines()
+        lastTime = t
+
+        cursorAnim = cursorAnim // redraw cursors
+        requestAnimationFrame(renderLoop)
       }
-      renderer.render(viewport, rmap)
-      updateOutlines()
-      lastTime = t
-      if (!destroyed) requestAnimationFrame(renderLoop)
     }
+
     renderLoop(0)
   })
 
@@ -860,7 +868,8 @@
             {/if}
             {#each Object.values($cursorAnim) as cur}
               <img class="cursor" src="/assets/gui_cursor.png" alt=""
-                style:top={cur.y + 'px'} style:left={cur.x + 'px'}
+                style:top={(cur.y - viewport.pos.y) * viewport.scale + 'px'}
+                style:left={(cur.x - viewport.pos.x) * viewport.scale + 'px'}
               />
             {/each}
             <!-- <Statusbar /> -->
