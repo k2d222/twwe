@@ -87,6 +87,8 @@ export class WebSocketServer implements Server {
       sendimage: [],
       deleteimage: [],
 
+      cursors: [],
+
       error: [],
     }
 

@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
-    fs,
-    io::Cursor,
+    fs, io,
     net::SocketAddr,
     path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
@@ -35,7 +34,7 @@ use futures::{
     future, StreamExt, TryStreamExt,
 };
 
-use twmap::{checks::CheckData, EmbeddedImage, Image, TwMap};
+use twmap::{checks::CheckData, EmbeddedImage, Image, Point, TwMap};
 
 mod room;
 use room::Room;
@@ -102,8 +101,9 @@ impl Server {
             content,
         };
         let str = serde_json::to_string(&msg).unwrap(); // this must not fail
-        log::debug!("text message sent to {}: {}", peer.addr, str);
         peer.tx.unbounded_send(Message::Text(str)).ok(); // this is ok to fail (peer logout)
+
+        // log::debug!("text message sent to {}: {}", peer.addr, str);
     }
 
     // fn broadcast_to_all(&self, content: ResponseContent) {
@@ -137,8 +137,8 @@ impl Server {
         let str = serde_json::to_string(&msg).unwrap(); // this must not fail
         let msg = Message::Text(str);
 
-        for tx in room.peers().values() {
-            tx.unbounded_send(msg.to_owned()).ok();
+        for p in room.peers().values() {
+            p.tx.unbounded_send(msg.to_owned()).ok();
         }
     }
 
@@ -155,9 +155,9 @@ impl Server {
         let msg = Message::Text(str);
 
         if let Some(room) = peer.room.clone() {
-            for (addr, tx) in room.peers().iter() {
+            for (addr, p) in room.peers().iter() {
                 if !addr.eq(&peer.addr) {
-                    tx.unbounded_send(msg.to_owned()).ok();
+                    p.tx.unbounded_send(msg.to_owned()).ok();
                 }
             }
         }
@@ -215,6 +215,7 @@ impl Server {
                 ResponseContent::ImageInfo(_) => (),
                 ResponseContent::DeleteImage(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::Error(_) => (),
+                ResponseContent::Cursors(_) => (),
             }
         }
     }
@@ -518,6 +519,30 @@ impl Server {
         Ok(ResponseContent::DeleteImage(delete_image))
     }
 
+    fn handle_cursor(&self, peer: &Peer, cursor: Cursor) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        room.peers()
+            .get_mut(&peer.addr)
+            .ok_or("server error")?
+            .cursor = Some(cursor);
+
+        let cursors = room
+            .peers()
+            .iter()
+            .filter_map(|(k, v)| {
+                if k != &peer.addr {
+                    if let Some(ref cursor) = v.cursor {
+                        return Some((v.id.to_string(), cursor.clone()));
+                    }
+                }
+                None
+            })
+            .collect();
+
+        Ok(ResponseContent::Cursors(cursors))
+    }
+
     fn handle_request(&self, peer: &mut Peer, req: Request) {
         let res = match req.content {
             RequestContent::CreateMap(content) => self.handle_create_map(content),
@@ -548,6 +573,7 @@ impl Server {
             RequestContent::CreateImage(content) => self.handle_create_image(peer, content),
             RequestContent::ImageInfo(content) => self.handle_image_info(peer, content),
             RequestContent::DeleteImage(content) => self.handle_delete_image(peer, content),
+            RequestContent::Cursors(content) => self.handle_cursor(peer, content),
         };
         self.respond_and_broadcast(peer, req.id, res);
     }
@@ -563,7 +589,7 @@ impl Server {
         let fut_recv = ws_recv.try_for_each(|msg| {
             match msg {
                 Message::Text(text) => {
-                    log::debug!("text message received from {}: {}", addr, text);
+                    // log::debug!("text message received from {}: {}", addr, text);
 
                     match serde_json::from_str(&text) {
                         Ok(req) => {
@@ -764,7 +790,7 @@ async fn route_get_image(
             twmap::Image::Embedded(image) => image
                 .image
                 .unwrap_ref()
-                .write_to(&mut Cursor::new(&mut buf), ImageFormat::Png)
+                .write_to(&mut io::Cursor::new(&mut buf), ImageFormat::Png)
                 .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "internal server error"))?,
         };
 
@@ -881,7 +907,7 @@ async fn route_create_image(
         return Err((StatusCode::BAD_REQUEST, "max number of images reached").into());
     }
 
-    let image = EmbeddedImage::from_reader(&config.name, Cursor::new(file))
+    let image = EmbeddedImage::from_reader(&config.name, io::Cursor::new(file))
         .map_err(|_| "failed to load image")?;
 
     // TODO: is this necessary, or does twmap handle this?

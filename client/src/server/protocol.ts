@@ -267,6 +267,16 @@ export interface ImageInfo {
   height: number
 }
 
+export interface Cursor {
+  point: Info.Coord
+  group: number
+  layer: number
+}
+
+export type Cursors = {
+  [k: string]: Cursor
+}
+
 export type ServerError =
   | {
       serverError: null
@@ -312,6 +322,8 @@ export interface RequestContent {
   createimage: CreateImage
   sendimage: SendImage
   deleteimage: DeleteImage
+
+  cursors: Cursor
 }
 
 // queries (name and content type) that can be received from the server
@@ -352,6 +364,8 @@ export interface ResponseContent {
   createimage: CreateImage
   sendimage: ImageInfo
   deleteimage: DeleteImage
+
+  cursors: Cursors
 
   error: ServerError
 }

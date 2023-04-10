@@ -16,9 +16,10 @@ use futures::channel::mpsc::UnboundedSender;
 
 use twmap::{
     checks::CheckData, constants, parse::LayerFlags, CompressedData, EmbeddedImage, Env, Envelope,
-    ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, QuadsLayer,
+    ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, Point, QuadsLayer,
     SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer, TilesLayer, TuneLayer, TwMap,
 };
+use uuid::Uuid;
 
 use crate::{
     map_cfg::MapConfig,
@@ -112,11 +113,17 @@ impl LazyMap {
     }
 }
 
+pub struct RoomPeer {
+    pub id: Uuid,
+    pub tx: Tx,
+    pub cursor: Option<Cursor>,
+}
+
 pub struct Room {
     name: String,
     path: PathBuf,
     pub config: MapConfig,
-    peers: Mutex<HashMap<SocketAddr, Tx>>,
+    peers: Mutex<HashMap<SocketAddr, RoomPeer>>,
     pub map: LazyMap,
     saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
 }
@@ -158,7 +165,14 @@ impl Room {
     }
 
     pub fn add_peer(&self, peer: &Peer) {
-        self.peers().insert(peer.addr, peer.tx.clone());
+        self.peers().insert(
+            peer.addr,
+            RoomPeer {
+                id: Uuid::new_v4(),
+                tx: peer.tx.clone(),
+                cursor: None,
+            },
+        );
     }
 
     pub fn peer_count(&self) -> usize {
@@ -172,13 +186,13 @@ impl Room {
         }
     }
 
-    pub fn peers(&self) -> MutexGuard<HashMap<SocketAddr, Tx>> {
+    pub fn peers(&self) -> MutexGuard<HashMap<SocketAddr, RoomPeer>> {
         self.peers.lock()
     }
 
     pub fn remove_closed_peers(&self) {
         let mut peers = self.peers();
-        peers.retain(|_, tx| !tx.is_closed());
+        peers.retain(|_, p| !p.tx.is_closed());
         if peers.is_empty() {
             self.map.unload()
         }

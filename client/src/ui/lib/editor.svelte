@@ -21,6 +21,7 @@
     ReorderLayer,
     CreateImage,
     DeleteImage,
+    Cursors,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from 'src/twmap/group'
@@ -66,6 +67,8 @@
     OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
+  import { spring, tweened } from 'svelte/motion'
+  import { derived, Readable, Writable } from 'svelte/store';
 
   type Coord = {
     x: number
@@ -117,6 +120,10 @@
   let shiftKey = false
   $: if (shiftKey && brushState === BrushState.Select) brushState = BrushState.Erase
   $: if (!shiftKey && brushState === BrushState.Erase) brushState = BrushState.Select
+
+  // cursors
+  let cursors: { [k: string]: { x: number, y: number } } = {}
+  let cursorAnim = spring(cursors)
 
   // computed (readonly)
   let g: number, l: number
@@ -310,6 +317,32 @@
   async function serverOnEditMap(e: EditMap) {
     map.info = e.info
   }
+  function serverOnCursors(e: Cursors) {
+    cursors = Object.fromEntries(Object.entries(e).map(([k, v]) => {
+      if (0 <= v.group && v.group < rmap.groups.length) {
+        const rgroup = rmap.groups[v.group]
+        let [ offX, offY ] = rgroup.offset()
+        const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
+        return [k, { x, y }]
+      }
+      else {
+        const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
+        return [k, { x, y }]
+      }
+
+    }))
+
+    const k1 = Object.keys($cursorAnim).sort()
+    const k2 = Object.keys(cursors).sort()
+    const eq = k1.length === k2.length && k1.every((k, i) => k === k2[i])
+
+    if (!eq) {
+      cursorAnim = spring(cursors, { stiffness: 0.1, damping: 0.7 })
+    }
+    else {
+      cursorAnim.set(cursors)
+    }
+  }
   function serverOnError(e: ServerError) {
     if ('serverError' in e) {
       showError(
@@ -421,6 +454,18 @@
       }
     }
   }
+  async function updateCursors() {
+    let [ offX, offY ] = activeRgroup.offset()
+    const cursors = await $server.query('cursors', {
+      group: g,
+      layer: l,
+      point: {
+        x: viewport.mousePos.x - offX,
+        y: viewport.mousePos.y - offY,
+      }
+    })
+    serverOnCursors(cursors)
+  }
 
   function onServerClosed() {
     showError('You have been disconnected from the server.')
@@ -428,6 +473,7 @@
   }
 
   let destroyed = false
+  let cursorInterval = 0
 
   onMount(() => {
     cont.prepend(canvas)
@@ -451,8 +497,11 @@
     $server.on('createimage', serverOnCreateImage)
     $server.on('deleteimage', serverOnDeleteImage)
     $server.on('editmap', serverOnEditMap)
+    $server.on('cursors', serverOnCursors)
     $server.on('error', serverOnError)
     $server.send('listusers')
+
+    cursorInterval = setInterval(updateCursors, 100) as any
 
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
@@ -494,6 +543,9 @@
     $server.off('deleteimage', serverOnDeleteImage)
     $server.off('editmap', serverOnEditMap)
     $server.off('error', serverOnError)
+
+    clearInterval(cursorInterval)
+
     destroyed = true
   })
 
@@ -806,6 +858,11 @@
             {:else if activeLayer instanceof QuadsLayer}
               <QuadsView {rmap} layer={activeLayer} />
             {/if}
+            {#each Object.values($cursorAnim) as cur}
+              <img class="cursor" src="/assets/gui_cursor.png" alt=""
+                style:top={cur.y + 'px'} style:left={cur.x + 'px'}
+              />
+            {/each}
             <!-- <Statusbar /> -->
           </div>
           {#if activeRlayer instanceof RenderAnyTilesLayer}

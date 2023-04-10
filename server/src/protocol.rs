@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
 use twmap::{
@@ -397,6 +399,13 @@ pub struct ImageInfo {
     pub height: u32,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Cursor {
+    pub point: Point<f32>,
+    pub group: i32,
+    pub layer: i32,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Error {
@@ -442,6 +451,8 @@ pub enum RequestContent {
     CreateImage(CreateImage),
     ImageInfo(u16),
     DeleteImage(DeleteImage),
+
+    Cursors(Cursor),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -482,6 +493,8 @@ pub enum ResponseContent {
     CreateImage(CreateImage),
     ImageInfo(ImageInfo),
     DeleteImage(DeleteImage),
+
+    Cursors(HashMap<String, Cursor>),
 
     Error(Error),
 }
