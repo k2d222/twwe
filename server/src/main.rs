@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::{self, File},
+    fs,
     io::Cursor,
     net::SocketAddr,
     path::PathBuf,
@@ -19,7 +19,7 @@ use axum::{
     headers,
     http::{header, Method, StatusCode},
     response::{ErrorResponse, IntoResponse},
-    routing::{get, post},
+    routing::get,
     Json, Router, TypedHeader,
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -238,17 +238,16 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}.map", clone_map.config.name).into();
-        let cfg_path: PathBuf = format!("maps/{}.json", clone_map.config.name).into();
+        let map_path: PathBuf = format!("maps/{}", clone_map.config.name).into();
 
         let room = self
             .room(&clone_map.clone)
             .ok_or("cannot clone non-existing map")?;
         room.save_map_copy(&map_path)?;
 
-        let mut new_room = Room::new(map_path);
+        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
         new_room.config.access = clone_map.config.access.clone();
-        new_room.save_config(&cfg_path)?;
+        new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
         rooms.insert(clone_map.config.name.to_owned(), Arc::new(new_room));
 
@@ -263,8 +262,7 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}.map", create_map.config.name).into();
-        let cfg_path: PathBuf = format!("maps/{}.json", create_map.config.name).into();
+        let map_path: PathBuf = format!("maps/{}", create_map.config.name).into();
 
         let mut map = TwMap::empty(create_map.version.unwrap_or(twmap::Version::DDNet06));
         let mut group = twmap::Group::physics();
@@ -280,9 +278,9 @@ impl Server {
         map_path.parent().map(fs::create_dir_all);
         map.save_file(&map_path).map_err(server_error)?;
 
-        let mut new_room = Room::new(map_path);
+        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
         new_room.config.access = create_map.config.access.clone();
-        new_room.save_config(&cfg_path)?;
+        new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
         rooms.insert(create_map.config.name.to_owned(), Arc::new(new_room));
 
@@ -301,8 +299,7 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}.map", create_map.config.name).into();
-        let cfg_path: PathBuf = format!("maps/{}.json", create_map.config.name).into();
+        let map_path: PathBuf = format!("maps/{}", create_map.config.name).into();
 
         std::fs::write(&map_path, file).map_err(|_| "failed to write file")?;
         TwMap::parse_file(&map_path).map_err(|_| {
@@ -310,9 +307,9 @@ impl Server {
             "not a valid map file"
         })?;
 
-        let mut new_room = Room::new(map_path);
+        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
         new_room.config.access = create_map.config.access.clone();
-        new_room.save_config(&cfg_path)?;
+        new_room.save_config()?;
         {
             let mut rooms = self.rooms.lock().unwrap();
             rooms.insert(create_map.config.name.to_owned(), Arc::new(new_room));
@@ -629,21 +626,16 @@ fn create_server() -> Server {
     let server = Server::new();
     {
         let mut server_rooms = server.rooms();
-        let rooms = glob("maps/**/*.map")
+        let rooms = glob("maps/*/map.map")
             .expect("no map found in maps directory")
             .into_iter()
             .filter_map(|e| e.ok())
             .map(|e| {
-                let config_path = e.with_extension("json");
-                let config = File::open(config_path)
-                    .ok()
-                    .and_then(|file| serde_json::from_reader(file).ok())
-                    .unwrap_or_default();
-                Arc::new(Room::new_with_config(e, config))
+                let dir = e.parent().unwrap().to_owned(); // map must be in a sub-directory
+                Arc::new(Room::new(dir).expect("failed to load one of the map dirs"))
             });
         for r in rooms {
-            let name = r.map.path.with_extension("").to_string_lossy().into_owned();
-            server_rooms.insert(name[5..].to_string(), r);
+            server_rooms.insert(r.name().to_owned(), r);
         }
     }
     log::info!("found {} maps.", server.rooms().len());
