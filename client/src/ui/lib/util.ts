@@ -101,7 +101,6 @@ export async function queryMaps(httpRoot: string): Promise<MapInfo[]> {
 
   const resp = await fetch(`${httpRoot}/maps`)
   const maps: MapInfo[] = await resp.json()
-  console.log(maps)
   sortMaps(maps)
   return maps
 }

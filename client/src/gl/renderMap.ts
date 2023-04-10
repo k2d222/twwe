@@ -228,23 +228,23 @@ export class RenderMap {
       if (change.points.type === 'color')
         env.points = change.points.content.map(p => ({
           time: p.time,
-          content: colorFromJson(p.content),
+          content: colorFromJson(p.content, 10),
           type: curveTypeFromString(p.type),
         }))
       else if (change.points.type === 'position')
         env.points = change.points.content.map(p => ({
           time: p.time,
           content: {
-            x: fromFixedNum(p.content.x),
-            y: fromFixedNum(p.content.y),
-            rotation: fromFixedNum(p.content.rotation),
+            x: fromFixedNum(p.content.x, 15),
+            y: fromFixedNum(p.content.y, 15),
+            rotation: fromFixedNum(p.content.rotation, 10),
           },
           type: curveTypeFromString(p.type),
         }))
       else if (change.points.type === 'sound')
         env.points = change.points.content.map(p => ({
           time: p.time,
-          content: fromFixedNum(p.content),
+          content: fromFixedNum(p.content, 10),
           type: curveTypeFromString(p.type),
         }))
     }
@@ -286,9 +286,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
 
     const quad: Quad = {
-      points: change.points.map(coordFromJson),
+      points: change.points.map(p => coordFromJson(p, 15)),
       colors: change.colors,
-      texCoords: change.texCoords.map(coordFromJson),
+      texCoords: change.texCoords.map(p => coordFromJson(p, 10)),
       posEnv:
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope),
       posEnvOffset: change.posEnvOffset,
@@ -306,9 +306,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
     const quad = rlayer.layer.quads[change.quad]
 
-    if ('points' in change) quad.points = change.points.map(coordFromJson)
+    if ('points' in change) quad.points = change.points.map(p => coordFromJson(p, 15))
     if ('colors' in change) quad.colors = change.colors
-    if ('texCoords' in change) quad.texCoords = change.texCoords.map(coordFromJson)
+    if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => coordFromJson(p, 10))
     if ('posEnv' in change)
       quad.posEnv =
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope)
@@ -331,15 +331,15 @@ export class RenderMap {
   editGroup(change: EditGroup) {
     const rgroup = this.groups[change.group]
 
-    if ('offX' in change) rgroup.group.offX = fromFixedNum(change.offX)
-    if ('offY' in change) rgroup.group.offY = fromFixedNum(change.offY)
+    if ('offX' in change) rgroup.group.offX = fromFixedNum(change.offX, 5)
+    if ('offY' in change) rgroup.group.offY = fromFixedNum(change.offY, 5)
     if ('paraX' in change) rgroup.group.paraX = change.paraX
     if ('paraY' in change) rgroup.group.paraY = change.paraY
     if ('clipping' in change) rgroup.group.clipping = change.clipping
-    if ('clipX' in change) rgroup.group.clipX = fromFixedNum(change.clipX)
-    if ('clipY' in change) rgroup.group.clipY = fromFixedNum(change.clipY)
-    if ('clipW' in change) rgroup.group.clipW = fromFixedNum(change.clipW)
-    if ('clipH' in change) rgroup.group.clipH = fromFixedNum(change.clipH)
+    if ('clipX' in change) rgroup.group.clipX = fromFixedNum(change.clipX, 5)
+    if ('clipY' in change) rgroup.group.clipY = fromFixedNum(change.clipY, 5)
+    if ('clipW' in change) rgroup.group.clipW = fromFixedNum(change.clipW, 5)
+    if ('clipH' in change) rgroup.group.clipH = fromFixedNum(change.clipH, 5)
     if ('name' in change) rgroup.group.name = change.name
   }
 

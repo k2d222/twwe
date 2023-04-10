@@ -389,7 +389,7 @@
           type: 'color',
           content: selected.points.map(p => ({
             time: p.time,
-            content: colorToJson(p.content),
+            content: colorToJson(p.content, 10),
             type: curveTypeToString(p.type),
           })),
         },
@@ -402,9 +402,9 @@
           content: selected.points.map(p => ({
             time: p.time,
             content: {
-              x: toFixedNum(p.content.x),
-              y: toFixedNum(p.content.y),
-              rotation: toFixedNum(p.content.rotation),
+              x: toFixedNum(p.content.x, 15),
+              y: toFixedNum(p.content.y, 15),
+              rotation: toFixedNum(p.content.rotation, 10),
             },
             type: curveTypeToString(p.type),
           })),
@@ -417,7 +417,7 @@
           type: 'sound',
           content: selected.points.map(p => ({
             time: p.time,
-            content: toFixedNum(p.content),
+            content: toFixedNum(p.content, 10),
             type: curveTypeToString(p.type),
           })),
         },

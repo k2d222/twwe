@@ -12,41 +12,41 @@ export function curveTypeFromString(str: CurveTypeStr): Info.CurveType {
   return curveTypeStr.indexOf(str)
 }
 
-export function fromFixedNum(x: string): number {
-  return parseFloat(x)
+export function fromFixedNum(x: string, floating: number): number {
+  return parseFloat(x) * Math.pow(2, floating)
 }
-export function toFixedNum(x: number): string {
-  return x.toString()
+export function toFixedNum(x: number, floating: number): string {
+  return (x / Math.pow(2, floating)).toString()
 }
 
-export function coordToJson(coord: Info.Coord): MapDir.Point<string> {
+export function coordToJson(coord: Info.Coord, floating: number): MapDir.Point<string> {
   return {
-    x: toFixedNum(coord.x),
-    y: toFixedNum(coord.y),
+    x: toFixedNum(coord.x, floating),
+    y: toFixedNum(coord.y, floating),
   }
 }
 
-export function coordFromJson(coord: MapDir.Point<string>): Info.Coord {
+export function coordFromJson(coord: MapDir.Point<string>, floating: number): Info.Coord {
   return {
-    x: fromFixedNum(coord.x),
-    y: fromFixedNum(coord.y),
+    x: fromFixedNum(coord.x, floating),
+    y: fromFixedNum(coord.y, floating),
   }
 }
 
-export function colorToJson(coord: Info.Color): MapDir.Color<string> {
+export function colorToJson(coord: Info.Color, floating: number): MapDir.Color<string> {
   return {
-    r: toFixedNum(coord.r),
-    g: toFixedNum(coord.g),
-    b: toFixedNum(coord.b),
-    a: toFixedNum(coord.a),
+    r: toFixedNum(coord.r, floating),
+    g: toFixedNum(coord.g, floating),
+    b: toFixedNum(coord.b, floating),
+    a: toFixedNum(coord.a, floating),
   }
 }
 
-export function colorFromJson(coord: MapDir.Color<string>): Info.Color {
+export function colorFromJson(coord: MapDir.Color<string>, floating: number): Info.Color {
   return {
-    r: fromFixedNum(coord.r),
-    g: fromFixedNum(coord.g),
-    b: fromFixedNum(coord.b),
-    a: fromFixedNum(coord.a),
+    r: fromFixedNum(coord.r, floating),
+    g: fromFixedNum(coord.g, floating),
+    b: fromFixedNum(coord.b, floating),
+    a: fromFixedNum(coord.a, floating),
   }
 }

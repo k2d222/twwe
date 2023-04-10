@@ -56,11 +56,11 @@
   }
   function onEditPosX(e: FormInputEvent) {
     const offX = parseI32(e.currentTarget.value)
-    if (!isNaN(offX)) onEditGroup({ group: g, offX: toFixedNum(offX) })
+    if (!isNaN(offX)) onEditGroup({ group: g, offX: toFixedNum(offX, 5) })
   }
   function onEditPosY(e: FormInputEvent) {
     const offY = parseI32(e.currentTarget.value)
-    if (!isNaN(offY)) onEditGroup({ group: g, offY: toFixedNum(offY) })
+    if (!isNaN(offY)) onEditGroup({ group: g, offY: toFixedNum(offY, 5) })
   }
   function onEditParaX(e: FormInputEvent) {
     const paraX = parseI32(e.currentTarget.value)
@@ -80,19 +80,19 @@
   }
   function onEditClipX(e: FormInputEvent) {
     const clipX = parseI32(e.currentTarget.value)
-    if (!isNaN(clipX)) onEditGroup({ group: g, clipX: toFixedNum(clipX) })
+    if (!isNaN(clipX)) onEditGroup({ group: g, clipX: toFixedNum(clipX, 5) })
   }
   function onEditClipY(e: FormInputEvent) {
     const clipY = parseI32(e.currentTarget.value)
-    if (!isNaN(clipY)) onEditGroup({ group: g, clipY: toFixedNum(clipY) })
+    if (!isNaN(clipY)) onEditGroup({ group: g, clipY: toFixedNum(clipY, 5) })
   }
   function onEditClipW(e: FormInputEvent) {
     const clipW = Math.max(parseI32(e.currentTarget.value), 0)
-    if (!isNaN(clipW)) onEditGroup({ group: g, clipW: toFixedNum(clipW) })
+    if (!isNaN(clipW)) onEditGroup({ group: g, clipW: toFixedNum(clipW, 5) })
   }
   function onEditClipH(e: FormInputEvent) {
     const clipH = Math.max(parseI32(e.currentTarget.value), 0)
-    if (!isNaN(clipH)) onEditGroup({ group: g, clipH: toFixedNum(clipH) })
+    if (!isNaN(clipH)) onEditGroup({ group: g, clipH: toFixedNum(clipH, 5) })
   }
 </script>
 
