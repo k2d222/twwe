@@ -601,7 +601,8 @@
     alert('TODO renaming maps is not yet implemented.')
   }
 
-  function onLeaveMap() {
+  async function onLeaveMap() {
+    await $server.query('leavemap', null)
     navigate('/')
   }
 
