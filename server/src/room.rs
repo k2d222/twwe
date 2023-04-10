@@ -114,29 +114,48 @@ impl LazyMap {
 }
 
 pub struct Room {
+    name: String,
+    path: PathBuf,
     pub config: MapConfig,
     peers: Mutex<HashMap<SocketAddr, Tx>>,
     pub map: LazyMap,
     saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
 }
 
-impl Room {
-    pub fn new(path: PathBuf) -> Self {
-        Room {
-            config: MapConfig::default(),
-            peers: Mutex::new(HashMap::new()),
-            map: LazyMap::new(path),
-            saving: Mutex::new(()),
-        }
-    }
+const MAP_FILE_NAME: &str = "map.map";
+const CFG_FILE_NAME: &str = "config.json";
 
-    pub fn new_with_config(path: PathBuf, config: MapConfig) -> Self {
-        Room {
+impl Room {
+    pub fn new(path: PathBuf) -> Option<Self> {
+        let mut map_path = path.clone();
+        map_path.push(MAP_FILE_NAME);
+
+        if !map_path.exists() {
+            return None;
+        }
+
+        let name = path.file_name()?.to_string_lossy().to_string();
+
+        let mut config_path = path.clone();
+        config_path.push(CFG_FILE_NAME);
+
+        let config = File::open(config_path)
+            .ok()
+            .and_then(|file| serde_json::from_reader(file).ok())
+            .unwrap_or_default();
+
+        Some(Room {
+            name,
+            path,
             config,
             peers: Mutex::new(HashMap::new()),
-            map: LazyMap::new(path),
+            map: LazyMap::new(map_path),
             saving: Mutex::new(()),
-        }
+        })
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
     }
 
     pub fn add_peer(&self, peer: &Peer) {
@@ -190,8 +209,10 @@ impl Room {
         Ok(())
     }
 
-    pub fn save_config(&self, path: &PathBuf) -> Result<(), &'static str> {
-        let file = File::create(path).map_err(server_error)?;
+    pub fn save_config(&self) -> Result<(), &'static str> {
+        let mut cfg_path = self.path.clone();
+        cfg_path.push(CFG_FILE_NAME);
+        let file = File::create(cfg_path).map_err(server_error)?;
         serde_json::to_writer(file, &self.config).map_err(server_error)?;
         Ok(())
     }
