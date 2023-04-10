@@ -4,7 +4,7 @@ import { Image } from '../../twmap/image'
 import { AnyTilesLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 import type { WebSocketServer } from 'src/server/server'
-import type { CreateMap, CreateMapBlank, CreateMapClone, ImageConfig, MapConfig } from 'src/server/protocol'
+import type { CreateMap, CreateMapBlank, CreateMapClone, ImageConfig, MapConfig, MapInfo } from 'src/server/protocol'
 
 export type Ctor<T> = new (...args: any[]) => T
 
@@ -89,6 +89,21 @@ export async function decodePng(file: Blob): Promise<ImageData> {
 
 export function externalImageUrl(name: string) {
   return '/mapres/' + name + '.png'
+}
+
+export async function queryMaps(httpRoot: string): Promise<MapInfo[]> {
+  function sortMaps(maps: MapInfo[]): MapInfo[] {
+    return maps.sort((a, b) => {
+      if (a.users === b.users) return a.name.localeCompare(b.name)
+      else return b.users - a.users
+    })
+  }
+
+  const resp = await fetch(`${httpRoot}/maps`)
+  const maps: MapInfo[] = await resp.json()
+  console.log(maps)
+  sortMaps(maps)
+  return maps
 }
 
 export async function queryMap(httpRoot: string, mapName: string): Promise<Map> {

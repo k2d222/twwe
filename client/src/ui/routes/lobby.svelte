@@ -36,7 +36,7 @@
     Login as JoinIcon,
     TrashCan as DeleteIcon,
   } from 'carbon-icons-svelte'
-  import { cloneMap, createMap, downloadMap, uploadMap } from '../lib/util'
+  import { cloneMap, createMap, downloadMap, queryMaps, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
@@ -133,20 +133,6 @@
 
   function setServerStatus(id: number, state: ServerStatus) {
     serverStatuses[id] = state
-  }
-
-  async function queryMaps(httpRoot: string): Promise<MapInfo[]> {
-    const resp = await fetch(`${httpRoot}/maps`)
-    const maps: MapInfo[] = await resp.json()
-    sortMaps(maps)
-    return maps
-  }
-
-  function sortMaps(maps: MapInfo[]): MapInfo[] {
-    return maps.sort((a, b) => {
-      if (a.users === b.users) return a.name.localeCompare(b.name)
-      else return b.users - a.users
-    })
   }
 
   function onSelectServer(e: Event & { detail: string }) {
