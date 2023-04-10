@@ -139,15 +139,15 @@
     try {
       showInfo('Uploading image…', 'none')
       const index = rmap.map.images.length
-      await uploadImage($serverConfig.httpUrl, rmap.map.name, file, {
-        name,
-        index,
-      })
       const data = await decodePng(file)
       const img = new Image()
       img.loadEmbedded(data)
       img.name = name
       rmap.addImage(img)
+      await uploadImage($serverConfig.httpUrl, rmap.map.name, file, {
+        name,
+        index,
+      })
       onEditLayer({ group: g, layer: l, image: index })
       showInfo('Image uploaded and selected.')
     } catch (e) {

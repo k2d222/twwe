@@ -43,7 +43,7 @@
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl, px2vw, rem2px, downloadMap } from './util'
+  import { externalImageUrl, px2vw, rem2px, downloadMap, queryImageData } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
@@ -288,15 +288,21 @@
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {
+    if (e.index !== map.images.length)
+      return
     if (e.external) {
       const image = new Image()
       image.loadExternal(externalImageUrl(e.name))
       image.name = e.name
       rmap.addImage(image)
     } else {
-      const image = await queryImage($server, $serverConfig.httpUrl, map.name, e.index)
+      const image = new Image()
+      image.name = e.name
       rmap.addImage(image)
+      const data = await queryImageData($serverConfig.httpUrl, map.name, e.index)
+      image.loadEmbedded(data)
     }
+    rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteImage(e: DeleteImage) {
     rmap.removeImage(e.index)

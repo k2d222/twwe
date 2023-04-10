@@ -117,7 +117,6 @@
     image = null
     file = f
     external = -1
-    
   }
 
   function getImgURL(image: Image) {

@@ -113,13 +113,18 @@ export async function queryMap(httpRoot: string, mapName: string): Promise<Map> 
   return map
 }
 
-export async function queryImage(server: WebSocketServer, httpRoot: string, mapName: string, imageIndex: number): Promise<Image> {
-  const imageInfo = await server.query('sendimage', { index: imageIndex })
+export async function queryImageData(httpRoot: string, mapName: string, imageIndex: number): Promise<ImageData> {
   const resp = await fetch(`${httpRoot}/maps/${mapName}/images/${imageIndex}`)
   const data = await resp.blob()
   const image = await decodePng(data)
+  return image
+}
+
+export async function queryImage(server: WebSocketServer, httpRoot: string, mapName: string, imageIndex: number): Promise<Image> {
+  const imageInfo = await server.query('sendimage', { index: imageIndex })
+  const data = await queryImageData(httpRoot, mapName, imageIndex)
   const img = new Image()
-  img.loadEmbedded(image)
+  img.loadEmbedded(data)
   img.name = imageInfo.name
   return img
 }

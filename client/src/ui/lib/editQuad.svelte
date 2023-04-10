@@ -50,7 +50,6 @@
 
   function onEditPosX(e: FormInputEvent) {
     const x = Math.floor(parseFloat(e.currentTarget.value) * 1024)
-    console.log(e.currentTarget.value)
     if (!isNaN(x)) {
       quad.points[p].x = x
       dispatch('change')

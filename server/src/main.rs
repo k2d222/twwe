@@ -892,6 +892,15 @@ async fn route_create_image(
 
     map.images.push(Image::Embedded(image));
 
+    server.broadcast_to_room(
+        &room,
+        ResponseContent::CreateImage(CreateImage {
+            name: config.name,
+            index: config.index,
+            external: false,
+        }),
+    );
+
     Ok(())
 }
 
