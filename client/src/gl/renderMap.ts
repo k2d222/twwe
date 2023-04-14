@@ -87,6 +87,7 @@ export class RenderMap {
   frontLayer: RenderFrontLayer | null
   switchLayer: RenderSwitchLayer | null
   tuneLayer: RenderTuneLayer | null
+  activeLayer: RenderLayer | null
 
   brushGroup: RenderGroup
   brushPos: Info.Coord
@@ -112,6 +113,13 @@ export class RenderMap {
     this.frontLayer = this.physicsLayer(RenderFrontLayer) || null
     this.switchLayer = this.physicsLayer(RenderSwitchLayer) || null
     this.tuneLayer = this.physicsLayer(RenderTuneLayer) || null
+    this.activeLayer = null
+  }
+
+  setActiveLayer(layer: RenderLayer | null) {
+    if (this.activeLayer) this.activeLayer.active = false
+    this.activeLayer = layer
+    if (this.activeLayer) this.activeLayer.active = true
   }
 
   private physicsLayer<T extends PhysicsLayer, U extends RenderAnyTilesLayer<T>>(ctor: Ctor<U>): U {

@@ -134,6 +134,7 @@
   $: activeRlayer = l === -1 ? null : activeRgroup.layers[l]
   $: activeGroup = activeRgroup === null ? null : activeRgroup.group
   $: activeLayer = activeRlayer === null ? null : activeRlayer.layer
+  $: rmap.setActiveLayer(activeRlayer)
 
   async function onCreateLayer(e: CreateLayer) {
     showInfo('Creating layer…')
