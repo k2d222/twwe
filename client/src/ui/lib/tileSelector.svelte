@@ -74,6 +74,7 @@
     if (tilesVisible) settingsVisible = false
     else if (settingsVisible) tilesVisible = false
   }
+  $: if (selected.length === 0) settingsVisible = false
 
   $: current =
     rlayer.layer instanceof TilesLayer
@@ -365,6 +366,7 @@
       iconDescription="Tile options"
       tooltipPosition="top"
       kind="secondary"
+      disabled={selected.length === 0}
     />
   </div>
   <div class="picker" class:hidden={!tilesVisible && !boxSelect}>
