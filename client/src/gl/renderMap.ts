@@ -183,6 +183,7 @@ export class RenderMap {
     brushLayer.colorEnv = this.brushEnv
     brushRlayer = new RenderTilesLayer(this, brushLayer)
     brushRlayer.texture = rlayer.texture
+    brushRlayer.recompute()
 
     this.brushGroup.layers = [brushRlayer]
   }
