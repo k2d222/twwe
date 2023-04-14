@@ -439,6 +439,7 @@ export class RenderMap {
     if (layer instanceof AnyTilesLayer) {
       const { width, height } = this.gameLayer.layer
       layer.init(width, height, layer.defaultTile as any)
+      rlayer.recompute()
     }
 
     rlayer.layer.name = create.name

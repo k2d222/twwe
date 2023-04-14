@@ -44,9 +44,11 @@ export class RenderAnyTilesLayer<
   }
 
   recomputeChunk(x: number, y: number) {
-    const chunkX = Math.floor(x / this.chunkSize)
-    const chunkY = Math.floor(y / this.chunkSize)
-    this.initChunkBuffer(chunkX, chunkY)
+    if (this.texture.loaded) {
+      const chunkX = Math.floor(x / this.chunkSize)
+      const chunkY = Math.floor(y / this.chunkSize)
+      this.initChunkBuffer(chunkX, chunkY)
+    }
   }
 
   recompute() {
@@ -200,7 +202,8 @@ export class RenderAnyTilesLayer<
 
   private initBuffers() {
     for (let y = 0; y < this.buffers.length; y++)
-      for (let x = 0; x < this.buffers[0].length; x++) this.initChunkBuffer(x, y)
+      for (let x = 0; x < this.buffers[0].length; x++)
+        this.initChunkBuffer(x, y)
   }
 }
 
