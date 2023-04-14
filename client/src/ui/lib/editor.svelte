@@ -21,6 +21,7 @@
     ReorderLayer,
     CreateImage,
     DeleteImage,
+    Cursors,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from 'src/twmap/group'
@@ -30,7 +31,7 @@
   import { Image } from '../../twmap/image'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { onMount, onDestroy } from 'svelte'
-  import { server } from '../global'
+  import { server, serverConfig } from '../global'
   import { canvas, renderer, setViewport } from '../../gl/global'
   import { Viewport } from '../../gl/viewport'
   import { RenderMap } from '../../gl/renderMap'
@@ -43,7 +44,7 @@
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl, px2vw, rem2px, downloadMap } from './util'
+  import { externalImageUrl, px2vw, rem2px, downloadMap, queryImageData } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
@@ -66,6 +67,8 @@
     OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
+  import { spring, tweened } from 'svelte/motion'
+  import { derived, Readable, Writable } from 'svelte/store';
 
   type Coord = {
     x: number
@@ -117,6 +120,10 @@
   let shiftKey = false
   $: if (shiftKey && brushState === BrushState.Select) brushState = BrushState.Erase
   $: if (!shiftKey && brushState === BrushState.Erase) brushState = BrushState.Select
+
+  // cursors
+  let cursors: { [k: string]: { x: number, y: number } } = {}
+  let cursorAnim = spring(cursors)
 
   // computed (readonly)
   let g: number, l: number
@@ -288,21 +295,53 @@
     rmap = rmap // hack to redraw treeview
   }
   async function serverOnCreateImage(e: CreateImage) {
+    if (e.index !== map.images.length)
+      return
     if (e.external) {
       const image = new Image()
       image.loadExternal(externalImageUrl(e.name))
       image.name = e.name
       rmap.addImage(image)
     } else {
-      const image = await queryImage($server, { index: e.index })
+      const image = new Image()
+      image.name = e.name
       rmap.addImage(image)
+      const data = await queryImageData($serverConfig.httpUrl, map.name, e.index)
+      image.loadEmbedded(data)
     }
+    rmap = rmap // hack to redraw treeview
   }
   function serverOnDeleteImage(e: DeleteImage) {
     rmap.removeImage(e.index)
   }
   async function serverOnEditMap(e: EditMap) {
     map.info = e.info
+  }
+  function serverOnCursors(e: Cursors) {
+    cursors = Object.fromEntries(Object.entries(e).map(([k, v]) => {
+      if (0 <= v.group && v.group < rmap.groups.length) {
+        const rgroup = rmap.groups[v.group]
+        let [ offX, offY ] = rgroup.offset()
+        // const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
+        return [k, { x: v.point.x + offX, y: v.point.y + offY }]
+      }
+      else {
+        // const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
+        return [k, v.point]
+      }
+
+    }))
+
+    const k1 = Object.keys($cursorAnim).sort()
+    const k2 = Object.keys(cursors).sort()
+    const eq = k1.length === k2.length && k1.every((k, i) => k === k2[i])
+
+    if (!eq) {
+      cursorAnim = spring(cursors, { stiffness: 0.1, damping: 0.7 })
+    }
+    else {
+      cursorAnim.set(cursors)
+    }
   }
   function serverOnError(e: ServerError) {
     if ('serverError' in e) {
@@ -415,6 +454,21 @@
       }
     }
   }
+  async function updateCursors() {
+    if (peerCount < 2)
+      return
+
+    let [ offX, offY ] = activeRgroup.offset()
+    const cursors = await $server.query('cursors', {
+      group: g,
+      layer: l,
+      point: {
+        x: viewport.mousePos.x - offX,
+        y: viewport.mousePos.y - offY,
+      }
+    })
+    serverOnCursors(cursors)
+  }
 
   function onServerClosed() {
     showError('You have been disconnected from the server.')
@@ -422,6 +476,7 @@
   }
 
   let destroyed = false
+  let cursorInterval = 0
 
   onMount(() => {
     cont.prepend(canvas)
@@ -445,8 +500,11 @@
     $server.on('createimage', serverOnCreateImage)
     $server.on('deleteimage', serverOnDeleteImage)
     $server.on('editmap', serverOnEditMap)
+    $server.on('cursors', serverOnCursors)
     $server.on('error', serverOnError)
     $server.send('listusers')
+
+    cursorInterval = setInterval(updateCursors, 100) as any
 
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
@@ -454,15 +512,20 @@
     let lastTime: DOMHighResTimeStamp = 0
 
     const renderLoop = (t: DOMHighResTimeStamp) => {
-      if (animEnabled) {
-        currentTime += t - lastTime
-        updateEnvelopes(currentTime)
+      if (!destroyed) {
+        if (animEnabled) {
+          currentTime += t - lastTime
+          updateEnvelopes(currentTime)
+        }
+        renderer.render(viewport, rmap)
+        updateOutlines()
+        lastTime = t
+
+        cursorAnim = cursorAnim // redraw cursors
+        requestAnimationFrame(renderLoop)
       }
-      renderer.render(viewport, rmap)
-      updateOutlines()
-      lastTime = t
-      if (!destroyed) requestAnimationFrame(renderLoop)
     }
+
     renderLoop(0)
   })
 
@@ -488,6 +551,9 @@
     $server.off('deleteimage', serverOnDeleteImage)
     $server.off('editmap', serverOnEditMap)
     $server.off('error', serverOnError)
+
+    clearInterval(cursorInterval)
+
     destroyed = true
   })
 
@@ -528,7 +594,7 @@
   }
 
   function onDownloadMap() {
-    downloadMap($server, map.name)
+    downloadMap($serverConfig.httpUrl, map.name)
   }
 
   function onRenameMap() {
@@ -800,6 +866,12 @@
             {:else if activeLayer instanceof QuadsLayer}
               <QuadsView {rmap} layer={activeLayer} />
             {/if}
+            {#each Object.values($cursorAnim) as cur}
+              <img class="cursor" src="/assets/gui_cursor.png" alt=""
+                style:top={(cur.y - viewport.pos.y) * viewport.scale + 'px'}
+                style:left={(cur.x - viewport.pos.x) * viewport.scale + 'px'}
+              />
+            {/each}
             <!-- <Statusbar /> -->
           </div>
           {#if activeRlayer instanceof RenderAnyTilesLayer}

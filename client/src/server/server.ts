@@ -9,7 +9,6 @@ import type {
 
 type QueryListener<K extends keyof ResponseContent> = (data: Response<K>) => void
 type BroadcastListener<K extends keyof ResponseContent> = (data: ResponseContent[K]) => void
-type BinaryListener = (data: ArrayBuffer) => any
 
 function isResponse(data: any): data is Response<any> {
   return 'id' in data
@@ -35,8 +34,6 @@ export interface Server {
     content: RequestContent[K],
     timeout?: number
   ): Promise<ResponseContent[K]>
-
-  uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void>
 }
 
 // a server using a websocket
@@ -44,7 +41,6 @@ export class WebSocketServer implements Server {
   socket: WebSocket
   queryListeners: { [key: number]: QueryListener<any> }
   broadcastListeners: { [K in keyof ResponseContent]: BroadcastListener<K>[] }
-  binaryListeners: BinaryListener[]
 
   private socketSend: (data: any) => void
   private deferredData: any[]
@@ -54,9 +50,9 @@ export class WebSocketServer implements Server {
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = e => this.onMessage(e)
     this.queryListeners = {}
-    this.binaryListeners = []
     this.broadcastListeners = {
       createmap: [],
+      clonemap: [],
       joinmap: [],
       editmap: [],
       savemap: [],
@@ -90,6 +86,8 @@ export class WebSocketServer implements Server {
       createimage: [],
       sendimage: [],
       deleteimage: [],
+
+      cursors: [],
 
       error: [],
     }
@@ -166,30 +164,25 @@ export class WebSocketServer implements Server {
   }
 
   private onMessage(e: MessageEvent) {
-    // binary messages from server are always maps.
     if (e.data instanceof ArrayBuffer) {
-      for (const fn of this.binaryListeners) {
-        fn(e.data)
-      }
+      console.warn('received binary data from the ws server, is the server outdated?')
+      return
     }
 
-    // text messages from server are JSON and contains a content field.
-    else {
-      const data = JSON.parse(e.data)
-      // this is a query response
-      if (isResponse(data)) {
-        if (data.id !== 0) {
-          const fn = this.queryListeners[data.id]
-          fn(data)
-        } else if ('ok' in data) {
-          for (const fn of this.getBroadcastListeners(data.ok.type)) {
-            fn(data.ok.content)
-          }
+    const data = JSON.parse(e.data)
+    // this is a query response
+    if (isResponse(data)) {
+      if (data.id !== 0) {
+        const fn = this.queryListeners[data.id]
+        fn(data)
+      } else if ('ok' in data) {
+        for (const fn of this.getBroadcastListeners(data.ok.type)) {
+          fn(data.ok.content)
         }
-      } else if (isBroadcast(data)) {
-        for (const fn of this.getBroadcastListeners(data.type)) {
-          fn(data.content)
-        }
+      }
+    } else if (isBroadcast(data)) {
+      for (const fn of this.getBroadcastListeners(data.type)) {
+        fn(data.content)
       }
     }
   }
@@ -218,32 +211,5 @@ export class WebSocketServer implements Server {
     }
     const message = JSON.stringify(req)
     this.socketSend(message)
-  }
-
-  private sendBinary(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void> {
-    const bytes = data.byteLength
-    return new Promise(resolve => {
-      this.socketSend(data)
-      const interval = setInterval(() => {
-        if (this.socket.bufferedAmount === 0) {
-          clearInterval(interval)
-          resolve()
-        } else {
-          if (onProgress) onProgress(bytes - this.socket.bufferedAmount)
-        }
-      }, 200)
-    })
-  }
-
-  uploadFile(data: ArrayBuffer, onProgress?: (_: number) => any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const listener = (x: Response<'uploadcomplete'>) => {
-        delete this.queryListeners[1]
-        if ('ok' in x) resolve()
-        else reject(x.err)
-      }
-      this.queryListeners[1] = listener
-      this.sendBinary(data, onProgress)
-    })
   }
 }

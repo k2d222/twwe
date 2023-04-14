@@ -47,7 +47,7 @@ import { gl } from './global'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
-import { envPointFromJson } from '../server/convert'
+import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum } from '../server/convert'
 import type { Brush } from 'src/ui/lib/editor'
 
 export type Range = {
@@ -225,11 +225,28 @@ export class RenderMap {
     if ('name' in change) env.name = change.name
     if ('synchronized' in change) env.synchronized = change.synchronized
     if ('points' in change) {
-      if (change.points.type === 'color') env.points = change.points.content.map(envPointFromJson)
+      if (change.points.type === 'color')
+        env.points = change.points.content.map(p => ({
+          time: p.time,
+          content: colorFromJson(p.content, 10),
+          type: curveTypeFromString(p.type),
+        }))
       else if (change.points.type === 'position')
-        env.points = change.points.content.map(envPointFromJson)
+        env.points = change.points.content.map(p => ({
+          time: p.time,
+          content: {
+            x: fromFixedNum(p.content.x, 15),
+            y: fromFixedNum(p.content.y, 15),
+            rotation: fromFixedNum(p.content.rotation, 10),
+          },
+          type: curveTypeFromString(p.type),
+        }))
       else if (change.points.type === 'sound')
-        env.points = change.points.content.map(envPointFromJson)
+        env.points = change.points.content.map(p => ({
+          time: p.time,
+          content: fromFixedNum(p.content, 10),
+          type: curveTypeFromString(p.type),
+        }))
     }
   }
 
@@ -269,9 +286,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
 
     const quad: Quad = {
-      points: change.points,
+      points: change.points.map(p => coordFromJson(p, 15)),
       colors: change.colors,
-      texCoords: change.texCoords,
+      texCoords: change.texCoords.map(p => coordFromJson(p, 10)),
       posEnv:
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope),
       posEnvOffset: change.posEnvOffset,
@@ -289,9 +306,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
     const quad = rlayer.layer.quads[change.quad]
 
-    if ('points' in change) quad.points = change.points
+    if ('points' in change) quad.points = change.points.map(p => coordFromJson(p, 15))
     if ('colors' in change) quad.colors = change.colors
-    if ('texCoords' in change) quad.texCoords = change.texCoords
+    if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => coordFromJson(p, 10))
     if ('posEnv' in change)
       quad.posEnv =
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope)
@@ -314,15 +331,15 @@ export class RenderMap {
   editGroup(change: EditGroup) {
     const rgroup = this.groups[change.group]
 
-    if ('offX' in change) rgroup.group.offX = change.offX
-    if ('offY' in change) rgroup.group.offY = change.offY
+    if ('offX' in change) rgroup.group.offX = fromFixedNum(change.offX, 5)
+    if ('offY' in change) rgroup.group.offY = fromFixedNum(change.offY, 5)
     if ('paraX' in change) rgroup.group.paraX = change.paraX
     if ('paraY' in change) rgroup.group.paraY = change.paraY
     if ('clipping' in change) rgroup.group.clipping = change.clipping
-    if ('clipX' in change) rgroup.group.clipX = change.clipX
-    if ('clipY' in change) rgroup.group.clipY = change.clipY
-    if ('clipW' in change) rgroup.group.clipW = change.clipW
-    if ('clipH' in change) rgroup.group.clipH = change.clipH
+    if ('clipX' in change) rgroup.group.clipX = fromFixedNum(change.clipX, 5)
+    if ('clipY' in change) rgroup.group.clipY = fromFixedNum(change.clipY, 5)
+    if ('clipW' in change) rgroup.group.clipW = fromFixedNum(change.clipW, 5)
+    if ('clipH' in change) rgroup.group.clipH = fromFixedNum(change.clipH, 5)
     if ('name' in change) rgroup.group.name = change.name
   }
 

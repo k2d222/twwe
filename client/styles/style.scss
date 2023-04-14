@@ -804,3 +804,10 @@ nav.hidden .context {
   opacity: 0.5;
   pointer-events: none;
 }
+
+.cursor {
+  position: fixed;
+  pointer-events: none;
+  width: 32px;
+  height: 32px;
+}

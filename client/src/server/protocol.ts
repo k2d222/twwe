@@ -1,29 +1,38 @@
 import type * as Info from '../twmap/types'
+import type * as MapDir from '../twmap/mapdir'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
 
 // MAPS
 
+type FixedNum = string
+
 export type MapAccess = 'public' | 'unlisted'
 
-export interface CreateBlankParams {
+export type MapConfig = {
+  name: string
+  access: MapAccess
+}
+
+export interface CreateMapBlank extends MapConfig {
   // version: MapVersion // TODO
   width: number
   height: number
   defaultLayers: boolean
 }
 
-export interface CreateCloneParams {
+export interface CreateMapClone extends MapConfig {
   clone: string
 }
 
-export interface CreateUploadParams {}
-
 export type CreateMap = {
-  name: string
-  access: MapAccess
-} & ({ blank: CreateBlankParams } | { clone: CreateCloneParams } | { upload: CreateUploadParams })
+  blank: CreateMapBlank
+} | {
+  clone: CreateMapClone
+} | {
+  upload: MapConfig
+}
 
 export interface JoinMap {
   name: string
@@ -59,15 +68,15 @@ export interface CreateGroup {
 // must have exactly one of the optional fields
 export interface EditGroup {
   group: number
-  offX?: number
-  offY?: number
+  offX?: FixedNum
+  offY?: FixedNum
   paraX?: number
   paraY?: number
   clipping?: boolean
-  clipX?: number
-  clipY?: number
-  clipW?: number
-  clipH?: number
+  clipX?: FixedNum
+  clipY?: FixedNum
+  clipW?: FixedNum
+  clipH?: FixedNum
   name?: string
 }
 
@@ -140,9 +149,9 @@ export type EditTile = EditTileParams & {
 export type CreateQuad = {
   group: number
   layer: number
-  points: Info.Coord[]
+  points: MapDir.Point<FixedNum>[]
   colors: Info.Color[]
-  texCoords: Info.Coord[]
+  texCoords: MapDir.Point<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -153,9 +162,9 @@ export type EditQuad = {
   group: number
   layer: number
   quad: number
-  points: Info.Coord[]
+  points: MapDir.Point<FixedNum>[]
   colors: Info.Color[]
-  texCoords: Info.Coord[]
+  texCoords: MapDir.Point<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -194,15 +203,15 @@ export interface EditEnvelope {
   points?:
     | {
         type: 'color'
-        content: EnvPoint<Info.Color>[]
+        content: EnvPoint<MapDir.Color<string>>[]
       }
     | {
         type: 'position'
-        content: EnvPoint<{ x: number; y: number; rotation: number }>[]
+        content: EnvPoint<{ x: FixedNum; y: FixedNum; rotation: FixedNum }>[]
       }
     | {
         type: 'sound'
-        content: EnvPoint<number>[]
+        content: EnvPoint<FixedNum>[]
       }
 }
 
@@ -230,6 +239,13 @@ export interface ListMaps {
   maps: MapInfo[]
 }
 
+// IMAGES
+
+export interface ImageConfig {
+  name: string
+  index: number
+}
+
 export interface CreateImage {
   name: string
   index: number
@@ -251,6 +267,16 @@ export interface ImageInfo {
   height: number
 }
 
+export interface Cursor {
+  point: Info.Coord
+  group: number
+  layer: number
+}
+
+export type Cursors = {
+  [k: string]: Cursor
+}
+
 export type ServerError =
   | {
       serverError: null
@@ -261,7 +287,8 @@ export type ServerError =
 
 // queries (name and content type) that can be sent by the client
 export interface RequestContent {
-  createmap: CreateMap
+  createmap: CreateMapBlank
+  clonemap: CreateMapClone
   joinmap: JoinMap
   leavemap: null
   editmap: EditMap
@@ -295,11 +322,14 @@ export interface RequestContent {
   createimage: CreateImage
   sendimage: SendImage
   deleteimage: DeleteImage
+
+  cursors: Cursor
 }
 
 // queries (name and content type) that can be received from the server
 export interface ResponseContent {
-  createmap: CreateMap
+  createmap: CreateMapBlank
+  clonemap: CreateMapClone
   joinmap: JoinMap
   leavemap: null
   editmap: EditMap
@@ -334,6 +364,8 @@ export interface ResponseContent {
   createimage: CreateImage
   sendimage: ImageInfo
   deleteimage: DeleteImage
+
+  cursors: Cursors
 
   error: ServerError
 }

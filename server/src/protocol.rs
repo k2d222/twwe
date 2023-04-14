@@ -1,5 +1,10 @@
+use std::collections::HashMap;
+
+use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
-use twmap::{Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position};
+use twmap::{
+    Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position, Volume,
+};
 
 use crate::map_cfg::MapAccess;
 
@@ -15,7 +20,7 @@ use crate::map_cfg::MapAccess;
 // message to clients in the order it received it. (and websocket preserves packet order)
 // Downside is, the server can never refuse a request from a client. We assume the client
 // always makes valid requests.
-//
+//clone
 // Other requests, like editing layers / groups can lead to desync between the
 // clients, hence cannot be handled that way. They require a forward-and-back
 // communication with the server to see if it agrees with the transaction.
@@ -27,8 +32,16 @@ use crate::map_cfg::MapAccess;
 // MAPS
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MapConfig {
+    pub name: String,
+    pub access: MapAccess,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateBlankParams {
+pub struct CreateMapBlank {
+    #[serde(flatten)]
+    pub config: MapConfig,
     pub version: Option<twmap::Version>,
     pub width: u32,
     pub height: u32,
@@ -36,25 +49,24 @@ pub struct CreateBlankParams {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateCloneParams {
+pub struct CreateMapClone {
+    #[serde(flatten)]
+    pub config: MapConfig,
     pub clone: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum CreateParams {
-    Blank(CreateBlankParams),
-    Clone(CreateCloneParams),
-    Upload {},
+pub struct CreateMapUpload {
+    #[serde(flatten)]
+    pub config: MapConfig,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CreateMap {
-    pub name: String,
-    pub access: MapAccess,
-    #[serde(flatten)]
-    pub params: CreateParams,
+#[serde(rename_all = "camelCase")]
+pub enum CreateMap {
+    Blank(CreateMapBlank),
+    Clone(CreateMapClone),
+    Upload(CreateMapUpload),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -95,15 +107,15 @@ pub struct CreateGroup {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum OneGroupChange {
-    OffX(i32),
-    OffY(i32),
+    OffX(I27F5),
+    OffY(I27F5),
     ParaX(i32),
     ParaY(i32),
     Clipping(bool),
-    ClipX(i32),
-    ClipY(i32),
-    ClipW(i32),
-    ClipH(i32),
+    ClipX(I27F5),
+    ClipY(I27F5),
+    ClipW(I27F5),
+    ClipH(I27F5),
     Name(String),
 }
 
@@ -146,9 +158,9 @@ pub enum OneLayerChange {
 #[serde(remote = "InvalidLayerKind", rename_all = "lowercase")]
 enum SerdeInvalidLayerKind {
     Unknown(i32),        // unknown value of 'LAYERTYPE' identifier
-    UnknownTileMap(i32), // 'LAYERTYPE' identified a tile layer, unknown value of 'TILESLAYERFLAG' identifier
+    UnknownTilemap(i32), // 'LAYERTYPE' identified a tile layer, unknown value of 'TILESLAYERFLAG' identifier
     NoType,              // layer item too short to get 'LAYERTYPE' identifier
-    NoTypeTileMap, // 'LAYERTYPE' identified a tile layer, layer item too short to get 'TILESLAYERFLAG' identifier
+    NoTypeTilemap, // 'LAYERTYPE' identified a tile layer, layer item too short to get 'TILESLAYERFLAG' identifier
 }
 
 #[derive(Serialize, Deserialize)]
@@ -257,9 +269,9 @@ pub struct EditTile {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Quad {
-    pub points: [Point; 5],
+    pub points: [Point<I17F15>; 5],
     pub colors: [Color; 4],
-    pub tex_coords: [Point; 4],
+    pub tex_coords: [Point<I22F10>; 4],
     pub pos_env: Option<u16>,
     pub pos_env_offset: i32,
     pub color_env: Option<u16>,
@@ -297,7 +309,7 @@ pub struct DeleteQuad {
 pub enum EnvPoints {
     Color(Vec<EnvPoint<I32Color>>),
     Position(Vec<EnvPoint<Position>>),
-    Sound(Vec<EnvPoint<i32>>),
+    Sound(Vec<EnvPoint<Volume>>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -359,16 +371,19 @@ pub struct ListMaps {
     pub maps: Vec<MapInfo>,
 }
 
+// IMAGES
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ImageConfig {
+    pub name: String,
+    pub index: u16,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateImage {
     pub name: String,
     pub index: u16,
     pub external: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SendImage {
-    pub index: u16,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -384,6 +399,13 @@ pub struct ImageInfo {
     pub height: u32,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Cursor {
+    pub point: Point<f32>,
+    pub group: i32,
+    pub layer: i32,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Error {
@@ -394,7 +416,8 @@ pub enum Error {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RequestContent {
-    CreateMap(CreateMap),
+    CreateMap(CreateMapBlank),
+    CloneMap(CreateMapClone),
     JoinMap(JoinMap),
     LeaveMap,
     EditMap(EditMap),
@@ -422,19 +445,21 @@ pub enum RequestContent {
     EditEnvelope(EditEnvelope),
     DeleteEnvelope(DeleteEnvelope),
 
-    SendMap(SendMap),
     ListUsers,
     ListMaps,
 
     CreateImage(CreateImage),
-    SendImage(SendImage),
+    ImageInfo(u16),
     DeleteImage(DeleteImage),
+
+    Cursors(Cursor),
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum ResponseContent {
-    CreateMap(CreateMap),
+    CreateMap(CreateMapBlank),
+    CloneMap(CreateMapClone),
     JoinMap(JoinMap),
     LeaveMap,
     EditMap(EditMap),
@@ -462,14 +487,14 @@ pub enum ResponseContent {
     EditEnvelope(EditEnvelope),
     DeleteEnvelope(DeleteEnvelope),
 
-    SendMap(SendMap),
     ListUsers(ListUsers),
     ListMaps(ListMaps),
-    UploadComplete,
 
     CreateImage(CreateImage),
-    SendImage(ImageInfo),
+    ImageInfo(ImageInfo),
     DeleteImage(DeleteImage),
+
+    Cursors(HashMap<String, Cursor>),
 
     Error(Error),
 }

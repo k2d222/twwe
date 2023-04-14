@@ -8,19 +8,18 @@ use std::{
     sync::Arc,
 };
 
+use axum::extract::ws::Message;
 use ndarray::Array2;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
-use tokio_tungstenite::tungstenite::protocol::Message;
-
 use twmap::{
-    constants, map_checks::CheckData, map_parse::LayerFlags, CompressedData, EmbeddedImage, Env,
-    Envelope, ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind,
-    QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TileMapLayer, TilesLayer,
-    TuneLayer, TwMap,
+    checks::CheckData, constants, parse::LayerFlags, CompressedData, EmbeddedImage, Env, Envelope,
+    ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, Point, QuadsLayer,
+    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer, TilesLayer, TuneLayer, TwMap,
 };
+use uuid::Uuid;
 
 use crate::{
     map_cfg::MapConfig,
@@ -43,8 +42,8 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
     Ok(map)
 }
 
-fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
-    let old_width = layer.tiles().shape().1 as isize;
+fn set_layer_width<T: TilemapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
+    let old_width = layer.tiles().shape().x as isize;
     let diff = width as isize - old_width;
 
     if width < 2 || width > 10000 {
@@ -60,8 +59,8 @@ fn set_layer_width<T: TileMapLayer>(layer: &mut T, width: usize) -> Result<(), &
     Ok(())
 }
 
-pub fn set_layer_height<T: TileMapLayer>(layer: &mut T, height: usize) -> Result<(), &'static str> {
-    let old_height = layer.tiles().shape().0 as isize;
+pub fn set_layer_height<T: TilemapLayer>(layer: &mut T, height: usize) -> Result<(), &'static str> {
+    let old_height = layer.tiles().shape().y as isize;
     let diff = height as isize - old_height;
 
     if height < 2 || height > 10000 {
@@ -114,34 +113,66 @@ impl LazyMap {
     }
 }
 
+pub struct RoomPeer {
+    pub id: Uuid,
+    pub tx: Tx,
+    pub cursor: Option<Cursor>,
+}
+
 pub struct Room {
+    name: String,
+    path: PathBuf,
     pub config: MapConfig,
-    peers: Mutex<HashMap<SocketAddr, Tx>>,
+    peers: Mutex<HashMap<SocketAddr, RoomPeer>>,
     pub map: LazyMap,
     saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
 }
 
-impl Room {
-    pub fn new(path: PathBuf) -> Self {
-        Room {
-            config: MapConfig::default(),
-            peers: Mutex::new(HashMap::new()),
-            map: LazyMap::new(path),
-            saving: Mutex::new(()),
-        }
-    }
+const MAP_FILE_NAME: &str = "map.map";
+const CFG_FILE_NAME: &str = "config.json";
 
-    pub fn new_with_config(path: PathBuf, config: MapConfig) -> Self {
-        Room {
+impl Room {
+    pub fn new(path: PathBuf) -> Option<Self> {
+        let mut map_path = path.clone();
+        map_path.push(MAP_FILE_NAME);
+
+        if !map_path.exists() {
+            return None;
+        }
+
+        let name = path.file_name()?.to_string_lossy().to_string();
+
+        let mut config_path = path.clone();
+        config_path.push(CFG_FILE_NAME);
+
+        let config = File::open(config_path)
+            .ok()
+            .and_then(|file| serde_json::from_reader(file).ok())
+            .unwrap_or_default();
+
+        Some(Room {
+            name,
+            path,
             config,
             peers: Mutex::new(HashMap::new()),
-            map: LazyMap::new(path),
+            map: LazyMap::new(map_path),
             saving: Mutex::new(()),
-        }
+        })
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
     }
 
     pub fn add_peer(&self, peer: &Peer) {
-        self.peers().insert(peer.addr, peer.tx.clone());
+        self.peers().insert(
+            peer.addr,
+            RoomPeer {
+                id: Uuid::new_v4(),
+                tx: peer.tx.clone(),
+                cursor: None,
+            },
+        );
     }
 
     pub fn peer_count(&self) -> usize {
@@ -155,13 +186,13 @@ impl Room {
         }
     }
 
-    pub fn peers(&self) -> MutexGuard<HashMap<SocketAddr, Tx>> {
+    pub fn peers(&self) -> MutexGuard<HashMap<SocketAddr, RoomPeer>> {
         self.peers.lock()
     }
 
     pub fn remove_closed_peers(&self) {
         let mut peers = self.peers();
-        peers.retain(|_, tx| !tx.is_closed());
+        peers.retain(|_, p| !p.tx.is_closed());
         if peers.is_empty() {
             self.map.unload()
         }
@@ -191,8 +222,10 @@ impl Room {
         Ok(())
     }
 
-    pub fn save_config(&self, path: &PathBuf) -> Result<(), &'static str> {
-        let file = File::create(path).map_err(server_error)?;
+    pub fn save_config(&self) -> Result<(), &'static str> {
+        let mut cfg_path = self.path.clone();
+        cfg_path.push(CFG_FILE_NAME);
+        let file = File::create(cfg_path).map_err(server_error)?;
         serde_json::to_writer(file, &self.config).map_err(server_error)?;
         Ok(())
     }
@@ -505,15 +538,15 @@ impl Room {
 
         use OneGroupChange::*;
         match edit_group.change.clone() {
-            OffX(off_x) => group.offset_x = off_x,
-            OffY(off_y) => group.offset_y = off_y,
-            ParaX(para_x) => group.parallax_x = para_x,
-            ParaY(para_y) => group.parallax_y = para_y,
+            OffX(off_x) => group.offset.x = off_x,
+            OffY(off_y) => group.offset.y = off_y,
+            ParaX(para_x) => group.parallax.x = para_x,
+            ParaY(para_y) => group.parallax.y = para_y,
             Clipping(clipping) => group.clipping = clipping,
-            ClipX(clip_x) => group.clip_x = clip_x,
-            ClipY(clip_y) => group.clip_y = clip_y,
-            ClipW(clip_w) => group.clip_width = clip_w,
-            ClipH(clip_h) => group.clip_height = clip_h,
+            ClipX(clip_x) => group.clip.x = clip_x,
+            ClipY(clip_y) => group.clip.y = clip_y,
+            ClipW(clip_w) => group.clip_size.x = clip_w,
+            ClipH(clip_h) => group.clip_size.y = clip_h,
             Name(name) => {
                 if group.is_physics_group() {
                     return Err("cannot rename the physics group");
@@ -568,7 +601,7 @@ impl Room {
         }
 
         let mut map = self.map.get();
-        let default_layer_size = map.find_physics_layer::<GameLayer>().unwrap().tiles.shape();
+        let size = map.find_physics_layer::<GameLayer>().unwrap().tiles.shape();
         let group = map
             .groups
             .get_mut(create_layer.group as usize)
@@ -584,7 +617,7 @@ impl Room {
                     return Err("cannot create multiple physics layers of the same kind");
                 }
 
-                let tiles = CompressedData::Loaded(Array2::default(default_layer_size));
+                let tiles = CompressedData::Loaded(Array2::default((size.x, size.y)));
                 let layer = $struct { tiles };
                 group.layers.push($enum(layer));
             }};
@@ -593,7 +626,7 @@ impl Room {
         match create_layer.kind {
             // LayerKind::Game => todo!(),
             LayerKind::Tiles => {
-                let mut layer = TilesLayer::new(default_layer_size);
+                let mut layer = TilesLayer::new((size.x, size.y));
                 layer.name = create_layer.name.to_owned();
                 group.layers.push(Layer::Tiles(layer));
             }
@@ -624,7 +657,7 @@ impl Room {
 
         if let Image(Some(i)) = edit_layer.change {
             let image = map.images.get(i as usize).ok_or("invalid image index")?;
-            let tile_dims_ok = image.width() % 16 == 0 && image.height() % 16 == 0;
+            let tile_dims_ok = image.size().x % 16 == 0 && image.size().y % 16 == 0;
 
             let group = map
                 .groups
@@ -863,14 +896,10 @@ impl Room {
             return Err("max number of images reached");
         }
 
-        let (width, height) =
+        let size =
             constants::external_dimensions(&name, map.version).ok_or("invalid external image")?;
 
-        let image = ExternalImage {
-            name,
-            width,
-            height,
-        };
+        let image = ExternalImage { name, size };
         map.images.push(Image::External(image));
 
         Ok(())
@@ -885,8 +914,8 @@ impl Room {
         Ok(ImageInfo {
             index: index as u16,
             name: image.name().to_owned(),
-            width: image.width() as u32,
-            height: image.height() as u32,
+            width: image.size().x as u32,
+            height: image.size().y as u32,
         })
     }
 
