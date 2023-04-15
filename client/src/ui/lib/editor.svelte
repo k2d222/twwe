@@ -471,8 +471,8 @@
     serverOnCursors(cursors)
   }
 
-  function onServerClosed() {
-    showError('You have been disconnected from the server.')
+  async function onServerClosed() {
+    await showError('You have been disconnected from the server.')
     navigate('/')
   }
 

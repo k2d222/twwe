@@ -19,7 +19,6 @@
   import { onMount, onDestroy } from 'svelte'
   import { Button } from 'carbon-components-svelte'
   import { ColorPalette as PaletteIcon, Tools as ToolsIcon } from 'carbon-icons-svelte'
-import type { PhysicsLayer } from 'src/twmap/map';
 
   type Range = {
     start: Coord
@@ -108,6 +107,7 @@ import type { PhysicsLayer } from 'src/twmap/map';
     Editor.off('keydown', onKeyDown)
     Editor.off('keyup', onKeyUp)
     Editor.off('keypress', onKeyPress)
+    mounted = false
   })
 
   $: if (mounted && rlayer) {
@@ -116,6 +116,8 @@ import type { PhysicsLayer } from 'src/twmap/map';
 
   async function drawLayer() {
     const img = await getCanvasImage(rlayer.texture.image)
+    if (!mounted)
+      return
     canvas.width = img.width as number
     canvas.height = img.height as number
     ctx.globalCompositeOperation = 'copy'
