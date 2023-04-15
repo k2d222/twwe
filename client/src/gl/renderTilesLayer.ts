@@ -566,17 +566,62 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
     super(layer, new Texture(RenderSwitchLayer.image))
     this.textBuffer = createTextBuffer()
     this.fontTexture = new Texture(fontImage, false)
-    textBufferInit(this.textBuffer, this.layer)
+    this.initTextBuffer()
+  }
+
+  private initTextBuffer() {
+    this.textBuffer.tileCount = this.layer.tileCount() * 2 // two texts (top & btm)
+
+    const vertexArr = new Float32Array(this.textBuffer.tileCount * 12 * 3)
+    const texCoordArr = new Float32Array(this.textBuffer.tileCount * 12 * 3)
+    let t = 0
+
+    for (let y = 0; y < this.layer.height; y++) {
+      for (let x = 0; x < this.layer.width; x++) {
+        const tile = this.layer.getTile(x, y)
+
+        if (tile.id === 0)
+          // skip tiles with id 0
+          continue
+
+        { // number
+          const split = splitNumber(tile.number)
+          const vertices = makeNumberVertices(x, y, split)
+          vertexArr.set(vertices, t * 12 * 3)
+
+          const texCoords = makeNumberTexCoords(split)
+          texCoordArr.set(texCoords, t * 12 * 3)
+
+          t++
+        }
+        { // delay
+          const split = splitNumber(tile.delay)
+          const vertices = makeNumberVertices(x, y, split, true)
+          vertexArr.set(vertices, t * 12 * 3)
+
+          const texCoords = makeNumberTexCoords(split)
+          texCoordArr.set(texCoords, t * 12 * 3)
+
+          t++
+        }
+      }
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.textBuffer.vertex)
+    gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.textBuffer.texCoord)
+    gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
   }
 
   recomputeChunk(x: number, y: number) {
     super.recomputeChunk(x, y)
-    textBufferInit(this.textBuffer, this.layer)
+    this.initTextBuffer()
   }
 
   recompute() {
     super.recompute()
-    textBufferInit(this.textBuffer, this.layer)
+    this.initTextBuffer()
   }
 
   render(viewBox: ViewBox) {

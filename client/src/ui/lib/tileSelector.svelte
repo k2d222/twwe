@@ -472,6 +472,9 @@
         </label>
       {:else if rlayer.layer instanceof SwitchLayer}
         <label>
+          Switch number <input type="number" min={0} max={255} bind:value={currentSwitch.number} />
+        </label>
+        <label>
           Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay} />
         </label>
       {:else if rlayer.layer instanceof SpeedupLayer}
