@@ -214,6 +214,13 @@ const fontImage: Image = (() => {
   return image
 })()
 
+const arrowImage: Image = (() => {
+  const image = new Image()
+  image.loadExternal('/editor/speed_arrow.png')
+  image.name = 'SpeedArrow'
+  return image
+})()
+
 type TextBuffer = {
   vertex: WebGLBuffer
   texCoord: WebGLBuffer
@@ -261,7 +268,7 @@ function textBufferInit(buffer: TextBuffer, layer: AnyTilesLayer<{ id: number; n
   gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
 }
 
-function textPreRender(fontTexture: Texture) {
+function textRender(buffer: TextBuffer, fontTexture: Texture) {
   // Enable texture
   gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
   gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
@@ -270,16 +277,9 @@ function textPreRender(fontTexture: Texture) {
   // Vertex colors are not needed
   gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
   gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
-}
 
-function textPostRender() {
-  // keep textures disabled by default
-  gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
-  gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
-}
-
-function textRender(buffer: TextBuffer, texture: Texture) {
-  textPreRender(texture)
+  // semi-transparent
+  gl.uniform4fv(shader.locs.unifs.uColorMask, [1, 1, 1, 0.8])
 
   // Vertex attribute
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer.vertex)
@@ -291,7 +291,37 @@ function textRender(buffer: TextBuffer, texture: Texture) {
 
   gl.drawArrays(gl.TRIANGLES, 0, buffer.tileCount * 6 * 3)
 
-  textPostRender()
+  // keep textures disabled by default
+  gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
+  gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
+}
+
+function arrowRender(buffer: TextBuffer, arrowTexture: Texture) {
+  // Enable texture
+  gl.enableVertexAttribArray(shader.locs.attrs.aTexCoord)
+  gl.uniform1i(shader.locs.unifs.uTexCoord, 1)
+  gl.bindTexture(gl.TEXTURE_2D, arrowTexture.tex)
+
+  // Vertex colors are not needed
+  gl.disableVertexAttribArray(shader.locs.attrs.aVertexColor)
+  gl.uniform1i(shader.locs.unifs.uVertexColor, 0)
+
+  // semi-transparent
+  gl.uniform4fv(shader.locs.unifs.uColorMask, [1, 1, 1, 0.8])
+
+  // Vertex attribute
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.vertex)
+  gl.vertexAttribPointer(shader.locs.attrs.aPosition, 2, gl.FLOAT, false, 0, 0)
+
+  // Texture coord attribute
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer.texCoord)
+  gl.vertexAttribPointer(shader.locs.attrs.aTexCoord, 2, gl.FLOAT, false, 0, 0)
+
+  gl.drawArrays(gl.TRIANGLES, 0, buffer.tileCount * 6 * 3)
+
+  // keep textures disabled by default
+  gl.disableVertexAttribArray(shader.locs.attrs.aTexCoord)
+  gl.uniform1i(shader.locs.unifs.uTexCoord, 0)
 }
 
 export class RenderTilesLayer extends RenderAnyTilesLayer<TilesLayer> {
@@ -403,27 +433,34 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
   })()
 
   textBuffer: TextBuffer
+  arrowBuffer: TextBuffer
   fontTexture: Texture
+  arrowTexture: Texture
 
   constructor(_: RenderMap, layer: SpeedupLayer) {
     super(layer, new Texture(RenderSpeedupLayer.image))
     this.textBuffer = createTextBuffer()
+    this.arrowBuffer = createTextBuffer()
     this.fontTexture = new Texture(fontImage, false)
-    this.initBuffer()
+    this.arrowTexture = new Texture(arrowImage, false)
+    this.initTextBuffer()
+    this.initArrowBuffer()
   }
 
   recomputeChunk(x: number, y: number) {
     super.recomputeChunk(x, y)
-    this.initBuffer()
+    this.initTextBuffer()
+    this.initArrowBuffer()
   }
 
   recompute() {
     super.recompute()
-    this.initBuffer()
+    this.initTextBuffer()
+    this.initArrowBuffer()
   }
 
-  private initBuffer() {
-    this.textBuffer.tileCount = this.layer.tileCount()
+  private initTextBuffer() {
+    this.textBuffer.tileCount = this.layer.tileCount() * 2 // two texts (top & btm)
 
     const vertexArr = new Float32Array(this.textBuffer.tileCount * 12 * 3)
     const texCoordArr = new Float32Array(this.textBuffer.tileCount * 12 * 3)
@@ -437,14 +474,26 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
           // skip tiles with id 0
           continue
 
-        const split = splitNumber(tile.force)
-        const vertices = makeNumberVertices(x, y, split)
-        vertexArr.set(vertices, t * 12 * 3)
+        { // force
+          const split = splitNumber(tile.force)
+          const vertices = makeNumberVertices(x, y, split)
+          vertexArr.set(vertices, t * 12 * 3)
 
-        const texCoords = makeNumberTexCoords(split)
-        texCoordArr.set(texCoords, t * 12 * 3)
+          const texCoords = makeNumberTexCoords(split)
+          texCoordArr.set(texCoords, t * 12 * 3)
 
-        t++
+          t++
+        }
+        { // max speed
+          const split = splitNumber(tile.maxSpeed)
+          const vertices = makeNumberVertices(x, y, split, true)
+          vertexArr.set(vertices, t * 12 * 3)
+
+          const texCoords = makeNumberTexCoords(split)
+          texCoordArr.set(texCoords, t * 12 * 3)
+
+          t++
+        }
       }
     }
 
@@ -452,6 +501,38 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
     gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.textBuffer.texCoord)
+    gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
+  }
+
+  private initArrowBuffer() {
+    this.arrowBuffer.tileCount = this.layer.tileCount()
+
+    const vertexArr = new Float32Array(this.arrowBuffer.tileCount * 12 * 3)
+    const texCoordArr = new Float32Array(this.arrowBuffer.tileCount * 12 * 3)
+    let t = 0
+
+    for (let y = 0; y < this.layer.height; y++) {
+      for (let x = 0; x < this.layer.width; x++) {
+        const tile = this.layer.getTile(x, y)
+
+        if (tile.id === 0)
+          // skip tiles with id 0
+          continue
+
+        const vertices = makeVertices(x, y)
+        vertexArr.set(vertices, t * 12)
+
+        const texCoords = makeArrowTexCoords(tile)
+        texCoordArr.set(texCoords, t * 12)
+
+        t++
+      }
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.arrowBuffer.vertex)
+    gl.bufferData(gl.ARRAY_BUFFER, vertexArr, gl.STATIC_DRAW)
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.arrowBuffer.texCoord)
     gl.bufferData(gl.ARRAY_BUFFER, texCoordArr, gl.STATIC_DRAW)
   }
 
@@ -463,7 +544,10 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
       return
     }
 
-    if (this.visible && this.active) textRender(this.textBuffer, this.fontTexture)
+    if (this.visible && this.active) {
+      textRender(this.textBuffer, this.fontTexture)
+      arrowRender(this.arrowBuffer, this.arrowTexture)
+    }
   }
 }
 
@@ -601,6 +685,24 @@ function makeTexCoords(tile: { id: number; flags?: number }, atlasSize: number) 
   return [x0, y0, x3, y1, x1, y2, x0, y0, x1, y2, x2, y3]
 }
 
+function makeArrowTexCoords(tile: { angle?: number }) {
+  const cos = Math.cos(tile.angle / 180 * Math.PI)
+  const sin = Math.sin(tile.angle / 180 * Math.PI)
+  const x = (cos - sin) / Math.sqrt(2) * 0.5
+  const y = (sin + cos) / Math.sqrt(2) * 0.5
+
+  let p1x = -x + 0.5
+  let p1y = -y + 0.5
+  let p2x = -y + 0.5
+  let p2y = +x + 0.5
+  let p3x = +x + 0.5
+  let p3y = +y + 0.5
+  let p4x = +y + 0.5
+  let p4y = -x + 0.5
+
+  return [p1x, p1y, p2x, p2y, p3x, p3y, p1x, p1y, p3x, p3y, p4x, p4y]
+}
+
 // num must be 999 <= num <= 0
 function splitNumber(num: number): [number, number, number] {
   return [
@@ -610,12 +712,16 @@ function splitNumber(num: number): [number, number, number] {
   ]
 }
 
-function makeNumberVertices(x: number, y: number, digits: [number, number, number]) {
+function makeNumberVertices(x: number, y: number, digits: [number, number, number], bottom = false) {
   // tweaking the font appearance
   const w = 0.7
   const spacing = -0.4 // distance beetween numbers
   y -= 0.05
   x -= 0.17
+
+  if(bottom) {
+    y += 0.5 - 0.05
+  }
 
   let verts = []
 
