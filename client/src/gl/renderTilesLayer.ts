@@ -742,9 +742,18 @@ function makeNumberTexCoords(digits: [number, number, number]) {
 
   const texCoords = []
 
-  for (const digit of digits) {
-    const tx = offX + digit
-    const ty = offY
+  let leadingZero = true
+
+  for (let i = 0; i < digits.length; i++) {
+    const digit = digits[i]
+    let tx = 0, ty = 0
+
+    // avoid drawing leading zeros
+    if (digit !== 0 || !leadingZero || i === digits.length - 1) {
+      tx = offX + digit
+      ty = offY
+      leadingZero = false
+    }
 
     const x0 = tx / tileCount
     const x1 = (tx + 1) / tileCount
