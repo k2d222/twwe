@@ -222,6 +222,9 @@
 
   function serverOnUsers(e: ListUsers) {
     peerCount = e.roomCount
+    if (peerCount === 1) {
+      cursors = {}
+    }
   }
   function serverOnEditTile(e: EditTile) {
     rmap.editTile(e)
