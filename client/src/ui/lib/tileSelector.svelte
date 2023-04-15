@@ -19,6 +19,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { Button } from 'carbon-components-svelte'
   import { ColorPalette as PaletteIcon, Tools as ToolsIcon } from 'carbon-icons-svelte'
+import type { PhysicsLayer } from 'src/twmap/map';
 
   type Range = {
     start: Coord
@@ -182,20 +183,20 @@
     return res
   }
 
-  function rotateCW(sel: EditTileParams[][]) {
+  function brushRotateCW(sel: EditTileParams[][]) {
     return Array.from({ length: sel[0].length }, (_, j) =>
       Array.from({ length: sel.length }, (_, i) => sel[sel.length - 1 - i][j])
     )
   }
-  function rotateCCW(sel: EditTileParams[][]) {
+  function brushRotateCCW(sel: EditTileParams[][]) {
     return Array.from({ length: sel[0].length }, (_, j) =>
       Array.from({ length: sel.length }, (_, i) => sel[i][sel[0].length - 1 - j])
     )
   }
-  function vFlip(sel: EditTileParams[][]) {
+  function brushFlipV(sel: EditTileParams[][]) {
     return sel.reverse()
   }
-  function hFlip(sel: EditTileParams[][]) {
+  function brushFlipH(sel: EditTileParams[][]) {
     // WARN: mutates the array
     return sel.map(row => row.reverse())
   }
@@ -250,76 +251,168 @@
     }
   }
 
+  // whether a physics tile can have flags (be rotated / mirrored)
+  function isDirectionalGameTile(id: number) {
+    return [60, 61, 64, 65, 67, 224, 225].includes(id)
+  }
+  function isDirectionalSwitchTile(id: number) {
+    return [224, 225].includes(id)
+  }
+
   function onFlipV() {
     if (selected.length === 0) return
 
-    if (rlayer.layer instanceof TilesLayer) {
+    const flipFn =
+      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'tile') {
+          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
+          else tile.flags ^= TileFlags.HFLIP
+        }
+      } :
+      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'tile' && isDirectionalGameTile(tile.id)) {
+          if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+        }
+      } :
+      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'switch' && isDirectionalSwitchTile(tile.id)) {
+          if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+        }
+      } :
+      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'speedup') {
+          tile.angle = (360 - tile.angle) % 360
+        }
+      } :
+      false
+
+    if (flipFn) {
       for (let row of selected) {
         for (let tile of row) {
-          if (tile.type === 'tile') {
-            if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
-            else tile.flags ^= TileFlags.HFLIP
-          }
+          flipFn(tile)
         }
       }
     }
 
-    selected = vFlip(selected)
+    selected = brushFlipV(selected)
   }
 
   function onFlipH() {
     if (selected.length === 0) return
 
-    if (rlayer.layer instanceof TilesLayer) {
+    const flipFn =
+      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'tile') {
+          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
+          else tile.flags ^= TileFlags.VFLIP
+        }
+      } :
+      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'tile' && isDirectionalGameTile(tile.id)) {
+          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+        }
+      } :
+      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'switch' && isDirectionalSwitchTile(tile.id)) {
+          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+        }
+      } :
+      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'speedup') {
+          tile.angle = (540 - tile.angle) % 360
+        }
+      } :
+      false
+
+    if (flipFn) {
       for (let row of selected) {
         for (let tile of row) {
-          if (tile.type === 'tile') {
-            if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
-            else tile.flags ^= TileFlags.VFLIP
-          }
+          flipFn(tile)
         }
       }
     }
 
-    selected = hFlip(selected)
+    selected = brushFlipH(selected)
   }
   function onRotateCW() {
     if (selected.length === 0) return
 
-    if (rlayer.layer instanceof TilesLayer) {
+    function doRotate(tile: EditTileParams) {
+      if ('flags' in tile) {
+        if (tile.flags & TileFlags.ROTATE) {
+          tile.flags ^= TileFlags.HFLIP
+          tile.flags ^= TileFlags.VFLIP
+        }
+        tile.flags ^= TileFlags.ROTATE
+      }
+    }
+
+    const rotateFn =
+      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
+        doRotate(tile)
+      } :
+      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
+        if (isDirectionalGameTile(tile.id)) doRotate(tile)
+      } :
+      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
+        if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
+      } :
+      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'speedup') {
+          tile.angle = (tile.angle + 90) % 360
+        }
+      } :
+      false
+
+    if (rotateFn) {
       for (let row of selected) {
         for (let tile of row) {
-          if (tile.type === 'tile') {
-            if (tile.flags & TileFlags.ROTATE) {
-              tile.flags ^= TileFlags.HFLIP
-              tile.flags ^= TileFlags.VFLIP
-            }
-            tile.flags ^= TileFlags.ROTATE
-          }
+          rotateFn(tile)
         }
       }
     }
 
-    selected = rotateCW(selected)
+    selected = brushRotateCW(selected)
   }
   function onRotateCCW() {
     if (selected.length === 0) return
 
-    if (rlayer.layer instanceof TilesLayer) {
+    function doRotate(tile: EditTileParams) {
+      if ('flags' in tile) {
+        if (!(tile.flags & TileFlags.ROTATE)) {
+          tile.flags ^= TileFlags.HFLIP
+          tile.flags ^= TileFlags.VFLIP
+        }
+        tile.flags ^= TileFlags.ROTATE
+      }
+    }
+
+    const rotateFn =
+      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
+        doRotate(tile)
+      } :
+      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
+        if (isDirectionalGameTile(tile.id)) doRotate(tile)
+      } :
+      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
+        if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
+      } :
+      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
+        if (tile.type === 'speedup') {
+          tile.angle = (tile.angle + 270) % 360
+        }
+      } :
+      false
+
+    if (rotateFn) {
       for (let row of selected) {
         for (let tile of row) {
-          if (tile.type === 'tile') {
-            if (!(tile.flags & TileFlags.ROTATE)) {
-              tile.flags ^= TileFlags.HFLIP
-              tile.flags ^= TileFlags.VFLIP
-            }
-            tile.flags ^= TileFlags.ROTATE
-          }
+          rotateFn(tile)
         }
       }
     }
 
-    selected = rotateCCW(selected)
+    selected = brushRotateCCW(selected)
   }
 
   function onKeyPress(e: KeyboardEvent) {
