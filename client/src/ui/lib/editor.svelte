@@ -511,6 +511,8 @@
     $server.on('error', serverOnError)
     $server.send('listusers')
 
+    canvas.addEventListener('mouseenter', onHoverCanvas)
+
     cursorInterval = setInterval(updateCursors, 100) as any
 
     viewport = new Viewport(cont, canvas)
@@ -559,10 +561,18 @@
     $server.off('editmap', serverOnEditMap)
     $server.off('error', serverOnError)
 
+    canvas.removeEventListener('mouseenter', onHoverCanvas)
+
     clearInterval(cursorInterval)
 
     destroyed = true
   })
+
+  function onHoverCanvas() {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur()
+    canvas.focus()
+  }
 
   function onToggleLayerPanes() {
     if (layerPaneSize < closedPaneThreshold || propsPaneSize < closedPaneThreshold) {
