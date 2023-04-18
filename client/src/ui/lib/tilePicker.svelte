@@ -222,6 +222,7 @@
       selection.end = { x, y }
       boxSelect = false
       selected = makeBoxSelection(current, normalizeRange(selection))
+      tilesVisible = false
     }
   }
 
