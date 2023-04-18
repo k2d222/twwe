@@ -148,44 +148,47 @@ export class RenderMap {
     return env
   }
 
-  setBrush(g: number, l: number, buffer: Brush) {
-    if (buffer.length === 0 || buffer[0].length === 0) {
+  setBrush(brush: Brush | null) {
+    if (brush === null) {
       this.clearBrush()
       return
     }
 
-    const rgroup = this.groups[g]
-    const rlayer = rgroup.layers[l]
-    const layer = rlayer.layer as AnyTilesLayer<any>
-    const w = buffer[0].length
-    const h = buffer.length
+    const rgroup = this.groups[brush.group]
 
     this.brushGroup.group.offX = rgroup.group.offX - this.brushPos.x * 32
     this.brushGroup.group.offY = rgroup.group.offY - this.brushPos.y * 32
     this.brushGroup.group.paraX = rgroup.group.paraX
     this.brushGroup.group.paraY = rgroup.group.paraY
 
-    const fill = (i: number) => {
-      const x = i % w
-      const y = Math.floor(i / w)
-      return buffer[y][x] || layer.defaultTile()
+    for (const blayer of brush.layers) {
+      const rlayer = rgroup.layers[blayer.layer]
+      const layer = rlayer.layer as AnyTilesLayer<any>
+      const w = blayer.tiles[0].length
+      const h = blayer.tiles.length
+      
+      const fill = (i: number) => {
+        const x = i % w
+        const y = Math.floor(i / w)
+        return blayer.tiles[y][x] || layer.defaultTile()
+      }
+
+      // clone the type of the brush layer
+      const brushLayer = new TilesLayer()
+      let brushRlayer: RenderLayer
+      brushLayer.init(w, h, fill)
+
+      // COMBAK: these properties wont be reactive if source layer is changed.
+      if (layer instanceof TilesLayer) {
+        brushLayer.color = layer.color
+      }
+      brushLayer.colorEnv = this.brushEnv
+      brushRlayer = new RenderTilesLayer(this, brushLayer)
+      brushRlayer.texture = rlayer.texture
+      brushRlayer.recompute()
+
+      this.brushGroup.layers.push(brushRlayer)
     }
-
-    // clone the type of the brush layer
-    const brushLayer = new TilesLayer()
-    let brushRlayer: RenderLayer
-    brushLayer.init(w, h, fill)
-
-    // COMBAK: these properties wont be reactive if source layer is changed.
-    if (layer instanceof TilesLayer) {
-      brushLayer.color = layer.color
-    }
-    brushLayer.colorEnv = this.brushEnv
-    brushRlayer = new RenderTilesLayer(this, brushLayer)
-    brushRlayer.texture = rlayer.texture
-    brushRlayer.recompute()
-
-    this.brushGroup.layers = [brushRlayer]
   }
 
   moveBrush(pos: Info.Coord) {

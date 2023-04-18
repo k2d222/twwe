@@ -2,6 +2,7 @@ import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { RenderMap } from '../../gl/renderMap'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
+import type { Map } from '../../twmap/map'
 import {
   TilesLayer,
   GameLayer,
@@ -13,7 +14,14 @@ import {
 } from '../../twmap/tilesLayer'
 import type { WebSocketServer } from 'src/server/server'
 
-export type Brush = EditTileParams[][]
+// list of layers -> 2d array of tiles
+export type Brush = {
+  group: number,
+  layers: {
+    layer: number,
+    tiles: EditTileParams[][],
+  }[]
+}
 
 export type Range = {
   start: Coord
@@ -104,29 +112,53 @@ function makeDefaultTileParams(layer: AnyTilesLayer<any>): EditTileParams {
     : null
 }
 
-export function makeBoxSelection(layer: AnyTilesLayer<any>, sel: Range): Brush {
-  const res: Brush = []
+export function makeBoxSelection(map: Map, g: number, ll: number[], sel: Range): Brush {
+  const res: Brush = {
+    group: g,
+    layers: [],
+  }
 
-  for (let j = sel.start.y; j <= sel.end.y; j++) {
-    const row = []
-    for (let i = sel.start.x; i <= sel.end.x; i++) {
-      row.push(makeTileParams(layer, i, j))
+  const group = map.groups[g]
+
+  for (let l of ll) {
+    const layer = group.layers[l] as AnyTilesLayer<any>
+    const tiles: EditTileParams[][] = []
+
+    for (let j = sel.start.y; j <= sel.end.y; j++) {
+      const row = []
+      for (let i = sel.start.x; i <= sel.end.x; i++) {
+        row.push(makeTileParams(layer, i, j))
+      }
+      tiles.push(row)
     }
-    res.push(row)
+
+    res.layers.push({ layer: l, tiles })
   }
 
   return res
 }
 
-export function makeEmptySelection(layer: AnyTilesLayer<any>, sel: Range): Brush {
-  const res: Brush = []
+export function makeEmptySelection(map: Map, g: number, ll: number[], sel: Range): Brush {
+  const res: Brush = {
+    group: g,
+    layers: [],
+  }
 
-  for (let j = sel.start.y; j <= sel.end.y; j++) {
-    const row = []
-    for (let i = sel.start.x; i <= sel.end.x; i++) {
-      row.push(makeDefaultTileParams(layer))
+  const group = map.groups[g]
+
+  for (let l of ll) {
+    const layer = group.layers[l] as AnyTilesLayer<any>
+    const tiles: EditTileParams[][] = []
+
+    for (let j = sel.start.y; j <= sel.end.y; j++) {
+      const row = []
+      for (let i = sel.start.x; i <= sel.end.x; i++) {
+        row.push(makeDefaultTileParams(layer))
+      }
+      tiles.push(row)
     }
-    res.push(row)
+
+    res.layers.push({ layer: l, tiles })
   }
 
   return res
@@ -135,28 +167,29 @@ export function makeEmptySelection(layer: AnyTilesLayer<any>, sel: Range): Brush
 export function placeTiles(
   server: WebSocketServer,
   rmap: RenderMap,
-  g: number,
-  l: number,
   pos: Coord,
-  tiles: Brush
+  brush: Brush
 ) {
-  let [i, j] = [0, 0]
   let changes: EditTile[] = []
 
-  for (const row of tiles) {
-    for (const tile of row) {
-      const change: EditTile = {
-        group: g,
-        layer: l,
-        x: pos.x + i,
-        y: pos.y + j,
-        ...tile,
+  for (const layer of brush.layers) {
+    let [i, j] = [0, 0]
+
+    for (const row of layer.tiles) {
+      for (const tile of row) {
+        const change: EditTile = {
+          group: brush.group,
+          layer: layer.layer,
+          x: pos.x + i,
+          y: pos.y + j,
+          ...tile,
+        }
+        changes.push(change)
+        i++
       }
-      changes.push(change)
-      i++
+      j++
+      i = 0
     }
-    j++
-    i = 0
   }
 
   for (const change of changes) {
@@ -170,23 +203,23 @@ export function placeTiles(
 export function fill(
   server: WebSocketServer,
   rmap: RenderMap,
-  g: number,
-  l: number,
   range: Range,
-  tiles: Brush
+  brush: Brush
 ) {
   let changes: EditTile[] = []
 
-  for (let j = range.start.y; j <= range.end.y; j++) {
-    for (let i = range.start.x; i <= range.end.x; i++) {
-      const change: EditTile = {
-        group: g,
-        layer: l,
-        x: i,
-        y: j,
-        ...tiles[(j - range.start.y) % tiles.length][(i - range.start.x) % tiles[0].length],
+  for (const layer of brush.layers) {
+    for (let j = range.start.y; j <= range.end.y; j++) {
+      for (let i = range.start.x; i <= range.end.x; i++) {
+        const change: EditTile = {
+          group: brush.group,
+          layer: layer.layer,
+          x: i,
+          y: j,
+          ...layer.tiles[(j - range.start.y) % layer.tiles.length][(i - range.start.x) % layer.tiles[0].length],
+        }
+        changes.push(change)
       }
-      changes.push(change)
     }
   }
 
@@ -201,33 +234,34 @@ export function fill(
 export function drawLine(
   server: WebSocketServer,
   rmap: RenderMap,
-  g: number,
-  l: number,
   start: Coord,
   end: Coord,
-  tiles: Brush
+  brush: Brush
 ) {
   const points = bresenham([start.x, start.y], [end.x, end.y])
 
   for (const point of points) {
-    let [i, j] = [0, 0]
     let changes: EditTile[] = []
 
     // TODO: avoid changing twice the same tile
-    for (const row of tiles) {
-      for (const tile of row) {
-        const change: EditTile = {
-          group: g,
-          layer: l,
-          x: point[0] + i,
-          y: point[1] + j,
-          ...tile,
+    for (const layer of brush.layers) {
+      let [i, j] = [0, 0]
+
+      for (const row of layer.tiles) {
+        for (const tile of row) {
+          const change: EditTile = {
+            group: brush.group,
+            layer: layer.layer,
+            x: point[0] + i,
+            y: point[1] + j,
+            ...tile,
+          }
+          changes.push(change)
+          i++
         }
-        changes.push(change)
-        i++
+        j++
+        i = 0
       }
-      j++
-      i = 0
     }
 
     for (const change of changes) {

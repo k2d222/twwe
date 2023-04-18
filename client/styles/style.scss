@@ -265,6 +265,7 @@ canvas {
 
     color: themes.$text-secondary;
     background-color: themes.$layer-01;
+    user-select: none;
 
     &:hover {
       color: themes.$text-primary;
@@ -282,6 +283,7 @@ canvas {
       outline-offset: -2px;
     }
 
+    // &.selected::before,
     &.active::before {
       content: '';
       position: absolute;
@@ -470,6 +472,7 @@ canvas {
 .edit-group,
 .edit-quad,
 .edit-info,
+.edit-multiple,
 .edit-env-point {
   display: flex;
   flex-direction: column;

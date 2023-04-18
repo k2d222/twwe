@@ -22,11 +22,13 @@
     CreateImage,
     DeleteImage,
     Cursors,
+EditTileParams,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
-  import type { Group } from 'src/twmap/group'
-  import type { RenderGroup } from 'src/gl/renderGroup'
-  import type { RenderLayer } from 'src/gl/renderLayer'
+  import type { Group } from '../../twmap/group'
+  import { LayerType } from '../../twmap/types'
+  import type { RenderGroup } from '../../gl/renderGroup'
+  import type { RenderLayer } from '../../gl/renderLayer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { QuadsLayer } from '../../twmap/quadsLayer'
@@ -68,7 +70,7 @@
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
   import { spring, tweened } from 'svelte/motion'
-  import { derived, Readable, Writable } from 'svelte/store';
+  import { derived, Readable, Writable } from 'svelte/store'
 
   type Coord = {
     x: number
@@ -112,8 +114,8 @@
   let brushState = BrushState.Empty
   let mouseRange = Editor.createRange() // start and end pos of visible brush outline
   let brushRange = Editor.createRange() // start and end pos of copied buffer (if any)
-  let brushBuffer: Editor.Brush = []
-  $: rmap.setBrush(g, l, brushBuffer)
+  let brushBuffer: Editor.Brush | null = null
+  $: rmap.setBrush(brushBuffer)
   $: rmap.moveBrush(mouseRange.start)
 
   // imput state
@@ -130,6 +132,7 @@
   let activeRgroup: RenderGroup | null, activeRlayer: RenderLayer | null
   let activeGroup: Group | null, activeLayer: Layer | null
   $: [g, l] = active
+  $: ll = selected.map(([_, l]) => l).filter(l => l !== -1 && map.groups[g].layers[l].type === LayerType.TILES)
   $: activeRgroup = g === -1 ? null : rmap.groups[g]
   $: activeRlayer = l === -1 ? null : activeRgroup.layers[l]
   $: activeGroup = activeRgroup === null ? null : activeRgroup.group
@@ -690,7 +693,7 @@
   }
 
   function onMouseDown(e: MouseEvent) {
-    if (activeLayer instanceof AnyTilesLayer) {
+    if (activeLayer instanceof AnyTilesLayer || selected.length > 1) {
       updateMouseRange()
 
       if (e.buttons === 1) {
@@ -702,7 +705,7 @@
           brushState = e.shiftKey ? BrushState.Erase : BrushState.Select
         } else if (brushState === BrushState.Paste && !e.ctrlKey && !e.shiftKey) {
           // paste current selection
-          Editor.placeTiles($server, rmap, g, l, mouseRange.start, brushBuffer)
+          Editor.placeTiles($server, rmap, mouseRange.start, brushBuffer)
         } else if (brushState === BrushState.Paste && e.shiftKey) {
           // start a fill selection
           brushState = BrushState.Fill
@@ -712,13 +715,13 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    if (activeLayer instanceof AnyTilesLayer) {
+    if (activeLayer instanceof AnyTilesLayer || selected.length > 1) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
 
       if (e.buttons === 1) {
         // left click
         if (brushState === BrushState.Paste) {
-          Editor.drawLine($server, rmap, g, l, mouseRange.start, curPos, brushBuffer)
+          Editor.drawLine($server, rmap, mouseRange.start, curPos, brushBuffer)
         }
       }
 
@@ -727,40 +730,46 @@
   }
 
   function onMouseUp(_e: MouseEvent) {
-    if (activeLayer instanceof AnyTilesLayer) {
+    if (ll.length > 0) {
       updateMouseRange()
 
       if (brushState === BrushState.Select) {
         // end selection
         brushRange.end = mouseRange.end
         brushRange = Editor.normalizeRange(brushRange)
-        brushBuffer = Editor.makeBoxSelection(activeLayer, brushRange)
+        brushBuffer = Editor.makeBoxSelection(map, g, ll, brushRange)
         brushState = BrushState.Paste
         updateMouseRange()
       } else if (brushState === BrushState.Fill) {
         // fill selection with brush buffer
-        Editor.fill($server, rmap, g, l, Editor.normalizeRange(mouseRange), brushBuffer)
+        Editor.fill($server, rmap, Editor.normalizeRange(mouseRange), brushBuffer)
         brushState = BrushState.Paste
       } else if (brushState === BrushState.Erase) {
         // erase selection
         const range = Editor.normalizeRange(mouseRange)
-        const buffer = Editor.makeEmptySelection(activeLayer, range)
-        Editor.fill($server, rmap, g, l, range, buffer)
-        brushState = brushBuffer.length === 0 ? BrushState.Empty : BrushState.Paste
+        const buffer = Editor.makeEmptySelection(map, g, ll, range)
+        Editor.fill($server, rmap, range, buffer)
+        brushState = brushBuffer === null ? BrushState.Empty : BrushState.Paste
       }
     }
   }
 
-  function onTilePick(e: CustomEvent<Editor.Brush>) {
-    brushBuffer = e.detail
+  function onTilePick(e: CustomEvent<EditTileParams[][]>) {
+    brushBuffer = {
+      group: g,
+      layers: [{
+        layer: l,
+        tiles: e.detail,
+      }]
+    }
 
-    if (brushBuffer.length === 0 || brushBuffer[0].length === 0) {
+    if (brushBuffer === null) {
       brushState = BrushState.Empty
     } else {
       brushState = BrushState.Paste
       brushRange = {
         start: { x: 0, y: 0 },
-        end: { x: brushBuffer[0].length - 1, y: brushBuffer.length - 1 },
+        end: { x: e.detail[0].length - 1, y: e.detail.length - 1 },
       }
       mouseRange.end.x = mouseRange.start.x + brushRange.end.x
       mouseRange.end.y = mouseRange.start.y + brushRange.end.y
@@ -770,7 +779,7 @@
   function onContextMenu(e: MouseEvent) {
     e.preventDefault()
     brushState = BrushState.Empty
-    brushBuffer = []
+    brushBuffer = null
   }
 
   function onEditInfo() {
@@ -882,14 +891,24 @@
           {#if activeRlayer instanceof RenderAnyTilesLayer}
             <TileSelector
               rlayer={activeRlayer}
-              bind:selected={brushBuffer}
               on:select={onTilePick}
             />
           {/if}
         </Pane>
 
         <Pane class="properties" bind:size={propsPaneSize}>
-          {#if activeLayer !== null}
+          {#if selected.length > 1}
+            <div class="edit-multiple">
+              <h3 class="bx--modal-header__heading">Multiple selection</h3>
+              {#if ll.length > 1}
+                <span>You selected {ll.length} tile layers.</span>
+                <span>You can edit the tiles from these layers together with your brush (clone, delete and repeat).</span>
+              {:else}
+                <span>You selected multiple layers.</span>
+                <span>Editing quad layers together is not implemented yet. You can only edit tiles layers together.</span>
+              {/if}
+            </div>
+          {:else if activeLayer !== null}
             <LayerEditor
               {rmap}
               {g}
