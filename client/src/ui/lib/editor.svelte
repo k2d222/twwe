@@ -22,7 +22,7 @@
     CreateImage,
     DeleteImage,
     Cursors,
-EditTileParams,
+    EditTileParams,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from '../../twmap/group'
@@ -40,7 +40,8 @@ EditTileParams,
   import { RenderQuadsLayer } from '../../gl/renderQuadsLayer'
   import { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
   import TreeView from './treeView.svelte'
-  import TileSelector from './tileSelector.svelte'
+  import TilePicker from './tilePicker.svelte'
+  import BrushEditor from './editBrush.svelte'
   import { showInfo, showError, clearDialog, showDialog } from './dialog'
   import QuadsView from './quadsView.svelte'
   import InfoEditor from './editInfo.svelte'
@@ -69,8 +70,7 @@ EditTileParams,
     OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
-  import { spring, tweened } from 'svelte/motion'
-  import { derived, Readable, Writable } from 'svelte/store'
+  import { spring } from 'svelte/motion'
 
   type Coord = {
     x: number
@@ -776,6 +776,18 @@ EditTileParams,
     }
   }
 
+  function onBrushChange(e: CustomEvent<Editor.Brush>) {
+    brushBuffer = e.detail
+    const tiles = brushBuffer.layers[0].tiles
+
+    brushRange = {
+      start: { x: 0, y: 0 },
+      end: { x: tiles[0].length - 1, y: tiles.length - 1 },
+    }
+    mouseRange.end.x = mouseRange.start.x + brushRange.end.x
+    mouseRange.end.y = mouseRange.start.y + brushRange.end.y
+  }
+
   function onContextMenu(e: MouseEvent) {
     e.preventDefault()
     brushState = BrushState.Empty
@@ -888,8 +900,15 @@ EditTileParams,
             {/each}
             <!-- <Statusbar /> -->
           </div>
+          {#if brushBuffer !== null}
+            <BrushEditor
+              {rmap}
+              brush={brushBuffer}
+              on:change={onBrushChange}
+            />
+          {/if}
           {#if activeRlayer instanceof RenderAnyTilesLayer}
-            <TileSelector
+            <TilePicker
               rlayer={activeRlayer}
               on:select={onTilePick}
             />

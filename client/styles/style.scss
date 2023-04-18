@@ -366,7 +366,7 @@ canvas {
   }
 }
 
-#tile-selector {
+#tile-picker {
   canvas {
     position: absolute;
     width: 100%;
@@ -377,6 +377,14 @@ canvas {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
   }
+
+  .box-select {
+    position: absolute;
+    background: blue;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
 
   .picker .header {
     padding: .5rem;
@@ -465,6 +473,30 @@ canvas {
     border: 1px solid lightgrey;
     box-shadow: 5px 5px 20px -15px black;
     border-radius: 5px;
+  }
+}
+
+#edit-brush {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: themes.$layer-01;
+
+  .buttons {
+    display: flex;
+    padding: .5rem;
+    gap: 1rem;
+
+    button {
+      width: 2rem;
+      height: 2rem;
+
+      > img {
+        width: 100%;
+        height: 100%;
+      }
+    }
   }
 }
 
@@ -789,13 +821,6 @@ nav.hidden .context {
       }
     }
   }
-}
-
-#tile-selector .box-select {
-  position: absolute;
-  background: blue;
-  opacity: 0.5;
-  pointer-events: none;
 }
 
 .cursor {

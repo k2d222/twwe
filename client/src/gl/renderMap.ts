@@ -149,8 +149,9 @@ export class RenderMap {
   }
 
   setBrush(brush: Brush | null) {
+    this.clearBrush()
+
     if (brush === null) {
-      this.clearBrush()
       return
     }
 

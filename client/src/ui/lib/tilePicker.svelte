@@ -30,11 +30,13 @@
   export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
   export let selected: EditTileParams[][] = []
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{
+    select: EditTileParams[][]
+  }>()
+
   $: dispatch('select', selected)
 
   let tilesVisible = false
-  let settingsVisible = false
 
   let canvas: HTMLCanvasElement
   let ctx: CanvasRenderingContext2D
@@ -53,28 +55,19 @@
   let currentFront: { type: 'tile' } & Tile = { type: 'tile', ...FrontLayer.defaultTile() }
   let currentTele: { type: 'tele' } & Tele = { type: 'tele', ...TeleLayer.defaultTile() }
   let currentSwitch: { type: 'switch' } & Switch = { type: 'switch', ...SwitchLayer.defaultTile() }
-  let currentSpeedup: { type: 'speedup' } & Speedup = {
-    type: 'speedup',
-    ...SpeedupLayer.defaultTile(),
-  }
+  let currentSpeedup: { type: 'speedup' } & Speedup = { type: 'speedup', ...SpeedupLayer.defaultTile() }
   let currentTune: { type: 'tune' } & Tune = { type: 'tune', ...TuneLayer.defaultTile() }
 
-  $: currentTele.number = minmax(0, currentTele.number, 255)
-  $: currentSwitch.delay = minmax(0, currentSwitch.delay, 255)
-  $: currentSwitch.number = minmax(0, currentSwitch.number, 255)
-  $: currentSpeedup.angle = minmax(0, currentSpeedup.angle, 359)
-  $: currentSpeedup.maxSpeed = minmax(0, currentSpeedup.maxSpeed, 255)
-  $: currentSpeedup.force = minmax(0, currentSpeedup.force, 255)
-  $: currentTune.number = minmax(0, currentTune.number, 255)
+  $: currentTele.number = clamp(currentTele.number, 0, 255)
+  $: currentSwitch.delay = clamp(currentSwitch.delay, 0, 255)
+  $: currentSwitch.number = clamp(currentSwitch.number, 0, 255)
+  $: currentSpeedup.angle = clamp(currentSpeedup.angle, 0, 359)
+  $: currentSpeedup.maxSpeed = clamp(currentSpeedup.maxSpeed, 0, 255)
+  $: currentSpeedup.force = clamp(currentSpeedup.force, 0, 255)
+  $: currentTune.number = clamp(currentTune.number, 0, 255)
 
   let current: EditTileParams
   let boxSelect = false
-
-  $: {
-    if (tilesVisible) settingsVisible = false
-    else if (settingsVisible) tilesVisible = false
-  }
-  $: if (selected.length === 0) settingsVisible = false
 
   $: current =
     rlayer.layer instanceof TilesLayer
@@ -99,14 +92,12 @@
     drawLayer()
     Editor.on('keydown', onKeyDown)
     Editor.on('keyup', onKeyUp)
-    Editor.on('keypress', onKeyPress)
     mounted = true
   })
 
   onDestroy(() => {
     Editor.off('keydown', onKeyDown)
     Editor.off('keyup', onKeyUp)
-    Editor.off('keypress', onKeyPress)
     mounted = false
   })
 
@@ -152,7 +143,7 @@
     return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`
   }
 
-  function minmax(min: number, cur: number, max: number) {
+  function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
   }
 
@@ -183,24 +174,6 @@
     }
 
     return res
-  }
-
-  function brushRotateCW(sel: EditTileParams[][]) {
-    return Array.from({ length: sel[0].length }, (_, j) =>
-      Array.from({ length: sel.length }, (_, i) => sel[sel.length - 1 - i][j])
-    )
-  }
-  function brushRotateCCW(sel: EditTileParams[][]) {
-    return Array.from({ length: sel[0].length }, (_, j) =>
-      Array.from({ length: sel.length }, (_, i) => sel[i][sel[0].length - 1 - j])
-    )
-  }
-  function brushFlipV(sel: EditTileParams[][]) {
-    return sel.reverse()
-  }
-  function brushFlipH(sel: EditTileParams[][]) {
-    // WARN: mutates the array
-    return sel.map(row => row.reverse())
   }
 
   let boxStyle = ''
@@ -248,184 +221,8 @@
       const y = Math.floor((e.offsetY / (e.currentTarget as HTMLElement).clientHeight) * tileCount)
       selection.end = { x, y }
       boxSelect = false
-      tilesVisible = false
       selected = makeBoxSelection(current, normalizeRange(selection))
     }
-  }
-
-  // whether a physics tile can have flags (be rotated / mirrored)
-  function isDirectionalGameTile(id: number) {
-    return [60, 61, 64, 65, 67, 224, 225].includes(id)
-  }
-  function isDirectionalSwitchTile(id: number) {
-    return [224, 225].includes(id)
-  }
-
-  function onFlipV() {
-    if (selected.length === 0) return
-
-    const flipFn =
-      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile') {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
-          else tile.flags ^= TileFlags.HFLIP
-        }
-      } :
-      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile' && isDirectionalGameTile(tile.id)) {
-          if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'switch' && isDirectionalSwitchTile(tile.id)) {
-          if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
-          tile.angle = (360 - tile.angle) % 360
-        }
-      } :
-      false
-
-    if (flipFn) {
-      for (let row of selected) {
-        for (let tile of row) {
-          flipFn(tile)
-        }
-      }
-    }
-
-    selected = brushFlipV(selected)
-  }
-
-  function onFlipH() {
-    if (selected.length === 0) return
-
-    const flipFn =
-      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile') {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
-          else tile.flags ^= TileFlags.VFLIP
-        }
-      } :
-      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile' && isDirectionalGameTile(tile.id)) {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'switch' && isDirectionalSwitchTile(tile.id)) {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
-          tile.angle = (540 - tile.angle) % 360
-        }
-      } :
-      false
-
-    if (flipFn) {
-      for (let row of selected) {
-        for (let tile of row) {
-          flipFn(tile)
-        }
-      }
-    }
-
-    selected = brushFlipH(selected)
-  }
-  function onRotateCW() {
-    if (selected.length === 0) return
-
-    function doRotate(tile: EditTileParams) {
-      if ('flags' in tile) {
-        if (tile.flags & TileFlags.ROTATE) {
-          tile.flags ^= TileFlags.HFLIP
-          tile.flags ^= TileFlags.VFLIP
-        }
-        tile.flags ^= TileFlags.ROTATE
-      }
-    }
-
-    const rotateFn =
-      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        doRotate(tile)
-      } :
-      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (isDirectionalGameTile(tile.id)) doRotate(tile)
-      } :
-      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
-      } :
-      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
-          tile.angle = (tile.angle + 90) % 360
-        }
-      } :
-      false
-
-    if (rotateFn) {
-      for (let row of selected) {
-        for (let tile of row) {
-          rotateFn(tile)
-        }
-      }
-    }
-
-    selected = brushRotateCW(selected)
-  }
-  function onRotateCCW() {
-    if (selected.length === 0) return
-
-    function doRotate(tile: EditTileParams) {
-      if ('flags' in tile) {
-        if (!(tile.flags & TileFlags.ROTATE)) {
-          tile.flags ^= TileFlags.HFLIP
-          tile.flags ^= TileFlags.VFLIP
-        }
-        tile.flags ^= TileFlags.ROTATE
-      }
-    }
-
-    const rotateFn =
-      rlayer.layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        doRotate(tile)
-      } :
-      rlayer.layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (isDirectionalGameTile(tile.id)) doRotate(tile)
-      } :
-      rlayer.layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
-      } :
-      rlayer.layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
-          tile.angle = (tile.angle + 270) % 360
-        }
-      } :
-      false
-
-    if (rotateFn) {
-      for (let row of selected) {
-        for (let tile of row) {
-          rotateFn(tile)
-        }
-      }
-    }
-
-    selected = brushRotateCCW(selected)
-  }
-
-  function onKeyPress(e: KeyboardEvent) {
-    if (e.ctrlKey || e.altKey) return
-
-    if (['r', 'v', 'h', 'n', 'm'].includes(e.key.toLowerCase())) e.preventDefault()
-
-    if (e.key === 'r') onRotateCW()
-    else if (e.key === 'R') onRotateCCW()
-    else if (e.key === 'v' || e.key === 'm') onFlipV()
-    else if (e.key === 'h' || e.key === 'n') onFlipH()
   }
 
   function onKeyDown(e: KeyboardEvent) {
@@ -444,7 +241,7 @@
   }
 </script>
 
-<div id="tile-selector">
+<div id="tile-picker">
   <div class="controls">
     <Button
       expressive
@@ -453,15 +250,6 @@
       iconDescription="Tile picker"
       tooltipPosition="top"
       kind="secondary"
-    />
-    <Button
-      expressive
-      on:click={() => (settingsVisible = !settingsVisible)}
-      icon={ToolsIcon}
-      iconDescription="Tile options"
-      tooltipPosition="top"
-      kind="secondary"
-      disabled={selected.length === 0}
     />
   </div>
   <div class="picker" class:hidden={!tilesVisible && !boxSelect}>
@@ -508,22 +296,6 @@
         on:mouseup={onMouseUp}
       />
       <div class="box-select" style={boxStyle} />
-    </div>
-  </div>
-  <div class="settings picker" class:hidden={!settingsVisible}>
-    <div class="buttons">
-      <button class="default" on:click={onFlipV}>
-        <img alt="Flip Vertically" src="/assets/flip-v.svg" />
-      </button>
-      <button class="default" on:click={onFlipH}>
-        <img alt="Flip Horizontally" src="/assets/flip-h.svg" />
-      </button>
-      <button class="default" on:click={onRotateCW}>
-        <img alt="Rotate Clockwise" src="/assets/rotate-cw.svg" />
-      </button>
-      <button class="default" on:click={onRotateCCW}>
-        <img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg" />
-      </button>
     </div>
   </div>
 </div>
