@@ -715,6 +715,7 @@
   }
 
   function onMouseMove(e: MouseEvent) {
+    shiftKey = e.shiftKey
     if (activeLayer instanceof AnyTilesLayer || selected.length > 1) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
 
