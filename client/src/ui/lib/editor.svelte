@@ -706,7 +706,7 @@
     if (activeLayer instanceof AnyTilesLayer || selected.length > 1) {
       updateMouseRange()
 
-      if (e.buttons === 1) {
+      if (e.buttons === 1 && !e.ctrlKey) {
         // left click
         if (brushState === BrushState.Empty) {
           // start a selection
