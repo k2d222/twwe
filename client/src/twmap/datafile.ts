@@ -50,15 +50,15 @@ export class DataFile {
   }
 
   private parse() {
-    console.log('begin parsing')
-
     // parse header
     const { reader } = this
     var signature = reader.uint32()
 
     // signature 'DATA' or 'ATAD'
-    if (signature == 0x41544144 || signature == 0x44415441) console.log('valid signature')
-    else return false
+    if (signature !== 0x41544144 && signature !== 0x44415441) {
+      console.error('invalid map signature')
+      return false
+    }
 
     this.version = reader.uint32()
 
@@ -68,7 +68,7 @@ export class DataFile {
 
     // we only support datafile version 4
     if (this.version != 4) {
-      console.log('invalid version', this.version)
+      console.error('invalid map version', this.version)
       return false
     }
 

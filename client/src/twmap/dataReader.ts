@@ -50,9 +50,11 @@ export class DataReader extends DataView {
       .map(s => s.reverse())
       .map(s => [...s])
       .flat()
+
     let nullterm = buf.findIndex(x => x === 0)
-    if (nullterm === -1) nullterm = buf.length
+    if (nullterm === -1) nullterm = buf.length - 1
     buf = buf.slice(0, nullterm)
+
     return String.fromCharCode.apply(null, buf)
   }
 
