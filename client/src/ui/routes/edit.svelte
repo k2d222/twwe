@@ -15,6 +15,10 @@
   const pLoadMap = loadMap(mapName)
 </script>
 
+<svelte:head>
+  <title>{mapName} - DDNet Map Editor</title>
+</svelte:head>
+
 {#await pLoadMap}
   <Dialog>Loading "{mapName}"…</Dialog>
 {:then map}
