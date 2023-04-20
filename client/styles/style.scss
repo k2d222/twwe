@@ -801,3 +801,13 @@ nav.hidden .context {
   width: 32px;
   height: 32px;
 }
+
+#stats {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  padding: .5rem;
+  background: black;
+  color: yellow;
+  font-weight: bold;
+}

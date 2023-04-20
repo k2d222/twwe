@@ -48,6 +48,7 @@
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
+  import Stats from './stats.svelte'
   import {
     Layers as LayersIcon,
     Activity as EnvelopesIcon,
@@ -67,8 +68,7 @@
     OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
-  import { spring, tweened } from 'svelte/motion'
-  import { derived, Readable, Writable } from 'svelte/store';
+  import { spring } from 'svelte/motion'
 
   type Coord = {
     x: number
@@ -80,7 +80,8 @@
   let cont: HTMLElement
   let viewport: Viewport
   let animEnabled = false
-  let currentTime = 0
+  let time = 0
+  let animTime = 0
   let peerCount = 0
   let infoEditorVisible = false
   let active: [number, number] = map.physicsLayerIndex(GameLayer)
@@ -513,21 +514,22 @@
     viewport = new Viewport(cont, canvas)
     setViewport(viewport)
 
-    let lastTime: DOMHighResTimeStamp = 0
-
     const renderLoop = (t: DOMHighResTimeStamp) => {
-      if (!destroyed) {
-        if (animEnabled) {
-          currentTime += t - lastTime
-          updateEnvelopes(currentTime)
-        }
-        renderer.render(viewport, rmap)
-        updateOutlines()
-        lastTime = t
+      if (destroyed)
+        return
 
-        cursorAnim = cursorAnim // redraw cursors
-        requestAnimationFrame(renderLoop)
+      if (animEnabled) {
+        animTime += t - time
+        updateEnvelopes(animTime)
       }
+
+      renderer.render(viewport, rmap)
+      updateOutlines()
+      cursorAnim = cursorAnim // redraw cursors
+
+      time = t
+
+      requestAnimationFrame(renderLoop)
     }
 
     renderLoop(0)
@@ -929,4 +931,8 @@
       <InfoEditor info={map.info} />
     </ModalBody>
   </ComposedModal>
+
+  {#if import.meta.env.MODE === 'development'}
+    <Stats {time} />
+  {/if}
 </div>
