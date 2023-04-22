@@ -74,9 +74,15 @@
       : UnknownLayerIcon
   }
 
-  function select(g: number, l: number) {
-    active = [g, l]
-    selected = [active]
+  function select(g: number, l: number, e: MouseEvent | KeyboardEvent) {
+    if (e.shiftKey && active[0] === g) {
+      active = [g, l]
+      selected = [...selected.filter(([_, l2]) => l2 !== -1 && l2 !== l), [g, l]]
+    }
+    else {
+      active = [g, l]
+      selected = [active]
+    }
   }
 
   function onKeyDown(g: number, l: number, e: KeyboardEvent) {
@@ -90,11 +96,11 @@
         folded[g] = false
       } else if (e.key === 'Enter' || e.key === ' ') {
         folded[g] = !folded[g]
-        select(g, l)
+        select(g, l, e)
       }
     } else {
       if (e.key === 'Enter' || e.key === ' ') {
-        select(g, l)
+        select(g, l, e)
       }
     }
     if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -128,7 +134,7 @@
         aria-selected={isSelected(selected, g, -1)}
         class:selected={isSelected(selected, g, -1)}
         class:active={isActive(active, g, -1)}
-        on:click={() => select(g, -1)}
+        on:click={(e) => select(g, -1, e)}
         on:keydown={e => onKeyDown(g, -1, e)}
       >
         <span class="toggle" aria-hidden="true" on:click={() => (folded[g] = !folded[g])}>
@@ -152,7 +158,7 @@
               aria-selected={isSelected(selected, g, l)}
               class:selected={isSelected(selected, g, l)}
               class:active={isActive(active, g, l)}
-              on:click={() => select(g, l)}
+              on:click={(e) => select(g, l, e)}
               on:keydown={e => onKeyDown(g, l, e)}
             >
               <span class="icon"><svelte:component this={layerIcon(layer)} /></span>

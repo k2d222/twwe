@@ -17,6 +17,7 @@ export class Viewport {
   posDragStart: Vec2 // top-left corner when drag started
   posDragLast: Vec2 // top-left corner last frame
   mousePos: Vec2 // mouse world position when hover the canvas
+  mouseHover: boolean // mouse is over the canvas
 
   clickTimeout: number // millis between press and release to be considered click
 
@@ -66,10 +67,6 @@ export class Viewport {
     this.cont.addEventListener('wheel', this.onwheel.bind(this))
     window.addEventListener('resize', this.onresize.bind(this))
     this.cont.addEventListener('keydown', this.onkeydown.bind(this))
-
-    // TODO
-    // this.canvas.addEventListener('mouseenter', () => this.mouseHover = true)
-    // this.canvas.addEventListener('mouseleave', () => hover = false)
   }
 
   // this is probably a noop, because canvas is sized to window size

@@ -265,6 +265,7 @@ canvas {
 
     color: themes.$text-secondary;
     background-color: themes.$layer-01;
+    user-select: none;
 
     &:hover {
       color: themes.$text-primary;
@@ -282,6 +283,7 @@ canvas {
       outline-offset: -2px;
     }
 
+    // &.selected::before,
     &.active::before {
       content: '';
       position: absolute;
@@ -364,7 +366,7 @@ canvas {
   }
 }
 
-#tile-selector {
+#tile-picker {
   canvas {
     position: absolute;
     width: 100%;
@@ -375,6 +377,14 @@ canvas {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
   }
+
+  .box-select {
+    position: absolute;
+    background: blue;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
 
   .picker .header {
     padding: .5rem;
@@ -466,10 +476,35 @@ canvas {
   }
 }
 
+#edit-brush {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: themes.$layer-01;
+
+  .buttons {
+    display: flex;
+    padding: .5rem;
+    gap: 1rem;
+
+    button {
+      width: 2rem;
+      height: 2rem;
+
+      > img {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+}
+
 .edit-layer,
 .edit-group,
 .edit-quad,
 .edit-info,
+.edit-multiple,
 .edit-env-point {
   display: flex;
   flex-direction: column;
@@ -786,13 +821,6 @@ nav.hidden .context {
       }
     }
   }
-}
-
-#tile-selector .box-select {
-  position: absolute;
-  background: blue;
-  opacity: 0.5;
-  pointer-events: none;
 }
 
 .cursor {
