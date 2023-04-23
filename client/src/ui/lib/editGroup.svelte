@@ -16,14 +16,22 @@
   } from '../../twmap/tilesLayer'
   import { createEventDispatcher } from 'svelte'
   import { toFixedNum } from '../../server/convert'
-  import { rmap } from '../global'
+  import { rmap, selected } from '../global'
 
   type Events = 'createlayer' | 'editgroup' | 'reordergroup' | 'deletegroup'
   type EventMap = { [K in Events]: RequestContent[K] }
 
   const dispatch = createEventDispatcher<EventMap>()
 
-  export let g: number
+  let g: number
+  $: {
+    if ($selected.length === 0) {
+      g = -1
+    }
+    else {
+      g = $selected[$selected.length - 1][0]
+    }
+  }
 
   $: rgroup = $rmap.groups[g]
   $: group = rgroup.group
