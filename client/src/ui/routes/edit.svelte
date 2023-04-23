@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { server, serverConfig } from '../global'
+  import { server, serverConfig, rmap } from '../global'
   import { queryMap } from '../lib/util'
   import Dialog from '../lib/dialog.svelte'
   import Editor from '../lib/editor.svelte'
+  import { RenderMap } from '../../gl/renderMap'
 
   export let mapName: string
 
@@ -12,18 +13,18 @@
     return map
   }
 
-  const pLoadMap = loadMap(mapName)
+  $: (async () => {
+    const map = await loadMap(mapName)
+    $rmap = new RenderMap(map)
+  })()
 </script>
 
 <svelte:head>
   <title>{mapName} - DDNet Map Editor</title>
 </svelte:head>
 
-{#await pLoadMap}
+{#if $rmap === null}
   <Dialog>Loading "{mapName}"…</Dialog>
-{:then map}
-  <Editor {map} />
-{:catch e}
-  {console.error(e)}
-  <Dialog type="error">Failed to join the map "{mapName}".</Dialog>
-{/await}
+{:else}
+  <Editor />
+{/if}

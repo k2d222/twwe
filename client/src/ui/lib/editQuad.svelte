@@ -1,22 +1,21 @@
 <script lang="ts">
   import type { Color } from '../../twmap/types'
   import type { Quad } from '../../twmap/quadsLayer'
-  import type { RenderMap } from '../../gl/renderMap'
   import { ColorEnvelope, PositionEnvelope } from '../../twmap/envelope'
   import { createEventDispatcher } from 'svelte'
+  import { rmap } from '../global'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
   type FormInputEvent = FormEvent<HTMLInputElement>
 
   const dispatch = createEventDispatcher()
 
-  export let rmap: RenderMap
   export let quad: Quad
   export let p: number
 
   $: point = quad.points[p]
-  $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
-  $: positionEnvelopes = rmap.map.envelopes.filter(e => e instanceof PositionEnvelope)
+  $: colorEnvelopes = $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
+  $: positionEnvelopes = $rmap.map.envelopes.filter(e => e instanceof PositionEnvelope)
 
   function pointName(p: number) {
     if (p === 0) return 'Top Left'
@@ -84,7 +83,7 @@
   }
 
   function onEditColEnv(e: FormEvent<HTMLSelectElement>) {
-    quad.colorEnv = rmap.map.envelopes[parseInt(e.currentTarget.value)] as ColorEnvelope
+    quad.colorEnv = $rmap.map.envelopes[parseInt(e.currentTarget.value)] as ColorEnvelope
     dispatch('change')
   }
 
@@ -97,7 +96,7 @@
   }
 
   function onEditPosEnv(e: FormEvent<HTMLSelectElement>) {
-    quad.posEnv = rmap.map.envelopes[parseInt(e.currentTarget.value)] as PositionEnvelope
+    quad.posEnv = $rmap.map.envelopes[parseInt(e.currentTarget.value)] as PositionEnvelope
     dispatch('change')
   }
 
@@ -140,7 +139,7 @@
       Position Envelope <select on:change={onEditPosEnv}>
         <option selected={quad.posEnv === null} value={-1}>None</option>
         {#each positionEnvelopes as env}
-          {@const i = rmap.map.envelopes.indexOf(env)}
+          {@const i = $rmap.map.envelopes.indexOf(env)}
           <option selected={quad.posEnv === env} value={i}>
             {'#' + i + ' ' + (env.name || '(unnamed)')}
           </option>
@@ -158,7 +157,7 @@
       Color Env. <select on:change={onEditColEnv}>
         <option selected={quad.colorEnv === null} value={-1}>None</option>
         {#each colorEnvelopes as env}
-          {@const i = rmap.map.envelopes.indexOf(env)}
+          {@const i = $rmap.map.envelopes.indexOf(env)}
           <option selected={quad.colorEnv === env} value={i}>
             {'#' + i + ' ' + (env.name || '(unnamed)')}
           </option>

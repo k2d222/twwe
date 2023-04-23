@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { RenderMap } from '../../gl/renderMap'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
+  import { rmap } from '../global'
   import {
     View,
     ViewOff,
@@ -15,11 +15,10 @@
     Layers as GroupIcon,
   } from 'carbon-icons-svelte'
 
-  export let rmap: RenderMap
   export let active: [number, number] = [-1, -1]
   export let selected: [number, number][] = [active]
 
-  let folded = new Array(rmap.map.groups.length).fill(false)
+  let folded = new Array($rmap.map.groups.length).fill(false)
 
   let self: HTMLElement
   let treeWalker: TreeWalker
@@ -124,7 +123,7 @@
 </script>
 
 <ul id="tree" role="tree" bind:this={self}>
-  {#each rmap.groups as rgroup, g}
+  {#each $rmap.groups as rgroup, g}
     {@const group = rgroup.group}
     <li class="group" class:visible={rgroup.visible} class:folded={folded[g]}>
       <div

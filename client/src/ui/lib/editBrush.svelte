@@ -11,10 +11,9 @@
   } from '../../twmap/tilesLayer'
   import * as Editor from './editor'
   import { onMount, onDestroy } from 'svelte'
-  import type { RenderMap } from 'src/gl/renderMap'
+  import { rmap } from '../global'
 
   export let brush: Editor.Brush
-  export let rmap: RenderMap
 
   const dispatch = createEventDispatcher<{
     change: Editor.Brush
@@ -199,7 +198,7 @@
 
   function onFlipV() {
     for (const layer of brush.layers) {
-      const rlayer = rmap.groups[brush.group].layers[layer.layer]
+      const rlayer = $rmap.groups[brush.group].layers[layer.layer]
 
       if (rlayer.layer instanceof AnyTilesLayer) {
         tilesFlipV(rlayer.layer, layer.tiles)
@@ -212,7 +211,7 @@
 
   function onFlipH() {
     for (const layer of brush.layers) {
-      const rlayer = rmap.groups[brush.group].layers[layer.layer]
+      const rlayer = $rmap.groups[brush.group].layers[layer.layer]
 
       if (rlayer.layer instanceof AnyTilesLayer) {
         tilesFlipH(rlayer.layer, layer.tiles)
@@ -225,7 +224,7 @@
 
   function onRotateCW() {
     for (const layer of brush.layers) {
-      const rlayer = rmap.groups[brush.group].layers[layer.layer]
+      const rlayer = $rmap.groups[brush.group].layers[layer.layer]
 
       if (rlayer.layer instanceof AnyTilesLayer) {
         tilesRotateCW(rlayer.layer, layer.tiles)
@@ -238,7 +237,7 @@
 
   function onRotateCCW() {
     for (const layer of brush.layers) {
-      const rlayer = rmap.groups[brush.group].layers[layer.layer]
+      const rlayer = $rmap.groups[brush.group].layers[layer.layer]
 
       if (rlayer.layer instanceof AnyTilesLayer) {
         tilesRotateCCW(rlayer.layer, layer.tiles)

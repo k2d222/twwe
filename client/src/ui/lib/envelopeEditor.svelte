@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Envelope } from '../../twmap/map'
-  import type { RenderMap } from '../../gl/renderMap'
   import {
     CreateEnvelope,
     EditEnvelope,
@@ -15,6 +14,7 @@
   import ContextMenu from './contextMenu.svelte'
   import { onMount } from 'svelte'
   import { showError, clearDialog } from './dialog'
+  import { rmap } from '../global'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
   type InputEvent = FormEvent<HTMLInputElement>
@@ -31,7 +31,6 @@
     h: number
   }
 
-  export let rmap: RenderMap
   export let selected: Envelope | null = null
 
   let viewBox: ViewBox = { x: 0, y: 0, w: 0, h: 0 }
@@ -118,8 +117,8 @@
     lastSelected = selected
   }
 
-  // redraw selected when rmap is updated
-  $: rmap, selected = selected
+  // redraw selected when $rmap is updated
+  $: $rmap, selected = selected
 
   function clampI32(n: number) {
     return clamp(n, -2_147_483_648, 2_147_483_647)
@@ -254,19 +253,19 @@
   }
 
   onMount(() => {
-    if (selected === null && rmap.map.envelopes.length) selected = rmap.map.envelopes[0]
+    if (selected === null && $rmap.map.envelopes.length) selected = $rmap.map.envelopes[0]
   })
 
   async function onRename(e: InputEvent) {
     const change: EditEnvelope = {
-      index: rmap.map.envelopes.indexOf(selected),
+      index: $rmap.map.envelopes.indexOf(selected),
       name: e.currentTarget.value,
     }
     try {
       // showInfo('Please wait…')
       await $server.query('editenvelope', change)
-      rmap.editEnvelope(change)
-      rmap = rmap // hack to redraw
+      $rmap.editEnvelope(change)
+      $rmap = $rmap // hack to redraw
       clearDialog()
     } catch (e) {
       showError('Failed to rename envelope: ' + e)
@@ -283,9 +282,9 @@
     try {
       // showInfo('Please wait…')
       await $server.query('createenvelope', change)
-      rmap.createEnvelope(change)
-      selected = rmap.map.envelopes[rmap.map.envelopes.length - 1]
-      rmap = rmap // hack to redraw
+      $rmap.createEnvelope(change)
+      selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
+      $rmap = $rmap // hack to redraw
       clearDialog()
     } catch (e) {
       showError('Failed to create envelope: ' + e)
@@ -294,14 +293,14 @@
 
   async function onDelete() {
     const change: DeleteEnvelope = {
-      index: rmap.map.envelopes.indexOf(selected),
+      index: $rmap.map.envelopes.indexOf(selected),
     }
     try {
       // showInfo('Please wait…')
       await $server.query('deleteenvelope', change)
-      rmap.removeEnvelope(change.index)
-      selected = rmap.map.envelopes[change.index - 1] || null
-      rmap = rmap // hack to redraw
+      $rmap.removeEnvelope(change.index)
+      selected = $rmap.map.envelopes[change.index - 1] || null
+      $rmap = $rmap // hack to redraw
       clearDialog()
     } catch (e) {
       showError('Failed to delete envelope: ' + e)
@@ -380,7 +379,7 @@
   }
 
   function makeEnvEdit(): EditEnvelope {
-    const index = rmap.map.envelopes.indexOf(selected)
+    const index = $rmap.map.envelopes.indexOf(selected)
 
     if (selected instanceof ColorEnvelope) {
       return {
@@ -530,9 +529,9 @@
 <div id="envelope-editor">
   <div class="header">
     {#if selected}
-      <select on:change={e => (selected = rmap.map.envelopes[e.currentTarget.value])}>
-        {#each rmap.map.envelopes as env}
-          {@const i = rmap.map.envelopes.indexOf(env)}
+      <select on:change={e => (selected = $rmap.map.envelopes[e.currentTarget.value])}>
+        {#each $rmap.map.envelopes as env}
+          {@const i = $rmap.map.envelopes.indexOf(env)}
           <option selected={env === selected} value={i}>
             {`#${i} ${env.name || ''} (${envTypes[env.type]})`}
           </option>

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { RenderMap } from '../../gl/renderMap'
   import type { QuadsLayer, Quad } from '../../twmap/quadsLayer'
   import type { CreateQuad, EditQuad } from 'src/server/protocol'
   import type * as Info from '../../twmap/types'
@@ -13,8 +12,8 @@
   import { Button } from 'carbon-components-svelte'
   import { Add as AddIcon } from 'carbon-icons-svelte'
   import { coordToJson } from '../../server/convert'
+  import { rmap } from '../global'
 
-  export let rmap: RenderMap
   export let layer: QuadsLayer
 
   let viewBox: string
@@ -23,7 +22,7 @@
   $: quadPoints = layer.quads.map(q => {
     return [...q.points]
   })
-  $: [g, l] = layerIndex(rmap.map, layer)
+  $: [g, l] = layerIndex($rmap.map, layer)
 
   function quadPointsStr(points: Info.Coord[]) {
     const toStr = (p: Info.Coord) => p.x / 1024 + ',' + p.y / 1024
@@ -36,7 +35,7 @@
 
   function makeViewBox() {
     const { x1, y1, x2, y2 } = viewport.screen()
-    const rgroup = rmap.groups[g]
+    const rgroup = $rmap.groups[g]
     const [offX, offY] = rgroup.offset()
     return [x1 - offX, y1 - offY, x2 - x1, y2 - y1].map(x => x * 32).join(' ')
   }
@@ -117,7 +116,7 @@
     quadPoints = quadPoints // hack to redraw quad
 
     const change = editQuad(activeQuad)
-    rmap.editQuad(change)
+    $rmap.editQuad(change)
   }
 
   function onMouseUp(e: MouseEvent) {
@@ -148,7 +147,7 @@
 
   function onChange(q: number) {
     const change = editQuad(q)
-    rmap.editQuad(change)
+    $rmap.editQuad(change)
     $server.send('editquad', change)
     quadPoints = quadPoints // hack to redraw
   }
@@ -158,7 +157,7 @@
       // showInfo('Please wait…')
       const change = { group: g, layer: l, quad: q }
       $server.query('deletequad', change)
-      rmap.deleteQuad(change)
+      $rmap.deleteQuad(change)
       hideCM()
       layer = layer
       clearDialog()
@@ -205,7 +204,7 @@
     try {
       // showInfo('Please wait…')
       $server.query('createquad', change)
-      rmap.createQuad(change)
+      $rmap.createQuad(change)
       layer = layer
       clearDialog()
     } catch (e) {
@@ -233,8 +232,8 @@
   function editQuad(q: number): EditQuad {
     const quad = layer.quads[q]
     const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
-    const posEnv_ = rmap.map.envelopes.indexOf(posEnv)
-    const colorEnv_ = rmap.map.envelopes.indexOf(colorEnv)
+    const posEnv_ = $rmap.map.envelopes.indexOf(posEnv)
+    const colorEnv_ = $rmap.map.envelopes.indexOf(colorEnv)
 
     return {
       group: g,
@@ -253,8 +252,8 @@
   function onDuplicate(q: number) {
     const quad = cloneQuad(layer.quads[q])
     const { colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
-    const posEnv_ = rmap.map.envelopes.indexOf(posEnv)
-    const colorEnv_ = rmap.map.envelopes.indexOf(colorEnv)
+    const posEnv_ = $rmap.map.envelopes.indexOf(posEnv)
+    const colorEnv_ = $rmap.map.envelopes.indexOf(colorEnv)
     const points = quad.points.map(p => {
       return { x: p.x + 10 * 1024, y: p.y + 10 * 1024 }
     })
@@ -274,7 +273,7 @@
     try {
       // showInfo('Please wait…')
       $server.query('createquad', change)
-      rmap.createQuad(change)
+      $rmap.createQuad(change)
       hideCM()
       layer = layer
       clearDialog()
@@ -367,7 +366,6 @@
     {@const quad = layer.quads[cm_q]}
     <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
       <QuadEditor
-        {rmap}
         {quad}
         p={cm_p}
         on:change={() => onChange(cm_q)}

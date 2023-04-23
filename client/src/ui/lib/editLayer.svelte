@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { EditLayer, DeleteLayer, ReorderLayer, RequestContent } from '../../server/protocol'
-  import type { RenderMap } from '../../gl/renderMap'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
   import { FormEvent, FormInputEvent, uploadImage } from './util'
@@ -15,23 +14,23 @@
   import ImagePicker from './imagePicker.svelte'
   import { createEventDispatcher } from 'svelte'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
+  import { rmap } from '../global'
 
   type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
   type EventMap = { [K in Events]: RequestContent[K] }
 
   const dispatch = createEventDispatcher<EventMap>()
 
-  export let rmap: RenderMap
   export let g: number
   export let l: number
 
-  $: rgroup = rmap.groups[g]
+  $: rgroup = $rmap.groups[g]
   $: group = rgroup.group
   $: rlayer = rgroup.layers[l]
   $: layer = rlayer.layer as TilesLayer | QuadsLayer
-  $: colorEnvelopes = rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
+  $: colorEnvelopes = $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
 
-  $: images = rmap.map.images
+  $: images = $rmap.map.images
   $: image = layer.image
 
   function parseI32(str: string) {
@@ -102,7 +101,7 @@
       onEditLayer({ group: g, layer: l, image: null })
     } else if (e.detail instanceof Image) {
       // use embedded image
-      const index = rmap.map.images.indexOf(e.detail)
+      const index = $rmap.map.images.indexOf(e.detail)
       onEditLayer({ group: g, layer: l, image: index })
     } else if (e.detail instanceof File) {
       const name = e.detail.name.replace(/\.[^\.]+$/, '')
@@ -120,12 +119,12 @@
       } else {
         try {
           showInfo('Creating image...', 'none')
-          const index = rmap.map.images.length
+          const index = $rmap.map.images.length
           await $server.query('createimage', { name, index, external: true })
           const img = new Image()
           img.loadExternal(url)
           img.name = name
-          rmap.addImage(img)
+          $rmap.addImage(img)
           onEditLayer({ group: g, layer: l, image: index })
           clearDialog()
         } catch (e) {
@@ -138,13 +137,13 @@
   async function uploadImageAndPick(file: Blob, name: string) {
     try {
       showInfo('Uploading image…', 'none')
-      const index = rmap.map.images.length
+      const index = $rmap.map.images.length
       const data = await decodePng(file)
       const img = new Image()
       img.loadEmbedded(data)
       img.name = name
-      rmap.addImage(img)
-      await uploadImage($serverConfig.httpUrl, rmap.map.name, file, {
+      $rmap.addImage(img)
+      await uploadImage($serverConfig.httpUrl, $rmap.map.name, file, {
         name,
         index,
       })
@@ -160,9 +159,9 @@
     const image = e.detail
 
     try {
-      const index = rmap.map.images.indexOf(image)
+      const index = $rmap.map.images.indexOf(image)
       await $server.query('deleteimage', { index })
-      rmap.removeImage(index)
+      $rmap.removeImage(index)
       images = images // update the component
     } catch (e) {
       showError('Failed to delete image: ' + e)
@@ -170,7 +169,7 @@
   }
 
   function onEditGroup(e: FormInputEvent) {
-    const newGroup = clamp(parseInt(e.currentTarget.value), 0, rmap.groups.length - 1)
+    const newGroup = clamp(parseInt(e.currentTarget.value), 0, $rmap.groups.length - 1)
     if (!isNaN(newGroup)) onReorderLayer({ group: g, layer: l, newGroup, newLayer: 0 })
   }
   function onEditOrder(e: FormInputEvent) {
@@ -229,7 +228,7 @@
       Group <input
         type="number"
         min={0}
-        max={rmap.groups.length - 1}
+        max={$rmap.groups.length - 1}
         value={g}
         on:change={onEditGroup}
       />
@@ -284,7 +283,7 @@
       Color Envelope <select on:change={onEditColorEnv}>
         <option selected={layer.colorEnv === null} value={null}>None</option>
         {#each colorEnvelopes as env}
-          {@const i = rmap.map.envelopes.indexOf(env)}
+          {@const i = $rmap.map.envelopes.indexOf(env)}
           <option selected={layer.colorEnv === env} value={i}>
             {'#' + i + ' ' + (env.name || '(unnamed)')}
           </option>
