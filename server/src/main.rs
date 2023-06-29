@@ -239,14 +239,16 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}", clone_map.config.name).into();
+        let map_path: PathBuf = format!("maps/{}/map.map", clone_map.config.name).into();
 
         let room = self
             .room(&clone_map.clone)
             .ok_or("cannot clone non-existing map")?;
+
+        map_path.parent().map(fs::create_dir_all);
         room.save_map_copy(&map_path)?;
 
-        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
+        let mut new_room = Room::new(map_path.parent().unwrap().to_owned()).ok_or("map creation failed")?;
         new_room.config.access = clone_map.config.access.clone();
         new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
@@ -263,7 +265,7 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}", create_map.config.name).into();
+        let map_path: PathBuf = format!("maps/{}/map.map", create_map.config.name).into();
 
         let mut map = TwMap::empty(create_map.version.unwrap_or(twmap::Version::DDNet06));
         let mut group = twmap::Group::physics();
@@ -276,10 +278,11 @@ impl Server {
         group.layers.push(twmap::Layer::Game(layer));
         map.groups.push(group);
         map.check().map_err(server_error)?;
+
         map_path.parent().map(fs::create_dir_all);
         map.save_file(&map_path).map_err(server_error)?;
 
-        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
+        let mut new_room = Room::new(map_path.parent().unwrap().to_owned()).ok_or("map creation failed")?;
         new_room.config.access = create_map.config.access.clone();
         new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
@@ -300,15 +303,17 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}", create_map.config.name).into();
+        let map_path: PathBuf = format!("maps/{}/map.map", create_map.config.name).into();
 
+        map_path.parent().map(fs::create_dir_all);
         std::fs::write(&map_path, file).map_err(|_| "failed to write file")?;
+
         TwMap::parse_file(&map_path).map_err(|_| {
-            std::fs::remove_file(&map_path).unwrap();
+            std::fs::remove_file(&map_path).ok();
             "not a valid map file"
         })?;
 
-        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
+        let mut new_room = Room::new(map_path.parent().unwrap().to_owned()).ok_or("map creation failed")?;
         new_room.config.access = create_map.config.access.clone();
         new_room.save_config()?;
         {
@@ -824,14 +829,6 @@ async fn route_create_map(
         .text()
         .await
         .map_err(|_| (StatusCode::BAD_REQUEST, "first field must be text"))?;
-    let file = form
-        .next_field()
-        .await
-        .map_err(multipart_error)?
-        .ok_or((StatusCode::BAD_REQUEST, "missing second field"))?
-        .bytes()
-        .await
-        .map_err(multipart_error)?;
 
     let create_map = serde_json::from_str::<CreateMap>(&f1).map_err(json_error)?;
 
@@ -844,9 +841,19 @@ async fn route_create_map(
             .handle_clone_map(clone)
             .map(|_| ())
             .map_err(|str| (StatusCode::BAD_REQUEST, str).into()),
-        CreateMap::Upload(upload) => server
-            .handle_upload_map(upload, &file)
-            .map_err(|str| (StatusCode::BAD_REQUEST, str).into()),
+        CreateMap::Upload(upload) => {
+            let file = form
+                .next_field()
+                .await
+                .map_err(multipart_error)?
+                .ok_or((StatusCode::BAD_REQUEST, "missing second field"))?
+                .bytes()
+                .await
+                .map_err(multipart_error)?;
+            server
+                .handle_upload_map(upload, &file)
+                .map_err(|str| (StatusCode::BAD_REQUEST, str).into())
+        }
     }
 }
 
@@ -938,7 +945,7 @@ async fn run_server(args: Cli) {
     log::info!("Listening on: {}", addr);
 
     let cors = cors::CorsLayer::new()
-        .allow_methods(vec![Method::GET, Method::POST])
+        .allow_methods(vec![Method::GET, Method::POST, Method::DELETE])
         .allow_origin(cors::Any)
         .allow_credentials(false)
         .allow_headers(cors::Any);
