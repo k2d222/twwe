@@ -1,0 +1,5 @@
+brush highlight not aligned with para / offset
+resize layer : 0 ?
+very slow pasting large tiles chunks
+speedup upside down
+preview change layer order
