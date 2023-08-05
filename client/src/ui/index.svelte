@@ -10,7 +10,7 @@
 <Router {url}>
   <div>
     <Route path="edit/*mapName" let:params>
-      <JoinServer><Edit mapName={params.mapName} /></JoinServer>
+      <JoinServer><Edit name={params.mapName} /></JoinServer>
     </Route>
     <Route path="/">
       <Lobby />

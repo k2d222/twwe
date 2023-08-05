@@ -22,7 +22,6 @@ import { Group } from './group'
 import { Image } from './image'
 import { ColorEnvelope, PositionEnvelope, SoundEnvelope } from './envelope'
 import { fromString as UuidFromString } from './uuid'
-import type { Automapper } from './automap'
 
 export type Ctor<T> = new (...args: any[]) => T
 export type PhysicsLayer =
@@ -47,7 +46,6 @@ export class Map {
   images: Image[]
   envelopes: Envelope[]
   groups: Group[]
-  automappers: { [image: string]: Automapper }
   info: MapInfo
 
   constructor() {
@@ -55,7 +53,6 @@ export class Map {
     this.images = []
     this.envelopes = []
     this.groups = []
-    this.automappers = {}
     this.info = {
       author: '',
       version: '',

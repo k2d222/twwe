@@ -769,14 +769,18 @@ function inBounds(x: number, y: number, w: number, h: number) {
   return x >= 0 && y >= 0 && x < w && y < h
 }
 
+const outTile: Info.Tile = {
+  id: -1,
+  flags: 0,
+}
+
 function posRuleMatches(rule: PosRule, layer: TilesLayer, x: number, y: number) {
   const xx = x + rule.offset.x
   const yy = y + rule.offset.y
 
-  if (!inBounds(xx, yy, layer.width, layer.height))
-    return false
-
-  const tile = layer.getTile(xx, yy)
+  const tile = inBounds(xx, yy, layer.width, layer.height)
+    ? layer.getTile(xx, yy)
+    : outTile
 
   return rule.invert
     ? rule.states.every(s => !tileMatches(tile, s))

@@ -7,7 +7,7 @@
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
-  import { server, serverConfig, selected } from '../global'
+  import { server, serverConfig, selected, automappers } from '../global'
   import { decodePng, externalImageUrl, isPhysicsLayer } from './util'
   import { Image } from '../../twmap/image'
   import { ColorEnvelope } from '../../twmap/envelope'
@@ -102,17 +102,17 @@
     }
   }
 
-  function automapperConfig(layer: TilesLayer): AutomapperConfig | null {
+  function automapperConfig(layer: TilesLayer): string | null {
     if (
       layer.automapper.config === -1 ||
       !layer.image ||
-      !(layer.image.name in $rmap.map.automappers) ||
-      layer.automapper.config >= $rmap.map.automappers[layer.image.name].length
+      !(layer.image.name in $automappers) ||
+      layer.automapper.config >= $automappers[layer.image.name].length
     ) {
       return null
     }
 
-    return $rmap.map.automappers[layer.image.name][layer.automapper.config]
+    return $automappers[layer.image.name][layer.automapper.config]
   }
 
   let imagePickerOpen = false
@@ -245,9 +245,10 @@
     onDeleteLayer({ group: g, layer: l })
   }
   function onAutomap() {
-    const tlayer = layer as TilesLayer
-    const conf = automapperConfig(tlayer)
-    $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
+    // const tlayer = layer as TilesLayer
+    // const conf = automapperConfig(tlayer)
+    // $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
+    alert('TODO')
   }
 </script>
 
@@ -332,7 +333,7 @@
       </label>
       {@const conf = automapperConfig(layer)}
       <label>
-        Automapper <input type="button" value={conf === null ? 'None' : conf.name} disabled={layer.image === null} on:click={() => automapperOpen = true} />
+        Automapper <input type="button" value={conf ?? 'None'} disabled={layer.image === null} on:click={() => automapperOpen = true} />
       </label>
       <ComposedModal bind:open={automapperOpen} size="sm">
         <ModalHeader title="Automapper" />

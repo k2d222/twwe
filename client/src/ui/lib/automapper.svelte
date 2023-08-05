@@ -7,28 +7,34 @@
   } from '../../twmap/automap'
   import { showInfo } from './dialog'
   import { createEventDispatcher } from 'svelte'
-  import { rmap } from '../global'
+  import { rmap, server, automappers } from '../global'
 
   export let layer: TilesLayer
 
   let dispatch = createEventDispatcher<{change: number}>()
 
-  $: configs = $rmap.map.automappers[layer.image?.name] ?? []
+  $: configs = $automappers[layer.image?.name] ?? []
 
   async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
     const name = file.name.replace(/.rules$/, '')
     const str = await file.text()
-    const newRules = parseAutomapper(str) ?? []
-    const lints = lintAutomapper(str)
 
+    // const newRules = parseAutomapper(str) ?? []
+    const lints = lintAutomapper(str)
     const errs = lints.filter(l => l.level === LintLevel.Error)
     const warns = lints.filter(l => l.level === LintLevel.Warning)
 
-    $rmap.map.automappers[name] = newRules
+    await $server.query('uploadautomapper', {
+      image: name,
+      content: str,
+    })
+
+    const am = await $server.query("listautomappers", null)
+    $automappers = am.configs
 
     showInfo(
-      `Uploaded ${configs.length} rules for '${name}' with ${errs.length} errors and ${warns.length} warnings.`,
+      `Uploaded ${am.configs[name].length} rules for '${name}' with ${errs.length} errors and ${warns.length} warnings.`,
       'closable'
     )
   }
@@ -49,7 +55,7 @@
     <select bind:value={layer.automapper.config} on:change={onConfig}>
       <option value={-1}>None</option>
       {#each configs as conf, i}
-        <option value={i}>{conf.name}</option>
+        <option value={i}>{conf}</option>
       {/each}
     </select>
   </label>

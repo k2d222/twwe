@@ -365,9 +365,9 @@ export interface ResponseContent {
 
   edittile: EditTile
 
-  listautomappers: null
-  sendautomapper: SendAutomapper
-  uploadautomapper: UploadAutomapper
+  listautomappers: ListAutomappers
+  sendautomapper: UploadAutomapper
+  uploadautomapper: null
 
   createquad: CreateQuad
   editquad: EditQuad

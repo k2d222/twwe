@@ -549,14 +549,9 @@ impl Server {
     fn handle_list_automappers(&self, peer: &Peer) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
 
-        let map_name = room
-            .map
-            .path
-            .file_stem()
-            .ok_or("internal server error")?
-            .to_string_lossy();
+        let path = room.path().to_str().ok_or("internal server error")?;
 
-        let rule_files: Vec<_> = glob(&format!("automappers/{}/*.rules", map_name))
+        let rule_files: Vec<_> = glob(&format!("{}/*.rules", path))
             .map(|paths| paths.into_iter().filter_map(|p| p.ok()).collect())
             .unwrap_or_default();
 
@@ -586,22 +581,15 @@ impl Server {
     fn handle_send_automapper(&self, peer: &Peer, send_automapper: SendAutomapper) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
 
-        let map_name = room
-            .map
-            .path
-            .file_stem()
-            .ok_or("internal server error")?
-            .to_string_lossy();
-
         if !self.check_image_name(&send_automapper.image) {
             return Err("invalid image name");
         }
 
-        let rule_file = fs::read_to_string(format!(
-            "automappers/{}/{}.rules",
-            map_name, send_automapper.image
-        ))
-        .map_err(|_| "automapper file not found")?;
+        let mut path = room.path().to_owned();
+        path.push(format!("{}.rules", send_automapper.image));
+
+        let rule_file = fs::read_to_string(format!("{}.rules", send_automapper.image))
+            .map_err(|_| "automapper file not found")?;
 
         Ok(ResponseContent::SendAutomapper(rule_file))
     }
@@ -613,25 +601,17 @@ impl Server {
     ) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
 
-        let map_name = room
-            .map
-            .path
-            .file_stem()
-            .ok_or("internal server error")?
-            .to_string_lossy();
-
         if !self.check_image_name(&upload_automapper.image) {
             return Err("invalid image name");
         }
 
+        let mut path = room.path().to_owned();
+        path.push(format!("{}.rules", upload_automapper.image));
+
         Automapper::parse(upload_automapper.image.clone(), &upload_automapper.content)
             .map_err(|_| "invalid automapper file")?;
 
-        fs::write(
-            format!("automappers/{}/{}.rules", map_name, upload_automapper.image),
-            upload_automapper.content,
-        )
-        .map_err(server_error)?;
+        fs::write(path, upload_automapper.content).map_err(server_error)?;
 
         Ok(ResponseContent::UploadAutomapper)
     }

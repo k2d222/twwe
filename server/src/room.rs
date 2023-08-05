@@ -164,6 +164,10 @@ impl Room {
         self.name.as_ref()
     }
 
+    pub fn path(&self) -> &Path {
+        self.path.as_ref()
+    }
+
     pub fn add_peer(&self, peer: &Peer) {
         self.peers().insert(
             peer.addr,
