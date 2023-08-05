@@ -510,7 +510,7 @@ pub enum ResponseContent {
     ListMaps(ListMaps),
     ListAutomappers(ListAutomappers),
     SendAutomapper(String),
-    UploadComplete,
+    UploadAutomapper,
 
     CreateImage(CreateImage),
     ImageInfo(ImageInfo),

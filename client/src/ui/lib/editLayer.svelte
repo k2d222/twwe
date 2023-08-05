@@ -106,13 +106,13 @@
     if (
       layer.automapper.config === -1 ||
       !layer.image ||
-      !(layer.image.name in rmap.map.automappers) ||
-      layer.automapper.config >= rmap.map.automappers[layer.image.name].length
+      !(layer.image.name in $rmap.map.automappers) ||
+      layer.automapper.config >= $rmap.map.automappers[layer.image.name].length
     ) {
       return null
     }
 
-    return rmap.map.automappers[layer.image.name][layer.automapper.config]
+    return $rmap.map.automappers[layer.image.name][layer.automapper.config]
   }
 
   let imagePickerOpen = false

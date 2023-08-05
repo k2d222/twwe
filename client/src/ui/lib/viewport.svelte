@@ -30,7 +30,6 @@
 
   $: rgroup = g === -1 ? null : $rmap.groups[g]
   $: rlayer = l === -1 ? null : rgroup.layers[l]
-  $: group = rgroup === null ? null : rgroup.group
   $: layer = rlayer === null ? null : rlayer.layer
   $: selectedTilesLayers = $selected
     .map(([_, l]) => l)

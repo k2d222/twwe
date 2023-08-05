@@ -34,7 +34,7 @@ use futures::{
     future, StreamExt, TryStreamExt,
 };
 
-use twmap::{checks::CheckData, EmbeddedImage, Image, Point, TwMap};
+use twmap::{automapper::Automapper, checks::CheckData, EmbeddedImage, Image, TwMap};
 
 mod room;
 use room::Room;
@@ -217,6 +217,7 @@ impl Server {
                 ResponseContent::Error(_) => (),
                 ResponseContent::ListAutomappers(_) => (),
                 ResponseContent::SendAutomapper(_) => (),
+                ResponseContent::UploadAutomapper => (),
                 ResponseContent::Cursors(_) => (),
             }
         }
@@ -632,7 +633,7 @@ impl Server {
         )
         .map_err(server_error)?;
 
-        Ok(ResponseContent::UploadComplete)
+        Ok(ResponseContent::UploadAutomapper)
     }
 
     fn handle_request(&self, peer: &mut Peer, req: Request) {
@@ -666,6 +667,11 @@ impl Server {
             RequestContent::ImageInfo(content) => self.handle_image_info(peer, content),
             RequestContent::DeleteImage(content) => self.handle_delete_image(peer, content),
             RequestContent::Cursors(content) => self.handle_cursor(peer, content),
+            RequestContent::ListAutomappers => self.handle_list_automappers(peer),
+            RequestContent::SendAutomapper(content) => self.handle_send_automapper(peer, content),
+            RequestContent::UploadAutomapper(content) => {
+                self.handle_upload_automapper(peer, content)
+            }
         };
         self.respond_and_broadcast(peer, req.id, res);
     }
