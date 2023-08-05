@@ -18,7 +18,6 @@ export interface Run {
 export interface IndexRule {
   tile: Info.Tile
   rules: Rule[]
-  defaultRule: boolean
 }
 
 export type Rule = PosRule | RandomRule
@@ -551,23 +550,52 @@ export function parse(content: string): Config[] | null {
   let automapper: Config | null = null
   let run: Run | null = null
   let indexRule: IndexRule | null = null
+  let defaultRule = true
+
+  function finishIndexRule() {
+    if (indexRule && defaultRule) {
+      indexRule.rules.push(defaultPosRule)
+    }
+    indexRule = null
+    defaultRule = true
+  }
+
+  function newIndexRule(tile: Info.Tile) {
+    finishIndexRule()
+    indexRule = { tile, rules: [] }
+    run.indexRules.push(indexRule)
+  }
+
+  function newRun() {
+    finishIndexRule()
+    run = { layerCopy: true, indexRules: [] }
+    automapper.runs.push(run)
+  }
+
+  function newConfig(name: string) {
+    automapper = { name, runs: [] }
+    automappers.push(automapper)
+    newRun()
+  }
 
   while (!reader.empty()) {
     let tok = reader.token()
+
     if ('header' in tok.content) {
       const name = tok.content.header
-      indexRule = null
-      run = { layerCopy: true, indexRules: [] }
-      automapper = { name, runs: [run] }
-      automappers.push(automapper)
-    } else if (!('word' in tok.content) || !automapper) {
+      newConfig(name)
+    }
+    
+    else if (!('word' in tok.content) || !automapper) {
       // invalid line, skip
       continue
-    } else if (tok.content.word === 'NewRun') {
-      run = { layerCopy: true, indexRules: [] }
-      automapper.runs.push(run)
-      indexRule = null
-    } else if (tok.content.word === 'Index') {
+    }
+    
+    else if (tok.content.word === 'NewRun') {
+      newRun()
+    }
+    
+    else if (tok.content.word === 'Index') {
       // id
       tok = reader.token()
       if (!tok.success || !('int' in tok.content)) return null
@@ -578,16 +606,17 @@ export function parse(content: string): Config[] | null {
       do {
         tok = reader.token()
         if (tok.success && 'word' in tok.content) {
-          if (tok.content.word === 'XFLIP') flags &= Info.TileFlags.VFLIP
-          else if (tok.content.word === 'YFLIP') flags &= Info.TileFlags.HFLIP
-          else if (tok.content.word === 'ROTATE') flags &= Info.TileFlags.ROTATE
+          if (tok.content.word === 'XFLIP') flags |= Info.TileFlags.VFLIP
+          else if (tok.content.word === 'YFLIP') flags |= Info.TileFlags.HFLIP
+          else if (tok.content.word === 'ROTATE') flags |= Info.TileFlags.ROTATE
         }
       } while (tok.success)
 
       const tile: Info.Tile = { id, flags }
-      indexRule = { tile, rules: [], defaultRule: true }
-      run.indexRules.push(indexRule)
-    } else if (indexRule !== null && tok.content.word === 'Pos') {
+      newIndexRule(tile)
+    }
+    
+    else if (indexRule !== null && tok.content.word === 'Pos') {
       // offset
       tok = reader.token()
       if (!tok.success || !('int' in tok.content)) return null
@@ -596,6 +625,10 @@ export function parse(content: string): Config[] | null {
       if (!tok.success || !('int' in tok.content)) return null
       const y = tok.content.int
       const offset = { x, y }
+
+      if (x === 0 && y === 0) {
+        defaultRule = false
+      }
 
       // rule
       tok = reader.token()
@@ -607,8 +640,11 @@ export function parse(content: string): Config[] | null {
           states: [{ id: 0 }],
           invert: tok.content.word === 'FULL',
         }
+
         indexRule.rules.push(rule)
-      } else if (['INDEX', 'NOTINDEX'].includes(tok.content.word)) {
+      }
+
+      else if (['INDEX', 'NOTINDEX'].includes(tok.content.word)) {
         const invert = tok.content.word === 'NOTINDEX'
 
         // id
@@ -653,21 +689,29 @@ export function parse(content: string): Config[] | null {
         const rule: PosRule = { offset, states, invert }
         indexRule.rules.push(rule)
       }
-    } else if (indexRule !== null && tok.content.word === 'Random') {
+    }
+    
+    else if (indexRule !== null && tok.content.word === 'Random') {
       tok = reader.token()
       let coef = 1.0
       if (tok.success && 'float' in tok.content) coef = tok.content.float
       else if (tok.success && 'int' in tok.content) coef = 1.0 / tok.content.int
       const rule: RandomRule = { coef }
       indexRule.rules.push(rule)
-    } else if (indexRule !== null && tok.content.word === 'NoDefaultRule') {
-      indexRule.defaultRule = false
-    } else if (run !== null && tok.content.word === 'NoLayerCopy') {
+    }
+    
+    else if (indexRule !== null && tok.content.word === 'NoDefaultRule') {
+      defaultRule = false
+    }
+    
+    else if (run !== null && tok.content.word === 'NoLayerCopy') {
       run.layerCopy = false
     }
 
     reader.nextLine()
   }
+
+  finishIndexRule()
 
   return automappers
 }
@@ -752,24 +796,18 @@ export function automap(layer: TilesLayer, automapper: Config, seed: number) {
         for (const irule of run.indexRules) {
           let match = true
 
-          if (irule.defaultRule) {
-            match = posRuleMatches(defaultPosRule, srcLayer, x, y)
-          }
-
-          if (match) {
-            for (const rule of irule.rules) {
-              if ('coef' in rule) {
-                match = hashLocation(seed, r1, r2, x, y) < HASH_MAX * rule.coef
-              } else {
-                match = posRuleMatches(rule, srcLayer, x, y)
-              }
-              if (!match)
-                break
+          for (const rule of irule.rules) {
+            if ('coef' in rule) {
+              match = hashLocation(seed, r1, r2, x, y) < HASH_MAX * rule.coef
+            } else {
+              match = posRuleMatches(rule, srcLayer, x, y)
             }
+            if (!match)
+              break
           }
 
           if (match) {
-            layer.setTile(x, y, irule.tile)
+            layer.setTile(x, y, TilesLayer.cloneTile(irule.tile))
           }
 
           r2++
