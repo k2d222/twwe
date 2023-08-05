@@ -13,7 +13,7 @@
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
   import AutomapperPicker from './automapper.svelte'
-  import type { Config as AutomapperConfig } from '../../twmap/automap'
+  import { automap, type Config as AutomapperConfig } from '../../twmap/automap'
   import { createEventDispatcher } from 'svelte'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
@@ -245,7 +245,9 @@
     onDeleteLayer({ group: g, layer: l })
   }
   function onAutomap() {
-    alert('TODO')
+    const tlayer = layer as TilesLayer
+    const conf = automapperConfig(tlayer)
+    $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
   }
 </script>
 
@@ -337,7 +339,7 @@
         <ModalBody hasForm>
           <AutomapperPicker
             {layer}
-            on:cancel={() => (automapperOpen = false)}
+            on:change={() => layer = layer}
           />
         </ModalBody>
       </ComposedModal>

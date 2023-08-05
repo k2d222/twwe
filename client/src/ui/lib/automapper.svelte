@@ -1,35 +1,40 @@
 <script lang="ts">
   import type { TilesLayer } from '../../twmap/tilesLayer'
   import {
-    Automapper,
     parse as parseAutomapper,
     lint as lintAutomapper,
     LintLevel,
   } from '../../twmap/automap'
   import { showInfo } from './dialog'
+  import { createEventDispatcher } from 'svelte'
+  import { rmap } from '../global'
 
   export let layer: TilesLayer
-  let configs: Automapper[] = []
-  $: config = layer.automapper.config
+
+  let dispatch = createEventDispatcher<{change: number}>()
+
+  $: configs = $rmap.map.automappers[layer.image?.name] ?? []
 
   async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
+    const name = file.name.replace(/.rules$/, '')
     const str = await file.text()
-    const newRules = parseAutomapper(str)
+    const newRules = parseAutomapper(str) ?? []
     const lints = lintAutomapper(str)
 
     const errs = lints.filter(l => l.level === LintLevel.Error)
     const warns = lints.filter(l => l.level === LintLevel.Warning)
 
-    if (newRules)
-      for (const rule of newRules) {
-        configs[rule.name] = rule
-      }
+    $rmap.map.automappers[name] = newRules
 
     showInfo(
-      `Uploaded ${newRules.length} rules with ${errs.length} errors and ${warns.length} warnings.`,
+      `Uploaded ${configs.length} rules for '${name}' with ${errs.length} errors and ${warns.length} warnings.`,
       'closable'
     )
+  }
+
+  async function onConfig() {
+    dispatch('change', layer.automapper.config)
   }
 </script>
 
@@ -41,10 +46,10 @@
 
   <label>
     Active rule
-    <select bind:value={config}>
+    <select bind:value={layer.automapper.config} on:change={onConfig}>
       <option value={-1}>None</option>
-      {#each Object.keys(configs) as conf, i}
-        <option value={i}>{conf}</option>
+      {#each configs as conf, i}
+        <option value={i}>{conf.name}</option>
       {/each}
     </select>
   </label>

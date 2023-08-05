@@ -26,7 +26,7 @@ export type Rule = PosRule | RandomRule
 export interface PosRule {
   offset: Info.Coord
   states: TileState[]
-  invert: boolean // whether to invert state matches, e.g. state.id = 0 will match all tiles with id != 0.
+  invert: boolean // whether to invert state matches, e.g. state.id = 0 will match all tiles with id != 0. (NOTINDEX)
 }
 
 export const defaultPosRule: PosRule = {
@@ -721,8 +721,19 @@ function tileMatches(tile: Info.Tile, test: TileState) {
   return true
 }
 
+function inBounds(x: number, y: number, w: number, h: number) {
+  return x >= 0 && y >= 0 && x < w && y < h
+}
+
 function posRuleMatches(rule: PosRule, layer: TilesLayer, x: number, y: number) {
-  const tile = layer.getTile(x + rule.offset.x, y + rule.offset.y)
+  const xx = x + rule.offset.x
+  const yy = y + rule.offset.y
+
+  if (!inBounds(xx, yy, layer.width, layer.height))
+    return false
+
+  const tile = layer.getTile(xx, yy)
+
   return rule.invert
     ? rule.states.every(s => !tileMatches(tile, s))
     : rule.states.some(s => tileMatches(tile, s))
@@ -741,11 +752,19 @@ export function automap(layer: TilesLayer, automapper: Config, seed: number) {
         for (const irule of run.indexRules) {
           let match = true
 
-          for (const rule of irule.rules) {
-            if ('coef' in rule) {
-              match = match && hashLocation(seed, r1, r2, x, y) < HASH_MAX * rule.coef
-            } else {
-              match = match && posRuleMatches(rule, srcLayer, x, y)
+          if (irule.defaultRule) {
+            match = posRuleMatches(defaultPosRule, srcLayer, x, y)
+          }
+
+          if (match) {
+            for (const rule of irule.rules) {
+              if ('coef' in rule) {
+                match = hashLocation(seed, r1, r2, x, y) < HASH_MAX * rule.coef
+              } else {
+                match = posRuleMatches(rule, srcLayer, x, y)
+              }
+              if (!match)
+                break
             }
           }
 
