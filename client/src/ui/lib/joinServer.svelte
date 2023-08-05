@@ -2,17 +2,18 @@
   import storage from '../../storage'
   import { InlineNotification, Loading } from 'carbon-components-svelte'
   import { WebSocketServer } from '../../server/server'
-  import { server } from '../global'
+  import { server, serverConfig } from '../global'
 
   const serverConfs = storage.load('servers')
   const serverId = storage.load('currentServer')
   const serverConf = serverConfs[serverId]
-  const url = new URL(serverConf.url)
+  const url = new URL(serverConf.wsUrl)
 
   let connected = false
   let error = false
 
-  $server = new WebSocketServer(serverConf.url)
+  $serverConfig = serverConf
+  $server = new WebSocketServer(serverConf.wsUrl)
   $server.socket.addEventListener('open', () => (connected = true), { once: true })
   $server.socket.addEventListener('error', () => (error = true), { once: true })
 </script>

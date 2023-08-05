@@ -69,21 +69,9 @@ Use the `--cert` and `--key` flags to enable TLS support for websocket. They mus
 
 ### Client
 
-Copy the `env.example` file to `.env.production` and configure the websocket server url. For a TLS-encrypted websocket, the url scheme is `wss://`. Otherwise, use `ws://`.
+Copy the `env.example` file to `.env` or `.env.production` and configure the websocket server url. For a TLS-encrypted websocket, the url schemes are `wss://` and `https://`. Otherwise, use `ws://` and `http://`.
 
 Have [npm](https://www.npmjs.com/) installed and run `npm install` in the client directory to install dependencies, `npm run dev` to run a dev server and `npm run build` to produce a release in the `dist` directory.
 
 Note: the client is written in non-strict Typescript. Typescript is only used for IDE hints and documentation, but ignored by the [Vite](https://vitejs.dev/guide/features.html#typescript) bundler.
 Use `npm run check` to run Typescript checks on the project.
-
-## Roadmap
-
-Future short-term goals are as follows:
-
- - [x] Improve **concurrency** on the server. ~Currently, the whole server state is protected by a single mutex which means there cannot be any simultaneous requests.~
- - [x] Allow editing multiple maps on a single server. The server will advertise which maps are available.
- - [x] Allow users to create, upload and download maps
- - [ ] Setup access permissions.
- - [x] Plugin to update a real Teeworlds or DDNet server (#21)
- - [ ] Stabilise and secure the server for a production(-ish) use.
- - [x] Add more editor tools for quads, envelopes, sounds etc.

@@ -62,11 +62,26 @@
   ]
 
   let external = -1
+
+  let file: File | null = null
+  
   $: external = image && image.img ? externalImages.indexOf(image.name) : external
+
+  $: selectedName =
+    external !== -1
+      ? externalImages[external] + ' (external)'
+      : image
+      ? image.name + ' (embedded)'
+      : file
+      ? file.name + ' (upload)'
+      : 'none'
 
   function onConfirm() {
     if (image) {
       dispatch('pick', image)
+    } else if (file) {
+      dispatch('pick', file)
+      file = null
     } else if (external !== -1) {
       dispatch('pick', externalImages[external])
     } else {
@@ -82,22 +97,25 @@
     if (e.key === 'Escape') onCancel()
   }
 
-  function onFileChange(e: CustomEvent<readonly File[]>) {
-    const file = e.detail[0]
-    dispatch('upload', file)
-  }
-
   function onDeleteImage(image: Image) {
     dispatch('delete', image)
   }
 
   function selectExternal(i: number) {
     image = null
+    file = null
     external = external === i ? -1 : i
   }
 
   function selectEmbedded(img: Image) {
     image = image === img ? null : img
+    file = null
+    external = -1
+  }
+
+  function selectFile(f: File | null) {
+    image = null
+    file = f
     external = -1
   }
 
@@ -117,12 +135,6 @@
     }
   }
 
-  $: selectedName =
-    external !== -1
-      ? externalImages[external] + ' (external)'
-      : image
-      ? image.name + ' (embedded)'
-      : 'none'
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
@@ -140,10 +152,14 @@
           labelDescription="Only png files are accepted."
           accept={['.png']}
           status="complete"
-          on:change={onFileChange}
+          on:change={(e) => selectFile(e.detail.length === 1 ? e.detail[0] : null)}
+          files={file === null ? [] : [file]}
         />
       </TabContent>
       <TabContent class="images">
+        {#if images.length === 0}
+          <p>No embedded images available. Upload an image or embed an external image first.</p>
+        {/if}
         <div class="list">
           {#each images.filter(i => !i.img) as img}
             <button

@@ -20,7 +20,7 @@ use crate::map_cfg::MapAccess;
 // message to clients in the order it received it. (and websocket preserves packet order)
 // Downside is, the server can never refuse a request from a client. We assume the client
 // always makes valid requests.
-//
+//clone
 // Other requests, like editing layers / groups can lead to desync between the
 // clients, hence cannot be handled that way. They require a forward-and-back
 // communication with the server to see if it agrees with the transaction.
@@ -32,8 +32,16 @@ use crate::map_cfg::MapAccess;
 // MAPS
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MapConfig {
+    pub name: String,
+    pub access: MapAccess,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateBlankParams {
+pub struct CreateMapBlank {
+    #[serde(flatten)]
+    pub config: MapConfig,
     pub version: Option<twmap::Version>,
     pub width: u32,
     pub height: u32,
@@ -41,25 +49,24 @@ pub struct CreateBlankParams {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateCloneParams {
+pub struct CreateMapClone {
+    #[serde(flatten)]
+    pub config: MapConfig,
     pub clone: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum CreateParams {
-    Blank(CreateBlankParams),
-    Clone(CreateCloneParams),
-    Upload {},
+pub struct CreateMapUpload {
+    #[serde(flatten)]
+    pub config: MapConfig,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CreateMap {
-    pub name: String,
-    pub access: MapAccess,
-    #[serde(flatten)]
-    pub params: CreateParams,
+#[serde(rename_all = "camelCase")]
+pub enum CreateMap {
+    Blank(CreateMapBlank),
+    Clone(CreateMapClone),
+    Upload(CreateMapUpload),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -364,6 +371,14 @@ pub struct ListMaps {
     pub maps: Vec<MapInfo>,
 }
 
+// IMAGES
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ImageConfig {
+    pub name: String,
+    pub index: u16,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ListAutomappers {
     pub configs: HashMap<String, Vec<String>>,
@@ -388,11 +403,6 @@ pub struct CreateImage {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SendImage {
-    pub index: u16,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DeleteImage {
     pub index: u16,
 }
@@ -405,6 +415,13 @@ pub struct ImageInfo {
     pub height: u32,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Cursor {
+    pub point: Point<f32>,
+    pub group: i32,
+    pub layer: i32,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Error {
@@ -415,7 +432,8 @@ pub enum Error {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RequestContent {
-    CreateMap(CreateMap),
+    CreateMap(CreateMapBlank),
+    CloneMap(CreateMapClone),
     JoinMap(JoinMap),
     LeaveMap,
     EditMap(EditMap),
@@ -443,7 +461,6 @@ pub enum RequestContent {
     EditEnvelope(EditEnvelope),
     DeleteEnvelope(DeleteEnvelope),
 
-    SendMap(SendMap),
     ListUsers,
     ListMaps,
     ListAutomappers,
@@ -451,14 +468,17 @@ pub enum RequestContent {
     UploadAutomapper(UploadAutomapper),
 
     CreateImage(CreateImage),
-    SendImage(SendImage),
+    ImageInfo(u16),
     DeleteImage(DeleteImage),
+
+    Cursors(Cursor),
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum ResponseContent {
-    CreateMap(CreateMap),
+    CreateMap(CreateMapBlank),
+    CloneMap(CreateMapClone),
     JoinMap(JoinMap),
     LeaveMap,
     EditMap(EditMap),
@@ -486,7 +506,6 @@ pub enum ResponseContent {
     EditEnvelope(EditEnvelope),
     DeleteEnvelope(DeleteEnvelope),
 
-    SendMap(SendMap),
     ListUsers(ListUsers),
     ListMaps(ListMaps),
     ListAutomappers(ListAutomappers),
@@ -494,8 +513,10 @@ pub enum ResponseContent {
     UploadComplete,
 
     CreateImage(CreateImage),
-    SendImage(ImageInfo),
+    ImageInfo(ImageInfo),
     DeleteImage(DeleteImage),
+
+    Cursors(HashMap<String, Cursor>),
 
     Error(Error),
 }

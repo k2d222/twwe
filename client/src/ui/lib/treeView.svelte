@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { RenderMap } from '../../gl/renderMap'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
+  import { rmap, selected } from '../global'
   import {
     View,
     ViewOff,
@@ -15,14 +15,23 @@
     Layers as GroupIcon,
   } from 'carbon-icons-svelte'
 
-  export let rmap: RenderMap
-  export let active: [number, number] = [-1, -1]
-  export let selected: [number, number][] = [active]
-
-  let folded = new Array(rmap.map.groups.length).fill(false)
+  let folded = new Array($rmap.map.groups.length).fill(false)
 
   let self: HTMLElement
   let treeWalker: TreeWalker
+
+  let active_g: number, active_l: number
+  $: {
+    if ($selected.length === 0) {
+      active_g = -1
+      active_l = -1
+    }
+    else {
+      active_g = $selected[$selected.length - 1][0]
+      active_l = $selected[$selected.length - 1][1]
+    }
+  }
+  $: active = [active_g, active_l] as [number, number]
 
   $: if (self)
     treeWalker = document.createTreeWalker(self, NodeFilter.SHOW_ELEMENT, {
@@ -34,16 +43,15 @@
     })
 
   // if active is changed, and some node is focused, focus active instead.
-  $: if (self && active[0] !== -1) {
+  $: if (self && active_g !== -1) {
     const focused = self.querySelector(':focus')
     if (focused) {
-      const [g, l] = active
-      const group = self.children[g]
-      if (l === -1) {
+      const group = self.children[active_g]
+      if (active_l === -1) {
         const node = group.firstElementChild as HTMLElement
         node.focus()
       } else {
-        const layer = group.lastElementChild.children[l]
+        const layer = group.lastElementChild.children[active_l]
         const node = layer.firstElementChild as HTMLElement
         node.focus()
       }
@@ -74,9 +82,13 @@
       : UnknownLayerIcon
   }
 
-  function select(g: number, l: number) {
-    active = [g, l]
-    selected = [active]
+  function select(g: number, l: number, e: MouseEvent | KeyboardEvent) {
+    if (e.shiftKey && g === active_g) {
+      $selected = [...$selected.filter(([_, l2]) => l2 !== -1 && l2 !== l), [g, l]]
+    }
+    else {
+      $selected = [[g, l]]
+    }
   }
 
   function onKeyDown(g: number, l: number, e: KeyboardEvent) {
@@ -90,11 +102,11 @@
         folded[g] = false
       } else if (e.key === 'Enter' || e.key === ' ') {
         folded[g] = !folded[g]
-        select(g, l)
+        select(g, l, e)
       }
     } else {
       if (e.key === 'Enter' || e.key === ' ') {
-        select(g, l)
+        select(g, l, e)
       }
     }
     if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -118,17 +130,17 @@
 </script>
 
 <ul id="tree" role="tree" bind:this={self}>
-  {#each rmap.groups as rgroup, g}
+  {#each $rmap.groups as rgroup, g}
     {@const group = rgroup.group}
     <li class="group" class:visible={rgroup.visible} class:folded={folded[g]}>
       <div
         class="node"
         role="treeitem"
         tabindex="0"
-        aria-selected={isSelected(selected, g, -1)}
-        class:selected={isSelected(selected, g, -1)}
+        aria-selected={isSelected($selected, g, -1)}
+        class:selected={isSelected($selected, g, -1)}
         class:active={isActive(active, g, -1)}
-        on:click={() => select(g, -1)}
+        on:click={(e) => select(g, -1, e)}
         on:keydown={e => onKeyDown(g, -1, e)}
       >
         <span class="toggle" aria-hidden="true" on:click={() => (folded[g] = !folded[g])}>
@@ -149,10 +161,10 @@
               class="node"
               role="treeitem"
               tabindex="0"
-              aria-selected={isSelected(selected, g, l)}
-              class:selected={isSelected(selected, g, l)}
+              aria-selected={isSelected($selected, g, l)}
+              class:selected={isSelected($selected, g, l)}
               class:active={isActive(active, g, l)}
-              on:click={() => select(g, l)}
+              on:click={(e) => select(g, l, e)}
               on:keydown={e => onKeyDown(g, l, e)}
             >
               <span class="icon"><svelte:component this={layerIcon(layer)} /></span>

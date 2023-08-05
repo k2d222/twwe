@@ -10,4 +10,5 @@ export abstract class RenderLayer {
   abstract texture: Texture | null
 
   abstract render(viewport: ViewBox): void
+  abstract recompute(): void
 }

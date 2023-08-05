@@ -1,11 +1,8 @@
 <script lang="ts">
-  import type { Map } from '../../twmap/map'
   import type {
-    ListUsers,
     ServerError,
     EditMap,
     EditTile,
-    EditTileParams,
     CreateQuad,
     EditQuad,
     DeleteQuad,
@@ -22,32 +19,28 @@
     ReorderLayer,
     CreateImage,
     DeleteImage,
+ListUsers,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
-  import type { Group } from 'src/twmap/group'
-  import type { RenderGroup } from 'src/gl/renderGroup'
-  import type { RenderLayer } from 'src/gl/renderLayer'
-  import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
+  import type { Group } from '../../twmap/group'
+  import { LayerType } from '../../twmap/types'
+  import type { RenderGroup } from '../../gl/renderGroup'
+  import type { RenderLayer } from '../../gl/renderLayer'
+  import { GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
-  import { QuadsLayer } from '../../twmap/quadsLayer'
   import { onMount, onDestroy } from 'svelte'
-  import { server } from '../global'
-  import { canvas, renderer, setViewport } from '../../gl/global'
-  import { Viewport } from '../../gl/viewport'
-  import { RenderMap } from '../../gl/renderMap'
-  import { RenderQuadsLayer } from '../../gl/renderQuadsLayer'
-  import { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
+  import { server, serverConfig, rmap, selected } from '../global'
+  import { canvas } from '../../gl/global'
   import TreeView from './treeView.svelte'
-  import TileSelector from './tileSelector.svelte'
   import { showInfo, showError, clearDialog, showDialog } from './dialog'
-  import QuadsView from './quadsView.svelte'
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { queryImage, externalImageUrl, px2vw, rem2px, downloadMap } from './util'
+  import { externalImageUrl, px2vw, rem2px, downloadMap, queryImageData } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
+  import Viewport from './viewport.svelte'
   import {
     Layers as LayersIcon,
     Activity as EnvelopesIcon,
@@ -68,23 +61,10 @@
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
 
-  type Coord = {
-    x: number
-    y: number
-  }
-
-  export let map: Map
-
-  let cont: HTMLElement
-  let viewport: Viewport
+  // let viewport: Viewport
   let animEnabled = false
-  let currentTime = 0
-  let selectedTiles: EditTileParams[][]
   let peerCount = 0
   let infoEditorVisible = false
-  let active: [number, number] = map.physicsLayerIndex(GameLayer)
-  let selected: [number, number][] = [active]
-  let rmap = new RenderMap(map)
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -97,13 +77,24 @@
 
   // computed (readonly)
   let g: number, l: number
+  $: {
+    if ($selected.length === 0) {
+      g = -1
+      l = -1
+    }
+    else {
+      g = $selected[$selected.length - 1][0]
+      l = $selected[$selected.length - 1][1]
+    }
+  }
   let activeRgroup: RenderGroup | null, activeRlayer: RenderLayer | null
   let activeGroup: Group | null, activeLayer: Layer | null
-  $: [g, l] = active
-  $: activeRgroup = g === -1 ? null : rmap.groups[g]
+  $: ll = $selected.map(([_, l]) => l).filter(l => l !== -1 && $rmap.map.groups[g].layers[l].type === LayerType.TILES)
+  $: activeRgroup = g === -1 ? null : $rmap.groups[g]
   $: activeRlayer = l === -1 ? null : activeRgroup.layers[l]
   $: activeGroup = activeRgroup === null ? null : activeRgroup.group
   $: activeLayer = activeRlayer === null ? null : activeRlayer.layer
+  $: $rmap.setActiveLayer(activeRlayer)
 
   async function onCreateLayer(e: CreateLayer) {
     showInfo('Creating layer…')
@@ -151,8 +142,7 @@
     try {
       await $server.query('creategroup', e)
       serverOnCreateGroup(e)
-      active = [map.groups.length - 1, -1]
-      selected = [active]
+      $selected = [[$rmap.map.groups.length - 1, -1]]
       clearDialog()
     } catch (e) {
       showError('Failed to create group: ' + e)
@@ -193,93 +183,108 @@
     peerCount = e.roomCount
   }
   function serverOnEditTile(e: EditTile) {
-    rmap.editTile(e)
+    $rmap.editTile(e)
   }
   function serverOnCreateQuad(e: CreateQuad) {
-    rmap.createQuad(e)
+    $rmap.createQuad(e)
     activeLayer = activeLayer // hack to redraw quadview
   }
   function serverOnEditQuad(e: EditQuad) {
-    rmap.editQuad(e)
+    $rmap.editQuad(e)
     activeLayer = activeLayer // hack to redraw quadview
   }
   function serverOnDeleteQuad(e: DeleteQuad) {
-    rmap.deleteQuad(e)
+    $rmap.deleteQuad(e)
     activeLayer = activeLayer // hack to redraw quadview
   }
   function serverOnCreateEnvelope(e: CreateEnvelope) {
-    rmap.createEnvelope(e)
-    rmap = rmap // hack to redraw env editor
+    $rmap.createEnvelope(e)
+    $rmap = $rmap // hack to redraw env editor
   }
   function serverOnEditEnvelope(e: EditEnvelope) {
-    rmap.editEnvelope(e)
-    rmap = rmap // hack to redraw env editor
+    $rmap.editEnvelope(e)
+    $rmap = $rmap // hack to redraw env editor
   }
   function serverOnDeleteEnvelope(e: DeleteEnvelope) {
-    rmap.removeEnvelope(e.index)
-    rmap = rmap // hack to redraw env editor
+    $rmap.removeEnvelope(e.index)
+    $rmap = $rmap // hack to redraw env editor
   }
   function serverOnEditGroup(e: EditGroup) {
-    rmap.editGroup(e)
-    rmap = rmap // hack to redraw treeview
+    $rmap.editGroup(e)
+    $rmap = $rmap // hack to redraw treeview
   }
   async function serverOnEditLayer(e: EditLayer) {
-    rmap.editLayer(e)
-    rmap = rmap // hack to redraw treeview
+    $rmap.editLayer(e)
+    $rmap = $rmap // hack to redraw treeview
   }
   function serverOnCreateGroup(e: CreateGroup) {
-    rmap.createGroup(e)
-    rmap = rmap // hack to redraw treeview
+    $rmap.createGroup(e)
+    $rmap = $rmap // hack to redraw treeview
   }
   function serverOnCreateLayer(e: CreateLayer) {
-    rmap.createLayer(e)
-    rmap = rmap // hack to redraw treeview
+    $rmap.createLayer(e)
+    $rmap = $rmap // hack to redraw treeview
   }
   function serverOnDeleteGroup(e: DeleteGroup) {
-    const deleted = rmap.deleteGroup(e)
-    if (activeRgroup && deleted === activeRgroup)
-      active = [Math.min(map.groups.length - 1, e.group), -1]
-    selected = selected.filter(([g, _]) => g !== e.group)
-    rmap = rmap // hack to redraw treeview
+    $rmap.deleteGroup(e)
+    $rmap = $rmap // hack to redraw treeview
+    $selected = $selected.filter(([g, _]) => g !== e.group)
+    if ($selected.length === 0)
+      $selected = [[Math.min($rmap.map.groups.length - 1, e.group), -1]]
   }
   function serverOnDeleteLayer(e: DeleteLayer) {
-    const deleted = rmap.deleteLayer(e)
-    if (activeRlayer && deleted === activeRlayer) {
-      if (activeGroup.layers.length === 0) active = map.physicsLayerIndex(GameLayer)
-      else active = [g, Math.min(activeGroup.layers.length - 1, e.layer)]
+    $rmap.deleteLayer(e)
+    $rmap = $rmap // hack to redraw treeview
+    $selected = $selected.filter(([g, l]) => g !== e.group || l !== e.layer)
+    if ($selected.length === 0) {
+      $selected = (activeGroup.layers.length === 0) ?
+        [$rmap.map.physicsLayerIndex(GameLayer)] :
+        [[g, Math.min(activeGroup.layers.length - 1, e.layer)]]
     }
-    selected = selected.filter(([g, l]) => g !== e.group || l !== e.layer)
-    rmap = rmap // hack to redraw treeview
   }
   function serverOnReorderGroup(e: ReorderGroup) {
-    rmap.reorderGroup(e)
-    if (activeLayer) active = map.layerIndex(activeLayer)
-    else if (activeGroup) active = [map.groupIndex(activeGroup), -1]
-    selected = [active] // TODO: keep selected layers
-    rmap = rmap // hack to redraw treeview
+    $rmap.reorderGroup(e)
+    $rmap = $rmap // hack to redraw treeview
+    $selected.pop() // remove active
+    const active: [number, number] =
+       activeLayer ? $rmap.map.layerIndex(activeLayer) :
+       activeGroup ? [$rmap.map.groupIndex(activeGroup), -1] :
+       $rmap.map.physicsLayerIndex(GameLayer)
+      
+    $selected = [...$selected, active]
   }
   function serverOnReorderLayer(e: ReorderLayer) {
-    rmap.reorderLayer(e)
-    if (activeLayer) active = map.layerIndex(activeLayer)
-    selected = [active] // TODO: keep selected layers
-    rmap = rmap // hack to redraw treeview
+    $rmap.reorderLayer(e)
+    $rmap = $rmap // hack to redraw treeview
+    $selected.pop() // remove active
+    const active: [number, number] =
+       activeLayer ? $rmap.map.layerIndex(activeLayer) :
+       activeGroup ? [$rmap.map.groupIndex(activeGroup), -1] :
+       $rmap.map.physicsLayerIndex(GameLayer)
+    $selected = [...$selected, active]
   }
   async function serverOnCreateImage(e: CreateImage) {
+    if (e.index !== $rmap.map.images.length)
+      return
     if (e.external) {
       const image = new Image()
       image.loadExternal(externalImageUrl(e.name))
       image.name = e.name
-      rmap.addImage(image)
+      $rmap.addImage(image)
     } else {
-      const image = await queryImage($server, { index: e.index })
-      rmap.addImage(image)
+      const image = new Image()
+      image.name = e.name
+      $rmap.addImage(image)
+      const data = await queryImageData($serverConfig.httpUrl, $rmap.map.name, e.index)
+      image.loadEmbedded(data)
     }
+    $rmap = $rmap // hack to redraw treeview
   }
   function serverOnDeleteImage(e: DeleteImage) {
-    rmap.removeImage(e.index)
+    $rmap.removeImage(e.index)
   }
   async function serverOnEditMap(e: EditMap) {
-    map.info = e.info
+    $rmap.map.info = e.info
   }
   function serverOnError(e: ServerError) {
     if ('serverError' in e) {
@@ -296,113 +301,13 @@
     }
   }
 
-  function updateOutlines() {
-    const { scale, pos } = viewport
-    let { x, y } = viewport.mousePos
-    let [offX, offY] = activeRgroup.offset()
-    x = Math.floor(x - offX)
-    y = Math.floor(y - offY)
-
-    let color = 'black'
-    if (
-      activeLayer instanceof AnyTilesLayer &&
-      (x < 0 || y < 0 || x >= activeLayer.width || y >= activeLayer.height)
-    ) {
-      color = 'red'
-    }
-
-    if (boxSelect || boxFill) {
-      const range = Editor.normalizeRange(boxRange)
-      let [x1, y1] = viewport.worldToPixel(range.start.x - offX, range.start.y)
-      let [x2, y2] = viewport.worldToPixel(range.end.x + 1 - offX, range.end.y + 1)
-      hoverTileStyle = `
-          width: ${x2 - x1}px;
-          height: ${y2 - y1}px;
-          top: ${y1}px;
-          left: ${x1}px;
-          border-width: ${scale / 16}px;
-          border-color: ${color};
-        `
-      boxStyle = `
-          width: ${x2 - x1}px;
-          height: ${y2 - y1}px;
-          top: ${y1}px;
-          left: ${x1}px;
-          background: ${boxFill ? 'orange' : shiftKey ? 'red' : 'blue'};
-        `
-    } else {
-      if (selectedTiles.length)
-        hoverTileStyle = `
-            width: ${scale * selectedTiles[0].length}px;
-            height: ${scale * selectedTiles.length}px;
-            top: ${(y + offY - pos.y) * scale}px;
-            left: ${(x + offX - pos.x) * scale}px;
-            border-width: ${scale / 16}px;
-            border-color: ${color};
-          `
-      else
-        hoverTileStyle = `
-          display: none;
-        `
-      boxStyle = `
-          display: none;
-        `
-    }
-
-    if (activeRgroup.group.clipping) {
-      let { clipX, clipY, clipW, clipH } = activeRgroup.group
-      clipX /= 32
-      clipY /= 32
-      clipW /= 32
-      clipH /= 32
-      clipOutlineStyle = `
-        width: ${clipW * scale}px;
-        height: ${clipH * scale}px;
-        top: ${(clipY - pos.y) * scale}px;
-        left: ${(clipX - pos.x) * scale}px;
-      `
-    } else {
-      clipOutlineStyle = `
-        display: none;
-      `
-    }
-
-    if (activeLayer instanceof AnyTilesLayer) {
-      layerOutlineStyle = `
-        width: ${activeLayer.width * scale}px;
-        height: ${activeLayer.height * scale}px;
-        top: ${(-pos.y + offY) * scale}px;
-        left: ${-(pos.x - offX) * scale}px;
-      `
-    } else {
-      layerOutlineStyle = `
-        display: none;
-      `
-    }
-  }
-
-  function updateEnvelopes(t: number) {
-    for (let env of map.envelopes) {
-      env.update(t)
-    }
-    for (const rgroup of rmap.groups) {
-      for (const rlayer of rgroup.layers) {
-        if (rlayer instanceof RenderQuadsLayer) {
-          rlayer.recomputeEnvelope() // COMBAK: maybe better perfs?
-        }
-      }
-    }
-  }
-
-  function onServerClosed() {
-    showError('You have been disconnected from the server.')
+  async function onServerClosed() {
+    await showError('You have been disconnected from the server.')
     navigate('/')
   }
 
-  let destroyed = false
-
   onMount(() => {
-    cont.prepend(canvas)
+    $selected = [$rmap.map.physicsLayerIndex(GameLayer)]
     $server.socket.addEventListener('close', onServerClosed, { once: true })
     $server.on('listusers', serverOnUsers)
     $server.on('edittile', serverOnEditTile)
@@ -426,22 +331,7 @@
     $server.on('error', serverOnError)
     $server.send('listusers')
 
-    viewport = new Viewport(cont, canvas)
-    setViewport(viewport)
-
-    let lastTime: DOMHighResTimeStamp = 0
-
-    const renderLoop = (t: DOMHighResTimeStamp) => {
-      if (animEnabled) {
-        currentTime += t - lastTime
-        updateEnvelopes(currentTime)
-      }
-      renderer.render(viewport, rmap)
-      updateOutlines()
-      lastTime = t
-      if (!destroyed) requestAnimationFrame(renderLoop)
-    }
-    renderLoop(0)
+    canvas.addEventListener('mouseenter', onHoverCanvas)
   })
 
   onDestroy(() => {
@@ -466,8 +356,15 @@
     $server.off('deleteimage', serverOnDeleteImage)
     $server.off('editmap', serverOnEditMap)
     $server.off('error', serverOnError)
-    destroyed = true
+
+    canvas.removeEventListener('mouseenter', onHoverCanvas)
   })
+
+  function onHoverCanvas() {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur()
+    canvas.focus()
+  }
 
   function onToggleLayerPanes() {
     if (layerPaneSize < closedPaneThreshold || propsPaneSize < closedPaneThreshold) {
@@ -492,13 +389,12 @@
 
   function onToggleAnim() {
     animEnabled = !animEnabled
-    if (!animEnabled) updateEnvelopes(0)
   }
 
   async function onSaveMap() {
     try {
       showInfo('Saving map...', 'none')
-      await $server.query('savemap', { name: map.name })
+      await $server.query('savemap', { name: $rmap.map.name })
       showInfo('Map saved on the server.', 'closable')
     } catch (e) {
       showError('Failed to save map: ' + e)
@@ -506,14 +402,15 @@
   }
 
   function onDownloadMap() {
-    downloadMap($server, map.name)
+    downloadMap($serverConfig.httpUrl, $rmap.map.name)
   }
 
   function onRenameMap() {
     alert('TODO renaming maps is not yet implemented.')
   }
 
-  function onLeaveMap() {
+  async function onLeaveMap() {
+    await $server.query('leavemap', null)
     navigate('/')
   }
 
@@ -528,20 +425,14 @@
     if (res)
       try {
         await $server.query('leavemap', null)
-        await $server.query('deletemap', { name: map.name })
+        await $server.query('deletemap', { name: $rmap.map.name })
         navigate('/')
       } catch (e) {
         showError('Map deletion failed: ' + e)
       }
   }
 
-  // let ctrlKey = false
-  let shiftKey = false
-
   function onKeyDown(e: KeyboardEvent) {
-    // ctrlKey = e.ctrlKey
-    shiftKey = e.shiftKey
-
     const target = e.target as HTMLElement
     if (!target.contains(canvas)) return
 
@@ -565,9 +456,6 @@
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    // ctrlKey = e.ctrlKey
-    shiftKey = e.shiftKey
-
     const target = e.target as HTMLElement
     if (!target.contains(canvas)) return
 
@@ -581,88 +469,6 @@
     Editor.fire('keypress', e)
   }
 
-  let hoverTileStyle = ''
-  let layerOutlineStyle = ''
-  let clipOutlineStyle = ''
-  let boxStyle = ''
-
-  let boxSelect = false // visual box when selecting an area
-  let boxFill = false // visual box when using shift+drag (fill a rect with brush)
-  let boxRange: Editor.Range = {
-    start: { x: 0, y: 0 },
-    end: { x: 0, y: 0 },
-  }
-  let lastPos = { x: 0, y: 0 }
-
-  function worldPosToTileCoord(pos: Coord): Coord {
-    const [offX, offY] = activeRgroup.offset()
-    return {
-      x: Math.floor(pos.x - offX),
-      y: Math.floor(pos.y - offY),
-    }
-  }
-
-  function onMouseDown(e: MouseEvent) {
-    if (activeLayer instanceof AnyTilesLayer) {
-      const curPos = worldPosToTileCoord(viewport.mousePos)
-      if (e.buttons === 1) {
-        if (!e.ctrlKey && !e.shiftKey && selectedTiles.length !== 0) {
-          Editor.placeTiles($server, rmap, g, l, curPos, selectedTiles)
-        } else if (e.shiftKey && selectedTiles.length !== 0) {
-          boxRange.start = curPos
-          boxRange.end = curPos
-          boxFill = true
-        } else if (selectedTiles.length === 0) {
-          boxRange.start = curPos
-          boxRange.end = curPos
-          boxSelect = true
-        }
-      }
-      lastPos = curPos
-    }
-  }
-
-  function onMouseMove(e: MouseEvent) {
-    if (activeLayer instanceof AnyTilesLayer) {
-      const curPos = worldPosToTileCoord(viewport.mousePos)
-      if (e.buttons === 1 && !e.ctrlKey) {
-        if (!boxFill && !boxSelect && !e.shiftKey) {
-          Editor.drawLine($server, rmap, g, l, lastPos, curPos, selectedTiles)
-        } else if (boxFill || boxSelect) {
-          boxRange.end = curPos
-        }
-      }
-      lastPos = curPos
-    }
-  }
-
-  function onMouseUp(e: MouseEvent) {
-    if (activeLayer instanceof AnyTilesLayer) {
-      if (boxSelect || boxFill) {
-        const curPos = worldPosToTileCoord(viewport.mousePos)
-        boxRange.end = curPos
-        boxRange = Editor.normalizeRange(boxRange)
-
-        if (boxSelect && !e.shiftKey) {
-          selectedTiles = Editor.makeBoxSelection(activeLayer, boxRange)
-          boxSelect = false
-        } else if (boxSelect && e.shiftKey) {
-          const brush = Editor.makeEmptySelection(activeLayer, boxRange)
-          Editor.placeTiles($server, rmap, g, l, boxRange.start, brush)
-          selectedTiles = []
-          boxSelect = false
-        } else if (boxFill) {
-          Editor.fill($server, rmap, g, l, boxRange, selectedTiles)
-          boxFill = false
-        }
-      }
-    }
-  }
-
-  function onContextMenu(e: MouseEvent) {
-    e.preventDefault()
-    selectedTiles = []
-  }
 
   function onEditInfo() {
     infoEditorVisible = !infoEditorVisible
@@ -673,10 +479,10 @@
     try {
       // showInfo('Please wait…')
       const change: EditMap = {
-        info: map.info,
+        info: $rmap.map.info,
       }
       const res = await $server.query('editmap', change)
-      map.info = res.info
+      $rmap.map.info = res.info
       clearDialog()
     } catch (e) {
       showError('Failed to edit map info: ' + e)
@@ -720,7 +526,7 @@
       </OverflowMenu>
     </div>
     <div class="middle">
-      <span id="map-name">{map.name}</span>
+      <span id="map-name">{$rmap.map.name}</span>
     </div>
     <div class="right">
       <div id="users">
@@ -733,7 +539,7 @@
     <Pane size={100 - envPaneSize}>
       <Splitpanes dblClickSplitter={false}>
         <Pane class="layers" bind:size={layerPaneSize}>
-          <TreeView {rmap} bind:active bind:selected />
+          <TreeView />
           <Button
             id="create-group"
             size="field"
@@ -746,44 +552,29 @@
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>
-          <div
-            id="canvas-container"
-            bind:this={cont}
-            on:mousedown={onMouseDown}
-            on:mouseup={onMouseUp}
-            on:mousemove={onMouseMove}
-            on:contextmenu={onContextMenu}
-          >
-            <!-- Here goes the canvas on mount() -->
-            <div id="clip-outline" style={clipOutlineStyle} />
-            {#if activeLayer instanceof AnyTilesLayer}
-              <div id="hover-tile" style={hoverTileStyle} />
-              <div id="layer-outline" style={layerOutlineStyle} />
-            {:else if activeLayer instanceof QuadsLayer}
-              <QuadsView {rmap} layer={activeLayer} />
-            {/if}
-            <div class="box-select" style={boxStyle} />
-            <!-- <Statusbar /> -->
-          </div>
-          {#if activeRlayer instanceof RenderAnyTilesLayer}
-            <TileSelector rlayer={activeRlayer} bind:selected={selectedTiles} />
-          {/if}
+          <Viewport {animEnabled} />
         </Pane>
 
         <Pane class="properties" bind:size={propsPaneSize}>
-          {#if activeLayer !== null}
+          {#if $selected.length > 1}
+            <div class="edit-multiple">
+              <h3 class="bx--modal-header__heading">Multiple selection</h3>
+              {#if ll.length > 1}
+                <span>You $selected {ll.length} tile layers.</span>
+                <span>You can edit the tiles from these layers together with your brush (clone, delete and repeat).</span>
+              {:else}
+                <span>You $selected multiple layers.</span>
+                <span>Editing quad layers together is not implemented yet. You can only edit tiles layers together.</span>
+              {/if}
+            </div>
+          {:else if l !== -1}
             <LayerEditor
-              {rmap}
-              {g}
-              {l}
               on:deletelayer={e => onDeleteLayer(e.detail)}
               on:editlayer={e => onEditLayer(e.detail)}
               on:reorderlayer={e => onReorderLayer(e.detail)}
             />
-          {:else if activeGroup !== null}
+          {:else if g !== -1}
             <GroupEditor
-              {rmap}
-              {g}
               on:createlayer={e => onCreateLayer(e.detail)}
               on:deletegroup={e => onDeleteGroup(e.detail)}
               on:editgroup={e => onEditGroup(e.detail)}
@@ -797,7 +588,7 @@
     </Pane>
 
     <Pane bind:size={envPaneSize}>
-      <EnvelopeEditor {rmap} />
+      <EnvelopeEditor />
     </Pane>
   </Splitpanes>
 
@@ -808,7 +599,8 @@
   >
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
-      <InfoEditor info={map.info} />
+      <InfoEditor info={$rmap.map.info} />
     </ModalBody>
   </ComposedModal>
+
 </div>
