@@ -219,6 +219,7 @@ impl Server {
                 ResponseContent::ListAutomappers(_) => (),
                 ResponseContent::SendAutomapper(_) => (),
                 ResponseContent::UploadAutomapper => (),
+                ResponseContent::ApplyAutomapper(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::Cursors(_) => (),
             }
         }
@@ -623,43 +624,49 @@ impl Server {
         Ok(ResponseContent::UploadAutomapper)
     }
 
+    fn handle_apply_automapper(&self, peer: &mut Peer, apply_automapper: ApplyAutomapper) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.apply_automapper(&apply_automapper)?;
+        Ok(ResponseContent::ApplyAutomapper(apply_automapper))
+    }
+
     fn handle_request(&self, peer: &mut Peer, req: Request) {
+        use RequestContent::*;
         let res = match req.content {
-            RequestContent::CreateMap(content) => self.handle_create_map(content),
-            RequestContent::CloneMap(content) => self.handle_clone_map(content),
-            RequestContent::EditMap(content) => self.handle_edit_map(peer, content),
-            RequestContent::JoinMap(content) => self.handle_join_map(peer, content),
-            RequestContent::LeaveMap => self.handle_leave_map(peer),
-            RequestContent::SaveMap(content) => self.handle_save_map(peer, content),
-            RequestContent::DeleteMap(content) => self.handle_delete_map(peer, content),
-            RequestContent::RenameMap(content) => self.handle_rename_map(content),
-            RequestContent::CreateGroup(content) => self.handle_create_group(peer, content),
-            RequestContent::EditGroup(content) => self.handle_edit_group(peer, content),
-            RequestContent::ReorderGroup(content) => self.handle_reorder_group(peer, content),
-            RequestContent::DeleteGroup(content) => self.handle_delete_group(peer, content),
-            RequestContent::CreateLayer(content) => self.handle_create_layer(peer, content),
-            RequestContent::EditLayer(content) => self.handle_edit_layer(peer, content),
-            RequestContent::ReorderLayer(content) => self.handle_reorder_layer(peer, content),
-            RequestContent::DeleteLayer(content) => self.handle_delete_layer(peer, content),
-            RequestContent::EditTile(content) => self.handle_edit_tile(peer, content),
-            RequestContent::EditTiles(content) => self.handle_edit_tiles(peer, content),
-            RequestContent::CreateQuad(content) => self.handle_create_quad(peer, content),
-            RequestContent::EditQuad(content) => self.handle_edit_quad(peer, content),
-            RequestContent::DeleteQuad(content) => self.handle_delete_quad(peer, content),
-            RequestContent::CreateEnvelope(content) => self.handle_create_envelope(peer, content),
-            RequestContent::EditEnvelope(content) => self.handle_edit_envelope(peer, content),
-            RequestContent::DeleteEnvelope(content) => self.handle_delete_envelope(peer, content),
-            RequestContent::ListUsers => self.handle_list_users(peer),
-            RequestContent::ListMaps => self.handle_list_maps(),
-            RequestContent::CreateImage(content) => self.handle_create_image(peer, content),
-            RequestContent::ImageInfo(content) => self.handle_image_info(peer, content),
-            RequestContent::DeleteImage(content) => self.handle_delete_image(peer, content),
-            RequestContent::Cursors(content) => self.handle_cursor(peer, content),
-            RequestContent::ListAutomappers => self.handle_list_automappers(peer),
-            RequestContent::SendAutomapper(content) => self.handle_send_automapper(peer, content),
-            RequestContent::UploadAutomapper(content) => {
-                self.handle_upload_automapper(peer, content)
-            }
+            CreateMap(content) => self.handle_create_map(content),
+            CloneMap(content) => self.handle_clone_map(content),
+            EditMap(content) => self.handle_edit_map(peer, content),
+            JoinMap(content) => self.handle_join_map(peer, content),
+            LeaveMap => self.handle_leave_map(peer),
+            SaveMap(content) => self.handle_save_map(peer, content),
+            DeleteMap(content) => self.handle_delete_map(peer, content),
+            RenameMap(content) => self.handle_rename_map(content),
+            CreateGroup(content) => self.handle_create_group(peer, content),
+            EditGroup(content) => self.handle_edit_group(peer, content),
+            ReorderGroup(content) => self.handle_reorder_group(peer, content),
+            DeleteGroup(content) => self.handle_delete_group(peer, content),
+            CreateLayer(content) => self.handle_create_layer(peer, content),
+            EditLayer(content) => self.handle_edit_layer(peer, content),
+            ReorderLayer(content) => self.handle_reorder_layer(peer, content),
+            DeleteLayer(content) => self.handle_delete_layer(peer, content),
+            EditTile(content) => self.handle_edit_tile(peer, content),
+            EditTiles(content) => self.handle_edit_tiles(peer, content),
+            CreateQuad(content) => self.handle_create_quad(peer, content),
+            EditQuad(content) => self.handle_edit_quad(peer, content),
+            DeleteQuad(content) => self.handle_delete_quad(peer, content),
+            CreateEnvelope(content) => self.handle_create_envelope(peer, content),
+            EditEnvelope(content) => self.handle_edit_envelope(peer, content),
+            DeleteEnvelope(content) => self.handle_delete_envelope(peer, content),
+            ListUsers => self.handle_list_users(peer),
+            ListMaps => self.handle_list_maps(),
+            CreateImage(content) => self.handle_create_image(peer, content),
+            ImageInfo(content) => self.handle_image_info(peer, content),
+            DeleteImage(content) => self.handle_delete_image(peer, content),
+            Cursors(content) => self.handle_cursor(peer, content),
+            ListAutomappers => self.handle_list_automappers(peer),
+            SendAutomapper(content) => self.handle_send_automapper(peer, content),
+            UploadAutomapper(content) => self.handle_upload_automapper(peer, content),
+            ApplyAutomapper(content) => self.handle_apply_automapper(peer, content),
         };
         self.respond_and_broadcast(peer, req.id, res);
     }

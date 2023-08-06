@@ -254,6 +254,8 @@ export interface ListMaps {
   maps: MapInfo[]
 }
 
+// AUTOMAPPERS
+
 export interface ListAutomappers {
   configs: { [k in string]: string[] }
 }
@@ -267,6 +269,10 @@ export interface UploadAutomapper {
   content: string
 }
 
+export interface ApplyAutomapper {
+  group: number
+  layer: number
+}
 // IMAGES
 
 export interface ImageConfig {
@@ -339,6 +345,7 @@ export interface RequestContent {
   listautomappers: null
   sendautomapper: SendAutomapper
   uploadautomapper: UploadAutomapper
+  applyautomapper: ApplyAutomapper
 
   createquad: CreateQuad
   editquad: EditQuad
@@ -385,6 +392,7 @@ export interface ResponseContent {
   listautomappers: ListAutomappers
   sendautomapper: UploadAutomapper
   uploadautomapper: null
+  applyautomapper: ApplyAutomapper
 
   createquad: CreateQuad
   editquad: EditQuad

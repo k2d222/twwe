@@ -2,7 +2,7 @@ extern crate pretty_env_logger;
 
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::Arc,
@@ -15,12 +15,11 @@ use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
-use structview::View;
 use twmap::{
-    checks::CheckData, constants, parse::LayerFlags, CompressedData, EmbeddedImage, Env, Envelope,
-    ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, Point, QuadsLayer,
-    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer, TilesLayer, TilesLoadInfo,
-    TuneLayer, TwMap,
+    automapper::Automapper, checks::CheckData, constants, parse::LayerFlags, CompressedData,
+    EmbeddedImage, Env, Envelope, ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer,
+    LayerKind, Point, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer,
+    TilesLayer, TuneLayer, TwMap,
 };
 use uuid::Uuid;
 
@@ -1048,5 +1047,76 @@ impl Room {
             map.info = info;
             Ok(())
         }
+    }
+
+    pub fn apply_automapper(&self, apply_automapper: &ApplyAutomapper) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        // COMBAK: some shenanigans to get the image name before mutable borrow of layer
+        // HELP ME RUST GOD THIS HURTS
+        let group = map
+            .groups
+            .get(apply_automapper.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get(apply_automapper.layer as usize)
+            .ok_or("invalid layer index")?;
+        let image_name = if let Layer::Tiles(layer) = layer {
+            let img_index = layer.image.ok_or("layer has no image")?;
+            let image_name = map
+                .images
+                .get(img_index as usize)
+                .ok_or("internal server error")?
+                .name()
+                .to_owned();
+            Some(image_name)
+        } else {
+            None
+        }
+        .ok_or("layer is not a tiles layer")?;
+
+        let group = map
+            .groups
+            .get_mut(apply_automapper.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(apply_automapper.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        match layer {
+            Layer::Tiles(layer) => {
+                let mut path = self.path.clone();
+                path.push(format!("{}.rules", image_name));
+                let contents = fs::read_to_string(path).map_err(|_| "automapper file not found")?;
+                let automapper = Automapper::parse(image_name, &contents)
+                    .map_err(|_| "automapper syntax error")?;
+                layer
+                    .run_automapper(&automapper)
+                    .map_err(|_| "automapper parse failure")?;
+                Ok(())
+            }
+            _ => Err("layer is not a tiles layer"),
+        }
+    }
+}
+
+struct Foo {
+    s1: String,
+    s2: String,
+}
+
+fn bar() {
+    let mut foo = Foo {
+        s1: "hello".to_owned(),
+        s2: "world".to_owned(),
+    };
+
+    let ref1 = &mut foo.s1;
+
+    if ref1 == "hello" {
+        let ref2 = foo.s2;
+        println!("{ref2}");
     }
 }

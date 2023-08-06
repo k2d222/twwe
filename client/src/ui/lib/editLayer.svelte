@@ -248,7 +248,7 @@
     // const tlayer = layer as TilesLayer
     // const conf = automapperConfig(tlayer)
     // $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
-    alert('TODO')
+    $server.send('applyautomapper', { group: g, layer: l })
   }
   function onAutomapperChange() {
     const automapper = (layer as TilesLayer).automapper

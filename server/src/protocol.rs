@@ -412,6 +412,12 @@ pub struct UploadAutomapper {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ApplyAutomapper {
+    pub group: u32,
+    pub layer: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateImage {
     pub name: String,
     pub index: u16,
@@ -480,9 +486,11 @@ pub enum RequestContent {
 
     ListUsers,
     ListMaps,
+
     ListAutomappers,
     SendAutomapper(SendAutomapper),
     UploadAutomapper(UploadAutomapper),
+    ApplyAutomapper(ApplyAutomapper),
 
     CreateImage(CreateImage),
     ImageInfo(u16),
@@ -526,9 +534,11 @@ pub enum ResponseContent {
 
     ListUsers(ListUsers),
     ListMaps(ListMaps),
+
     ListAutomappers(ListAutomappers),
     SendAutomapper(String),
     UploadAutomapper,
+    ApplyAutomapper(ApplyAutomapper),
 
     CreateImage(CreateImage),
     ImageInfo(ImageInfo),
