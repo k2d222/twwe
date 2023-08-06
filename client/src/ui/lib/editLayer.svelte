@@ -250,6 +250,10 @@
     // $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
     alert('TODO')
   }
+  function onAutomapperChange() {
+    const automapper = (layer as TilesLayer).automapper
+    onEditLayer({ group: g, layer: l, automapper })
+  }
 </script>
 
 <div class="edit-layer">
@@ -340,7 +344,7 @@
         <ModalBody hasForm>
           <AutomapperPicker
             {layer}
-            on:change={() => layer = layer}
+            on:change={onAutomapperChange}
           />
         </ModalBody>
       </ComposedModal>

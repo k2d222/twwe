@@ -1,5 +1,6 @@
 import type * as Info from '../twmap/types'
 import type * as MapDir from '../twmap/mapdir'
+import type { AutomapperConfig } from '../twmap/mapdir'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
@@ -111,6 +112,7 @@ export interface EditTilesLayer extends CommonLayerChange {
   colorEnv?: number | null
   colorEnvOffset?: number
   image?: number | null
+  automapper?: AutomapperConfig
 }
 
 export interface EditQuadsLayer extends CommonLayerChange {

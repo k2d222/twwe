@@ -396,6 +396,11 @@ export class RenderMap {
         }
         rlayer.recompute()
       }
+      if ('automapper' in change) {
+        rlayer.layer.automapper.config = change.automapper.config === null ? -1 : change.automapper.config
+        rlayer.layer.automapper.seed = change.automapper.seed
+        rlayer.layer.automapper.automatic = change.automapper.automatic
+      }
     } else if (rlayer instanceof RenderQuadsLayer) {
       if ('image' in change) {
         if (change.image === null) {

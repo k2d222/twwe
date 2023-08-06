@@ -4,3 +4,4 @@ very slow pasting large tiles chunks
 speedup upside down
 preview change layer order
 cursor not disappearing on logout
+users online: 0 happened

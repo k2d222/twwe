@@ -62,10 +62,10 @@
 
   <label>
     Seed
-    <input type="number" bind:value={layer.automapper.seed} />
+    <input type="number" bind:value={layer.automapper.seed} on:change={onConfig} />
   </label>
   <label>
     Automatic
-    <input type="checkbox" bind:checked={layer.automapper.automatic} />
+    <input type="checkbox" bind:checked={layer.automapper.automatic} on:change={onConfig} />
   </label>
 </div>

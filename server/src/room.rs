@@ -859,6 +859,10 @@ impl Room {
                 Layer::Tiles(layer) => layer.color_env_offset = color_env_off,
                 _ => return Err("cannot change layer color envelope offset"),
             },
+            Automapper(config) => match layer {
+                Layer::Tiles(layer) => layer.automapper_config = config,
+                _ => return Err("cannot change layer automapper"),
+            },
         }
 
         Ok(())

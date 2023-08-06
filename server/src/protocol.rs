@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
 use twmap::{
-    Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position, Volume,
+    AutomapperConfig, Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point,
+    Position, Volume,
 };
 
 use crate::map_cfg::MapAccess;
@@ -151,6 +152,7 @@ pub enum OneLayerChange {
     Image(Option<u16>),
     ColorEnv(Option<u16>),
     ColorEnvOffset(i32),
+    Automapper(AutomapperConfig),
 }
 
 // see https://serde.rs/remote-derive.html
