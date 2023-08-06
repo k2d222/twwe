@@ -9,15 +9,18 @@ use std::{
 };
 
 use axum::extract::ws::Message;
-use ndarray::Array2;
+use base64::Engine;
+use ndarray::{s, Array2, ArrayView};
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
+use structview::View;
 use twmap::{
     checks::CheckData, constants, parse::LayerFlags, CompressedData, EmbeddedImage, Env, Envelope,
     ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, Point, QuadsLayer,
-    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer, TilesLayer, TuneLayer, TwMap,
+    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer, TilesLayer, TilesLoadInfo,
+    TuneLayer, TwMap,
 };
 use uuid::Uuid;
 
@@ -279,7 +282,7 @@ impl Room {
         use EditTileContent::*;
 
         match (layer, edit_tile.content.clone()) {
-            (Layer::Game(layer), Tile(edit)) => {
+            (Layer::Game(layer), Tiles(edit)) => {
                 let mut tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
@@ -287,12 +290,12 @@ impl Room {
                     return Err("game layer cannot have the opaque flag");
                 }
             }
-            (Layer::Tiles(layer), Tile(edit)) => {
+            (Layer::Tiles(layer), Tiles(edit)) => {
                 let mut tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
             }
-            (Layer::Front(layer), Tile(edit)) => {
+            (Layer::Front(layer), Tiles(edit)) => {
                 let mut tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
@@ -332,6 +335,68 @@ impl Room {
             }
             (_, _) => {
                 return Err("tile type incompatible with layer type");
+            }
+        };
+
+        Ok(())
+    }
+
+    pub fn set_tiles(&self, edit_tiles: &EditTiles) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let group = map
+            .groups
+            .get_mut(edit_tiles.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(edit_tiles.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        if layer.kind() != edit_tiles.kind {
+            return Err("invalid layer kind");
+        }
+
+        // because all the tilemap layers share the same fields, but cannot
+        // be mutated with the TileMapLayer trait, the easyest is to copy-paste
+        // the code with a macro.
+        macro_rules! tiles {
+            ($layer: ident) => {{
+                let x = edit_tiles.x as usize;
+                let y = edit_tiles.y as usize;
+                let width = edit_tiles.width as usize;
+                let height = edit_tiles.height as usize;
+                let shape = $layer.tiles().shape();
+
+                if x + width > shape.x || y + height > shape.y {
+                    return Err("tile change outside layer");
+                }
+
+                let buf = base64::engine::general_purpose::STANDARD
+                    .decode(&edit_tiles.data)
+                    .map_err(|_| "invalid data")?;
+                let tiles =
+                    structview::View::view_slice(buf.as_slice()).map_err(|_| "invalid data")?;
+                let tiles =
+                    ArrayView::from_shape((height, width), tiles).map_err(|_| "invalid data")?;
+
+                let mut view = $layer
+                    .tiles_mut()
+                    .unwrap_mut()
+                    .slice_mut(s![y..y + height, x..x + width]);
+                view.assign(&tiles);
+            }};
+        }
+
+        match layer {
+            Layer::Game(l) => tiles!(l),
+            Layer::Tiles(l) => tiles!(l),
+            Layer::Front(l) => tiles!(l),
+            Layer::Tele(l) => tiles!(l),
+            Layer::Speedup(l) => tiles!(l),
+            Layer::Switch(l) => tiles!(l),
+            Layer::Tune(l) => tiles!(l),
+            Layer::Quads(_) | Layer::Sounds(_) | Layer::Invalid(_) => {
+                return Err("layer is not a tile layer");
             }
         };
 
@@ -621,7 +686,7 @@ impl Room {
                     return Err("cannot create multiple physics layers of the same kind");
                 }
 
-                let tiles = CompressedData::Loaded(Array2::default((size.x, size.y)));
+                let tiles = CompressedData::Loaded(Array2::default((size.y, size.x)));
                 let layer = $struct { tiles };
                 group.layers.push($enum(layer));
             }};

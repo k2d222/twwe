@@ -249,7 +249,7 @@ pub struct Tune {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum EditTileContent {
-    Tile(Tile),
+    Tiles(Tile),
     Tele(Tele),
     Speedup(Speedup),
     Switch(Switch),
@@ -264,6 +264,20 @@ pub struct EditTile {
     pub y: u32,
     #[serde(flatten)]
     pub content: EditTileContent,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditTiles {
+    pub group: u32,
+    pub layer: u32,
+    pub x: u32,
+    pub y: u32,
+    #[serde(with = "SerdeLayerKind")]
+    pub kind: LayerKind,
+    pub width: u32,
+    pub height: u32,
+    pub data: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -452,6 +466,7 @@ pub enum RequestContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+    EditTiles(EditTiles),
 
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
@@ -497,6 +512,7 @@ pub enum ResponseContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+    EditTiles(EditTiles),
 
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),

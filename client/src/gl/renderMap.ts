@@ -14,6 +14,7 @@ import type {
   DeleteLayer,
   CreateGroup,
   CreateLayer,
+  EditTiles,
 } from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
 import type { Quad } from '../twmap/quadsLayer'

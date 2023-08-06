@@ -203,6 +203,7 @@ impl Server {
                 ResponseContent::ReorderLayer(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::DeleteLayer(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::EditTile(_) => self.broadcast_to_others(peer, content),
+                ResponseContent::EditTiles(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::CreateQuad(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::EditQuad(_) => self.broadcast_to_others(peer, content),
                 ResponseContent::DeleteQuad(_) => self.broadcast_to_others(peer, content),
@@ -434,6 +435,12 @@ impl Server {
         Ok(ResponseContent::EditTile(edit_tile))
     }
 
+    fn handle_edit_tiles(&self, peer: &mut Peer, edit_tiles: EditTiles) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.set_tiles(&edit_tiles)?;
+        Ok(ResponseContent::EditTiles(edit_tiles))
+    }
+
     fn handle_create_quad(&self, peer: &mut Peer, create_quad: CreateQuad) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
         room.create_quad(&create_quad)?;
@@ -635,6 +642,7 @@ impl Server {
             RequestContent::ReorderLayer(content) => self.handle_reorder_layer(peer, content),
             RequestContent::DeleteLayer(content) => self.handle_delete_layer(peer, content),
             RequestContent::EditTile(content) => self.handle_edit_tile(peer, content),
+            RequestContent::EditTiles(content) => self.handle_edit_tiles(peer, content),
             RequestContent::CreateQuad(content) => self.handle_create_quad(peer, content),
             RequestContent::EditQuad(content) => self.handle_edit_quad(peer, content),
             RequestContent::DeleteQuad(content) => self.handle_delete_quad(peer, content),

@@ -20,6 +20,7 @@
     CreateImage,
     DeleteImage,
 ListUsers,
+EditTiles,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from '../../twmap/group'
@@ -60,6 +61,8 @@ ListUsers,
     OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
+  import { dataToTiles } from '../../server/convert'
+  import type * as MapDir from '../../twmap/mapdir'
 
   // let viewport: Viewport
   let animEnabled = false
@@ -184,6 +187,23 @@ ListUsers,
   }
   function serverOnEditTile(e: EditTile) {
     $rmap.editTile(e)
+  }
+  function serverOnEditTiles(e: EditTiles) {
+    const tiles = dataToTiles(e.data, e.kind as MapDir.LayerKind)
+
+    for (let i = 0; i < tiles.length; ++i) {
+      const tile = tiles[i]
+      const x = i % e.width
+      const y = Math.floor(i / e.width)
+
+      $rmap.editTile({
+        group: e.group,
+        layer: e.layer,
+        x: x + e.x,
+        y: y + e.y,
+        ...tile
+      })
+    }
   }
   function serverOnCreateQuad(e: CreateQuad) {
     $rmap.createQuad(e)
@@ -311,6 +331,7 @@ ListUsers,
     $server.socket.addEventListener('close', onServerClosed, { once: true })
     $server.on('listusers', serverOnUsers)
     $server.on('edittile', serverOnEditTile)
+    $server.on('edittiles', serverOnEditTiles)
     $server.on('createquad', serverOnCreateQuad)
     $server.on('editquad', serverOnEditQuad)
     $server.on('deletequad', serverOnDeleteQuad)

@@ -133,17 +133,30 @@ export interface DeleteLayer {
 }
 
 export type EditTileParams =
-  | (Info.Tile & { type: 'tile' })
-  | (Info.Tele & { type: 'tele' })
-  | (Info.Speedup & { type: 'speedup' })
-  | (Info.Switch & { type: 'switch' })
-  | (Info.Tune & { type: 'tune' })
+  | (Info.Tile & { kind: 'tiles' })
+  | (Info.Tile & { kind: 'game' })
+  | (Info.Tile & { kind: 'front' })
+  | (Info.Tele & { kind: 'tele' })
+  | (Info.Speedup & { kind: 'speedup' })
+  | (Info.Switch & { kind: 'switch' })
+  | (Info.Tune & { kind: 'tune' })
 
 export type EditTile = EditTileParams & {
   group: number
   layer: number
   x: number
   y: number
+}
+
+export type EditTiles = {
+  group: number,
+  layer: number,
+  x: number,
+  y: number,
+  kind: 'tiles' | 'game' | 'front' | 'tele' | 'speedup' | 'switch' | 'tune'
+  width: number,
+  height: number,
+  data: string, // binary data format in base64
 }
 
 export type CreateQuad = {
@@ -319,6 +332,7 @@ export interface RequestContent {
   deletelayer: DeleteLayer
 
   edittile: EditTile
+  edittiles: EditTiles
 
   listautomappers: null
   sendautomapper: SendAutomapper
@@ -364,6 +378,7 @@ export interface ResponseContent {
   deletelayer: DeleteLayer
 
   edittile: EditTile
+  edittiles: EditTiles
 
   listautomappers: ListAutomappers
   sendautomapper: UploadAutomapper

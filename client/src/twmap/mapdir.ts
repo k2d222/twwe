@@ -55,7 +55,7 @@ export interface Quad {
   color_env_offset: number,
 }
 
-export enum LayerType {
+export enum LayerKind {
   Quads = 'quads',
   Tiles = 'tiles',
   Game = 'game',
@@ -67,13 +67,13 @@ export enum LayerType {
 }
 
 export interface LayerCommon {
-  type: LayerType,
+  type: LayerKind,
   name: string,
   detail: boolean,
 }
 
 export interface QuadsLayer extends LayerCommon {
-  type: LayerType.Quads,
+  type: LayerKind.Quads,
   quads: Quad[]
 }
 
@@ -124,7 +124,7 @@ export interface TilesLayerCommon extends LayerCommon {
 }
 
 export interface TilesLayer extends TilesLayerCommon {
-  type: LayerType.Tiles,
+  type: LayerKind.Tiles,
   color: Color<number>,
   color_env: number | null,
   color_env_offset: number,
@@ -132,22 +132,22 @@ export interface TilesLayer extends TilesLayerCommon {
   automapper_config: AutomapperConfig
 }
 export interface GameLayer extends TilesLayerCommon {
-  type: LayerType.Game,
+  type: LayerKind.Game,
 }
 export interface TeleLayer extends TilesLayerCommon {
-  type: LayerType.Tele,
+  type: LayerKind.Tele,
 }
 export interface SpeedupLayer extends TilesLayerCommon {
-  type: LayerType.Speedup,
+  type: LayerKind.Speedup,
 }
 export interface FrontLayer extends TilesLayerCommon {
-  type: LayerType.Front,
+  type: LayerKind.Front,
 }
 export interface SwitchLayer extends TilesLayerCommon {
-  type: LayerType.Switch,
+  type: LayerKind.Switch,
 }
 export interface TuneLayer extends TilesLayerCommon {
-  type: LayerType.Tune,
+  type: LayerKind.Tune,
 }
 
 export type Layer =

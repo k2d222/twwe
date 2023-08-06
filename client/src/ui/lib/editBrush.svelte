@@ -56,23 +56,23 @@
   function tilesFlipV(layer: AnyTilesLayer<any>, tiles: EditTileParams[][]) {
     const flipFn =
       layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile') {
+        if (tile.kind === 'tiles') {
           if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
           else tile.flags ^= TileFlags.HFLIP
         }
       } :
       layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile' && isDirectionalGameTile(tile.id)) {
+        if (tile.kind === 'game' && isDirectionalGameTile(tile.id)) {
           if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
       layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'switch' && isDirectionalSwitchTile(tile.id)) {
+        if (tile.kind === 'switch' && isDirectionalSwitchTile(tile.id)) {
           if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
       layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
+        if (tile.kind === 'speedup') {
           tile.angle = (360 - tile.angle) % 360
         }
       } :
@@ -90,23 +90,23 @@
   function tilesFlipH(layer: AnyTilesLayer<any>, tiles: EditTileParams[][]) {
     const flipFn =
       layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile') {
+        if (tile.kind === 'tiles') {
           if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
           else tile.flags ^= TileFlags.VFLIP
         }
       } :
       layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'tile' && isDirectionalGameTile(tile.id)) {
+        if (tile.kind === 'game' && isDirectionalGameTile(tile.id)) {
           if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
       layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'switch' && isDirectionalSwitchTile(tile.id)) {
+        if (tile.kind === 'switch' && isDirectionalSwitchTile(tile.id)) {
           if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
       layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
+        if (tile.kind === 'speedup') {
           tile.angle = (540 - tile.angle) % 360
         }
       } :
@@ -143,7 +143,7 @@
         if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
       } :
       layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
+        if (tile.kind === 'speedup') {
           tile.angle = (tile.angle + 90) % 360
         }
       } :
@@ -180,7 +180,7 @@
         if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
       } :
       layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.type === 'speedup') {
+        if (tile.kind === 'speedup') {
           tile.angle = (tile.angle + 270) % 360
         }
       } :
