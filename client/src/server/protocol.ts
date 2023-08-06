@@ -161,6 +161,11 @@ export type EditTiles = {
   data: string, // binary data format in base64
 }
 
+export interface SendLayer {
+  group: number
+  layer: number
+}
+
 export type CreateQuad = {
   group: number
   layer: number
@@ -273,6 +278,7 @@ export interface ApplyAutomapper {
   group: number
   layer: number
 }
+
 // IMAGES
 
 export interface ImageConfig {
@@ -341,6 +347,7 @@ export interface RequestContent {
 
   edittile: EditTile
   edittiles: EditTiles
+  sendlayer: SendLayer
 
   listautomappers: null
   sendautomapper: SendAutomapper
@@ -388,6 +395,7 @@ export interface ResponseContent {
 
   edittile: EditTile
   edittiles: EditTiles
+  sendlayer: string
 
   listautomappers: ListAutomappers
   sendautomapper: UploadAutomapper

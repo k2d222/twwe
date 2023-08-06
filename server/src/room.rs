@@ -15,23 +15,37 @@ use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
+use structview::View;
 use twmap::{
     automapper::Automapper, checks::CheckData, constants, parse::LayerFlags, CompressedData,
-    EmbeddedImage, Env, Envelope, ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer,
-    LayerKind, Point, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer,
-    TilesLayer, TuneLayer, TwMap,
+    EmbeddedImage, Env, Envelope, ExternalImage, FrontLayer, GameLayer, GameTile, Group, Image,
+    Info, Layer, LayerKind, Point, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileFlags,
+    TilemapLayer, TilesLayer, TuneLayer, TwMap,
 };
 use uuid::Uuid;
 
 use crate::{
     map_cfg::MapConfig,
     protocol::*,
-    twmap_map_checks::check_env_points,
-    twmap_map_edit::{extend_layer, shrink_layer},
+    twmap_map_checks::check_env_points, // TODO ask @patiga for granular checks
+    twmap_map_edit::{extend_layer, shrink_layer}, // TODO I think twmap has methods for this now
     Peer,
 };
 
 type Tx = UnboundedSender<Message>;
+
+// taken as-is from twmap
+trait ViewAsBytes: View {
+    fn into_boxed_bytes(boxed_slice: Box<[Self]>) -> Box<[u8]> {
+        let len = boxed_slice.len() * std::mem::size_of::<Self>();
+        let ptr = Box::into_raw(boxed_slice);
+        unsafe {
+            let byte_slice = std::slice::from_raw_parts_mut(ptr as *mut u8, len);
+            Box::from_raw(byte_slice)
+        }
+    }
+}
+impl<T: View> ViewAsBytes for T {}
 
 fn server_error<E: std::fmt::Display>(err: E) -> &'static str {
     log::error!("{}", err);
@@ -201,6 +215,38 @@ impl Room {
         peers.retain(|_, p| !p.tx.is_closed());
         if peers.is_empty() {
             self.map.unload()
+        }
+    }
+
+    pub fn layer_data(&self, group: usize, layer: usize) -> Result<String, &'static str> {
+        let mut map = self.map.get();
+        let group = map.groups.get_mut(group).ok_or("invalid group index")?;
+        let layer = group.layers.get_mut(layer).ok_or("invalid layer index")?;
+
+        // TODO I really need to stop using macros and use traits instead
+        macro_rules! layer_data {
+            ($layer: ident) => {{
+                let data = $layer
+                    .tiles
+                    .unwrap_ref()
+                    .to_owned()
+                    .into_raw_vec()
+                    .into_boxed_slice();
+                let buf = ViewAsBytes::into_boxed_bytes(data);
+                let str = base64::engine::general_purpose::STANDARD.encode(buf);
+                Ok(str)
+            }};
+        }
+
+        match layer {
+            Layer::Game(layer) => layer_data!(layer),
+            Layer::Tiles(layer) => layer_data!(layer),
+            Layer::Front(layer) => layer_data!(layer),
+            Layer::Tele(layer) => layer_data!(layer),
+            Layer::Speedup(layer) => layer_data!(layer),
+            Layer::Switch(layer) => layer_data!(layer),
+            Layer::Tune(layer) => layer_data!(layer),
+            Layer::Invalid(_) | Layer::Sounds(_) | Layer::Quads(_) => Err("not a tiles layer"),
         }
     }
 

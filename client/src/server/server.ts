@@ -71,6 +71,7 @@ export class WebSocketServer implements Server {
 
       edittile: [],
       edittiles: [],
+      sendlayer: [],
 
       listautomappers: [],
       sendautomapper: [],

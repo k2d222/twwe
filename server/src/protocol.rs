@@ -283,6 +283,12 @@ pub struct EditTiles {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SendLayer {
+    pub group: u32,
+    pub layer: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Quad {
     pub points: [Point<I17F15>; 5],
@@ -475,6 +481,7 @@ pub enum RequestContent {
 
     EditTile(EditTile),
     EditTiles(EditTiles),
+    SendLayer(SendLayer),
 
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
@@ -523,6 +530,7 @@ pub enum ResponseContent {
 
     EditTile(EditTile),
     EditTiles(EditTiles),
+    SendLayer(String),
 
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),

@@ -17,6 +17,7 @@
   import { createEventDispatcher } from 'svelte'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
+  import { dataToTiles, tilesLayerFlagsToLayerKind, tilesToData } from '../../server/convert'
 
   type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
   type EventMap = { [K in Events]: RequestContent[K] }
@@ -244,15 +245,41 @@
   function onDelete() {
     onDeleteLayer({ group: g, layer: l })
   }
-  function onAutomap() {
+  async function onAutomap() {
+    // TODO: move this, merge with event received from server
     // const tlayer = layer as TilesLayer
     // const conf = automapperConfig(tlayer)
     // $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
-    $server.send('applyautomapper', { group: g, layer: l })
+    await $server.query('applyautomapper', { group: g, layer: l })
+    const tlayer = layer as AnyTilesLayer<any>
+    const data = await $server.query('sendlayer', { group: g, layer: l })
+    const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(tlayer.flags))
+
+    for (let i = 0; i < tiles.length; ++i) {
+      const tile = tiles[i]
+      const x = i % tlayer.width
+      const y = Math.floor(i / tlayer.width)
+
+      $rmap.editTile({
+        group: g,
+        layer: l,
+        x,
+        y,
+        ...tile
+      })
+    }
   }
   function onAutomapperChange() {
     const automapper = (layer as TilesLayer).automapper
-    onEditLayer({ group: g, layer: l, automapper })
+    onEditLayer({
+      group: g,
+      layer: l,
+      automapper: {
+        config: automapper.config === -1 ? null : automapper.config,
+        seed: automapper.seed,
+        automatic: automapper.automatic,
+      }
+    })
   }
 </script>
 

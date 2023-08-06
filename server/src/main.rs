@@ -181,46 +181,48 @@ impl Server {
         }
 
         if let Ok(content) = content {
+            use ResponseContent::*;
             match content {
-                ResponseContent::CreateMap(_) => (),
-                ResponseContent::CloneMap(_) => (),
-                ResponseContent::JoinMap(_) => self.broadcast_users(peer),
-                ResponseContent::LeaveMap => self.broadcast_users(peer),
-                ResponseContent::SaveMap(_) => (),
-                ResponseContent::EditMap(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteMap(_) => (),
-                ResponseContent::RenameMap(content) => {
+                CreateMap(_) => (),
+                CloneMap(_) => (),
+                JoinMap(_) => self.broadcast_users(peer),
+                LeaveMap => self.broadcast_users(peer),
+                SaveMap(_) => (),
+                EditMap(_) => self.broadcast_to_others(peer, content),
+                DeleteMap(_) => (),
+                RenameMap(content) => {
                     self.room(&content.new_name).map(|room| {
                         self.broadcast_to_room(&room, ResponseContent::RenameMap(content))
                     });
                 }
-                ResponseContent::CreateGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ReorderGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::CreateLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ReorderLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditTile(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditTiles(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::CreateQuad(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditQuad(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteQuad(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::CreateEnvelope(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditEnvelope(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteEnvelope(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ListUsers(_) => (),
-                ResponseContent::ListMaps(_) => (),
-                ResponseContent::CreateImage(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ImageInfo(_) => (),
-                ResponseContent::DeleteImage(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::Error(_) => (),
-                ResponseContent::ListAutomappers(_) => (),
-                ResponseContent::SendAutomapper(_) => (),
-                ResponseContent::UploadAutomapper => (),
-                ResponseContent::ApplyAutomapper(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::Cursors(_) => (),
+                CreateGroup(_) => self.broadcast_to_others(peer, content),
+                EditGroup(_) => self.broadcast_to_others(peer, content),
+                ReorderGroup(_) => self.broadcast_to_others(peer, content),
+                DeleteGroup(_) => self.broadcast_to_others(peer, content),
+                CreateLayer(_) => self.broadcast_to_others(peer, content),
+                EditLayer(_) => self.broadcast_to_others(peer, content),
+                ReorderLayer(_) => self.broadcast_to_others(peer, content),
+                DeleteLayer(_) => self.broadcast_to_others(peer, content),
+                EditTile(_) => self.broadcast_to_others(peer, content),
+                EditTiles(_) => self.broadcast_to_others(peer, content),
+                SendLayer(_) => (),
+                CreateQuad(_) => self.broadcast_to_others(peer, content),
+                EditQuad(_) => self.broadcast_to_others(peer, content),
+                DeleteQuad(_) => self.broadcast_to_others(peer, content),
+                CreateEnvelope(_) => self.broadcast_to_others(peer, content),
+                EditEnvelope(_) => self.broadcast_to_others(peer, content),
+                DeleteEnvelope(_) => self.broadcast_to_others(peer, content),
+                ListUsers(_) => (),
+                ListMaps(_) => (),
+                CreateImage(_) => self.broadcast_to_others(peer, content),
+                ImageInfo(_) => (),
+                DeleteImage(_) => self.broadcast_to_others(peer, content),
+                Error(_) => (),
+                ListAutomappers(_) => (),
+                SendAutomapper(_) => (),
+                UploadAutomapper => (),
+                ApplyAutomapper(_) => self.broadcast_to_others(peer, content),
+                Cursors(_) => (),
             }
         }
     }
@@ -442,6 +444,12 @@ impl Server {
         Ok(ResponseContent::EditTiles(edit_tiles))
     }
 
+    fn handle_send_layer(&self, peer: &mut Peer, send_layer: SendLayer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        let layer = room.layer_data(send_layer.group as usize, send_layer.layer as usize)?;
+        Ok(ResponseContent::SendLayer(layer))
+    }
+
     fn handle_create_quad(&self, peer: &mut Peer, create_quad: CreateQuad) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
         room.create_quad(&create_quad)?;
@@ -651,6 +659,7 @@ impl Server {
             DeleteLayer(content) => self.handle_delete_layer(peer, content),
             EditTile(content) => self.handle_edit_tile(peer, content),
             EditTiles(content) => self.handle_edit_tiles(peer, content),
+            SendLayer(content) => self.handle_send_layer(peer, content),
             CreateQuad(content) => self.handle_create_quad(peer, content),
             EditQuad(content) => self.handle_edit_quad(peer, content),
             DeleteQuad(content) => self.handle_delete_quad(peer, content),

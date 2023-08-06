@@ -1,5 +1,5 @@
-import type * as Info from '../twmap/types'
-import type * as MapDir from '../twmap/mapdir'
+import * as Info from '../twmap/types'
+import * as MapDir from '../twmap/mapdir'
 import type { CurveTypeStr, EditTile, EditTileParams } from './protocol'
 import * as Parser from '../twmap/parser'
 
@@ -120,4 +120,25 @@ export function dataToTiles(data: string, kind: MapDir.LayerKind): EditTileParam
   else {
     throw 'unsupported tile type ' + kind
   }
+}
+
+export function tilesLayerFlagsToLayerKind(flags: Info.TilesLayerFlags) {
+  if (flags === Info.TilesLayerFlags.FRONT) return MapDir.LayerKind.Front
+  else if (flags === Info.TilesLayerFlags.GAME) return MapDir.LayerKind.Game
+  else if (flags === Info.TilesLayerFlags.SPEEDUP) return MapDir.LayerKind.Speedup
+  else if (flags === Info.TilesLayerFlags.SWITCH) return MapDir.LayerKind.Switch
+  else if (flags === Info.TilesLayerFlags.TELE) return MapDir.LayerKind.Tele
+  else if (flags === Info.TilesLayerFlags.TILES) return MapDir.LayerKind.Tiles
+  else if (flags === Info.TilesLayerFlags.TUNE) return MapDir.LayerKind.Tune
+}
+
+export function layerKindToTilesLayerFlags(kind: MapDir.LayerKind) {
+  if (kind === MapDir.LayerKind.Front) return Info.TilesLayerFlags.FRONT
+  else if (kind === MapDir.LayerKind.Game) return Info.TilesLayerFlags.GAME
+  else if (kind === MapDir.LayerKind.Speedup) return Info.TilesLayerFlags.SPEEDUP
+  else if (kind === MapDir.LayerKind.Switch) return Info.TilesLayerFlags.SWITCH
+  else if (kind === MapDir.LayerKind.Tele) return Info.TilesLayerFlags.TELE
+  else if (kind === MapDir.LayerKind.Tiles) return Info.TilesLayerFlags.TILES
+  else if (kind === MapDir.LayerKind.Tune) return Info.TilesLayerFlags.TUNE
+  else throw "not a tile layer"
 }

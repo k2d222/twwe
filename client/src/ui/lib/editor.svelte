@@ -21,13 +21,14 @@
     DeleteImage,
 ListUsers,
 EditTiles,
+ApplyAutomapper,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from '../../twmap/group'
   import { LayerType } from '../../twmap/types'
   import type { RenderGroup } from '../../gl/renderGroup'
   import type { RenderLayer } from '../../gl/renderLayer'
-  import { GameLayer } from '../../twmap/tilesLayer'
+  import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
   import { server, serverConfig, rmap, selected } from '../global'
@@ -61,7 +62,7 @@ EditTiles,
     OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
-  import { dataToTiles } from '../../server/convert'
+  import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
   import type * as MapDir from '../../twmap/mapdir'
 
   // let viewport: Viewport
@@ -205,6 +206,25 @@ EditTiles,
       })
     }
   }
+  async function serverOnApplyAutomapper(e: ApplyAutomapper) {
+    const data = await $server.query('sendlayer', { group: g, layer: l })
+    const layer = $rmap.groups[e.group].layers[e.layer].layer as AnyTilesLayer<any>
+    const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(layer.flags))
+
+    for (let i = 0; i < tiles.length; ++i) {
+      const tile = tiles[i]
+      const x = i % layer.width
+      const y = Math.floor(i / layer.width)
+
+      $rmap.editTile({
+        group: g,
+        layer: l,
+        x,
+        y,
+        ...tile
+      })
+    }
+  }
   function serverOnCreateQuad(e: CreateQuad) {
     $rmap.createQuad(e)
     activeLayer = activeLayer // hack to redraw quadview
@@ -332,6 +352,7 @@ EditTiles,
     $server.on('listusers', serverOnUsers)
     $server.on('edittile', serverOnEditTile)
     $server.on('edittiles', serverOnEditTiles)
+    $server.on('applyautomapper', serverOnApplyAutomapper)
     $server.on('createquad', serverOnCreateQuad)
     $server.on('editquad', serverOnEditQuad)
     $server.on('deletequad', serverOnDeleteQuad)
