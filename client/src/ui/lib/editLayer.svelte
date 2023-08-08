@@ -366,7 +366,7 @@
       <label>
         Automapper <input type="button" value={conf ?? 'None'} disabled={layer.image === null} on:click={() => automapperOpen = true} />
       </label>
-      <ComposedModal bind:open={automapperOpen} size="sm">
+      <ComposedModal bind:open={automapperOpen} size="sm" selectorPrimaryFocus=".bx--modal-close">
         <ModalHeader title="Automapper" />
         <ModalBody hasForm>
           <AutomapperPicker
@@ -376,6 +376,7 @@
         </ModalBody>
       </ComposedModal>
       <button
+        class="default"
         disabled={conf === null || layer.automapper.automatic}
         on:click={onAutomap}
       >

@@ -42,6 +42,7 @@ ApplyAutomapper,
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
+  import AutomapperEditor from './editAutomapper.svelte'
   import Viewport from './viewport.svelte'
   import {
     Layers as LayersIcon,
@@ -52,6 +53,7 @@ ApplyAutomapper,
     Image as ImagesIcon,
     Music as SoundsIcon,
     Add as CreateGroupIcon,
+    Script as AutomapperIcon,
   } from 'carbon-icons-svelte'
   import {
     Button,
@@ -69,6 +71,7 @@ ApplyAutomapper,
   let animEnabled = false
   let peerCount = 0
   let infoEditorVisible = false
+  let automappersVisible = false
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -433,6 +436,14 @@ ApplyAutomapper,
     animEnabled = !animEnabled
   }
 
+  function onToggleAutomappers() {
+    automappersVisible = !automappersVisible
+  }
+
+  function onAutomapperClose() {
+    automappersVisible = false
+  }
+
   async function onSaveMap() {
     try {
       showInfo('Saving map...', 'none')
@@ -544,10 +555,13 @@ ApplyAutomapper,
         <EnvelopesIcon size={20} title="Envelopes" />
       </button>
       <button class="header-btn" id="images-toggle" disabled>
-        <ImagesIcon size={20} title="Images" />
+        <ImagesIcon size={20} title="Images (TODO)" />
       </button>
       <button class="header-btn" id="sounds-toggle" disabled>
-        <SoundsIcon size={20} title="Sounds" />
+        <SoundsIcon size={20} title="Sounds (TODO)" />
+      </button>
+      <button class="header-btn" id="automappers-toggle" on:click={onToggleAutomappers}>
+        <AutomapperIcon size={20} title="Automappers" />
       </button>
       <button class="header-btn" id="save" on:click={onSaveMap}>
         <SaveIcon size={20} title="Save map on server" />
@@ -642,6 +656,18 @@ ApplyAutomapper,
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
       <InfoEditor info={$rmap.map.info} />
+    </ModalBody>
+  </ComposedModal>
+
+  <ComposedModal
+    size="lg"
+    open={automappersVisible}
+    on:close={onAutomapperClose}
+    selectorPrimaryFocus=".bx--modal-close"
+  >
+    <ModalHeader title="Automappers" />
+    <ModalBody hasForm>
+      <AutomapperEditor />
     </ModalBody>
   </ComposedModal>
 

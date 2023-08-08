@@ -604,8 +604,7 @@ impl Server {
         let mut path = room.path().to_owned();
         path.push(format!("{}.rules", send_automapper.image));
 
-        let rule_file = fs::read_to_string(format!("{}.rules", send_automapper.image))
-            .map_err(|_| "automapper file not found")?;
+        let rule_file = fs::read_to_string(path).map_err(|_| "automapper file not found")?;
 
         Ok(ResponseContent::SendAutomapper(rule_file))
     }

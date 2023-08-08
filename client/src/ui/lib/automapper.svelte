@@ -51,7 +51,7 @@
   </label>
 
   <label>
-    Active rule
+    Config
     <select bind:value={layer.automapper.config} on:change={onConfig}>
       <option value={-1}>None</option>
       {#each configs as conf, i}

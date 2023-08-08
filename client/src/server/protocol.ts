@@ -398,7 +398,7 @@ export interface ResponseContent {
   sendlayer: string
 
   listautomappers: ListAutomappers
-  sendautomapper: UploadAutomapper
+  sendautomapper: string
   uploadautomapper: null
   applyautomapper: ApplyAutomapper
 

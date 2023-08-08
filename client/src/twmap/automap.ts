@@ -92,11 +92,13 @@ function tokError(reason: TokenErrorKind, line: number, range: Range, note?: str
 
 // export enum Keyword {
 //   NewRun,
+//   Index,
 //   XFLIP, YFLIP, ROTATE,
 //   Pos,
 //   EMPTY, FULL,
 //   INDEX, NOTINDEX,
 //   NONE, OR,
+//   Random,
 //   NoDefaultRule,
 //   NoLayerCopy,
 // }
