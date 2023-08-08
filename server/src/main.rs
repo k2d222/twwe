@@ -34,7 +34,10 @@ use futures::{
     future, StreamExt, TryStreamExt,
 };
 
-use twmap::{automapper::Automapper, checks::CheckData, EmbeddedImage, Image, TwMap};
+use twmap::{
+    automapper::Automapper, checks::CheckData, parse::AutoMapperConfigs, EmbeddedImage, Image,
+    TwMap,
+};
 
 mod room;
 use room::Room;
@@ -220,7 +223,8 @@ impl Server {
                 Error(_) => (),
                 ListAutomappers(_) => (),
                 SendAutomapper(_) => (),
-                UploadAutomapper => (),
+                DeleteAutomapper(_) => self.broadcast_to_others(peer, content),
+                UploadAutomapper(_) => self.broadcast_to_others(peer, content),
                 ApplyAutomapper(_) => self.broadcast_to_others(peer, content),
                 Cursors(_) => (),
             }
@@ -591,22 +595,37 @@ impl Server {
 
     fn check_image_name(&self, name: &str) -> bool {
         // this is a very primitive sanitization to prevent path traversal attacks.
-        !(name.chars().any(std::path::is_separator) || name.starts_with("."))
+        !(name.chars().any(std::path::is_separator) || name.starts_with(".") || name.is_empty())
     }
 
-    fn handle_send_automapper(&self, peer: &Peer, send_automapper: SendAutomapper) -> Res {
+    fn handle_send_automapper(&self, peer: &Peer, send_automapper: String) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
 
-        if !self.check_image_name(&send_automapper.image) {
+        if !self.check_image_name(&send_automapper) {
             return Err("invalid image name");
         }
 
         let mut path = room.path().to_owned();
-        path.push(format!("{}.rules", send_automapper.image));
+        path.push(format!("{}.rules", send_automapper));
 
         let rule_file = fs::read_to_string(path).map_err(|_| "automapper file not found")?;
 
         Ok(ResponseContent::SendAutomapper(rule_file))
+    }
+
+    fn handle_delete_automapper(&self, peer: &Peer, delete_automapper: String) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        if !self.check_image_name(&delete_automapper) {
+            return Err("invalid image name");
+        }
+
+        let mut path = room.path().to_owned();
+        path.push(format!("{}.rules", delete_automapper));
+
+        fs::remove_file(path).map_err(|_| "automapper file not found")?;
+
+        Ok(ResponseContent::DeleteAutomapper(delete_automapper))
     }
 
     fn handle_upload_automapper(
@@ -623,12 +642,21 @@ impl Server {
         let mut path = room.path().to_owned();
         path.push(format!("{}.rules", upload_automapper.image));
 
-        Automapper::parse(upload_automapper.image.clone(), &upload_automapper.content)
-            .map_err(|_| "invalid automapper file")?;
+        let automapper =
+            Automapper::parse(upload_automapper.image.clone(), &upload_automapper.content)
+                .map_err(|_| "invalid automapper file")?;
+        let configs: Vec<_> = automapper
+            .configs
+            .iter()
+            .map(|c| c.name.to_owned())
+            .collect();
 
         fs::write(path, upload_automapper.content).map_err(server_error)?;
 
-        Ok(ResponseContent::UploadAutomapper)
+        Ok(ResponseContent::UploadAutomapper(AutomapperConfigs {
+            image: upload_automapper.image.to_owned(),
+            configs,
+        }))
     }
 
     fn handle_apply_automapper(&self, peer: &mut Peer, apply_automapper: ApplyAutomapper) -> Res {
@@ -673,6 +701,7 @@ impl Server {
             Cursors(content) => self.handle_cursor(peer, content),
             ListAutomappers => self.handle_list_automappers(peer),
             SendAutomapper(content) => self.handle_send_automapper(peer, content),
+            DeleteAutomapper(content) => self.handle_delete_automapper(peer, content),
             UploadAutomapper(content) => self.handle_upload_automapper(peer, content),
             ApplyAutomapper(content) => self.handle_apply_automapper(peer, content),
         };

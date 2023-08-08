@@ -407,14 +407,15 @@ pub struct ListAutomappers {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SendAutomapper {
-    pub image: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UploadAutomapper {
     pub image: String,
     pub content: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AutomapperConfigs {
+    pub image: String,
+    pub configs: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -495,7 +496,8 @@ pub enum RequestContent {
     ListMaps,
 
     ListAutomappers,
-    SendAutomapper(SendAutomapper),
+    SendAutomapper(String),
+    DeleteAutomapper(String),
     UploadAutomapper(UploadAutomapper),
     ApplyAutomapper(ApplyAutomapper),
 
@@ -545,7 +547,8 @@ pub enum ResponseContent {
 
     ListAutomappers(ListAutomappers),
     SendAutomapper(String),
-    UploadAutomapper,
+    DeleteAutomapper(String),
+    UploadAutomapper(AutomapperConfigs),
     ApplyAutomapper(ApplyAutomapper),
 
     CreateImage(CreateImage),

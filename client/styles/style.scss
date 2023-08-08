@@ -850,6 +850,10 @@ nav.hidden .context {
   .list {
     display: flex;
     flex-direction: column;
+
+    > input[type=text] {
+      margin-top: .5rem;
+    }
   }
 
   .right {

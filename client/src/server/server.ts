@@ -75,6 +75,7 @@ export class WebSocketServer implements Server {
 
       listautomappers: [],
       sendautomapper: [],
+      deleteautomapper: [],
       uploadautomapper: [],
       applyautomapper: [],
 

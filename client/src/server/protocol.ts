@@ -265,10 +265,6 @@ export interface ListAutomappers {
   configs: { [k in string]: string[] }
 }
 
-export interface SendAutomapper {
-  image: string
-}
-
 export interface UploadAutomapper {
   image: string
   content: string
@@ -277,6 +273,11 @@ export interface UploadAutomapper {
 export interface ApplyAutomapper {
   group: number
   layer: number
+}
+
+export interface AutomapperConfigs {
+  image: string
+  configs: string[]
 }
 
 // IMAGES
@@ -350,7 +351,8 @@ export interface RequestContent {
   sendlayer: SendLayer
 
   listautomappers: null
-  sendautomapper: SendAutomapper
+  sendautomapper: string
+  deleteautomapper: string
   uploadautomapper: UploadAutomapper
   applyautomapper: ApplyAutomapper
 
@@ -399,7 +401,8 @@ export interface ResponseContent {
 
   listautomappers: ListAutomappers
   sendautomapper: string
-  uploadautomapper: null
+  deleteautomapper: string
+  uploadautomapper: AutomapperConfigs
   applyautomapper: ApplyAutomapper
 
   createquad: CreateQuad

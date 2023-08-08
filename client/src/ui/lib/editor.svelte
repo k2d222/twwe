@@ -19,9 +19,10 @@
     ReorderLayer,
     CreateImage,
     DeleteImage,
-ListUsers,
-EditTiles,
-ApplyAutomapper,
+    ListUsers,
+    EditTiles,
+    ApplyAutomapper,
+    AutomapperConfigs,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from '../../twmap/group'
@@ -31,7 +32,7 @@ ApplyAutomapper,
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
-  import { server, serverConfig, rmap, selected } from '../global'
+  import { server, serverConfig, rmap, selected, automappers } from '../global'
   import { canvas } from '../../gl/global'
   import TreeView from './treeView.svelte'
   import { showInfo, showError, clearDialog, showDialog } from './dialog'
@@ -228,6 +229,14 @@ ApplyAutomapper,
       })
     }
   }
+  function serverOnDeleteAutomapper(e: string) {
+    delete $automappers[e]
+    $automappers = $automappers
+  }
+  function serverOnUploadAutomapper(e: AutomapperConfigs) {
+    $automappers[e.image] = e.configs
+    $automappers = $automappers
+  }
   function serverOnCreateQuad(e: CreateQuad) {
     $rmap.createQuad(e)
     activeLayer = activeLayer // hack to redraw quadview
@@ -356,6 +365,8 @@ ApplyAutomapper,
     $server.on('edittile', serverOnEditTile)
     $server.on('edittiles', serverOnEditTiles)
     $server.on('applyautomapper', serverOnApplyAutomapper)
+    $server.on('deleteautomapper', serverOnDeleteAutomapper)
+    $server.on('uploadautomapper', serverOnUploadAutomapper)
     $server.on('createquad', serverOnCreateQuad)
     $server.on('editquad', serverOnEditQuad)
     $server.on('deletequad', serverOnDeleteQuad)
@@ -383,6 +394,10 @@ ApplyAutomapper,
     $server.socket.removeEventListener('error', onServerClosed)
     $server.off('listusers', serverOnUsers)
     $server.off('edittile', serverOnEditTile)
+    $server.off('edittiles', serverOnEditTiles)
+    $server.off('applyautomapper', serverOnApplyAutomapper)
+    $server.off('deleteautomapper', serverOnDeleteAutomapper)
+    $server.off('uploadautomapper', serverOnUploadAutomapper)
     $server.off('createquad', serverOnCreateQuad)
     $server.off('editquad', serverOnEditQuad)
     $server.off('deletequad', serverOnDeleteQuad)
@@ -667,7 +682,7 @@ ApplyAutomapper,
   >
     <ModalHeader title="Automappers" />
     <ModalBody hasForm>
-      <AutomapperEditor />
+      <AutomapperEditor on:close={() => (automappersVisible = false)} />
     </ModalBody>
   </ComposedModal>
 
