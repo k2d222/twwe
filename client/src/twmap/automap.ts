@@ -543,6 +543,14 @@ export function lint(content: string): Lint[] {
   return errs
 }
 
+export function lintToString(lint: Lint): string {
+  const level = lint.level === LintLevel.Error ? 'error' : 'warning'
+  let str = `[${level}] line ${lint.line + 1}, chars ${lint.range[0]}-${lint.range[1]}: ${lint.reason}.`
+  if (lint.note)
+    str += ` Note: ${lint.note}`
+  return str
+}
+
 /// parsing
 
 export function parse(content: string): Config[] | null {

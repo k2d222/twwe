@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { TilesLayer } from '../../twmap/tilesLayer'
   import {
-    parse as parseAutomapper,
     lint as lintAutomapper,
     LintLevel,
+    lintToString,
   } from '../../twmap/automap'
-  import { showInfo } from './dialog'
+  import { showError, showInfo, showWarning } from './dialog'
   import { createEventDispatcher } from 'svelte'
-  import { rmap, server, automappers } from '../global'
+  import { server, automappers } from '../global'
 
   export let layer: TilesLayer
 
@@ -23,18 +23,32 @@
     // const newRules = parseAutomapper(str) ?? []
     const lints = lintAutomapper(str)
     const errs = lints.filter(l => l.level === LintLevel.Error)
-    const warns = lints.filter(l => l.level === LintLevel.Warning)
 
-    await $server.query('uploadautomapper', {
-      image: name,
-      content: str,
-    })
+    for (const lint of lints) {
+      await showError(lintToString(lint))
+    }
+
+    if (errs.length > 0) {
+      const resp = await showWarning(`The automapper contains ${errs.length} error(s). Proceed?`, 'yesno')
+      if (!resp) return
+    }
+
+    try {
+      await $server.query('uploadautomapper', {
+        image: name,
+        content: str,
+      })
+    }
+    catch (e) {
+      showError("Saving failed: " + e)
+      return
+    }
 
     const am = await $server.query("listautomappers", null)
     $automappers = am.configs
 
     showInfo(
-      `Uploaded ${am.configs[name].length} rules for '${name}' with ${errs.length} errors and ${warns.length} warnings.`,
+      `Uploaded ${$automappers[name].length} rules for '${name}'.`,
       'closable'
     )
   }

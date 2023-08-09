@@ -1,6 +1,6 @@
 import * as Info from '../twmap/types'
 import * as MapDir from '../twmap/mapdir'
-import type { CurveTypeStr, EditTile, EditTileParams } from './protocol'
+import type { CurveTypeStr, EditTileParams } from './protocol'
 import * as Parser from '../twmap/parser'
 
 const curveTypeStr: CurveTypeStr[] = ['step', 'linear', 'slow', 'fast', 'smooth', 'bezier']

@@ -1,4 +1,4 @@
-import type { EditTile, EditTileParams, EditTiles } from '../../server/protocol'
+import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { RenderMap } from '../../gl/renderMap'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
@@ -13,9 +13,7 @@ import {
   SpeedupLayer,
   TuneLayer,
 } from '../../twmap/tilesLayer'
-import { dataToTiles, tilesToData, tileToData } from '../../server/convert'
-import type * as MapDir from '../../twmap/mapdir'
-import type { RenderAnyTilesLayer } from 'src/gl/renderTilesLayer'
+import { tilesToData } from '../../server/convert'
 
 // list of layers -> 2d array of tiles
 export type Brush = {

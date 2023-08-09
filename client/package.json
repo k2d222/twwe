@@ -31,6 +31,7 @@
     "carbon-icons-svelte": "^11.4.0",
     "carbon-preprocess-svelte": "^0.9.1",
     "codejar": "^4.2.0",
+    "codejar-linenumbers": "^1.0.0",
     "crc": "^4.1.1",
     "gl-matrix": "^3.4.3",
     "highlight.js": "^11.8.0",

@@ -13,11 +13,11 @@
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
   import AutomapperPicker from './automapper.svelte'
-  import { automap, type Config as AutomapperConfig } from '../../twmap/automap'
+  // import { automap, parse, type Config as AutomapperConfig } from '../../twmap/automap'
   import { createEventDispatcher } from 'svelte'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
-  import { dataToTiles, tilesLayerFlagsToLayerKind, tilesToData } from '../../server/convert'
+  import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
 
   type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
   type EventMap = { [K in Events]: RequestContent[K] }
@@ -247,11 +247,8 @@
   }
   async function onAutomap() {
     // TODO: move this, merge with event received from server
-    // const tlayer = layer as TilesLayer
-    // const conf = automapperConfig(tlayer)
-    // $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
     await $server.query('applyautomapper', { group: g, layer: l })
-    const tlayer = layer as AnyTilesLayer<any>
+    const tlayer = layer as TilesLayer
     const data = await $server.query('sendlayer', { group: g, layer: l })
     const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(tlayer.flags))
 
@@ -268,6 +265,14 @@
         ...tile
       })
     }
+
+    // client-side automapping
+    // setTimeout(async () => {
+    //   const txt = await $server.query('sendautomapper', tlayer.image.name)
+    //   const am = parse(txt)
+    //   const conf = am[tlayer.automapper.config]
+    //   $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
+    // }, 5000)
   }
   function onAutomapperChange() {
     const automapper = (layer as TilesLayer).automapper
