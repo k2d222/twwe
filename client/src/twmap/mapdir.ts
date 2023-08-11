@@ -3,7 +3,12 @@
 
 export type Point<T> = {
   x: T,
-  y: T
+  y: T,
+}
+
+export type Uv<T> = {
+  u: T,
+  v: T,
 }
 
 export type Color<T> = {

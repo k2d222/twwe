@@ -16,18 +16,14 @@ use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 use futures::channel::mpsc::UnboundedSender;
 
 use structview::View;
-use twmap::{
-    automapper::Automapper, checks::CheckData, constants, parse::LayerFlags, CompressedData,
-    EmbeddedImage, Env, Envelope, ExternalImage, FrontLayer, GameLayer, GameTile, Group, Image,
-    Info, Layer, LayerKind, Point, QuadsLayer, SpeedupLayer, SwitchLayer, TeleLayer, TileFlags,
-    TilemapLayer, TilesLayer, TuneLayer, TwMap,
-};
+use twmap::*;
+use twmap::{automapper::Automapper, constants};
 use uuid::Uuid;
 
 use crate::{
     map_cfg::MapConfig,
     protocol::*,
-    twmap_map_checks::check_env_points, // TODO ask @patiga for granular checks
+    twmap_map_checks::{CheckData, InternalMapChecking}, // TODO ask @patiga for granular checks
     twmap_map_edit::{extend_layer, shrink_layer}, // TODO I think twmap has methods for this now
     Peer,
 };
@@ -59,7 +55,7 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
 }
 
 fn set_layer_width<T: TilemapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
-    let old_width = layer.tiles().shape().x as isize;
+    let old_width = layer.tiles().shape().w as isize;
     let diff = width as isize - old_width;
 
     if width < 2 || width > 10000 {
@@ -76,7 +72,7 @@ fn set_layer_width<T: TilemapLayer>(layer: &mut T, width: usize) -> Result<(), &
 }
 
 pub fn set_layer_height<T: TilemapLayer>(layer: &mut T, height: usize) -> Result<(), &'static str> {
-    let old_height = layer.tiles().shape().y as isize;
+    let old_height = layer.tiles().shape().h as isize;
     let diff = height as isize - old_height;
 
     if height < 2 || height > 10000 {
@@ -412,7 +408,7 @@ impl Room {
                 let height = edit_tiles.height as usize;
                 let shape = $layer.tiles().shape();
 
-                if x + width > shape.x || y + height > shape.y {
+                if x + width > shape.w || y + height > shape.h {
                     return Err("tile change outside layer");
                 }
 
@@ -462,9 +458,8 @@ impl Room {
         match layer {
             Layer::Quads(layer) => {
                 let mut quad = twmap::Quad::default();
-                quad.corners
-                    .copy_from_slice(&create_quad.content.points[..4]);
-                quad.position = create_quad.content.points[4];
+                quad.position = create_quad.content.position;
+                quad.corners = create_quad.content.corners;
                 quad.texture_coords = create_quad.content.tex_coords;
                 layer.quads.push(quad);
             }
@@ -507,8 +502,8 @@ impl Room {
                     .get_mut(edit_quad.quad as usize)
                     .ok_or("invalid quad index")?;
 
-                quad.corners.copy_from_slice(&edit_quad.content.points[..4]);
-                quad.position = edit_quad.content.points[4];
+                quad.position = edit_quad.content.position;
+                quad.corners = edit_quad.content.corners;
                 quad.colors = edit_quad.content.colors;
                 quad.texture_coords = edit_quad.content.tex_coords;
                 quad.position_env = edit_quad.content.pos_env;
@@ -572,6 +567,23 @@ impl Room {
 
     pub fn edit_envelope(&self, edit_envelope: &EditEnvelope) -> Result<(), &'static str> {
         let mut map = self.map.get();
+
+        // first, the checks with immutable ref to map
+        match edit_envelope.change {
+            OneEnvelopeChange::Points(ref points) => match points {
+                EnvPoints::Color(points) => {
+                    EnvPoint::check_all(&points, &map).map_err(|_| "invalid envelope points")?
+                }
+                EnvPoints::Position(points) => {
+                    EnvPoint::check_all(&points, &map).map_err(|_| "invalid envelope points")?
+                }
+                EnvPoints::Sound(points) => {
+                    EnvPoint::check_all(&points, &map).map_err(|_| "invalid envelope points")?
+                }
+            },
+            _ => (),
+        };
+
         let envelope = map
             .envelopes
             .get_mut(edit_envelope.index as usize)
@@ -592,15 +604,12 @@ impl Room {
             },
             OneEnvelopeChange::Points(points) => match (envelope, points) {
                 (Envelope::Color(env), EnvPoints::Color(points)) => {
-                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
                     env.points = points;
                 }
                 (Envelope::Position(env), EnvPoints::Position(points)) => {
-                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
                     env.points = points;
                 }
                 (Envelope::Sound(env), EnvPoints::Sound(points)) => {
-                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
                     env.points = points;
                 }
                 _ => return Err("invalid envelope points type"),
@@ -659,8 +668,8 @@ impl Room {
             Clipping(clipping) => group.clipping = clipping,
             ClipX(clip_x) => group.clip.x = clip_x,
             ClipY(clip_y) => group.clip.y = clip_y,
-            ClipW(clip_w) => group.clip_size.x = clip_w,
-            ClipH(clip_h) => group.clip_size.y = clip_h,
+            ClipW(clip_w) => group.clip.w = clip_w,
+            ClipH(clip_h) => group.clip.h = clip_h,
             Name(name) => {
                 if group.is_physics_group() {
                     return Err("cannot rename the physics group");
@@ -731,7 +740,7 @@ impl Room {
                     return Err("cannot create multiple physics layers of the same kind");
                 }
 
-                let tiles = CompressedData::Loaded(Array2::default((size.y, size.x)));
+                let tiles = CompressedData::Loaded(Array2::default((size.w, size.h)));
                 let layer = $struct { tiles };
                 group.layers.push($enum(layer));
             }};
@@ -740,7 +749,7 @@ impl Room {
         match create_layer.kind {
             // LayerKind::Game => todo!(),
             LayerKind::Tiles => {
-                let mut layer = TilesLayer::new((size.x, size.y));
+                let mut layer = TilesLayer::new((size.w, size.h));
                 layer.name = create_layer.name.to_owned();
                 group.layers.push(Layer::Tiles(layer));
             }
@@ -771,7 +780,7 @@ impl Room {
 
         if let Image(Some(i)) = edit_layer.change {
             let image = map.images.get(i as usize).ok_or("invalid image index")?;
-            let tile_dims_ok = image.size().x % 16 == 0 && image.size().y % 16 == 0;
+            let tile_dims_ok = image.size().w % 16 == 0 && image.size().h % 16 == 0;
 
             let group = map
                 .groups
@@ -817,23 +826,20 @@ impl Room {
                 }
                 *layer.name_mut().ok_or("cannot change layer name")? = name
             }
-            Flags(flags) => {
-                let flags = LayerFlags::from_bits(flags).ok_or("invalid layer flags")?;
-                match layer {
-                    Layer::Front(_)
-                    | Layer::Tele(_)
-                    | Layer::Speedup(_)
-                    | Layer::Switch(_)
-                    | Layer::Tune(_)
-                    | Layer::Invalid(_)
-                    | Layer::Game(_) => (),
-                    Layer::Tiles(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
-                    Layer::Quads(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
-                    Layer::Sounds(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
-                }
-            }
+            Flags(flags) => match layer {
+                Layer::Front(_)
+                | Layer::Tele(_)
+                | Layer::Speedup(_)
+                | Layer::Switch(_)
+                | Layer::Tune(_)
+                | Layer::Invalid(_)
+                | Layer::Game(_) => (),
+                Layer::Tiles(layer) => layer.detail = (flags & 0b1) == 1,
+                Layer::Quads(layer) => layer.detail = (flags & 0b1) == 1,
+                Layer::Sounds(layer) => layer.detail = (flags & 0b1) == 1,
+            },
             Color(color) => match layer {
-                Layer::Tiles(layer) => layer.color = color,
+                Layer::Tiles(layer) => layer.color = color.into(),
                 _ => return Err("cannot change layer color"),
             },
             Width(width) => match layer {
@@ -1032,8 +1038,8 @@ impl Room {
         Ok(ImageInfo {
             index: index as u16,
             name: image.name().to_owned(),
-            width: image.size().x as u32,
-            height: image.size().y as u32,
+            width: image.size().w as u32,
+            height: image.size().h as u32,
         })
     }
 

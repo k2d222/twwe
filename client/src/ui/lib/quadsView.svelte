@@ -11,7 +11,7 @@
   import { showError, clearDialog } from './dialog'
   import { Button } from 'carbon-components-svelte'
   import { Add as AddIcon } from 'carbon-icons-svelte'
-  import { coordToJson } from '../../server/convert'
+  import { coordToJson, uvToJson } from '../../server/convert'
   import { rmap } from '../global'
 
   export let layer: QuadsLayer
@@ -176,12 +176,12 @@
     const change: CreateQuad = {
       group: g,
       layer: l,
-      points: [
+      position: coordToJson({ x: mx, y: my }, 15),
+      corners: [
         { x: -w / 2 + mx, y: -h / 2 + my }, // top left
         { x: w / 2 + mx, y: -h / 2 + my }, // top right
         { x: -w / 2 + mx, y: h / 2 + my }, // bottom left
         { x: w / 2 + mx, y: h / 2 + my }, // bottom right
-        { x: mx, y: my }, // center
       ].map(p => coordToJson(p, 15)),
       colors: [
         { r: 255, g: 255, b: 255, a: 255 },
@@ -194,7 +194,7 @@
         { x: 1024, y: 0 },
         { x: 0, y: 1024 },
         { x: 1024, y: 1024 },
-      ].map(p => coordToJson(p, 10)),
+      ].map(p => uvToJson(p, 10)),
       posEnv: null,
       posEnvOffset: 0,
       colorEnv: null,
@@ -239,9 +239,10 @@
       group: g,
       layer: l,
       quad: q,
-      points: points.map(p => coordToJson(p, 15)),
+      position: coordToJson(points[4], 15),
+      corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
       colors,
-      texCoords: texCoords.map(p => coordToJson(p, 10)),
+      texCoords: texCoords.map(p => uvToJson(p, 10)),
       posEnv: posEnv_ === -1 ? null : posEnv_,
       posEnvOffset,
       colorEnv: colorEnv_ === -1 ? null : colorEnv_,
@@ -261,9 +262,10 @@
     const change: CreateQuad = {
       group: g,
       layer: l,
-      points: points.map(p => coordToJson(p, 15)),
+      position: coordToJson(points[4], 15),
+      corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
       colors,
-      texCoords: texCoords.map(p => coordToJson(p, 10)),
+      texCoords: texCoords.map(p => uvToJson(p, 10)),
       posEnv: posEnv_ === -1 ? null : posEnv_,
       posEnvOffset,
       colorEnv: colorEnv_ === -1 ? null : colorEnv_,

@@ -17,7 +17,7 @@
   import { onMount } from "svelte"
   import { automappers, server } from "../global"
   import { CodeJar } from "codejar"
-  import { TrashCan as TrashIcon, Add as AddIcon, DistributeHorizontalLeft } from "carbon-icons-svelte"
+  import { TrashCan as TrashIcon, Add as AddIcon } from "carbon-icons-svelte"
   import { showError, showInfo, showWarning } from "./dialog"
   import { Button } from 'carbon-components-svelte'
   import { createEventDispatcher } from 'svelte'

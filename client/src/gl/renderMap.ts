@@ -48,7 +48,7 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
 import { Config as AutomapperConfig, automap } from '../twmap/automap'
-import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum } from '../server/convert'
+import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, uvFromJson } from '../server/convert'
 import type { Brush } from 'src/ui/lib/editor'
 
 export type Range = {
@@ -300,9 +300,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
 
     const quad: Quad = {
-      points: change.points.map(p => coordFromJson(p, 15)),
+      points: [...change.corners.map(p => coordFromJson(p, 15)), coordFromJson(change.position, 15)],
       colors: change.colors,
-      texCoords: change.texCoords.map(p => coordFromJson(p, 10)),
+      texCoords: change.texCoords.map(p => uvFromJson(p, 10)),
       posEnv:
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope),
       posEnvOffset: change.posEnvOffset,
@@ -320,9 +320,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
     const quad = rlayer.layer.quads[change.quad]
 
-    if ('points' in change) quad.points = change.points.map(p => coordFromJson(p, 15))
+    if ('position' in change) quad.points[4] =  coordFromJson(change.position, 15)
     if ('colors' in change) quad.colors = change.colors
-    if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => coordFromJson(p, 10))
+    if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => uvFromJson(p, 10))
     if ('posEnv' in change)
       quad.posEnv =
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope)

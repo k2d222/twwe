@@ -34,6 +34,20 @@ export function coordFromJson(coord: MapDir.Point<string>, floating: number): In
   }
 }
 
+export function uvToJson(uv: Info.Coord, floating: number): MapDir.Uv<string> {
+  return {
+    u: toFixedNum(uv.x, floating),
+    v: toFixedNum(uv.y, floating),
+  }
+}
+
+export function uvFromJson(uv: MapDir.Uv<string>, floating: number): Info.Coord {
+  return {
+    x: fromFixedNum(uv.u, floating),
+    y: fromFixedNum(uv.v, floating),
+  }
+}
+
 export function colorToJson(coord: Info.Color, floating: number): MapDir.Color<string> {
   return {
     r: toFixedNum(coord.r, floating),

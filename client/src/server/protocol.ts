@@ -169,9 +169,10 @@ export interface SendLayer {
 export type CreateQuad = {
   group: number
   layer: number
-  points: MapDir.Point<FixedNum>[]
-  colors: Info.Color[]
-  texCoords: MapDir.Point<FixedNum>[]
+  position: MapDir.Point<FixedNum>
+  corners: MapDir.Point<FixedNum>[] // 4 points
+  colors: MapDir.Color<number>[]
+  texCoords: MapDir.Uv<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -182,9 +183,10 @@ export type EditQuad = {
   group: number
   layer: number
   quad: number
-  points: MapDir.Point<FixedNum>[]
-  colors: Info.Color[]
-  texCoords: MapDir.Point<FixedNum>[]
+  position: MapDir.Point<FixedNum>
+  corners: MapDir.Point<FixedNum>[] // 4 points
+  colors: MapDir.Color<number>[]
+  texCoords: MapDir.Uv<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -223,7 +225,7 @@ export interface EditEnvelope {
   points?:
     | {
         type: 'color'
-        content: EnvPoint<MapDir.Color<string>>[]
+        content: EnvPoint<MapDir.Color<FixedNum>>[]
       }
     | {
         type: 'position'

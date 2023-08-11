@@ -34,10 +34,7 @@ use futures::{
     future, StreamExt, TryStreamExt,
 };
 
-use twmap::{
-    automapper::Automapper, checks::CheckData, parse::AutoMapperConfigs, EmbeddedImage, Image,
-    TwMap,
-};
+use twmap::{automapper::Automapper, EmbeddedImage, Image, TwMap};
 
 mod room;
 use room::Room;
@@ -45,6 +42,7 @@ use room::Room;
 mod map_cfg;
 mod protocol;
 use protocol::*;
+use twmap_map_checks::CheckData;
 
 mod twmap_map_checks;
 mod twmap_map_edit;
