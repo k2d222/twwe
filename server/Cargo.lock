@@ -1865,8 +1865,7 @@ dependencies = [
 [[package]]
 name = "twmap"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e572d31d0ba97c8509edd1956d4828cd8c7b5139a7192d7d7865517cddd3aeee"
+source = "git+https://gitlab.com/k2d222/twmap.git#a246e25614abf39afc0e53d66f4200d1d173750e"
 dependencies = [
  "az",
  "bitflags",

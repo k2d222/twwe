@@ -120,9 +120,6 @@ impl LazyMap {
             None => panic!("failed to load map {}", self.path.display()),
         }
     }
-    pub fn get_opt(&self) -> MutexGuard<Option<TwMap>> {
-        self.map.lock()
-    }
 }
 
 pub struct RoomPeer {
@@ -324,7 +321,7 @@ impl Room {
 
         match (layer, edit_tile.content.clone()) {
             (Layer::Game(layer), Tiles(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
                 if tile.flags.contains(TileFlags::OPAQUE) {
@@ -332,17 +329,17 @@ impl Room {
                 }
             }
             (Layer::Tiles(layer), Tiles(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
             }
             (Layer::Front(layer), Tiles(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
             }
             (Layer::Tele(layer), Tele(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.number = edit.number;
                 tile.id = edit.id;
             }
@@ -350,14 +347,14 @@ impl Room {
                 if !(0..360).contains(&edit.angle) {
                     return Err("speedup angle must be in range (0..360)");
                 }
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.force = edit.force;
                 tile.max_speed = edit.max_speed;
                 tile.id = edit.id;
                 tile.angle = edit.angle.into();
             }
             (Layer::Switch(layer), Switch(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.number = edit.number;
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
@@ -367,7 +364,7 @@ impl Room {
                 }
             }
             (Layer::Tune(layer), Tune(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.number = edit.number;
                 tile.id = edit.id;
             }
@@ -654,7 +651,7 @@ impl Room {
 
     pub fn edit_group(&self, edit_group: &EditGroup) -> Result<(), &'static str> {
         let mut map = self.map.get();
-        let mut group = map
+        let group = map
             .groups
             .get_mut(edit_group.group as usize)
             .ok_or("invalid group index")?;
@@ -1151,24 +1148,5 @@ impl Room {
             }
             _ => Err("layer is not a tiles layer"),
         }
-    }
-}
-
-struct Foo {
-    s1: String,
-    s2: String,
-}
-
-fn bar() {
-    let mut foo = Foo {
-        s1: "hello".to_owned(),
-        s2: "world".to_owned(),
-    };
-
-    let ref1 = &mut foo.s1;
-
-    if ref1 == "hello" {
-        let ref2 = foo.s2;
-        println!("{ref2}");
     }
 }

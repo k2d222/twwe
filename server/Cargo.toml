@@ -17,8 +17,8 @@ futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ndarray =  { version = "0.15", features = ["serde"] }
-twmap = "0.10"
-# twmap = { path = "/home/mathis/github/twmap/twmap" }
+# twmap = "0.10"
+twmap = { git = "https://gitlab.com/k2d222/twmap.git" }
 pretty_env_logger = "0.4"
 log = "0.4"
 glob = "0.3"
