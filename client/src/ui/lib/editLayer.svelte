@@ -382,7 +382,7 @@
       </ComposedModal>
       <button
         class="default"
-        disabled={conf === null || layer.automapper.automatic}
+        disabled={conf === null}
         on:click={onAutomap}
       >
         Apply Automapper

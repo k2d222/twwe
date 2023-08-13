@@ -172,16 +172,19 @@ export class DataFile {
     return item
   }
 
-  getType(type: number): ItemType {
+  getType(type: number): ItemType | null {
     for (let i = 0; i < this.numItemTypes; i++) {
       if (this.itemTypes[i].type == type) {
         return this.itemTypes[i]
       }
     }
+
+    return null
   }
 
   findUuidType(uuid: UUID): ItemType | null {
     const uuidIndex = this.getType(0xffff)
+    if (uuidIndex === null) return null
 
     for (let i = 0; i < uuidIndex.num; i++) {
       const item = this.getItem(uuidIndex.start + i)
@@ -202,6 +205,7 @@ export class DataFile {
 
   findItem(type: number, id: number): Item | null {
     const t = this.getType(type)
+    if (t === null) return null
 
     for (let i = 0; i < t.num; i++) {
       const item = this.getItem(t.start + i)
