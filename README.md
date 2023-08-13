@@ -75,3 +75,7 @@ Have [npm](https://www.npmjs.com/) installed and run `npm install` in the client
 
 Note: the client is written in non-strict Typescript. Typescript is only used for IDE hints and documentation, but ignored by the [Vite](https://vitejs.dev/guide/features.html#typescript) bundler.
 Use `npm run check` to run Typescript checks on the project.
+
+## License
+
+This work is licensed under the GNU Affero General Public License v3.0 (agpl). You are free to use and modify the code and executables under some conditions. Please contact me if the license doesn't fit your needs.
