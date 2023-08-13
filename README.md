@@ -18,11 +18,11 @@ Completed:
  * images (upload png files, select layer images)
  * envelopes (color and position envelopes, play animations)
  * map info (author, credits, … and server settings)
+ * Auto mappers
+ * Select and edit multiple layers at a time
  
 Still missing:
  * sound layers & sound envelopes
- * Auto mappers
- * Select and edit multiple layers at a time
  * Proof and grid lines?
  * Some tools: import / merge maps, auto place game tiles, show tile info, …
  
@@ -33,11 +33,11 @@ Missing features specific to the online editor:
  * Chat?
  
 Bugs are expected. It is advised to save regularly and if a bug happens, log out and back in to roll back to the previous save.
-Maps corruptions are unlikely to happen though thanks to @patiga's [twmap library](https://gitlab.com/Patiga/twmap)
+Maps corruptions are unlikely to happen though thanks to @patiga's [twmap library](https://gitlab.com/Patiga/twmap).
 
 ## Usage
 
-Select the active layer by clicking one of the radio buttons on the left bar. Explore the ui, it resembles the ddnet editor for the most part.
+Explore the UI, it resembles the ddnet editor for the most part.
 
 Key/Mouse bindings:
  * Zoom in/out -> mouse wheel
@@ -50,6 +50,7 @@ Key/Mouse bindings:
  * Toggle layers view / envelope view -> `tab`
  * Save map -> `ctrl+s`
  * `right_click` opens context-menus on quad points, envelope points and envelope lines.
+ * Select multiple layers with `shift`.
 
 The Save button saves the map on the disk on the server side. If a teeworlds server using this map is running, enter `reload` in the server console to update it.
 
