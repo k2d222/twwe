@@ -248,14 +248,27 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}", clone_map.config.name).into();
+        let path = PathBuf::from(format!("maps/{}", clone_map.config.name));
+        let map_path = PathBuf::from(format!("maps/{}/map.map", clone_map.config.name));
 
         let room = self
             .room(&clone_map.clone)
             .ok_or("cannot clone non-existing map")?;
-        room.save_map_copy(&map_path)?;
 
-        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
+        // clone the map to release the lock as soon as possible
+        room.map
+            .get()
+            .clone()
+            .save_file(&map_path)
+            .map_err(server_error)?;
+
+        log::debug!(
+            "cloned map '{}' to '{}'",
+            room.map.path.display(),
+            path.display()
+        );
+
+        let mut new_room = Room::new(path).ok_or("map creation failed")?;
         new_room.config.access = clone_map.config.access.clone();
         new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
@@ -272,7 +285,8 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}", create_map.config.name).into();
+        let path = PathBuf::from(format!("maps/{}", create_map.config.name));
+        let map_path = PathBuf::from(format!("maps/{}/map.map", create_map.config.name));
 
         let mut map = TwMap::empty(create_map.version.unwrap_or(twmap::Version::DDNet06));
         let mut group = twmap::Group::physics();
@@ -285,10 +299,12 @@ impl Server {
         group.layers.push(twmap::Layer::Game(layer));
         map.groups.push(group);
         map.check().map_err(server_error)?;
-        map_path.parent().map(fs::create_dir_all);
+        fs::create_dir_all(&path).map_err(server_error)?;
         map.save_file(&map_path).map_err(server_error)?;
 
-        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
+        log::debug!("created map '{}'", path.display());
+
+        let mut new_room = Room::new(path).ok_or("map creation failed")?;
         new_room.config.access = create_map.config.access.clone();
         new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
@@ -299,17 +315,18 @@ impl Server {
 
     fn handle_upload_map(
         &self,
-        create_map: CreateMapUpload,
+        upload_map: CreateMapUpload,
         file: &[u8],
     ) -> Result<(), &'static str> {
-        if !self.check_map_path(&create_map.config.name) {
+        if !self.check_map_path(&upload_map.config.name) {
             return Err("invalid map name");
         }
-        if self.room(&create_map.config.name).is_some() {
+        if self.room(&upload_map.config.name).is_some() {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}", create_map.config.name).into();
+        let path = PathBuf::from(format!("maps/{}", upload_map.config.name));
+        let map_path = PathBuf::from(format!("maps/{}/map.map", upload_map.config.name));
 
         std::fs::write(&map_path, file).map_err(|_| "failed to write file")?;
         TwMap::parse_file(&map_path).map_err(|_| {
@@ -317,12 +334,14 @@ impl Server {
             "not a valid map file"
         })?;
 
-        let mut new_room = Room::new(map_path).ok_or("map creation failed")?;
-        new_room.config.access = create_map.config.access.clone();
+        log::debug!("uploaded map '{}'", path.display());
+
+        let mut new_room = Room::new(path).ok_or("map creation failed")?;
+        new_room.config.access = upload_map.config.access.clone();
         new_room.save_config()?;
         {
             let mut rooms = self.rooms.lock().unwrap();
-            rooms.insert(create_map.config.name.to_owned(), Arc::new(new_room));
+            rooms.insert(upload_map.config.name.to_owned(), Arc::new(new_room));
         }
 
         Ok(())
@@ -952,14 +971,6 @@ async fn route_create_map(
         .text()
         .await
         .map_err(|_| (StatusCode::BAD_REQUEST, "first field must be text"))?;
-    let file = form
-        .next_field()
-        .await
-        .map_err(multipart_error)?
-        .ok_or((StatusCode::BAD_REQUEST, "missing second field"))?
-        .bytes()
-        .await
-        .map_err(multipart_error)?;
 
     let create_map = serde_json::from_str::<CreateMap>(&f1).map_err(json_error)?;
 
@@ -972,9 +983,19 @@ async fn route_create_map(
             .handle_clone_map(clone)
             .map(|_| ())
             .map_err(|str| (StatusCode::BAD_REQUEST, str).into()),
-        CreateMap::Upload(upload) => server
-            .handle_upload_map(upload, &file)
-            .map_err(|str| (StatusCode::BAD_REQUEST, str).into()),
+        CreateMap::Upload(upload) => {
+            let file = form
+                .next_field()
+                .await
+                .map_err(multipart_error)?
+                .ok_or((StatusCode::BAD_REQUEST, "missing second field"))?
+                .bytes()
+                .await
+                .map_err(multipart_error)?;
+            server
+                .handle_upload_map(upload, &file)
+                .map_err(|str| (StatusCode::BAD_REQUEST, str).into())
+        }
     }
 }
 
