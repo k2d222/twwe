@@ -255,6 +255,8 @@ impl Server {
             .room(&clone_map.clone)
             .ok_or("cannot clone non-existing map")?;
 
+        fs::create_dir_all(&path).map_err(server_error)?;
+
         // clone the map to release the lock as soon as possible
         room.map
             .get()
@@ -271,6 +273,7 @@ impl Server {
         let mut new_room = Room::new(path).ok_or("map creation failed")?;
         new_room.config.access = clone_map.config.access.clone();
         new_room.save_config()?;
+
         let mut rooms = self.rooms.lock().unwrap();
         rooms.insert(clone_map.config.name.to_owned(), Arc::new(new_room));
 
@@ -299,12 +302,14 @@ impl Server {
         group.layers.push(twmap::Layer::Game(layer));
         map.groups.push(group);
         map.check().map_err(server_error)?;
+
         fs::create_dir_all(&path).map_err(server_error)?;
         map.save_file(&map_path).map_err(server_error)?;
 
         log::debug!("created map '{}'", path.display());
 
         let mut new_room = Room::new(path).ok_or("map creation failed")?;
+
         new_room.config.access = create_map.config.access.clone();
         new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
@@ -328,9 +333,11 @@ impl Server {
         let path = PathBuf::from(format!("maps/{}", upload_map.config.name));
         let map_path = PathBuf::from(format!("maps/{}/map.map", upload_map.config.name));
 
+        fs::create_dir_all(&path).map_err(server_error)?;
         std::fs::write(&map_path, file).map_err(|_| "failed to write file")?;
+
         TwMap::parse_file(&map_path).map_err(|_| {
-            std::fs::remove_file(&map_path).unwrap();
+            std::fs::remove_file(&map_path).ok();
             "not a valid map file"
         })?;
 
@@ -1087,7 +1094,7 @@ async fn run_server(args: Cli) {
     log::info!("Listening on: {}", addr);
 
     let cors = cors::CorsLayer::new()
-        .allow_methods(vec![Method::GET, Method::POST])
+        .allow_methods(vec![Method::GET, Method::POST, Method::DELETE])
         .allow_origin(cors::Any)
         .allow_credentials(false)
         .allow_headers(cors::Any);
