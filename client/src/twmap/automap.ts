@@ -483,13 +483,13 @@ function lintAutomapper(reader: FileReader): Lint[] {
     if (tok.success && 'header' in tok.content) {
       // finished config
       if (!indexRule)
-        errs.push(lintWarn('Previous config is empty', reader.state.line, tok.content.range))
+        errs.push(lintWarn('Previous config or run is empty', reader.state.line, tok.content.range))
       reader.state.token = 0
       return errs
     }
 
-    const validToks = ['NoLayerCopy', 'Index']
-    if (indexRule) validToks.push('NewRun', 'Pos', 'Random', 'NoDefaultRule')
+    const validToks = ['NoLayerCopy', 'Index', 'NewRun']
+    if (indexRule) validToks.push('Pos', 'Random', 'NoDefaultRule')
 
     if (!tok.success || !('word' in tok.content) || !validToks.includes(tok.content.word))
       errs.push(
@@ -501,6 +501,8 @@ function lintAutomapper(reader: FileReader): Lint[] {
         )
       )
     else if (tok.content.word === 'NoLayerCopy') {
+      if (indexRule)
+        errs.push(lintWarn('Misplaced "NoLayerCopy"', reader.state.line, tok.content.range, 'For readability, "NoLayerCopy" should be placed at the start of the run.'))
       if (noLayerCopy)
         errs.push(lintWarn('Duplicate "NoLayerCopy"', reader.state.line, tok.content.range))
       else noLayerCopy = true
@@ -508,8 +510,13 @@ function lintAutomapper(reader: FileReader): Lint[] {
       reader.state.token = 0
       errs.push(...lintIndex(reader))
       indexRule = true
+      noDefaultRule = false
     } else if (tok.content.word === 'NewRun') {
-      // TODO
+      if (!indexRule)
+        errs.push(lintWarn('Previous run is empty', reader.state.line, tok.content.range))
+      indexRule = false
+      noDefaultRule = false
+      noLayerCopy = false
     } else if (tok.content.word === 'Pos') {
       reader.state.token = 0
       errs.push(...lintPos(reader))
