@@ -468,7 +468,6 @@ function lintAutomapper(reader: FileReader): Lint[] {
 
   if (!reader.lineEmpty()) {
     const range: Range = [reader.state.token, reader.lines[reader.state.line].length]
-    console.log(reader.lines[reader.state.line], reader.lines[reader.state.line])
     errs.push(lintWarn('Expected end of line', reader.state.line, range))
   }
   reader.nextLine()

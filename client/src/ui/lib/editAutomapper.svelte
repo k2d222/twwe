@@ -16,6 +16,7 @@
     LintLevel,
     lintToString,
   } from '../../twmap/automap'
+import { DDNetRulesLinter } from "./lang-ddnet_rules/lint";
 
   const dispatch = createEventDispatcher()
 
@@ -35,7 +36,7 @@
 
   function editorState(doc: string) {
     return EditorState.create({
-      extensions: [basicSetup, DDNetRules()],
+      extensions: [basicSetup, DDNetRules(), DDNetRulesLinter],
       doc
     })
   }
