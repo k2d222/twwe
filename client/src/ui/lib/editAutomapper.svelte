@@ -2,21 +2,15 @@
   import { onMount } from "svelte"
   import { automappers, server } from "../global"
   import { TrashCan as TrashIcon, Add as AddIcon } from "carbon-icons-svelte"
-  import { showError, showInfo, showWarning } from "./dialog"
-  import { Button } from 'carbon-components-svelte'
+  import { clearDialog, showError, showInfo, showWarning } from "./dialog"
+  import { Button, TextInput } from 'carbon-components-svelte'
   import { createEventDispatcher } from 'svelte'
 
   import { basicSetup } from "codemirror"
   import { EditorState } from "@codemirror/state"
   import { EditorView } from "@codemirror/view"
   import { DDNetRules } from './lang-ddnet_rules/index'
-
-  import {
-    lint as lintAutomapper,
-    LintLevel,
-    lintToString,
-  } from '../../twmap/automap'
-import { DDNetRulesLinter } from "./lang-ddnet_rules/lint";
+  import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
 
   const dispatch = createEventDispatcher()
 
@@ -70,19 +64,8 @@ import { DDNetRulesLinter } from "./lang-ddnet_rules/lint";
 
     const str = view.state.doc.toString()
 
-    const lints = lintAutomapper(str)
-    const errs = lints.filter(l => l.level === LintLevel.Error)
-
-    for (const lint of lints) {
-      await showError(lintToString(lint))
-    }
-
-    if (errs.length > 0) {
-      const resp = await showWarning(`The automapper contains ${errs.length} error(s). Proceed?`, 'yesno')
-      if (!resp) return
-    }
-
     try {
+      showInfo("Uploading...")
       const resp = await $server.query('uploadautomapper', {
         image: selected,
         content: str
@@ -96,10 +79,7 @@ import { DDNetRulesLinter } from "./lang-ddnet_rules/lint";
       return
     }
 
-    showInfo(
-      `Uploaded ${$automappers[selected].length} rules for '${selected}'.`,
-      'closable'
-    )
+    clearDialog()
     changed = false
   }
 
@@ -161,8 +141,8 @@ import { DDNetRulesLinter } from "./lang-ddnet_rules/lint";
   <div class="right">
     <div class="editor hljs" bind:this={editor}></div>
     <div class="controls">
-      <button class="default large" on:click={onClose}>Close</button>
-      <button class="primary large" on:click={onSave} disabled={selected === null}>Save</button>
+      <Button size="small" kind="secondary" on:click={onClose}>Close</Button>
+      <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
     </div>
   </div>
 </div>

@@ -23,7 +23,7 @@ NoLayerCopy   { "NoLayerCopy" EndLine }
   Comment { "#" ![\n]* }
   space { " " }
   EndLine { "\n" }
-  Int { @digit+ }
+  Int { $[+-]? @digit+ }
   Float { $[+-]? (@digit+ ("." @digit*)? | "." @digit+) "%"? }
   HeaderTok { "[" ![\]]* "]" }
 
