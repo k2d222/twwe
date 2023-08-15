@@ -6,19 +6,20 @@ Space = " " // 1 space only, no tabs
 EndLine = ".*\n"
 
 File = Config*
-Config = Header Run*
+Config = Header Runs?
 
 Header = "[" (name= .*) "]" EndLine
-Run = NoLayerCopy* IndexRules (NewRun Run)* | ε
+Runs = Run (NewRun Run)*
+Run = NoLayerCopy* IndexRules
 NewRun = "NewRun" EndLine
-IndexRules = Index (Pos | Random | NoDefaultRule | NoLayerCopy)*
-Index = "Index" (id= \d) Orient? EndLine
+IndexRules = IndexRule (Pos | Random | NoDefaultRule | NoLayerCopy)*
+IndexRule = "Index" (id= \d) Orient? EndLine
 Orient = Flag{0,3}
 Flag = "XFLIP" | "YFLIP" | "ROTATE"
 Pos = "Pos" (x= \d) (y= \d) (rule= PosRule) EndLine
 PosRule = "EMPTY" | "FULL" | Index
 Index = ("INDEX" | "NOTINDEX") IndexList
-IndexList = (id= \d) (Orient | "NONE" | ε) ("OR" IndexList)?
+IndexList = (id= \d) (Orient | "NONE")? ("OR" IndexList)?
 Random = "Random" Float EndLine
 Float = scanf("%f") "%"?
 NoDefaultRule = "NoDefaultRule" EndLine

@@ -1,0 +1,45 @@
+@top file { Config* }
+
+@skip { space | Comment }
+
+Config        { Header Runs? }
+Header        { HeaderTok EndLine }
+Runs          { Run (NewRun Run)* }
+Run           { NoLayerCopy* IndexRules }
+NewRun        { "NewRun" EndLine }
+IndexRules    { IndexRule (Pos | Random | NoDefaultRule | NoLayerCopy)* }
+IndexRule     { "Index" Int Orient? EndLine }
+Orient        { Flag+ }
+Flag          { "XFLIP" | "YFLIP" | "ROTATE" }
+Pos           { "Pos" Int Int PosRule EndLine }
+PosRule       { "EMPTY" | "FULL" | TileSpec }
+TileSpec      { ("INDEX" | "NOTINDEX") SpecList }
+SpecList      { Int (Orient | "NONE")? ("OR" SpecList)? }
+Random        { "Random" Float EndLine }
+NoDefaultRule { "NoDefaultRule" EndLine }
+NoLayerCopy   { "NoLayerCopy" EndLine }
+
+@tokens {
+  Comment { "#" ![\n]* }
+  space { " " }
+  EndLine { "\n" }
+  Int { @digit+ }
+  Float { $[+-]? (@digit+ ("." @digit*)? | "." @digit+) "%"? }
+  HeaderTok { "[" ![\]]* "]" }
+
+  "Index"
+  "Pos"
+  "Random"
+  "NoDefaultRule"
+  "NoLayerCopy"
+  "XFLIP"
+  "YFLIP"
+  "ROTATE"
+  "INDEX"
+  "NOTINDEX"
+  "EMPTY"
+  "FULL"
+  "OR"
+
+  @precedence { Comment, EndLine }
+}
