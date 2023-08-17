@@ -7,14 +7,17 @@
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
-  import { server, serverConfig, selected } from '../global'
+  import { server, serverConfig, selected, automappers } from '../global'
   import { decodePng, externalImageUrl, isPhysicsLayer } from './util'
   import { Image } from '../../twmap/image'
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
+  import AutomapperPicker from './automapper.svelte'
+  // import { automap, parse, type Config as AutomapperConfig } from '../../twmap/automap'
   import { createEventDispatcher } from 'svelte'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
+  import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
 
   type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
   type EventMap = { [K in Events]: RequestContent[K] }
@@ -100,7 +103,21 @@
     }
   }
 
+  function automapperConfig(layer: TilesLayer): string | null {
+    if (
+      layer.automapper.config === -1 ||
+      !layer.image ||
+      !(layer.image.name in $automappers) ||
+      layer.automapper.config >= $automappers[layer.image.name].length
+    ) {
+      return null
+    }
+
+    return $automappers[layer.image.name][layer.automapper.config]
+  }
+
   let imagePickerOpen = false
+  let automapperOpen = false
 
   async function onImagePick(e: Event & { detail: File | Image | string | null }) {
     imagePickerOpen = false
@@ -228,6 +245,47 @@
   function onDelete() {
     onDeleteLayer({ group: g, layer: l })
   }
+  async function onAutomap() {
+    // TODO: move this, merge with event received from server
+    await $server.query('applyautomapper', { group: g, layer: l })
+    const tlayer = layer as TilesLayer
+    const data = await $server.query('sendlayer', { group: g, layer: l })
+    const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(tlayer.flags))
+
+    for (let i = 0; i < tiles.length; ++i) {
+      const tile = tiles[i]
+      const x = i % tlayer.width
+      const y = Math.floor(i / tlayer.width)
+
+      $rmap.editTile({
+        group: g,
+        layer: l,
+        x,
+        y,
+        ...tile
+      })
+    }
+
+    // client-side automapping
+    // setTimeout(async () => {
+    //   const txt = await $server.query('sendautomapper', tlayer.image.name)
+    //   const am = parse(txt)
+    //   const conf = am[tlayer.automapper.config]
+    //   $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
+    // }, 5000)
+  }
+  function onAutomapperChange() {
+    const automapper = (layer as TilesLayer).automapper
+    onEditLayer({
+      group: g,
+      layer: l,
+      automapper: {
+        config: automapper.config === -1 ? null : automapper.config,
+        seed: automapper.seed,
+        automatic: automapper.automatic,
+      }
+    })
+  }
 </script>
 
 <div class="edit-layer">
@@ -309,6 +367,26 @@
           on:change={onEditColorEnvOffset}
         />
       </label>
+      {@const conf = automapperConfig(layer)}
+      <label>
+        Automapper <input type="button" value={conf ?? 'None'} disabled={layer.image === null} on:click={() => automapperOpen = true} />
+      </label>
+      <ComposedModal bind:open={automapperOpen} size="sm" selectorPrimaryFocus=".bx--modal-close">
+        <ModalHeader title="Automapper" />
+        <ModalBody hasForm>
+          <AutomapperPicker
+            {layer}
+            on:change={onAutomapperChange}
+          />
+        </ModalBody>
+      </ComposedModal>
+      <button
+        class="default"
+        disabled={conf === null}
+        on:click={onAutomap}
+      >
+        Apply Automapper
+      </button>
     {/if}
     {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
       <label>
@@ -333,3 +411,4 @@
     />
   </ModalBody>
 </ComposedModal>
+

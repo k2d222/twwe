@@ -7,12 +7,21 @@ import {
   SpeedupLayer,
   SwitchLayer,
   TuneLayer,
+  TilesLayer,
 } from './tilesLayer'
 import { DataFile } from './datafile'
-import { parseGroup, parseImage, parseEnvelope, parseInfo, parseString } from './parser'
+import {
+  parseGroup,
+  parseImage,
+  parseEnvelope,
+  parseInfo,
+  parseString,
+  parseAutomapper,
+} from './parser'
 import { Group } from './group'
 import { Image } from './image'
 import { ColorEnvelope, PositionEnvelope, SoundEnvelope } from './envelope'
+import { fromString as UuidFromString } from './uuid'
 
 export type Ctor<T> = new (...args: any[]) => T
 export type PhysicsLayer =
@@ -60,6 +69,14 @@ export class Map {
     this.envelopes = this.loadEnvelopes(df)
     this.groups = this.loadGroups(df)
     this.info = this.loadInfo(df)
+    const amConfigs = this.loadAutomapperConfigs(df)
+
+    for (const config of amConfigs) {
+      const layer = this.groups[config.group].layers[config.layer] as TilesLayer
+      layer.automapper.automatic = (config.flags & 0b1) === 1
+      layer.automapper.config = config.config
+      layer.automapper.seed = config.seed
+    }
   }
 
   groupIndex(group: Group): number {
@@ -143,7 +160,7 @@ export class Map {
 
     if (!imagesInfo) return []
 
-    const images = []
+    const images: Image[] = []
 
     for (let i = 0; i < imagesInfo.num; i++) {
       const imageItem = df.getItem(imagesInfo.start + i)
@@ -162,7 +179,7 @@ export class Map {
 
     if (!groupsInfo) return []
 
-    const groups = []
+    const groups: Group[] = []
 
     for (let g = 0; g < groupsInfo.num; g++) {
       const groupItem = df.getItem(groupsInfo.start + g)
@@ -176,12 +193,12 @@ export class Map {
     return groups
   }
 
-  loadEnvelopes(df: DataFile) {
+  private loadEnvelopes(df: DataFile) {
     const envsInfo = df.getType(Info.ItemType.ENVELOPE)
 
     if (!envsInfo) return []
 
-    const envelopes = []
+    const envelopes: Envelope[] = []
 
     for (let e = 0; e < envsInfo.num; e++) {
       const envItem = df.getItem(envsInfo.start + e)
@@ -201,5 +218,22 @@ export class Map {
     }
 
     return envelopes
+  }
+
+  private loadAutomapperConfigs(df: DataFile) {
+    const uuid = UuidFromString('mapitemtype-automapper-config@ddnet.tw')
+    const automappersInfo = df.findUuidType(uuid)
+
+    if (!automappersInfo) return []
+
+    const automappers: Info.Automapper[] = []
+
+    for (let i = 0; i < automappersInfo.num; i++) {
+      const item = df.getItem(automappersInfo.start + i)
+      const automapperInfo = parseAutomapper(item.data)
+      automappers.push(automapperInfo)
+    }
+
+    return automappers
   }
 }

@@ -2,34 +2,46 @@ extern crate pretty_env_logger;
 
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use axum::extract::ws::Message;
-use ndarray::Array2;
+use base64::Engine;
+use ndarray::{s, Array2, ArrayView};
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
-use twmap::{
-    checks::CheckData, constants, parse::LayerFlags, CompressedData, EmbeddedImage, Env, Envelope,
-    ExternalImage, FrontLayer, GameLayer, Group, Image, Info, Layer, LayerKind, Point, QuadsLayer,
-    SpeedupLayer, SwitchLayer, TeleLayer, TileFlags, TilemapLayer, TilesLayer, TuneLayer, TwMap,
-};
+use structview::View;
+use twmap::*;
+use twmap::{automapper::Automapper, constants};
 use uuid::Uuid;
 
 use crate::{
     map_cfg::MapConfig,
     protocol::*,
-    twmap_map_checks::check_env_points,
-    twmap_map_edit::{extend_layer, shrink_layer},
+    twmap_map_checks::{CheckData, InternalMapChecking}, // TODO ask @patiga for granular checks
+    twmap_map_edit::{extend_layer, shrink_layer}, // TODO I think twmap has methods for this now
     Peer,
 };
 
 type Tx = UnboundedSender<Message>;
+
+// taken as-is from twmap
+trait ViewAsBytes: View {
+    fn into_boxed_bytes(boxed_slice: Box<[Self]>) -> Box<[u8]> {
+        let len = boxed_slice.len() * std::mem::size_of::<Self>();
+        let ptr = Box::into_raw(boxed_slice);
+        unsafe {
+            let byte_slice = std::slice::from_raw_parts_mut(ptr as *mut u8, len);
+            Box::from_raw(byte_slice)
+        }
+    }
+}
+impl<T: View> ViewAsBytes for T {}
 
 fn server_error<E: std::fmt::Display>(err: E) -> &'static str {
     log::error!("{}", err);
@@ -43,7 +55,7 @@ fn load_map(path: &Path) -> Result<TwMap, twmap::Error> {
 }
 
 fn set_layer_width<T: TilemapLayer>(layer: &mut T, width: usize) -> Result<(), &'static str> {
-    let old_width = layer.tiles().shape().x as isize;
+    let old_width = layer.tiles().shape().w as isize;
     let diff = width as isize - old_width;
 
     if width < 2 || width > 10000 {
@@ -60,7 +72,7 @@ fn set_layer_width<T: TilemapLayer>(layer: &mut T, width: usize) -> Result<(), &
 }
 
 pub fn set_layer_height<T: TilemapLayer>(layer: &mut T, height: usize) -> Result<(), &'static str> {
-    let old_height = layer.tiles().shape().y as isize;
+    let old_height = layer.tiles().shape().h as isize;
     let diff = height as isize - old_height;
 
     if height < 2 || height > 10000 {
@@ -93,7 +105,7 @@ impl LazyMap {
 
     fn unload(&self) {
         *self.map.lock() = None;
-        log::debug!("unloaded map {}", self.path.display());
+        log::debug!("unloaded map '{}'", self.path.display());
     }
 
     pub fn get(&self) -> MappedMutexGuard<TwMap> {
@@ -101,15 +113,12 @@ impl LazyMap {
         let mut map = self.map.lock();
         if *map == None {
             *map = load_map(&self.path).ok();
-            log::debug!("loaded map {}", self.path.display());
+            log::debug!("loaded map '{}'", self.path.display());
         }
         match *map {
             Some(_) => MutexGuard::map(map, |m| m.as_mut().unwrap()),
-            None => panic!("failed to load map {}", self.path.display()),
+            None => panic!("failed to load map '{}'", self.path.display()),
         }
-    }
-    pub fn get_opt(&self) -> MutexGuard<Option<TwMap>> {
-        self.map.lock()
     }
 }
 
@@ -164,6 +173,10 @@ impl Room {
         self.name.as_ref()
     }
 
+    pub fn path(&self) -> &Path {
+        self.path.as_ref()
+    }
+
     pub fn add_peer(&self, peer: &Peer) {
         self.peers().insert(
             peer.addr,
@@ -198,6 +211,38 @@ impl Room {
         }
     }
 
+    pub fn layer_data(&self, group: usize, layer: usize) -> Result<String, &'static str> {
+        let mut map = self.map.get();
+        let group = map.groups.get_mut(group).ok_or("invalid group index")?;
+        let layer = group.layers.get_mut(layer).ok_or("invalid layer index")?;
+
+        // TODO I really need to stop using macros and use traits instead
+        macro_rules! layer_data {
+            ($layer: ident) => {{
+                let data = $layer
+                    .tiles
+                    .unwrap_ref()
+                    .to_owned()
+                    .into_raw_vec()
+                    .into_boxed_slice();
+                let buf = ViewAsBytes::into_boxed_bytes(data);
+                let str = base64::engine::general_purpose::STANDARD.encode(buf);
+                Ok(str)
+            }};
+        }
+
+        match layer {
+            Layer::Game(layer) => layer_data!(layer),
+            Layer::Tiles(layer) => layer_data!(layer),
+            Layer::Front(layer) => layer_data!(layer),
+            Layer::Tele(layer) => layer_data!(layer),
+            Layer::Speedup(layer) => layer_data!(layer),
+            Layer::Switch(layer) => layer_data!(layer),
+            Layer::Tune(layer) => layer_data!(layer),
+            Layer::Invalid(_) | Layer::Sounds(_) | Layer::Quads(_) => Err("not a tiles layer"),
+        }
+    }
+
     pub fn send_map(&self, peer: &Peer) -> Result<(), &'static str> {
         let buf = {
             let mut buf = Vec::new();
@@ -207,18 +252,6 @@ impl Room {
 
         peer.tx.unbounded_send(Message::Binary(buf)).ok();
 
-        Ok(())
-    }
-
-    pub fn save_map_copy(&self, path: &PathBuf) -> Result<(), &'static str> {
-        // clone the map to release the lock as soon as possible
-        self.map
-            .get()
-            .clone()
-            .save_file(path)
-            .map_err(server_error)?;
-
-        log::debug!("cloned {} to {}", self.map.path.display(), path.display());
         Ok(())
     }
 
@@ -275,26 +308,26 @@ impl Room {
         use EditTileContent::*;
 
         match (layer, edit_tile.content.clone()) {
-            (Layer::Game(layer), Tile(edit)) => {
-                let mut tile = tile!(layer);
+            (Layer::Game(layer), Tiles(edit)) => {
+                let tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
                 if tile.flags.contains(TileFlags::OPAQUE) {
                     return Err("game layer cannot have the opaque flag");
                 }
             }
-            (Layer::Tiles(layer), Tile(edit)) => {
-                let mut tile = tile!(layer);
+            (Layer::Tiles(layer), Tiles(edit)) => {
+                let tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
             }
-            (Layer::Front(layer), Tile(edit)) => {
-                let mut tile = tile!(layer);
+            (Layer::Front(layer), Tiles(edit)) => {
+                let tile = tile!(layer);
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
             }
             (Layer::Tele(layer), Tele(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.number = edit.number;
                 tile.id = edit.id;
             }
@@ -302,14 +335,14 @@ impl Room {
                 if !(0..360).contains(&edit.angle) {
                     return Err("speedup angle must be in range (0..360)");
                 }
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.force = edit.force;
                 tile.max_speed = edit.max_speed;
                 tile.id = edit.id;
                 tile.angle = edit.angle.into();
             }
             (Layer::Switch(layer), Switch(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.number = edit.number;
                 tile.id = edit.id;
                 tile.flags = TileFlags::from_bits(edit.flags).ok_or("invalid tile flags")?;
@@ -319,7 +352,7 @@ impl Room {
                 }
             }
             (Layer::Tune(layer), Tune(edit)) => {
-                let mut tile = tile!(layer);
+                let tile = tile!(layer);
                 tile.number = edit.number;
                 tile.id = edit.id;
             }
@@ -328,6 +361,68 @@ impl Room {
             }
             (_, _) => {
                 return Err("tile type incompatible with layer type");
+            }
+        };
+
+        Ok(())
+    }
+
+    pub fn set_tiles(&self, edit_tiles: &EditTiles) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+        let group = map
+            .groups
+            .get_mut(edit_tiles.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(edit_tiles.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        if layer.kind() != edit_tiles.kind {
+            return Err("invalid layer kind");
+        }
+
+        // because all the tilemap layers share the same fields, but cannot
+        // be mutated with the TileMapLayer trait, the easyest is to copy-paste
+        // the code with a macro.
+        macro_rules! tiles {
+            ($layer: ident) => {{
+                let x = edit_tiles.x as usize;
+                let y = edit_tiles.y as usize;
+                let width = edit_tiles.width as usize;
+                let height = edit_tiles.height as usize;
+                let shape = $layer.tiles().shape();
+
+                if x + width > shape.w || y + height > shape.h {
+                    return Err("tile change outside layer");
+                }
+
+                let buf = base64::engine::general_purpose::STANDARD
+                    .decode(&edit_tiles.data)
+                    .map_err(|_| "invalid data")?;
+                let tiles =
+                    structview::View::view_slice(buf.as_slice()).map_err(|_| "invalid data")?;
+                let tiles =
+                    ArrayView::from_shape((height, width), tiles).map_err(|_| "invalid data")?;
+
+                let mut view = $layer
+                    .tiles_mut()
+                    .unwrap_mut()
+                    .slice_mut(s![y..y + height, x..x + width]);
+                view.assign(&tiles);
+            }};
+        }
+
+        match layer {
+            Layer::Game(l) => tiles!(l),
+            Layer::Tiles(l) => tiles!(l),
+            Layer::Front(l) => tiles!(l),
+            Layer::Tele(l) => tiles!(l),
+            Layer::Speedup(l) => tiles!(l),
+            Layer::Switch(l) => tiles!(l),
+            Layer::Tune(l) => tiles!(l),
+            Layer::Quads(_) | Layer::Sounds(_) | Layer::Invalid(_) => {
+                return Err("layer is not a tile layer");
             }
         };
 
@@ -348,9 +443,8 @@ impl Room {
         match layer {
             Layer::Quads(layer) => {
                 let mut quad = twmap::Quad::default();
-                quad.corners
-                    .copy_from_slice(&create_quad.content.points[..4]);
-                quad.position = create_quad.content.points[4];
+                quad.position = create_quad.content.position;
+                quad.corners = create_quad.content.corners;
                 quad.texture_coords = create_quad.content.tex_coords;
                 layer.quads.push(quad);
             }
@@ -393,8 +487,8 @@ impl Room {
                     .get_mut(edit_quad.quad as usize)
                     .ok_or("invalid quad index")?;
 
-                quad.corners.copy_from_slice(&edit_quad.content.points[..4]);
-                quad.position = edit_quad.content.points[4];
+                quad.position = edit_quad.content.position;
+                quad.corners = edit_quad.content.corners;
                 quad.colors = edit_quad.content.colors;
                 quad.texture_coords = edit_quad.content.tex_coords;
                 quad.position_env = edit_quad.content.pos_env;
@@ -458,6 +552,23 @@ impl Room {
 
     pub fn edit_envelope(&self, edit_envelope: &EditEnvelope) -> Result<(), &'static str> {
         let mut map = self.map.get();
+
+        // first, the checks with immutable ref to map
+        match edit_envelope.change {
+            OneEnvelopeChange::Points(ref points) => match points {
+                EnvPoints::Color(points) => {
+                    EnvPoint::check_all(&points, &map).map_err(|_| "invalid envelope points")?
+                }
+                EnvPoints::Position(points) => {
+                    EnvPoint::check_all(&points, &map).map_err(|_| "invalid envelope points")?
+                }
+                EnvPoints::Sound(points) => {
+                    EnvPoint::check_all(&points, &map).map_err(|_| "invalid envelope points")?
+                }
+            },
+            _ => (),
+        };
+
         let envelope = map
             .envelopes
             .get_mut(edit_envelope.index as usize)
@@ -478,15 +589,12 @@ impl Room {
             },
             OneEnvelopeChange::Points(points) => match (envelope, points) {
                 (Envelope::Color(env), EnvPoints::Color(points)) => {
-                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
                     env.points = points;
                 }
                 (Envelope::Position(env), EnvPoints::Position(points)) => {
-                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
                     env.points = points;
                 }
                 (Envelope::Sound(env), EnvPoints::Sound(points)) => {
-                    check_env_points(&points).map_err(|_| "invalid envelope points")?;
                     env.points = points;
                 }
                 _ => return Err("invalid envelope points type"),
@@ -531,7 +639,7 @@ impl Room {
 
     pub fn edit_group(&self, edit_group: &EditGroup) -> Result<(), &'static str> {
         let mut map = self.map.get();
-        let mut group = map
+        let group = map
             .groups
             .get_mut(edit_group.group as usize)
             .ok_or("invalid group index")?;
@@ -545,8 +653,8 @@ impl Room {
             Clipping(clipping) => group.clipping = clipping,
             ClipX(clip_x) => group.clip.x = clip_x,
             ClipY(clip_y) => group.clip.y = clip_y,
-            ClipW(clip_w) => group.clip_size.x = clip_w,
-            ClipH(clip_h) => group.clip_size.y = clip_h,
+            ClipW(clip_w) => group.clip.w = clip_w,
+            ClipH(clip_h) => group.clip.h = clip_h,
             Name(name) => {
                 if group.is_physics_group() {
                     return Err("cannot rename the physics group");
@@ -617,7 +725,7 @@ impl Room {
                     return Err("cannot create multiple physics layers of the same kind");
                 }
 
-                let tiles = CompressedData::Loaded(Array2::default((size.x, size.y)));
+                let tiles = CompressedData::Loaded(Array2::default((size.w, size.h)));
                 let layer = $struct { tiles };
                 group.layers.push($enum(layer));
             }};
@@ -626,7 +734,7 @@ impl Room {
         match create_layer.kind {
             // LayerKind::Game => todo!(),
             LayerKind::Tiles => {
-                let mut layer = TilesLayer::new((size.x, size.y));
+                let mut layer = TilesLayer::new((size.w, size.h));
                 layer.name = create_layer.name.to_owned();
                 group.layers.push(Layer::Tiles(layer));
             }
@@ -657,7 +765,7 @@ impl Room {
 
         if let Image(Some(i)) = edit_layer.change {
             let image = map.images.get(i as usize).ok_or("invalid image index")?;
-            let tile_dims_ok = image.size().x % 16 == 0 && image.size().y % 16 == 0;
+            let tile_dims_ok = image.size().w % 16 == 0 && image.size().h % 16 == 0;
 
             let group = map
                 .groups
@@ -703,23 +811,20 @@ impl Room {
                 }
                 *layer.name_mut().ok_or("cannot change layer name")? = name
             }
-            Flags(flags) => {
-                let flags = LayerFlags::from_bits(flags).ok_or("invalid layer flags")?;
-                match layer {
-                    Layer::Front(_)
-                    | Layer::Tele(_)
-                    | Layer::Speedup(_)
-                    | Layer::Switch(_)
-                    | Layer::Tune(_)
-                    | Layer::Invalid(_)
-                    | Layer::Game(_) => (),
-                    Layer::Tiles(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
-                    Layer::Quads(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
-                    Layer::Sounds(layer) => layer.detail = flags.contains(LayerFlags::DETAIL),
-                }
-            }
+            Flags(flags) => match layer {
+                Layer::Front(_)
+                | Layer::Tele(_)
+                | Layer::Speedup(_)
+                | Layer::Switch(_)
+                | Layer::Tune(_)
+                | Layer::Invalid(_)
+                | Layer::Game(_) => (),
+                Layer::Tiles(layer) => layer.detail = (flags & 0b1) == 1,
+                Layer::Quads(layer) => layer.detail = (flags & 0b1) == 1,
+                Layer::Sounds(layer) => layer.detail = (flags & 0b1) == 1,
+            },
             Color(color) => match layer {
-                Layer::Tiles(layer) => layer.color = color,
+                Layer::Tiles(layer) => layer.color = color.into(),
                 _ => return Err("cannot change layer color"),
             },
             Width(width) => match layer {
@@ -789,6 +894,10 @@ impl Room {
             ColorEnvOffset(color_env_off) => match layer {
                 Layer::Tiles(layer) => layer.color_env_offset = color_env_off,
                 _ => return Err("cannot change layer color envelope offset"),
+            },
+            Automapper(config) => match layer {
+                Layer::Tiles(layer) => layer.automapper_config = config,
+                _ => return Err("cannot change layer automapper"),
             },
         }
 
@@ -914,8 +1023,8 @@ impl Room {
         Ok(ImageInfo {
             index: index as u16,
             name: image.name().to_owned(),
-            width: image.size().x as u32,
-            height: image.size().y as u32,
+            width: image.size().w as u32,
+            height: image.size().h as u32,
         })
     }
 
@@ -974,6 +1083,58 @@ impl Room {
             let mut map = self.map.get();
             map.info = info;
             Ok(())
+        }
+    }
+
+    pub fn apply_automapper(&self, apply_automapper: &ApplyAutomapper) -> Result<(), &'static str> {
+        let mut map = self.map.get();
+
+        // COMBAK: some shenanigans to get the image name before mutable borrow of layer
+        // HELP ME RUST GOD THIS HURTS
+        let group = map
+            .groups
+            .get(apply_automapper.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get(apply_automapper.layer as usize)
+            .ok_or("invalid layer index")?;
+        let image_name = if let Layer::Tiles(layer) = layer {
+            let img_index = layer.image.ok_or("layer has no image")?;
+            let image_name = map
+                .images
+                .get(img_index as usize)
+                .ok_or("internal server error")?
+                .name()
+                .to_owned();
+            Some(image_name)
+        } else {
+            None
+        }
+        .ok_or("layer is not a tiles layer")?;
+
+        let group = map
+            .groups
+            .get_mut(apply_automapper.group as usize)
+            .ok_or("invalid group index")?;
+        let layer = group
+            .layers
+            .get_mut(apply_automapper.layer as usize)
+            .ok_or("invalid layer index")?;
+
+        match layer {
+            Layer::Tiles(layer) => {
+                let mut path = self.path.clone();
+                path.push(format!("{}.rules", image_name));
+                let contents = fs::read_to_string(path).map_err(|_| "automapper file not found")?;
+                let automapper = Automapper::parse(image_name, &contents)
+                    .map_err(|_| "automapper syntax error")?;
+                layer
+                    .run_automapper(&automapper)
+                    .map_err(|_| "automapper parse failure")?;
+                Ok(())
+            }
+            _ => Err("layer is not a tiles layer"),
         }
     }
 }

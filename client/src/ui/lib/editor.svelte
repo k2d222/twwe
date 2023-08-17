@@ -19,17 +19,20 @@
     ReorderLayer,
     CreateImage,
     DeleteImage,
-ListUsers,
+    ListUsers,
+    EditTiles,
+    ApplyAutomapper,
+    AutomapperConfigs,
   } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Group } from '../../twmap/group'
   import { LayerType } from '../../twmap/types'
   import type { RenderGroup } from '../../gl/renderGroup'
   import type { RenderLayer } from '../../gl/renderLayer'
-  import { GameLayer } from '../../twmap/tilesLayer'
+  import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
-  import { server, serverConfig, rmap, selected } from '../global'
+  import { server, serverConfig, rmap, selected, automappers } from '../global'
   import { canvas } from '../../gl/global'
   import TreeView from './treeView.svelte'
   import { showInfo, showError, clearDialog, showDialog } from './dialog'
@@ -40,6 +43,7 @@ ListUsers,
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
+  import AutomapperEditor from './editAutomapper.svelte'
   import Viewport from './viewport.svelte'
   import {
     Layers as LayersIcon,
@@ -50,6 +54,7 @@ ListUsers,
     Image as ImagesIcon,
     Music as SoundsIcon,
     Add as CreateGroupIcon,
+    Script as AutomapperIcon,
   } from 'carbon-icons-svelte'
   import {
     Button,
@@ -60,11 +65,14 @@ ListUsers,
     OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
+  import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
+  import type * as MapDir from '../../twmap/mapdir'
 
   // let viewport: Viewport
   let animEnabled = false
   let peerCount = 0
   let infoEditorVisible = false
+  let automappersVisible = false
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -184,6 +192,50 @@ ListUsers,
   }
   function serverOnEditTile(e: EditTile) {
     $rmap.editTile(e)
+  }
+  function serverOnEditTiles(e: EditTiles) {
+    const tiles = dataToTiles(e.data, e.kind as MapDir.LayerKind)
+
+    for (let i = 0; i < tiles.length; ++i) {
+      const tile = tiles[i]
+      const x = i % e.width
+      const y = Math.floor(i / e.width)
+
+      $rmap.editTile({
+        group: e.group,
+        layer: e.layer,
+        x: x + e.x,
+        y: y + e.y,
+        ...tile
+      })
+    }
+  }
+  async function serverOnApplyAutomapper(e: ApplyAutomapper) {
+    const data = await $server.query('sendlayer', { group: g, layer: l })
+    const layer = $rmap.groups[e.group].layers[e.layer].layer as AnyTilesLayer<any>
+    const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(layer.flags))
+
+    for (let i = 0; i < tiles.length; ++i) {
+      const tile = tiles[i]
+      const x = i % layer.width
+      const y = Math.floor(i / layer.width)
+
+      $rmap.editTile({
+        group: g,
+        layer: l,
+        x,
+        y,
+        ...tile
+      })
+    }
+  }
+  function serverOnDeleteAutomapper(e: string) {
+    delete $automappers[e]
+    $automappers = $automappers
+  }
+  function serverOnUploadAutomapper(e: AutomapperConfigs) {
+    $automappers[e.image] = e.configs
+    $automappers = $automappers
   }
   function serverOnCreateQuad(e: CreateQuad) {
     $rmap.createQuad(e)
@@ -311,6 +363,10 @@ ListUsers,
     $server.socket.addEventListener('close', onServerClosed, { once: true })
     $server.on('listusers', serverOnUsers)
     $server.on('edittile', serverOnEditTile)
+    $server.on('edittiles', serverOnEditTiles)
+    $server.on('applyautomapper', serverOnApplyAutomapper)
+    $server.on('deleteautomapper', serverOnDeleteAutomapper)
+    $server.on('uploadautomapper', serverOnUploadAutomapper)
     $server.on('createquad', serverOnCreateQuad)
     $server.on('editquad', serverOnEditQuad)
     $server.on('deletequad', serverOnDeleteQuad)
@@ -338,6 +394,10 @@ ListUsers,
     $server.socket.removeEventListener('error', onServerClosed)
     $server.off('listusers', serverOnUsers)
     $server.off('edittile', serverOnEditTile)
+    $server.off('edittiles', serverOnEditTiles)
+    $server.off('applyautomapper', serverOnApplyAutomapper)
+    $server.off('deleteautomapper', serverOnDeleteAutomapper)
+    $server.off('uploadautomapper', serverOnUploadAutomapper)
     $server.off('createquad', serverOnCreateQuad)
     $server.off('editquad', serverOnEditQuad)
     $server.off('deletequad', serverOnDeleteQuad)
@@ -389,6 +449,14 @@ ListUsers,
 
   function onToggleAnim() {
     animEnabled = !animEnabled
+  }
+
+  function onToggleAutomappers() {
+    automappersVisible = !automappersVisible
+  }
+
+  function onAutomapperClose() {
+    automappersVisible = false
   }
 
   async function onSaveMap() {
@@ -502,10 +570,13 @@ ListUsers,
         <EnvelopesIcon size={20} title="Envelopes" />
       </button>
       <button class="header-btn" id="images-toggle" disabled>
-        <ImagesIcon size={20} title="Images" />
+        <ImagesIcon size={20} title="Images (TODO)" />
       </button>
       <button class="header-btn" id="sounds-toggle" disabled>
-        <SoundsIcon size={20} title="Sounds" />
+        <SoundsIcon size={20} title="Sounds (TODO)" />
+      </button>
+      <button class="header-btn" id="automappers-toggle" on:click={onToggleAutomappers}>
+        <AutomapperIcon size={20} title="Automappers" />
       </button>
       <button class="header-btn" id="save" on:click={onSaveMap}>
         <SaveIcon size={20} title="Save map on server" />
@@ -600,6 +671,18 @@ ListUsers,
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
       <InfoEditor info={$rmap.map.info} />
+    </ModalBody>
+  </ComposedModal>
+
+  <ComposedModal
+    size="lg"
+    open={automappersVisible}
+    on:close={onAutomapperClose}
+    selectorPrimaryFocus=".bx--modal-close"
+  >
+    <ModalHeader title="Automappers" />
+    <ModalBody hasForm>
+      <AutomapperEditor on:close={() => (automappersVisible = false)} />
     </ModalBody>
   </ComposedModal>
 

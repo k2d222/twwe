@@ -50,13 +50,13 @@
   $: normSelection = normalizeRange(selection)
 
   // this is a bit monolithic but hey typescript
-  let currentTile: { type: 'tile' } & Tile = { type: 'tile', ...TilesLayer.defaultTile() }
-  let currentGame: { type: 'tile' } & Tile = { type: 'tile', ...GameLayer.defaultTile() }
-  let currentFront: { type: 'tile' } & Tile = { type: 'tile', ...FrontLayer.defaultTile() }
-  let currentTele: { type: 'tele' } & Tele = { type: 'tele', ...TeleLayer.defaultTile() }
-  let currentSwitch: { type: 'switch' } & Switch = { type: 'switch', ...SwitchLayer.defaultTile() }
-  let currentSpeedup: { type: 'speedup' } & Speedup = { type: 'speedup', ...SpeedupLayer.defaultTile() }
-  let currentTune: { type: 'tune' } & Tune = { type: 'tune', ...TuneLayer.defaultTile() }
+  let currentTile: { kind: 'tiles' } & Tile = { kind: 'tiles', ...TilesLayer.defaultTile() }
+  let currentGame: { kind: 'game' } & Tile = { kind: 'game', ...GameLayer.defaultTile() }
+  let currentFront: { kind: 'front' } & Tile = { kind: 'front', ...FrontLayer.defaultTile() }
+  let currentTele: { kind: 'tele' } & Tele = { kind: 'tele', ...TeleLayer.defaultTile() }
+  let currentSwitch: { kind: 'switch' } & Switch = { kind: 'switch', ...SwitchLayer.defaultTile() }
+  let currentSpeedup: { kind: 'speedup' } & Speedup = { kind: 'speedup', ...SpeedupLayer.defaultTile() }
+  let currentTune: { kind: 'tune' } & Tune = { kind: 'tune', ...TuneLayer.defaultTile() }
 
   $: currentTele.number = clamp(currentTele.number, 0, 255)
   $: currentSwitch.delay = clamp(currentSwitch.delay, 0, 255)

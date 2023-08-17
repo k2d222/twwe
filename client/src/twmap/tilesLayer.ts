@@ -59,6 +59,10 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
     return this.tiles[y * this.width + x]
   }
 
+  setTile(x: number, y: number, tile: Tile) {
+    this.tiles[y * this.width + x] = tile
+  }
+
   abstract defaultTile(): Tile
 
   setWidth(width: number, fill: () => Tile) {
@@ -88,11 +92,18 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
   protected abstract load(map: Map, df: DataFile, info: Info.TilesLayer): void
 }
 
+type AutomapperConfig = {
+  config: number
+  seed: number
+  automatic: boolean
+}
+
 export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   color: Info.Color
   image: Image | null
   colorEnv: ColorEnvelope | null
   colorEnvOffset: number
+  automapper: AutomapperConfig
 
   constructor() {
     super(Info.TilesLayerFlags.TILES)
@@ -100,6 +111,11 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
     this.image = null
     this.colorEnv = null
     this.colorEnvOffset = 0
+    this.automapper = {
+      config: null,
+      seed: 0,
+      automatic: false,
+    }
   }
 
   static defaultTile(): Info.Tile {

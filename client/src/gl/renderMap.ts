@@ -47,7 +47,8 @@ import { gl } from './global'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, Ctor } from '../ui/lib/util'
-import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum } from '../server/convert'
+import { Config as AutomapperConfig, automap } from '../twmap/automap'
+import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, uvFromJson } from '../server/convert'
 import type { Brush } from 'src/ui/lib/editor'
 
 export type Range = {
@@ -299,9 +300,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
 
     const quad: Quad = {
-      points: change.points.map(p => coordFromJson(p, 15)),
+      points: [...change.corners.map(p => coordFromJson(p, 15)), coordFromJson(change.position, 15)],
       colors: change.colors,
-      texCoords: change.texCoords.map(p => coordFromJson(p, 10)),
+      texCoords: change.texCoords.map(p => uvFromJson(p, 10)),
       posEnv:
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope),
       posEnvOffset: change.posEnvOffset,
@@ -319,9 +320,9 @@ export class RenderMap {
     const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
     const quad = rlayer.layer.quads[change.quad]
 
-    if ('points' in change) quad.points = change.points.map(p => coordFromJson(p, 15))
+    if ('position' in change) quad.points[4] =  coordFromJson(change.position, 15)
     if ('colors' in change) quad.colors = change.colors
-    if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => coordFromJson(p, 10))
+    if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => uvFromJson(p, 10))
     if ('posEnv' in change)
       quad.posEnv =
         change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope)
@@ -394,6 +395,11 @@ export class RenderMap {
         }
         rlayer.recompute()
       }
+      if ('automapper' in change) {
+        rlayer.layer.automapper.config = change.automapper.config === null ? -1 : change.automapper.config
+        rlayer.layer.automapper.seed = change.automapper.seed
+        rlayer.layer.automapper.automatic = change.automapper.automatic
+      }
     } else if (rlayer instanceof RenderQuadsLayer) {
       if ('image' in change) {
         if (change.image === null) {
@@ -459,6 +465,15 @@ export class RenderMap {
     group.layers.push(rlayer.layer)
     rgroup.layers.push(rlayer)
     return rlayer
+  }
+
+  automapLayer(g: number, l: number, automapper: AutomapperConfig, seed: number) {
+    const rgroup = this.groups[g]
+    const layer = rgroup.layers[l]
+    if (!(layer instanceof RenderTilesLayer)) return
+
+    automap(layer.layer, automapper, seed)
+    layer.recompute()
   }
 
   render() {

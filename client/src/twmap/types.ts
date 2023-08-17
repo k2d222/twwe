@@ -194,6 +194,15 @@ export type Envelope = {
   synchronized?: boolean
 }
 
+export type Automapper = {
+  version: number
+  group: number
+  layer: number
+  config: number
+  seed: number
+  flags: number
+}
+
 export type EnvPoint = {
   time: number
   curve: CurveType

@@ -1,5 +1,6 @@
 import type * as Info from '../twmap/types'
 import type * as MapDir from '../twmap/mapdir'
+import type { AutomapperConfig } from '../twmap/mapdir'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
@@ -111,6 +112,7 @@ export interface EditTilesLayer extends CommonLayerChange {
   colorEnv?: number | null
   colorEnvOffset?: number
   image?: number | null
+  automapper?: AutomapperConfig
 }
 
 export interface EditQuadsLayer extends CommonLayerChange {
@@ -133,11 +135,13 @@ export interface DeleteLayer {
 }
 
 export type EditTileParams =
-  | (Info.Tile & { type: 'tile' })
-  | (Info.Tele & { type: 'tele' })
-  | (Info.Speedup & { type: 'speedup' })
-  | (Info.Switch & { type: 'switch' })
-  | (Info.Tune & { type: 'tune' })
+  | (Info.Tile & { kind: 'tiles' })
+  | (Info.Tile & { kind: 'game' })
+  | (Info.Tile & { kind: 'front' })
+  | (Info.Tele & { kind: 'tele' })
+  | (Info.Speedup & { kind: 'speedup' })
+  | (Info.Switch & { kind: 'switch' })
+  | (Info.Tune & { kind: 'tune' })
 
 export type EditTile = EditTileParams & {
   group: number
@@ -146,12 +150,29 @@ export type EditTile = EditTileParams & {
   y: number
 }
 
+export type EditTiles = {
+  group: number,
+  layer: number,
+  x: number,
+  y: number,
+  kind: 'tiles' | 'game' | 'front' | 'tele' | 'speedup' | 'switch' | 'tune'
+  width: number,
+  height: number,
+  data: string, // binary data format in base64
+}
+
+export interface SendLayer {
+  group: number
+  layer: number
+}
+
 export type CreateQuad = {
   group: number
   layer: number
-  points: MapDir.Point<FixedNum>[]
-  colors: Info.Color[]
-  texCoords: MapDir.Point<FixedNum>[]
+  position: MapDir.Point<FixedNum>
+  corners: MapDir.Point<FixedNum>[] // 4 points
+  colors: MapDir.Color<number>[]
+  texCoords: MapDir.Uv<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -162,9 +183,10 @@ export type EditQuad = {
   group: number
   layer: number
   quad: number
-  points: MapDir.Point<FixedNum>[]
-  colors: Info.Color[]
-  texCoords: MapDir.Point<FixedNum>[]
+  position: MapDir.Point<FixedNum>
+  corners: MapDir.Point<FixedNum>[] // 4 points
+  colors: MapDir.Color<number>[]
+  texCoords: MapDir.Uv<FixedNum>[]
   posEnv: number | null
   posEnvOffset: number
   colorEnv: number | null
@@ -203,7 +225,7 @@ export interface EditEnvelope {
   points?:
     | {
         type: 'color'
-        content: EnvPoint<MapDir.Color<string>>[]
+        content: EnvPoint<MapDir.Color<FixedNum>>[]
       }
     | {
         type: 'position'
@@ -237,6 +259,27 @@ export interface MapInfo {
 
 export interface ListMaps {
   maps: MapInfo[]
+}
+
+// AUTOMAPPERS
+
+export interface ListAutomappers {
+  configs: { [k in string]: string[] }
+}
+
+export interface UploadAutomapper {
+  image: string
+  content: string
+}
+
+export interface ApplyAutomapper {
+  group: number
+  layer: number
+}
+
+export interface AutomapperConfigs {
+  image: string
+  configs: string[]
 }
 
 // IMAGES
@@ -306,6 +349,14 @@ export interface RequestContent {
   deletelayer: DeleteLayer
 
   edittile: EditTile
+  edittiles: EditTiles
+  sendlayer: SendLayer
+
+  listautomappers: null
+  sendautomapper: string
+  deleteautomapper: string
+  uploadautomapper: UploadAutomapper
+  applyautomapper: ApplyAutomapper
 
   createquad: CreateQuad
   editquad: EditQuad
@@ -347,6 +398,14 @@ export interface ResponseContent {
   deletelayer: DeleteLayer
 
   edittile: EditTile
+  edittiles: EditTiles
+  sendlayer: string
+
+  listautomappers: ListAutomappers
+  sendautomapper: string
+  deleteautomapper: string
+  uploadautomapper: AutomapperConfigs
+  applyautomapper: ApplyAutomapper
 
   createquad: CreateQuad
   editquad: EditQuad

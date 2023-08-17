@@ -2,9 +2,8 @@ use std::collections::HashMap;
 
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
-use twmap::{
-    Color, EnvPoint, I32Color, Info, InvalidLayerKind, LayerKind, Point, Position, Volume,
-};
+use twmap::{AutomapperConfig, EnvPoint, Info, InvalidLayerKind, LayerKind, Position, Volume};
+use vek::{Rgba, Uv, Vec2};
 
 use crate::map_cfg::MapAccess;
 
@@ -145,12 +144,13 @@ pub struct DeleteGroup {
 pub enum OneLayerChange {
     Name(String),
     Flags(i32),
-    Color(Color),
+    Color(Rgba<u8>),
     Width(u32),
     Height(u32),
     Image(Option<u16>),
     ColorEnv(Option<u16>),
     ColorEnvOffset(i32),
+    Automapper(AutomapperConfig),
 }
 
 // see https://serde.rs/remote-derive.html
@@ -249,7 +249,7 @@ pub struct Tune {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum EditTileContent {
-    Tile(Tile),
+    Tiles(Tile),
     Tele(Tele),
     Speedup(Speedup),
     Switch(Switch),
@@ -268,10 +268,31 @@ pub struct EditTile {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct EditTiles {
+    pub group: u32,
+    pub layer: u32,
+    pub x: u32,
+    pub y: u32,
+    #[serde(with = "SerdeLayerKind")]
+    pub kind: LayerKind,
+    pub width: u32,
+    pub height: u32,
+    pub data: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SendLayer {
+    pub group: u32,
+    pub layer: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Quad {
-    pub points: [Point<I17F15>; 5],
-    pub colors: [Color; 4],
-    pub tex_coords: [Point<I22F10>; 4],
+    pub position: Vec2<I17F15>,
+    pub corners: [Vec2<I17F15>; 4],
+    pub colors: [Rgba<u8>; 4],
+    pub tex_coords: [Uv<I22F10>; 4],
     pub pos_env: Option<u16>,
     pub pos_env_offset: i32,
     pub color_env: Option<u16>,
@@ -307,7 +328,7 @@ pub struct DeleteQuad {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type", content = "content")]
 pub enum EnvPoints {
-    Color(Vec<EnvPoint<I32Color>>),
+    Color(Vec<EnvPoint<Rgba<I22F10>>>),
     Position(Vec<EnvPoint<Position>>),
     Sound(Vec<EnvPoint<Volume>>),
 }
@@ -380,6 +401,29 @@ pub struct ImageConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ListAutomappers {
+    pub configs: HashMap<String, Vec<String>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UploadAutomapper {
+    pub image: String,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AutomapperConfigs {
+    pub image: String,
+    pub configs: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ApplyAutomapper {
+    pub group: u32,
+    pub layer: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateImage {
     pub name: String,
     pub index: u16,
@@ -401,7 +445,7 @@ pub struct ImageInfo {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Cursor {
-    pub point: Point<f32>,
+    pub point: Vec2<f32>,
     pub group: i32,
     pub layer: i32,
 }
@@ -436,6 +480,8 @@ pub enum RequestContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+    EditTiles(EditTiles),
+    SendLayer(SendLayer),
 
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
@@ -447,6 +493,12 @@ pub enum RequestContent {
 
     ListUsers,
     ListMaps,
+
+    ListAutomappers,
+    SendAutomapper(String),
+    DeleteAutomapper(String),
+    UploadAutomapper(UploadAutomapper),
+    ApplyAutomapper(ApplyAutomapper),
 
     CreateImage(CreateImage),
     ImageInfo(u16),
@@ -478,6 +530,8 @@ pub enum ResponseContent {
     DeleteLayer(DeleteLayer),
 
     EditTile(EditTile),
+    EditTiles(EditTiles),
+    SendLayer(String),
 
     CreateQuad(CreateQuad),
     EditQuad(EditQuad),
@@ -489,6 +543,12 @@ pub enum ResponseContent {
 
     ListUsers(ListUsers),
     ListMaps(ListMaps),
+
+    ListAutomappers(ListAutomappers),
+    SendAutomapper(String),
+    DeleteAutomapper(String),
+    UploadAutomapper(AutomapperConfigs),
+    ApplyAutomapper(ApplyAutomapper),
 
     CreateImage(CreateImage),
     ImageInfo(ImageInfo),

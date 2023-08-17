@@ -34,7 +34,7 @@ use futures::{
     future, StreamExt, TryStreamExt,
 };
 
-use twmap::{checks::CheckData, EmbeddedImage, Image, Point, TwMap};
+use twmap::{automapper::Automapper, EmbeddedImage, Image, TwMap};
 
 mod room;
 use room::Room;
@@ -42,6 +42,7 @@ use room::Room;
 mod map_cfg;
 mod protocol;
 use protocol::*;
+use twmap_map_checks::CheckData;
 
 mod twmap_map_checks;
 mod twmap_map_edit;
@@ -181,41 +182,49 @@ impl Server {
         }
 
         if let Ok(content) = content {
+            use ResponseContent::*;
             match content {
-                ResponseContent::CreateMap(_) => (),
-                ResponseContent::CloneMap(_) => (),
-                ResponseContent::JoinMap(_) => self.broadcast_users(peer),
-                ResponseContent::LeaveMap => self.broadcast_users(peer),
-                ResponseContent::SaveMap(_) => (),
-                ResponseContent::EditMap(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteMap(_) => (),
-                ResponseContent::RenameMap(content) => {
+                CreateMap(_) => (),
+                CloneMap(_) => (),
+                JoinMap(_) => self.broadcast_users(peer),
+                LeaveMap => self.broadcast_users(peer),
+                SaveMap(_) => (),
+                EditMap(_) => self.broadcast_to_others(peer, content),
+                DeleteMap(_) => (),
+                RenameMap(content) => {
                     self.room(&content.new_name).map(|room| {
                         self.broadcast_to_room(&room, ResponseContent::RenameMap(content))
                     });
                 }
-                ResponseContent::CreateGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ReorderGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteGroup(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::CreateLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ReorderLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteLayer(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditTile(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::CreateQuad(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditQuad(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteQuad(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::CreateEnvelope(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::EditEnvelope(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::DeleteEnvelope(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ListUsers(_) => (),
-                ResponseContent::ListMaps(_) => (),
-                ResponseContent::CreateImage(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::ImageInfo(_) => (),
-                ResponseContent::DeleteImage(_) => self.broadcast_to_others(peer, content),
-                ResponseContent::Error(_) => (),
-                ResponseContent::Cursors(_) => (),
+                CreateGroup(_) => self.broadcast_to_others(peer, content),
+                EditGroup(_) => self.broadcast_to_others(peer, content),
+                ReorderGroup(_) => self.broadcast_to_others(peer, content),
+                DeleteGroup(_) => self.broadcast_to_others(peer, content),
+                CreateLayer(_) => self.broadcast_to_others(peer, content),
+                EditLayer(_) => self.broadcast_to_others(peer, content),
+                ReorderLayer(_) => self.broadcast_to_others(peer, content),
+                DeleteLayer(_) => self.broadcast_to_others(peer, content),
+                EditTile(_) => self.broadcast_to_others(peer, content),
+                EditTiles(_) => self.broadcast_to_others(peer, content),
+                SendLayer(_) => (),
+                CreateQuad(_) => self.broadcast_to_others(peer, content),
+                EditQuad(_) => self.broadcast_to_others(peer, content),
+                DeleteQuad(_) => self.broadcast_to_others(peer, content),
+                CreateEnvelope(_) => self.broadcast_to_others(peer, content),
+                EditEnvelope(_) => self.broadcast_to_others(peer, content),
+                DeleteEnvelope(_) => self.broadcast_to_others(peer, content),
+                ListUsers(_) => (),
+                ListMaps(_) => (),
+                CreateImage(_) => self.broadcast_to_others(peer, content),
+                ImageInfo(_) => (),
+                DeleteImage(_) => self.broadcast_to_others(peer, content),
+                Error(_) => (),
+                ListAutomappers(_) => (),
+                SendAutomapper(_) => (),
+                DeleteAutomapper(_) => self.broadcast_to_others(peer, content),
+                UploadAutomapper(_) => self.broadcast_to_others(peer, content),
+                ApplyAutomapper(_) => self.broadcast_to_others(peer, content),
+                Cursors(_) => (),
             }
         }
     }
@@ -239,18 +248,32 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}/map.map", clone_map.config.name).into();
+        let path = PathBuf::from(format!("maps/{}", clone_map.config.name));
+        let map_path = PathBuf::from(format!("maps/{}/map.map", clone_map.config.name));
 
         let room = self
             .room(&clone_map.clone)
             .ok_or("cannot clone non-existing map")?;
 
-        map_path.parent().map(fs::create_dir_all);
-        room.save_map_copy(&map_path)?;
+        fs::create_dir_all(&path).map_err(server_error)?;
 
-        let mut new_room = Room::new(map_path.parent().unwrap().to_owned()).ok_or("map creation failed")?;
+        // clone the map to release the lock as soon as possible
+        room.map
+            .get()
+            .clone()
+            .save_file(&map_path)
+            .map_err(server_error)?;
+
+        log::debug!(
+            "cloned map '{}' to '{}'",
+            room.map.path.display(),
+            path.display()
+        );
+
+        let mut new_room = Room::new(path).ok_or("map creation failed")?;
         new_room.config.access = clone_map.config.access.clone();
         new_room.save_config()?;
+
         let mut rooms = self.rooms.lock().unwrap();
         rooms.insert(clone_map.config.name.to_owned(), Arc::new(new_room));
 
@@ -265,7 +288,8 @@ impl Server {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}/map.map", create_map.config.name).into();
+        let path = PathBuf::from(format!("maps/{}", create_map.config.name));
+        let map_path = PathBuf::from(format!("maps/{}/map.map", create_map.config.name));
 
         let mut map = TwMap::empty(create_map.version.unwrap_or(twmap::Version::DDNet06));
         let mut group = twmap::Group::physics();
@@ -279,10 +303,13 @@ impl Server {
         map.groups.push(group);
         map.check().map_err(server_error)?;
 
-        map_path.parent().map(fs::create_dir_all);
+        fs::create_dir_all(&path).map_err(server_error)?;
         map.save_file(&map_path).map_err(server_error)?;
 
-        let mut new_room = Room::new(map_path.parent().unwrap().to_owned()).ok_or("map creation failed")?;
+        log::debug!("created map '{}'", path.display());
+
+        let mut new_room = Room::new(path).ok_or("map creation failed")?;
+
         new_room.config.access = create_map.config.access.clone();
         new_room.save_config()?;
         let mut rooms = self.rooms.lock().unwrap();
@@ -293,19 +320,20 @@ impl Server {
 
     fn handle_upload_map(
         &self,
-        create_map: CreateMapUpload,
+        upload_map: CreateMapUpload,
         file: &[u8],
     ) -> Result<(), &'static str> {
-        if !self.check_map_path(&create_map.config.name) {
+        if !self.check_map_path(&upload_map.config.name) {
             return Err("invalid map name");
         }
-        if self.room(&create_map.config.name).is_some() {
+        if self.room(&upload_map.config.name).is_some() {
             return Err("name already taken");
         }
 
-        let map_path: PathBuf = format!("maps/{}/map.map", create_map.config.name).into();
+        let path = PathBuf::from(format!("maps/{}", upload_map.config.name));
+        let map_path = PathBuf::from(format!("maps/{}/map.map", upload_map.config.name));
 
-        map_path.parent().map(fs::create_dir_all);
+        fs::create_dir_all(&path).map_err(server_error)?;
         std::fs::write(&map_path, file).map_err(|_| "failed to write file")?;
 
         TwMap::parse_file(&map_path).map_err(|_| {
@@ -313,12 +341,14 @@ impl Server {
             "not a valid map file"
         })?;
 
-        let mut new_room = Room::new(map_path.parent().unwrap().to_owned()).ok_or("map creation failed")?;
-        new_room.config.access = create_map.config.access.clone();
+        log::debug!("uploaded map '{}'", path.display());
+
+        let mut new_room = Room::new(path).ok_or("map creation failed")?;
+        new_room.config.access = upload_map.config.access.clone();
         new_room.save_config()?;
         {
             let mut rooms = self.rooms.lock().unwrap();
-            rooms.insert(create_map.config.name.to_owned(), Arc::new(new_room));
+            rooms.insert(upload_map.config.name.to_owned(), Arc::new(new_room));
         }
 
         Ok(())
@@ -436,6 +466,18 @@ impl Server {
         Ok(ResponseContent::EditTile(edit_tile))
     }
 
+    fn handle_edit_tiles(&self, peer: &mut Peer, edit_tiles: EditTiles) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.set_tiles(&edit_tiles)?;
+        Ok(ResponseContent::EditTiles(edit_tiles))
+    }
+
+    fn handle_send_layer(&self, peer: &mut Peer, send_layer: SendLayer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        let layer = room.layer_data(send_layer.group as usize, send_layer.layer as usize)?;
+        Ok(ResponseContent::SendLayer(layer))
+    }
+
     fn handle_create_quad(&self, peer: &mut Peer, create_quad: CreateQuad) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
         room.create_quad(&create_quad)?;
@@ -548,37 +590,144 @@ impl Server {
         Ok(ResponseContent::Cursors(cursors))
     }
 
+    fn handle_list_automappers(&self, peer: &Peer) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        let path = room.path().to_str().ok_or("internal server error")?;
+
+        let rule_files: Vec<_> = glob(&format!("{}/*.rules", path))
+            .map(|paths| paths.into_iter().filter_map(|p| p.ok()).collect())
+            .unwrap_or_default();
+
+        let parse_automapper = |path: PathBuf| -> Option<(String, Automapper)> {
+            let file_name = path.file_stem()?.to_string_lossy().into_owned();
+            let file_contents = fs::read_to_string(path).ok()?;
+            let automapper = Automapper::parse(file_name.clone(), &file_contents).ok()?;
+            Some((file_name, automapper))
+        };
+
+        let automappers: HashMap<_, _> = rule_files
+            .into_iter()
+            .filter_map(parse_automapper)
+            .map(|(img_name, am)| (img_name, am.configs.into_iter().map(|c| c.name).collect()))
+            .collect();
+
+        Ok(ResponseContent::ListAutomappers(ListAutomappers {
+            configs: automappers,
+        }))
+    }
+
+    fn check_image_name(&self, name: &str) -> bool {
+        // this is a very primitive sanitization to prevent path traversal attacks.
+        !(name.chars().any(std::path::is_separator) || name.starts_with(".") || name.is_empty())
+    }
+
+    fn handle_send_automapper(&self, peer: &Peer, send_automapper: String) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        if !self.check_image_name(&send_automapper) {
+            return Err("invalid image name");
+        }
+
+        let mut path = room.path().to_owned();
+        path.push(format!("{}.rules", send_automapper));
+
+        let rule_file = fs::read_to_string(path).map_err(|_| "automapper file not found")?;
+
+        Ok(ResponseContent::SendAutomapper(rule_file))
+    }
+
+    fn handle_delete_automapper(&self, peer: &Peer, delete_automapper: String) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        if !self.check_image_name(&delete_automapper) {
+            return Err("invalid image name");
+        }
+
+        let mut path = room.path().to_owned();
+        path.push(format!("{}.rules", delete_automapper));
+
+        fs::remove_file(path).map_err(|_| "automapper file not found")?;
+
+        Ok(ResponseContent::DeleteAutomapper(delete_automapper))
+    }
+
+    fn handle_upload_automapper(
+        &self,
+        peer: &mut Peer,
+        upload_automapper: UploadAutomapper,
+    ) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+
+        if !self.check_image_name(&upload_automapper.image) {
+            return Err("invalid image name");
+        }
+
+        let mut path = room.path().to_owned();
+        path.push(format!("{}.rules", upload_automapper.image));
+
+        let automapper =
+            Automapper::parse(upload_automapper.image.clone(), &upload_automapper.content)
+                .map_err(|_| "invalid automapper file")?;
+        let configs: Vec<_> = automapper
+            .configs
+            .iter()
+            .map(|c| c.name.to_owned())
+            .collect();
+
+        fs::write(path, upload_automapper.content).map_err(server_error)?;
+
+        Ok(ResponseContent::UploadAutomapper(AutomapperConfigs {
+            image: upload_automapper.image.to_owned(),
+            configs,
+        }))
+    }
+
+    fn handle_apply_automapper(&self, peer: &mut Peer, apply_automapper: ApplyAutomapper) -> Res {
+        let room = peer.room.clone().ok_or("user is not connected to a map")?;
+        room.apply_automapper(&apply_automapper)?;
+        Ok(ResponseContent::ApplyAutomapper(apply_automapper))
+    }
+
     fn handle_request(&self, peer: &mut Peer, req: Request) {
+        use RequestContent::*;
         let res = match req.content {
-            RequestContent::CreateMap(content) => self.handle_create_map(content),
-            RequestContent::CloneMap(content) => self.handle_clone_map(content),
-            RequestContent::EditMap(content) => self.handle_edit_map(peer, content),
-            RequestContent::JoinMap(content) => self.handle_join_map(peer, content),
-            RequestContent::LeaveMap => self.handle_leave_map(peer),
-            RequestContent::SaveMap(content) => self.handle_save_map(peer, content),
-            RequestContent::DeleteMap(content) => self.handle_delete_map(peer, content),
-            RequestContent::RenameMap(content) => self.handle_rename_map(content),
-            RequestContent::CreateGroup(content) => self.handle_create_group(peer, content),
-            RequestContent::EditGroup(content) => self.handle_edit_group(peer, content),
-            RequestContent::ReorderGroup(content) => self.handle_reorder_group(peer, content),
-            RequestContent::DeleteGroup(content) => self.handle_delete_group(peer, content),
-            RequestContent::CreateLayer(content) => self.handle_create_layer(peer, content),
-            RequestContent::EditLayer(content) => self.handle_edit_layer(peer, content),
-            RequestContent::ReorderLayer(content) => self.handle_reorder_layer(peer, content),
-            RequestContent::DeleteLayer(content) => self.handle_delete_layer(peer, content),
-            RequestContent::EditTile(content) => self.handle_edit_tile(peer, content),
-            RequestContent::CreateQuad(content) => self.handle_create_quad(peer, content),
-            RequestContent::EditQuad(content) => self.handle_edit_quad(peer, content),
-            RequestContent::DeleteQuad(content) => self.handle_delete_quad(peer, content),
-            RequestContent::CreateEnvelope(content) => self.handle_create_envelope(peer, content),
-            RequestContent::EditEnvelope(content) => self.handle_edit_envelope(peer, content),
-            RequestContent::DeleteEnvelope(content) => self.handle_delete_envelope(peer, content),
-            RequestContent::ListUsers => self.handle_list_users(peer),
-            RequestContent::ListMaps => self.handle_list_maps(),
-            RequestContent::CreateImage(content) => self.handle_create_image(peer, content),
-            RequestContent::ImageInfo(content) => self.handle_image_info(peer, content),
-            RequestContent::DeleteImage(content) => self.handle_delete_image(peer, content),
-            RequestContent::Cursors(content) => self.handle_cursor(peer, content),
+            CreateMap(content) => self.handle_create_map(content),
+            CloneMap(content) => self.handle_clone_map(content),
+            EditMap(content) => self.handle_edit_map(peer, content),
+            JoinMap(content) => self.handle_join_map(peer, content),
+            LeaveMap => self.handle_leave_map(peer),
+            SaveMap(content) => self.handle_save_map(peer, content),
+            DeleteMap(content) => self.handle_delete_map(peer, content),
+            RenameMap(content) => self.handle_rename_map(content),
+            CreateGroup(content) => self.handle_create_group(peer, content),
+            EditGroup(content) => self.handle_edit_group(peer, content),
+            ReorderGroup(content) => self.handle_reorder_group(peer, content),
+            DeleteGroup(content) => self.handle_delete_group(peer, content),
+            CreateLayer(content) => self.handle_create_layer(peer, content),
+            EditLayer(content) => self.handle_edit_layer(peer, content),
+            ReorderLayer(content) => self.handle_reorder_layer(peer, content),
+            DeleteLayer(content) => self.handle_delete_layer(peer, content),
+            EditTile(content) => self.handle_edit_tile(peer, content),
+            EditTiles(content) => self.handle_edit_tiles(peer, content),
+            SendLayer(content) => self.handle_send_layer(peer, content),
+            CreateQuad(content) => self.handle_create_quad(peer, content),
+            EditQuad(content) => self.handle_edit_quad(peer, content),
+            DeleteQuad(content) => self.handle_delete_quad(peer, content),
+            CreateEnvelope(content) => self.handle_create_envelope(peer, content),
+            EditEnvelope(content) => self.handle_edit_envelope(peer, content),
+            DeleteEnvelope(content) => self.handle_delete_envelope(peer, content),
+            ListUsers => self.handle_list_users(peer),
+            ListMaps => self.handle_list_maps(),
+            CreateImage(content) => self.handle_create_image(peer, content),
+            ImageInfo(content) => self.handle_image_info(peer, content),
+            DeleteImage(content) => self.handle_delete_image(peer, content),
+            Cursors(content) => self.handle_cursor(peer, content),
+            ListAutomappers => self.handle_list_automappers(peer),
+            SendAutomapper(content) => self.handle_send_automapper(peer, content),
+            DeleteAutomapper(content) => self.handle_delete_automapper(peer, content),
+            UploadAutomapper(content) => self.handle_upload_automapper(peer, content),
+            ApplyAutomapper(content) => self.handle_apply_automapper(peer, content),
         };
         self.respond_and_broadcast(peer, req.id, res);
     }

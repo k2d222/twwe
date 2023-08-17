@@ -70,6 +70,14 @@ export class WebSocketServer implements Server {
       deletelayer: [],
 
       edittile: [],
+      edittiles: [],
+      sendlayer: [],
+
+      listautomappers: [],
+      sendautomapper: [],
+      deleteautomapper: [],
+      uploadautomapper: [],
+      applyautomapper: [],
 
       createquad: [],
       editquad: [],

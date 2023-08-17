@@ -1,30 +1,27 @@
 <script lang="ts">
-  import { server, serverConfig, rmap } from '../global'
+  import { server, serverConfig, rmap, automappers } from '../global'
   import { queryMap } from '../lib/util'
   import Dialog from '../lib/dialog.svelte'
   import Editor from '../lib/editor.svelte'
   import { RenderMap } from '../../gl/renderMap'
 
-  export let mapName: string
-
-  async function loadMap(name: string) {
-    await $server.query('joinmap', { name })
-    const map = await queryMap($serverConfig.httpUrl, name)
-    return map
-  }
+  export let name: string
 
   $: (async () => {
-    const map = await loadMap(mapName)
+    await $server.query('joinmap', { name })
+    const map = await queryMap($serverConfig.httpUrl, name)
+    const am = await $server.query('listautomappers', null)
+    $automappers = am.configs
     $rmap = new RenderMap(map)
   })()
 </script>
 
 <svelte:head>
-  <title>{mapName} - DDNet Map Editor</title>
+  <title>{name} - DDNet Map Editor</title>
 </svelte:head>
 
 {#if $rmap === null}
-  <Dialog>Loading "{mapName}"…</Dialog>
+  <Dialog>Loading "{name}"…</Dialog>
 {:else}
   <Editor />
 {/if}

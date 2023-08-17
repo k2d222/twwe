@@ -17,7 +17,8 @@ futures-util = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ndarray =  { version = "0.15", features = ["serde"] }
-twmap = "0.9"
+# twmap = "0.10"
+twmap = { git = "https://gitlab.com/k2d222/twmap.git" }
 pretty_env_logger = "0.4"
 log = "0.4"
 glob = "0.3"
@@ -31,3 +32,9 @@ tokio-util = "0.7.7"
 fixed = "1.19"
 image = "0.24.5"
 uuid = { version = "1.3.1", features = [ "v4", "fast-rng" ] }
+base64 = "0.21.2"
+structview = "1.1.0"
+bytemuck = "1.13.1"
+vek = { version = "0.15.10", features = ["rgba", "serde"] }
+thiserror = "1.0.44"
+sanitize-filename = "0.5.0"
