@@ -1,4 +1,3 @@
-import { syntaxTree } from "@codemirror/language"
 import { linter} from "@codemirror/lint"
 
 import {

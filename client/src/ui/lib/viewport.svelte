@@ -73,6 +73,7 @@
   let brushBuffer: Editor.Brush | null = null
   $: $rmap.setBrush(brushBuffer)
   $: $rmap.moveBrush(mouseRange.start)
+  $: onLayerSelectionChanged($selected)
 
   let destroyed = false
 
@@ -381,6 +382,25 @@
     }
     mouseRange.end.x = mouseRange.start.x + brushRange.end.x
     mouseRange.end.y = mouseRange.start.y + brushRange.end.y
+  }
+
+  function onLayerSelectionChanged(sel: [number, number][]) {
+    if (!brushBuffer) {
+      return
+    }
+
+    if (sel.length === 0) {
+      brushBuffer = null
+      return
+    }
+
+    const g = sel[0][0]
+    if (g !== brushBuffer.group) {
+      brushBuffer = null
+      return
+    }
+
+    brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, sel.map(s => s[1]))
   }
 </script>
 

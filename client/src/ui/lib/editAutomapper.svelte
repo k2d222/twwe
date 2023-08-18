@@ -3,7 +3,7 @@
   import { automappers, server } from "../global"
   import { TrashCan as TrashIcon, Add as AddIcon } from "carbon-icons-svelte"
   import { clearDialog, showError, showInfo, showWarning } from "./dialog"
-  import { Button, TextInput } from 'carbon-components-svelte'
+  import { Button } from 'carbon-components-svelte'
   import { createEventDispatcher } from 'svelte'
 
   import { basicSetup } from "codemirror"

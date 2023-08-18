@@ -14,6 +14,9 @@ import {
   TuneLayer,
 } from '../../twmap/tilesLayer'
 import { tilesToData } from '../../server/convert'
+import * as MapDir from '../../twmap/mapdir'
+import type { Layer } from '../../twmap/layer'
+import { QuadsLayer } from '../../twmap/quadsLayer'
 
 // list of layers -> 2d array of tiles
 export type Brush = {
@@ -63,37 +66,37 @@ export function createRange(): Range {
 
 function makeTileParams(layer: AnyTilesLayer<any>, x: number, y: number): EditTileParams {
   return layer instanceof TilesLayer
-    ? { kind: 'tiles', ...layer.getTile(x, y) }
+    ? { kind: MapDir.LayerKind.Tiles, ...layer.getTile(x, y) }
     : layer instanceof GameLayer
-    ? { kind: 'game', ...layer.getTile(x, y) }
+    ? { kind: MapDir.LayerKind.Game, ...layer.getTile(x, y) }
     : layer instanceof FrontLayer
-    ? { kind: 'front', ...layer.getTile(x, y) }
+    ? { kind: MapDir.LayerKind.Front, ...layer.getTile(x, y) }
     : layer instanceof TeleLayer
-    ? { kind: 'tele', ...layer.getTile(x, y) }
+    ? { kind: MapDir.LayerKind.Tele, ...layer.getTile(x, y) }
     : layer instanceof SwitchLayer
-    ? { kind: 'switch', ...layer.getTile(x, y) }
+    ? { kind: MapDir.LayerKind.Switch, ...layer.getTile(x, y) }
     : layer instanceof SpeedupLayer
-    ? { kind: 'speedup', ...layer.getTile(x, y) }
+    ? { kind: MapDir.LayerKind.Speedup, ...layer.getTile(x, y) }
     : layer instanceof TuneLayer
-    ? { kind: 'tune', ...layer.getTile(x, y) }
+    ? { kind: MapDir.LayerKind.Tune, ...layer.getTile(x, y) }
     : null
 }
 
 function makeDefaultTileParams(layer: AnyTilesLayer<any>): EditTileParams {
   return layer instanceof TilesLayer
-    ? { kind: 'tiles', ...layer.defaultTile() }
+    ? { kind: MapDir.LayerKind.Tiles, ...layer.defaultTile() }
     : layer instanceof GameLayer
-    ? { kind: 'game', ...layer.defaultTile() }
+    ? { kind: MapDir.LayerKind.Game, ...layer.defaultTile() }
     : layer instanceof FrontLayer
-    ? { kind: 'front', ...layer.defaultTile() }
+    ? { kind: MapDir.LayerKind.Front, ...layer.defaultTile() }
     : layer instanceof TeleLayer
-    ? { kind: 'tele', ...layer.defaultTile() }
+    ? { kind: MapDir.LayerKind.Tele, ...layer.defaultTile() }
     : layer instanceof SwitchLayer
-    ? { kind: 'switch', ...layer.defaultTile() }
+    ? { kind: MapDir.LayerKind.Switch, ...layer.defaultTile() }
     : layer instanceof SpeedupLayer
-    ? { kind: 'speedup', ...layer.defaultTile() }
+    ? { kind: MapDir.LayerKind.Speedup, ...layer.defaultTile() }
     : layer instanceof TuneLayer
-    ? { kind: 'tune', ...layer.defaultTile() }
+    ? { kind: MapDir.LayerKind.Tune, ...layer.defaultTile() }
     : null
 }
 
@@ -147,6 +150,102 @@ export function makeEmptySelection(map: Map, g: number, ll: number[], sel: Range
   }
 
   return res
+}
+
+function adaptTile(tile: EditTileParams, kind: MapDir.LayerKind): EditTileParams {
+  if (tile.kind === kind) {
+    return tile
+  } else if (kind === MapDir.LayerKind.Tiles) {
+    return {
+      id: tile.id,
+      kind,
+      flags: 0
+    }
+  } else if (kind === MapDir.LayerKind.Front) {
+    return {
+      id: tile.id,
+      kind,
+      flags: 0
+    }
+  } else if (kind === MapDir.LayerKind.Game) {
+    return {
+      id: tile.id,
+      kind,
+      flags: 0
+    }
+  } else if (kind === MapDir.LayerKind.Speedup) {
+    return {
+      id: tile.id,
+      kind,
+      force: 50,
+      maxSpeed: 0,
+      angle: 0,
+    }
+  } else if (kind === MapDir.LayerKind.Switch) {
+    return {
+      id: tile.id,
+      kind,
+      flags: 0,
+      delay: 0,
+      number: 0,
+    }
+  } else if (kind === MapDir.LayerKind.Tele) {
+    return {
+      id: tile.id,
+      kind,
+      number: 0,
+    }
+  } else {
+    throw 'Unsupported layer kind'
+  }
+}
+
+// TODO: refactor layer to contain kind (mapdir's kind instead of Info's type)
+function layerKind(layer: Layer): MapDir.LayerKind {
+  if (layer instanceof FrontLayer) {
+    return MapDir.LayerKind.Front
+  } else if (layer instanceof GameLayer) {
+    return MapDir.LayerKind.Game
+  } else if (layer instanceof QuadsLayer) {
+    return MapDir.LayerKind.Quads
+  } else if (layer instanceof SpeedupLayer) {
+    return MapDir.LayerKind.Speedup
+  } else if (layer instanceof SwitchLayer) {
+    return MapDir.LayerKind.Switch
+  } else if (layer instanceof TeleLayer) {
+    return MapDir.LayerKind.Tele
+  } else if (layer instanceof TilesLayer) {
+    return MapDir.LayerKind.Tiles
+  } else if (layer instanceof TuneLayer) {
+    return MapDir.LayerKind.Tune
+  }
+}
+
+export function adaptTilesToLayer(map: Map, g: number, l: number, tiles: EditTileParams[][]): EditTileParams[][] {
+  const layer = map.groups[g].layers[l]
+  const kind = layerKind(layer)
+
+  return tiles.map(row =>
+    row.map(tile => adaptTile(tile, kind))
+  )
+}
+
+export function adaptBrushToLayers(map: Map, brush: Brush, ll: number[]): Brush {
+  return {
+    group: brush.group,
+    layers: ll.map(l => {
+      const layer = brush.layers.find(x => x.layer === l)
+      if (layer) {
+        return layer
+      }
+      else {
+        return {
+          layer: l,
+          tiles: adaptTilesToLayer(map, brush.group, l, brush.layers[0].tiles)
+        }
+      }
+    })
+  }
 }
 
 // truncate 2D array left-right-top-bottom

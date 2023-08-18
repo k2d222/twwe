@@ -135,13 +135,15 @@ export interface DeleteLayer {
 }
 
 export type EditTileParams =
-  | (Info.Tile & { kind: 'tiles' })
-  | (Info.Tile & { kind: 'game' })
-  | (Info.Tile & { kind: 'front' })
-  | (Info.Tele & { kind: 'tele' })
-  | (Info.Speedup & { kind: 'speedup' })
-  | (Info.Switch & { kind: 'switch' })
-  | (Info.Tune & { kind: 'tune' })
+  { kind: MapDir.LayerKind } & (
+    | (Info.Tile & { kind: MapDir.LayerKind.Tiles })
+    | (Info.Tile & { kind: MapDir.LayerKind.Game })
+    | (Info.Tile & { kind: MapDir.LayerKind.Front })
+    | (Info.Tele & { kind: MapDir.LayerKind.Tele })
+    | (Info.Speedup & { kind: MapDir.LayerKind.Speedup })
+    | (Info.Switch & { kind: MapDir.LayerKind.Switch })
+    | (Info.Tune & { kind: MapDir.LayerKind.Tune })
+  )
 
 export type EditTile = EditTileParams & {
   group: number

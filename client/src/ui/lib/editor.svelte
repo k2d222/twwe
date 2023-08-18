@@ -631,10 +631,10 @@
             <div class="edit-multiple">
               <h3 class="bx--modal-header__heading">Multiple selection</h3>
               {#if ll.length > 1}
-                <span>You $selected {ll.length} tile layers.</span>
+                <span>You selected {ll.length} tile layers.</span>
                 <span>You can edit the tiles from these layers together with your brush (clone, delete and repeat).</span>
               {:else}
-                <span>You $selected multiple layers.</span>
+                <span>You selected multiple layers.</span>
                 <span>Editing quad layers together is not implemented yet. You can only edit tiles layers together.</span>
               {/if}
             </div>

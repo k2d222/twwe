@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import type * as Info from '../../twmap/types'
+  import * as MapDir from '../../twmap/mapdir'
   import type { EditTileParams } from '../../server/protocol'
   import type { Image } from '../../twmap/image'
   import type { AnyTilesLayer } from '../../twmap/tilesLayer'
@@ -50,13 +51,13 @@
   $: normSelection = normalizeRange(selection)
 
   // this is a bit monolithic but hey typescript
-  let currentTile: { kind: 'tiles' } & Tile = { kind: 'tiles', ...TilesLayer.defaultTile() }
-  let currentGame: { kind: 'game' } & Tile = { kind: 'game', ...GameLayer.defaultTile() }
-  let currentFront: { kind: 'front' } & Tile = { kind: 'front', ...FrontLayer.defaultTile() }
-  let currentTele: { kind: 'tele' } & Tele = { kind: 'tele', ...TeleLayer.defaultTile() }
-  let currentSwitch: { kind: 'switch' } & Switch = { kind: 'switch', ...SwitchLayer.defaultTile() }
-  let currentSpeedup: { kind: 'speedup' } & Speedup = { kind: 'speedup', ...SpeedupLayer.defaultTile() }
-  let currentTune: { kind: 'tune' } & Tune = { kind: 'tune', ...TuneLayer.defaultTile() }
+  let currentTile: { kind: MapDir.LayerKind.Tiles } & Tile = { kind: MapDir.LayerKind.Tiles, ...TilesLayer.defaultTile() }
+  let currentGame: { kind: MapDir.LayerKind.Game } & Tile = { kind: MapDir.LayerKind.Game, ...GameLayer.defaultTile() }
+  let currentFront: { kind: MapDir.LayerKind.Front } & Tile = { kind: MapDir.LayerKind.Front, ...FrontLayer.defaultTile() }
+  let currentTele: { kind: MapDir.LayerKind.Tele } & Tele = { kind: MapDir.LayerKind.Tele, ...TeleLayer.defaultTile() }
+  let currentSwitch: { kind: MapDir.LayerKind.Switch } & Switch = { kind: MapDir.LayerKind.Switch, ...SwitchLayer.defaultTile() }
+  let currentSpeedup: { kind: MapDir.LayerKind.Speedup } & Speedup = { kind: MapDir.LayerKind.Speedup, ...SpeedupLayer.defaultTile() }
+  let currentTune: { kind: MapDir.LayerKind.Tune } & Tune = { kind: MapDir.LayerKind.Tune, ...TuneLayer.defaultTile() }
 
   $: currentTele.number = clamp(currentTele.number, 0, 255)
   $: currentSwitch.delay = clamp(currentSwitch.delay, 0, 255)
