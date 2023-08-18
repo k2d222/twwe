@@ -288,6 +288,7 @@
 
       const range = Editor.normalizeRange(mouseRange)
       const [x, y] = viewport.worldToPixel(range.start.x, range.start.y)
+      const [offX, offY] = rgroup.offset()
       const w = (range.end.x - range.start.x + 1) * viewport.scale
       const h = (range.end.y - range.start.y + 1) * viewport.scale
 
@@ -302,8 +303,8 @@
       brushOutlineStyle = `
           width: ${w}px;
           height: ${h}px;
-          top: ${y}px;
-          left: ${x}px;
+          top: ${y + offY * viewport.scale}px;
+          left: ${x + offX * viewport.scale}px;
           background: ${fillColor};
           border-width: ${viewport.scale / 16}px;
           border-color: ${strokeColor};
