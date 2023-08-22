@@ -71,9 +71,9 @@
   let mouseRange = Editor.createRange() // start and end pos of visible brush outline
   let brushRange = Editor.createRange() // start and end pos of copied buffer (if any)
   let brushBuffer: Editor.Brush | null = null
+  $: onLayerSelectionChanged($selected)
   $: $rmap.setBrush(brushBuffer)
   $: $rmap.moveBrush(mouseRange.start)
-  $: onLayerSelectionChanged($selected)
 
   let destroyed = false
 
@@ -360,6 +360,7 @@
         tiles: e.detail,
       }]
     }
+    brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, $selected.map(s => s[1]))
 
     if (brushBuffer === null) {
       brushState = BrushState.Empty
