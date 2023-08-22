@@ -118,6 +118,7 @@
     peerCount = e.roomCount
     if (peerCount === 1) {
       cursors = {}
+      cursorAnim = spring(cursors)
     }
   }
 

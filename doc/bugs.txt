@@ -2,5 +2,4 @@ resize layer : 0 ?
 very slow pasting large tiles chunks
 preview change layer order
 preview change active layer
-cursor not disappearing on logout
 users online: 0 happened
