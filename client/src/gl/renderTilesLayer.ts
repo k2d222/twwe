@@ -732,7 +732,7 @@ function makeTexCoords(tile: { id: number; flags?: number }, atlasSize: number) 
 
 function makeArrowTexCoords(tile: { angle?: number }) {
   const cos = Math.cos(tile.angle / 180 * Math.PI)
-  const sin = Math.sin(tile.angle / 180 * Math.PI)
+  const sin = -Math.sin(tile.angle / 180 * Math.PI)
   const x = (cos - sin) / Math.sqrt(2) * 0.5
   const y = (sin + cos) / Math.sqrt(2) * 0.5
 

@@ -1,6 +1,5 @@
 resize layer : 0 ?
 very slow pasting large tiles chunks
-speedup upside down
 preview change layer order
 preview change active layer
 cursor not disappearing on logout
