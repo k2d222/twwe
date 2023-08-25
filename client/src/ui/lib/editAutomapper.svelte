@@ -19,11 +19,11 @@
   let changed = false
   let newAmName = ''
   let view: EditorView
+  let emptyState = editorState('Select or create an automapper on the left panel.')
 
   onMount(() => {
-    const state = editorState('Select or create an automapper on the left panel.')
     view = new EditorView({
-      state,
+      state: emptyState,
       parent: editor,
     })
   })
@@ -37,11 +37,17 @@
 
   async function onDelete(name: string) {
     const resp = await showWarning(`Do you want to delete '${name}'?`, 'yesno')
+    let sel = selected
 
     if (resp) {
       await $server.query('deleteautomapper', name)
       delete $automappers[name]
       $automappers = $automappers
+
+      if (name === sel) {
+        selected = null
+        view.setState(emptyState)
+      }
     }
   }
 
