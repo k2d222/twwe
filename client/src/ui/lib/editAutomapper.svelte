@@ -8,7 +8,7 @@
 
   import { basicSetup } from "codemirror"
   import { EditorState } from "@codemirror/state"
-  import { EditorView } from "@codemirror/view"
+  import { EditorView, tooltips } from "@codemirror/view"
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
 
@@ -30,7 +30,13 @@
 
   function editorState(doc: string) {
     return EditorState.create({
-      extensions: [basicSetup, DDNetRules(), DDNetRulesLinter],
+      extensions: [
+        basicSetup,
+        DDNetRules(),
+        DDNetRulesLinter,
+        EditorView.lineWrapping,
+        tooltips({ position: 'absolute' })
+      ],
       doc
     })
   }
@@ -145,7 +151,7 @@
   </div>
 
   <div class="right">
-    <div class="editor hljs" bind:this={editor}></div>
+    <div class="editor" bind:this={editor}></div>
     <div class="controls">
       <Button size="small" kind="secondary" on:click={onClose}>Close</Button>
       <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
