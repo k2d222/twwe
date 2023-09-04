@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg1"
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   sodipodi:docname="rpp_symbolic.png"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="true"
+     inkscape:zoom="0.25031856"
+     inkscape:cx="169.78365"
+     inkscape:cy="561.28478"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="1280"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g1">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="1"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Image"
+     id="g1">
+    <path
+       id="rect1"
+       style="opacity:1;fill:#000000;fill-opacity:1;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel"
+       d="M 19,0 C 8.47403,0 0,8.474032 0,19 v 474 c 0,10.52597 8.47403,19 19,19 h 474 c 10.526,0 19,-8.47403 19,-19 V 19 C 512,8.474032 503.526,0 493,0 Z m 21,40 h 285 c 147.9996,0 219.9995,230.00021 48,304 L 473,473 40,472 Z m 90,40 v 50 H 80 v 55 h 50 v 50 h 55 v -50 h 50 V 130 H 185 V 80 Z m 0,195 v 50 H 80 v 55 h 50 v 50 h 55 v -50 h 50 v -55 h -50 v -50 z" />
+  </g>
+</svg>
