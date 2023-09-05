@@ -1,5 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
+  import Info from '../../../assets/color-info.svg?component'
+  import Warning from '../../../assets/color-warning.svg?component'
+  import Error from '../../../assets/color-error.svg?component'
 
   export let type: 'info' | 'warning' | 'error' | '' = ''
   export let controls: 'closable' | 'yesno' | 'none' = 'none'
@@ -21,11 +24,11 @@
 <div id="dialog" class={type}>
   <div class="content">
     {#if type === 'info'}
-      <img src="/assets/color-info.svg" alt="info" />
+      <Info />
     {:else if type === 'warning'}
-      <img src="/assets/color-warning.svg" alt="warning" />
+      <Warning />
     {:else if type === 'error'}
-      <img src="/assets/color-error.svg" alt="error" />
+      <Error />
     {/if}
     {message}
     <slot />

@@ -22,15 +22,20 @@
   <title>{name} - DDNet Map Editor</title>
 </svelte:head>
 
-{#if $rmap === null}
-  <Dialog>Loading "{name}"…</Dialog>
-{:else}
 
-  <Headerbar />
+<div id="edit">
 
-  {#if $view === View.Automappers}
-    <EditAutomapper />
+  {#if $rmap === null}
+    <Dialog>Loading "{name}"…</Dialog>
   {:else}
-    <Editor />
+
+    <Headerbar />
+
+    {#if $view === View.Automappers}
+      <EditAutomapper />
+    {:else}
+      <Editor />
+    {/if}
   {/if}
-{/if}
+
+</div>

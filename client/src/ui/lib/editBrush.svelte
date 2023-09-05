@@ -13,6 +13,11 @@
   import { onMount, onDestroy } from 'svelte'
   import { rmap } from '../global'
 
+  import FlipV from '../../../assets/flip-v.svg?component'
+  import FlipH from '../../../assets/flip-h.svg?component'
+  import RotateCW from '../../../assets/rotate-cw.svg?component'
+  import RotateCCW from '../../../assets/rotate-ccw.svg?component'
+
   export let brush: Editor.Brush
 
   const dispatch = createEventDispatcher<{
@@ -264,16 +269,16 @@
 <div id="edit-brush">
   <div class="buttons">
     <button class="default" on:click={onFlipV}>
-      <img alt="Flip Vertically" src="/assets/flip-v.svg" />
+      <FlipV />
     </button>
     <button class="default" on:click={onFlipH}>
-      <img alt="Flip Horizontally" src="/assets/flip-h.svg" />
+      <FlipH />
     </button>
     <button class="default" on:click={onRotateCW}>
-      <img alt="Rotate Clockwise" src="/assets/rotate-cw.svg" />
+      <RotateCW />
     </button>
     <button class="default" on:click={onRotateCCW}>
-      <img alt="Rotate Counterclockwise" src="/assets/rotate-ccw.svg" />
+      <RotateCCW />
     </button>
   </div>
 </div>
