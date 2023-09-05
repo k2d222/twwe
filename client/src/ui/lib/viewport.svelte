@@ -4,7 +4,7 @@
   import { server, rmap, selected, anim } from '../global'
   import { AnyTilesLayer } from "../../twmap/tilesLayer"
   import { spring } from "svelte/motion"
-  import { Coord, LayerType } from "../../twmap/types"
+  import { type Coord, LayerType } from "../../twmap/types"
   import { QuadsLayer } from "../../twmap/quadsLayer"
   import QuadsView from "./quadsView.svelte"
   import { onDestroy, onMount } from "svelte"

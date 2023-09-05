@@ -1,16 +1,16 @@
 <script lang="ts">
   import type { Envelope } from '../../twmap/map'
   import {
-    CreateEnvelope,
-    EditEnvelope,
-    DeleteEnvelope,
-    CurveTypeStr,
+    type CreateEnvelope,
+    type EditEnvelope,
+    type DeleteEnvelope,
+    type CurveTypeStr,
     envTypes,
   } from '../../server/protocol'
   import { colorToJson, curveTypeToString, toFixedNum } from '../../server/convert'
   import { server } from '../global'
   import * as Info from '../../twmap/types'
-  import { ColorEnvelope, PositionEnvelope, SoundEnvelope, EnvPoint } from '../../twmap/envelope'
+  import { ColorEnvelope, PositionEnvelope, SoundEnvelope, type EnvPoint } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
   import { onMount } from 'svelte'
   import { showError, clearDialog } from './dialog'

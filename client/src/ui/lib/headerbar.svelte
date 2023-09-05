@@ -19,6 +19,7 @@
   import { peers, rmap, anim, view, View } from '../global'
   import * as Actions from '../actions'
   import InfoEditor from './editInfo.svelte'
+  import TeesIcon from '../../../assets/ddnet/tees_symbolic.svg?component'
 
   let infoEditorVisible = false
 
@@ -117,7 +118,7 @@
   </div>
   <div class="right">
     <div id="users">
-      Users online: <span>{$peers}</span>
+      <TeesIcon /> <span>{$peers}</span>
     </div>
   </div>
 

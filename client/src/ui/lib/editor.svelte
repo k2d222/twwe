@@ -36,7 +36,6 @@
   import { canvas } from '../../gl/global'
   import TreeView from './treeView.svelte'
   import { showInfo, showError, clearDialog } from './dialog'
-  import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
   import { externalImageUrl, px2vw, rem2px, queryImageData } from './util'
@@ -49,9 +48,6 @@
   } from 'carbon-icons-svelte'
   import {
     Button,
-    ComposedModal,
-    ModalBody,
-    ModalHeader,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
   import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
@@ -59,7 +55,6 @@
   import * as Actions from '../actions'
 
   // let viewport: Viewport
-  let infoEditorVisible = false
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -482,24 +477,6 @@
   }
 
 
-  function onEditInfo() {
-    infoEditorVisible = !infoEditorVisible
-  }
-
-  async function onInfoClose() {
-    infoEditorVisible = false
-    try {
-      // showInfo('Please wait…')
-      const change: EditMap = {
-        info: $rmap.map.info,
-      }
-      const res = await $server.query('editmap', change)
-      $rmap.map.info = res.info
-      clearDialog()
-    } catch (e) {
-      showError('Failed to edit map info: ' + e)
-    }
-  }
 </script>
 
 <svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:keypress={onKeyPress} />
@@ -562,16 +539,5 @@
       <EnvelopeEditor />
     </Pane>
   </Splitpanes>
-
-  <ComposedModal
-    open={infoEditorVisible}
-    on:close={onInfoClose}
-    selectorPrimaryFocus=".bx--modal-close"
-  >
-    <ModalHeader title="Map Properties" />
-    <ModalBody hasForm>
-      <InfoEditor info={$rmap.map.info} />
-    </ModalBody>
-  </ComposedModal>
 
 </div>

@@ -2,7 +2,7 @@
   import type { EditLayer, DeleteLayer, ReorderLayer, RequestContent } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
-  import { FormEvent, FormInputEvent, uploadImage } from './util'
+  import { type FormEvent, type FormInputEvent, uploadImage } from './util'
   import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'

@@ -1,4 +1,4 @@
-<script type="ts">
+<script lang="ts">
   import type { MapInfo } from '../../server/protocol'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
@@ -28,7 +28,7 @@
     RadioButton,
     ComboBox,
   } from 'carbon-components-svelte'
-  import storage, { ServerConfig } from '../../storage'
+  import storage, { type ServerConfig } from '../../storage'
   import {
     Help as AboutIcon,
     LogoGithub as GitHubIcon,

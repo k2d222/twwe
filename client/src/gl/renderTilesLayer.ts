@@ -9,7 +9,7 @@ import type {
   SwitchLayer,
 } from '../twmap/tilesLayer'
 import type { RenderMap } from './renderMap'
-import { RenderLayer, ViewBox } from './renderLayer'
+import { RenderLayer, type ViewBox } from './renderLayer'
 import { gl, shader } from './global'
 import { TileFlags } from '../twmap/types'
 import { Image } from '../twmap/image'

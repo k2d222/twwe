@@ -1,7 +1,7 @@
 import type { RenderMap } from 'src/gl/renderMap'
 import type { WebSocketServer } from 'src/server/server'
 import type { ServerConfig } from 'src/storage'
-import { writable, Writable } from 'svelte/store'
+import { writable, type Writable } from 'svelte/store'
 
 export enum View {
   Layers, Automappers, Images, Sounds, Envelopes, Settings // TODO

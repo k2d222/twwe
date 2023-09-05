@@ -195,6 +195,15 @@ canvas {
     }
   }
 
+  #users {
+    width: $header-h;
+    height: $header-h;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: .5rem;
+  }
+
   .header-btn {
     width: $header-h;
     height: $header-h;

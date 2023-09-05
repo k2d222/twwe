@@ -1,5 +1,5 @@
 import type { Layer } from '../../twmap/layer'
-import { Map, PhysicsLayer } from '../../twmap/map'
+import { Map, type PhysicsLayer } from '../../twmap/map'
 import { Image } from '../../twmap/image'
 import { AnyTilesLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'

@@ -1,7 +1,7 @@
 import { crc32 } from 'crc'
 import { inflate } from 'pako' // zlib
 
-import { UUID, compare as compareUUID } from './uuid'
+import { type UUID, compare as compareUUID } from './uuid'
 import { DataReader } from './dataReader'
 
 type ItemType = {

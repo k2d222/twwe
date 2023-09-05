@@ -6,7 +6,8 @@
   import type { Image } from '../../twmap/image'
   import type { AnyTilesLayer } from '../../twmap/tilesLayer'
   import type { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
-  import { TileFlags, Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
+  import type { Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
+  import { TileFlags } from '../../twmap/types'
   import {
     TilesLayer,
     GameLayer,
