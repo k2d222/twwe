@@ -36,7 +36,7 @@
     Login as JoinIcon,
     TrashCan as DeleteIcon,
   } from 'carbon-icons-svelte'
-  import { cloneMap, createMap, downloadMap, queryMaps, uploadMap } from '../lib/util'
+  import { cloneMap, createMap, download, queryMaps, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
@@ -169,7 +169,7 @@
   }
 
   function onDownloadMap(name: string) {
-    downloadMap(serverConfs[serverId].httpUrl, name)
+    download(`${serverConfs[serverId].httpUrl}/maps/${name}`, `${name}.map`)
   }
 
   function onAddServer() {

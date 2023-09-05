@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { server, serverConfig, rmap, automappers } from '../global'
+  import { server, serverConfig, rmap, automappers, view, View } from '../global'
   import { queryMap } from '../lib/util'
   import Dialog from '../lib/dialog.svelte'
   import Editor from '../lib/editor.svelte'
   import { RenderMap } from '../../gl/renderMap'
+  import EditAutomapper from '../lib/editAutomapper.svelte'
+  import Headerbar from '../lib/headerbar.svelte'
 
   export let name: string
 
@@ -23,5 +25,12 @@
 {#if $rmap === null}
   <Dialog>Loading "{name}"…</Dialog>
 {:else}
-  <Editor />
+
+  <Headerbar />
+
+  {#if $view === View.Automappers}
+    <EditAutomapper />
+  {:else}
+    <Editor />
+  {/if}
 {/if}

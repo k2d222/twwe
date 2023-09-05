@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Viewport } from "../../gl/viewport"
   import * as Editor from './editor'
-  import { server, rmap, selected } from '../global'
+  import { server, rmap, selected, anim } from '../global'
   import { AnyTilesLayer } from "../../twmap/tilesLayer"
   import { spring } from "svelte/motion"
   import { Coord, LayerType } from "../../twmap/types"
@@ -40,8 +40,7 @@
 
   let time = 0
   let animTime = 0
-  export let animEnabled = false
-  $: if (!animEnabled) updateEnvelopes(0)
+  $: if (!$anim) updateEnvelopes(0)
 
   // brush styling
   let brushOutlineStyle = ''
@@ -100,7 +99,7 @@
     if (destroyed)
       return
 
-    if (animEnabled) {
+    if ($anim) {
       animTime += t - time
       updateEnvelopes(animTime)
     }

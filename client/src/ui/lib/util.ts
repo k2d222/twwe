@@ -11,14 +11,14 @@ export type Ctor<T> = new (...args: any[]) => T
 export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
-export async function downloadMap(httpRoot: string, mapName: string) {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}`)
+export async function download(file: string, name: string) {
+  const resp = await fetch(file)
   const data = await resp.blob()
   const url = URL.createObjectURL(data)
 
   const link = document.createElement('a')
   link.href = url
-  link.download = mapName + '.map'
+  link.download = name
 
   document.body.append(link)
   link.click()

@@ -32,55 +32,42 @@
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { Image } from '../../twmap/image'
   import { onMount, onDestroy } from 'svelte'
-  import { server, serverConfig, rmap, selected, automappers } from '../global'
+  import { server, serverConfig, rmap, selected, automappers, anim, view, View, peers } from '../global'
   import { canvas } from '../../gl/global'
   import TreeView from './treeView.svelte'
-  import { showInfo, showError, clearDialog, showDialog } from './dialog'
+  import { showInfo, showError, clearDialog } from './dialog'
   import InfoEditor from './editInfo.svelte'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { externalImageUrl, px2vw, rem2px, downloadMap, queryImageData } from './util'
+  import { externalImageUrl, px2vw, rem2px, queryImageData } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
-  import AutomapperEditor from './editAutomapper.svelte'
   import Viewport from './viewport.svelte'
   import {
-    Layers as LayersIcon,
-    Activity as EnvelopesIcon,
-    Save as SaveIcon,
-    Play as PlayIcon,
-    Pause as PauseIcon,
-    Image as ImagesIcon,
-    Music as SoundsIcon,
     Add as CreateGroupIcon,
-    Script as AutomapperIcon,
   } from 'carbon-icons-svelte'
   import {
     Button,
     ComposedModal,
     ModalBody,
     ModalHeader,
-    OverflowMenu,
-    OverflowMenuItem,
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
   import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
   import type * as MapDir from '../../twmap/mapdir'
+  import * as Actions from '../actions'
 
   // let viewport: Viewport
-  let animEnabled = false
-  let peerCount = 0
   let infoEditorVisible = false
-  let automappersVisible = false
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
   let propsPaneSize = px2vw(rem2px(20))
-  let envPaneSize = 0
+  let envPaneSize = px2vw(rem2px(20))
   let lastLayerPaneSize = layerPaneSize
   let lastPropsPaneSize = propsPaneSize
-  let lastTopPaneSize = 20
+  let lastEnvPaneSize = 20
   let closedPaneThreshold = px2vw(rem2px(2))
 
   // computed (readonly)
@@ -188,7 +175,7 @@
   }
 
   function serverOnUsers(e: ListUsers) {
-    peerCount = e.roomCount
+    $peers = e.roomCount
   }
   function serverOnEditTile(e: EditTile) {
     $rmap.editTile(e)
@@ -426,78 +413,35 @@
     canvas.focus()
   }
 
-  function onToggleLayerPanes() {
-    if (layerPaneSize < closedPaneThreshold || propsPaneSize < closedPaneThreshold) {
+  function showLayers() {
+    layerPaneSize = lastLayerPaneSize
+    propsPaneSize = lastPropsPaneSize
+  }
+
+  function hideLayers() {
+    lastLayerPaneSize = layerPaneSize
+    lastPropsPaneSize = propsPaneSize
+    layerPaneSize = 0
+    propsPaneSize = 0
+  }
+
+  function onTogglePanes() {
+    if (layerPaneSize < closedPaneThreshold && propsPaneSize < closedPaneThreshold && envPaneSize < closedPaneThreshold) {
       layerPaneSize = lastLayerPaneSize
       propsPaneSize = lastPropsPaneSize
+      envPaneSize = lastEnvPaneSize
     } else {
       lastLayerPaneSize = layerPaneSize
       lastPropsPaneSize = propsPaneSize
+      lastEnvPaneSize = envPaneSize
       layerPaneSize = 0
       propsPaneSize = 0
-    }
-  }
-
-  function onToggleTopPane() {
-    if (envPaneSize < closedPaneThreshold) {
-      envPaneSize = lastTopPaneSize
-    } else {
-      lastTopPaneSize = envPaneSize
       envPaneSize = 0
     }
   }
 
   function onToggleAnim() {
-    animEnabled = !animEnabled
-  }
-
-  function onToggleAutomappers() {
-    automappersVisible = !automappersVisible
-  }
-
-  function onAutomapperClose() {
-    automappersVisible = false
-  }
-
-  async function onSaveMap() {
-    try {
-      showInfo('Saving map...', 'none')
-      await $server.query('savemap', { name: $rmap.map.name })
-      showInfo('Map saved on the server.', 'closable')
-    } catch (e) {
-      showError('Failed to save map: ' + e)
-    }
-  }
-
-  function onDownloadMap() {
-    downloadMap($serverConfig.httpUrl, $rmap.map.name)
-  }
-
-  function onRenameMap() {
-    alert('TODO renaming maps is not yet implemented.')
-  }
-
-  async function onLeaveMap() {
-    await $server.query('leavemap', null)
-    navigate('/')
-  }
-
-  async function onDeleteMap() {
-    if (peerCount !== 1) {
-      showError('Cannot delete map: other users are connected')
-      return
-    }
-
-    const res = await showDialog('warning', 'Are you sure you want to delete this map?', 'yesno')
-
-    if (res)
-      try {
-        await $server.query('leavemap', null)
-        await $server.query('deletemap', { name: $rmap.map.name })
-        navigate('/')
-      } catch (e) {
-        showError('Map deletion failed: ' + e)
-      }
+    $anim = !$anim
   }
 
   function onKeyDown(e: KeyboardEvent) {
@@ -510,7 +454,7 @@
       e.preventDefault()
 
       if (e.key === 's') {
-        onSaveMap()
+        Actions.saveMap()
       } else if (e.key === ' ') {
         onToggleAnim()
       }
@@ -518,7 +462,7 @@
       e.preventDefault()
 
       if (e.key === 'Tab') {
-        onToggleLayerPanes()
+        onTogglePanes()
       }
     }
   }
@@ -561,50 +505,6 @@
 <svelte:window on:keydown={onKeyDown} on:keyup={onKeyUp} on:keypress={onKeyPress} />
 
 <div id="editor">
-  <div id="header">
-    <div class="left">
-      <button class="header-btn" id="nav-toggle" on:click={onToggleLayerPanes}>
-        <LayersIcon size={20} title="Layers" />
-      </button>
-      <button class="header-btn" id="env-toggle" on:click={onToggleTopPane}>
-        <EnvelopesIcon size={20} title="Envelopes" />
-      </button>
-      <button class="header-btn" id="images-toggle" disabled>
-        <ImagesIcon size={20} title="Images (TODO)" />
-      </button>
-      <button class="header-btn" id="sounds-toggle" disabled>
-        <SoundsIcon size={20} title="Sounds (TODO)" />
-      </button>
-      <button class="header-btn" id="automappers-toggle" on:click={onToggleAutomappers}>
-        <AutomapperIcon size={20} title="Automappers" />
-      </button>
-      <button class="header-btn" id="save" on:click={onSaveMap}>
-        <SaveIcon size={20} title="Save map on server" />
-      </button>
-      <button class="header-btn" id="anim-toggle" on:click={onToggleAnim}>
-        <svelte:component
-          this={animEnabled ? PauseIcon : PlayIcon}
-          size={20}
-          title="Play/Pause envelopes animations"
-        />
-      </button>
-      <OverflowMenu class="header-btn" iconDescription="Map settings">
-        <OverflowMenuItem text="Properties" hasDivider on:click={onEditInfo} />
-        <OverflowMenuItem text="Rename" on:click={onRenameMap} />
-        <OverflowMenuItem text="Download" on:click={onDownloadMap} />
-        <OverflowMenuItem text="Leave" on:click={onLeaveMap} />
-        <OverflowMenuItem danger text="Delete" hasDivider on:click={onDeleteMap} />
-      </OverflowMenu>
-    </div>
-    <div class="middle">
-      <span id="map-name">{$rmap.map.name}</span>
-    </div>
-    <div class="right">
-      <div id="users">
-        Users online: <span>{peerCount}</span>
-      </div>
-    </div>
-  </div>
 
   <Splitpanes horizontal id="panes" dblClickSplitter={false}>
     <Pane size={100 - envPaneSize}>
@@ -623,7 +523,7 @@
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>
-          <Viewport {animEnabled} />
+          <Viewport />
         </Pane>
 
         <Pane class="properties" bind:size={propsPaneSize}>
@@ -671,18 +571,6 @@
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
       <InfoEditor info={$rmap.map.info} />
-    </ModalBody>
-  </ComposedModal>
-
-  <ComposedModal
-    size="lg"
-    open={automappersVisible}
-    on:close={onAutomapperClose}
-    selectorPrimaryFocus=".bx--modal-close"
-  >
-    <ModalHeader title="Automappers" />
-    <ModalBody hasForm>
-      <AutomapperEditor on:close={() => (automappersVisible = false)} />
     </ModalBody>
   </ComposedModal>
 
