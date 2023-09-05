@@ -594,6 +594,7 @@
   </div>
 
   <div class="graph" on:wheel={onMouseWheel}>
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <svg
       viewBox={viewBoxStr(viewBox)}
       preserveAspectRatio="none"

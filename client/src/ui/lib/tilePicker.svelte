@@ -129,7 +129,8 @@
     ctx.clearRect(0, 0, canvas.width / tileCount, canvas.height / tileCount)
   }
 
-  async function getCanvasImage(image: Image): Promise<CanvasImageSource> {
+  type ImageSource = CanvasImageSource & { width: number, height: number }
+  async function getCanvasImage(image: Image): Promise<ImageSource> {
     if (image.data instanceof HTMLImageElement) {
       ctx.drawImage(image.data, 0, 0)
       return image.data

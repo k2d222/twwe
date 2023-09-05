@@ -1,4 +1,4 @@
-import type { Image } from '../twmap/image'
+import type { Image, ImageSource } from '../twmap/image'
 import { gl } from './global'
 
 function isPow2(x: number) {
@@ -27,7 +27,7 @@ export class Texture {
     }
   }
 
-  private initTexture(img: TexImageSource) {
+  private initTexture(img: ImageSource) {
     this.tex = gl.createTexture()
     const interp = this.interpolate ? gl.LINEAR : gl.NEAREST
 

@@ -2,11 +2,13 @@ import type { DataFile } from './datafile'
 import type * as Info from './types'
 import { parseString } from './parser'
 
+export type ImageSource = TexImageSource & { width: number, height: number }
+
 export class Image {
   name: string
   width: number
   height: number
-  data: TexImageSource | null
+  data: ImageSource | null
   img: HTMLImageElement | null
 
   constructor() {

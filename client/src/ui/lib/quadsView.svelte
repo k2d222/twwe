@@ -286,6 +286,7 @@
 </script>
 
 <div id="edit-quads">
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
   <svg
     {viewBox}
     xmlns="http://www.w3.org/2000/svg"

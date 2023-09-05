@@ -131,7 +131,7 @@
         aria-selected={selected === name}
         class:selected={selected === name}
         tabindex="0"
-        role="button"
+        role="tab"
         on:keydown={onKeydown}
         on:click={() => onSelect(name)}
       >
