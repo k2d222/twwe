@@ -1,18 +1,18 @@
 <script lang="ts">
   import { onMount } from "svelte"
-  import { automappers, server } from "../global"
+  import { automappers, server, rmap } from "../global"
   import { TrashCan as TrashIcon, Add as AddIcon } from "carbon-icons-svelte"
   import { clearDialog, showError, showInfo, showWarning } from "./dialog"
-  import { Button } from 'carbon-components-svelte'
-  import { createEventDispatcher } from 'svelte'
+  import { Button, ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
 
   import { basicSetup } from "codemirror"
   import { EditorState } from "@codemirror/state"
   import { EditorView, tooltips } from "@codemirror/view"
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
-
-  const dispatch = createEventDispatcher()
+  import { Pane, Splitpanes } from "svelte-splitpanes"
+  import Viewport from "./mapView.svelte"
+  import { px2vw, rem2px } from "./util"
 
   let editor: HTMLElement
   let selected: string | null = null
@@ -20,6 +20,8 @@
   let newAmName = ''
   let view: EditorView
   let emptyState = editorState('Select or create an automapper on the left panel.')
+
+  let createAmOpen = false
 
   onMount(() => {
     view = new EditorView({
@@ -58,17 +60,18 @@
   }
 
   async function onNew() {
-    if (!isValidName(newAmName)) return
+    // if (!isValidName(newAmName)) return
 
-    const name = newAmName
-    newAmName = ''
-    await $server.query('uploadautomapper', {
-      image: name,
-      content: '',
-    })
+    // const name = newAmName
+    // newAmName = ''
+    // await $server.query('uploadautomapper', {
+    //   image: name,
+    //   content: '',
+    // })
 
-    $automappers[name] = []
-    $automappers = $automappers
+    // $automappers[name] = []
+    // $automappers = $automappers
+    createAmOpen = true
   }
 
   async function onSave() {
@@ -93,10 +96,6 @@
 
     clearDialog()
     changed = false
-  }
-
-  function onClose() {
-    dispatch('close')
   }
 
   async function onSelect(image: string) {
@@ -124,37 +123,69 @@
 </script>
 
 <div id="edit-automapper">
-  <div class="list">
-    {#each Object.keys($automappers) as name}
-      <div
-        class="row"
-        aria-selected={selected === name}
-        class:selected={selected === name}
-        tabindex="0"
-        role="tab"
-        on:keydown={onKeydown}
-        on:click={() => onSelect(name)}
-      >
-        <span class="label">{name}</span>
-        <button on:click={() => onDelete(name)}><TrashIcon /></button>
+  <Splitpanes id="panes" dblClickSplitter={false}>
+
+    <Pane size={px2vw(rem2px(15))}>
+      <div class="left list">
+        {#each Object.keys($automappers) as name}
+          <div
+            class="row"
+            aria-selected={selected === name}
+            class:selected={selected === name}
+            tabindex="0"
+            role="tab"
+            on:keydown={onKeydown}
+            on:click={() => onSelect(name)}
+          >
+            <span class="label">{name}</span>
+            <button on:click={() => onDelete(name)}><TrashIcon /></button>
+          </div>
+        {/each}
+
+        <Button
+          size="field"
+          kind="ghost"
+          icon={AddIcon}
+          on:click={onNew}
+        >New automapper</Button>
       </div>
-    {/each}
+    </Pane>
 
-    <input type="text" bind:value={newAmName} class="default" maxlength={127} placeholder="New automapper name" />
-    <Button
-      size="field"
-      kind="ghost"
-      icon={AddIcon}
-      on:click={onNew}
-      disabled={!isValidName(newAmName)}
-    >Create</Button>
-  </div>
-
-  <div class="right">
-    <div class="editor" bind:this={editor}></div>
-    <div class="controls">
-      <Button size="small" kind="secondary" on:click={onClose}>Close</Button>
-      <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
+  <Pane>
+    <div class="middle">
+      <div class="editor" bind:this={editor}></div>
+      <div class="controls">
+        <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
+      </div>
     </div>
-  </div>
+  </Pane>
+
+  <Pane>
+    <div class="right">
+      <Viewport rmap={$rmap}/>
+    </div>
+  </Pane>
+
+  </Splitpanes>
 </div>
+
+<ComposedModal bind:open={createAmOpen} size="sm" selectorPrimaryFocus=".bx--modal-close">
+  <ModalHeader title="New automapper" />
+  <ModalBody hasForm>
+    <div class="new-automapper">
+      <label>
+        Name
+        <input type="text" bind:value={newAmName} class="default" maxlength={127} placeholder="New automapper name" />
+      </label>
+      <label>
+        Kind
+        <select>
+          <option selected value="ddnet">DDNet</option>
+          <option value="rpp">Rules++</option>
+          <option value="tw" disabled>Teeworlds 0.7 (TODO)</option>
+        </select>
+      </label>
+      <button class="primary" disabled={!isValidName(newAmName)}>Create</button>
+    </div>
+  </ModalBody>
+</ComposedModal>

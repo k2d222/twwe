@@ -42,7 +42,7 @@
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
-  import Viewport from './viewport.svelte'
+  import Viewport from './mapView.svelte'
   import {
     Add as CreateGroupIcon,
   } from 'carbon-icons-svelte'
@@ -500,7 +500,7 @@
         </Pane>
 
         <Pane class="viewport" size={100 - layerPaneSize - propsPaneSize}>
-          <Viewport />
+          <Viewport rmap={$rmap} />
         </Pane>
 
         <Pane class="properties" bind:size={propsPaneSize}>

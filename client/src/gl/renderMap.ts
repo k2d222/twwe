@@ -43,7 +43,7 @@ import { QuadsLayer } from '../twmap/quadsLayer'
 import { Group } from '../twmap/group'
 import { RenderGroup } from './renderGroup'
 import { RenderQuadsLayer } from './renderQuadsLayer'
-import { gl } from './global'
+import { gl, init as glInit } from './global'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, type Ctor } from '../ui/lib/util'
@@ -95,6 +95,9 @@ export class RenderMap {
   brushEnv: ColorEnvelope
 
   constructor(map: Map) {
+    if (!gl)
+      glInit()
+
     this.map = map
     this.textures = map.images.map(img => new Texture(img))
     this.blankTexture = createEditorTexture('', '/editor/blank.png')

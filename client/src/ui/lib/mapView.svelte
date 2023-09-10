@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Viewport } from "../../gl/viewport"
+  import { canvas, init as glInit, renderer, viewport } from '../../gl/global'
   import * as Editor from './editor'
-  import { server, rmap, selected, anim } from '../global'
+  import { server, selected, anim } from '../global'
   import { AnyTilesLayer } from "../../twmap/tilesLayer"
   import { spring } from "svelte/motion"
   import { type Coord, LayerType } from "../../twmap/types"
@@ -9,12 +9,14 @@
   import QuadsView from "./quadsView.svelte"
   import { onDestroy, onMount } from "svelte"
   import type { Cursors, EditTileParams, ListUsers } from "../../server/protocol"
-  import { canvas, renderer, setViewport } from "../../gl/global"
   import { RenderQuadsLayer } from "../../gl/renderQuadsLayer"
   import TilePicker from './tilePicker.svelte'
   import BrushEditor from './editBrush.svelte'
   import Stats from './stats.svelte'
   import { RenderAnyTilesLayer } from "../../gl/renderTilesLayer"
+  import type { RenderMap } from "src/gl/renderMap"
+
+  export let rmap: RenderMap
 
   let g: number, l: number
   $: {
@@ -28,15 +30,14 @@
     }
   }
 
-  $: rgroup = g === -1 ? null : $rmap.groups[g]
+  $: rgroup = g === -1 ? null : rmap.groups[g]
   $: rlayer = l === -1 ? null : rgroup.layers[l]
   $: layer = rlayer === null ? null : rlayer.layer
   $: selectedTilesLayers = $selected
     .map(([_, l]) => l)
-    .filter(l => l !== -1 && $rmap.map.groups[g].layers[l].type === LayerType.TILES)
+    .filter(l => l !== -1 && rmap.map.groups[g].layers[l].type === LayerType.TILES)
 
   let cont: HTMLElement
-  let viewport: Viewport
 
   let time = 0
   let animTime = 0
@@ -71,17 +72,20 @@
   let brushRange = Editor.createRange() // start and end pos of copied buffer (if any)
   let brushBuffer: Editor.Brush | null = null
   $: onLayerSelectionChanged($selected)
-  $: $rmap.setBrush(brushBuffer)
-  $: $rmap.moveBrush(mouseRange.start)
+  $: rmap.setBrush(brushBuffer)
+  $: rmap.moveBrush(mouseRange.start)
 
   let destroyed = false
 
   onMount(() => {
     $server.on('listusers', serverOnUsers)
     $server.on('cursors', serverOnCursors)
-    cont.prepend(canvas)
-    viewport = new Viewport(cont, canvas)
-    setViewport(viewport) // TODO remove
+
+    if (!canvas)
+      glInit()
+
+    cont.prepend(viewport.cont)
+    viewport.cont.prepend(canvas)
     cursorInterval = setInterval(updateCursors, 100) as any
 
     renderLoop(0)
@@ -104,7 +108,7 @@
       updateEnvelopes(animTime)
     }
 
-    renderer.render(viewport, $rmap)
+    renderer.render(viewport, rmap)
     updateOutlines()
     cursorAnim = cursorAnim // redraw cursors
 
@@ -123,8 +127,8 @@
 
   function serverOnCursors(e: Cursors) {
     cursors = Object.fromEntries(Object.entries(e).map(([k, v]) => {
-      if (0 <= v.group && v.group < $rmap.groups.length) {
-        const rgroup = $rmap.groups[v.group]
+      if (0 <= v.group && v.group < rmap.groups.length) {
+        const rgroup = rmap.groups[v.group]
         let [ offX, offY ] = rgroup.offset()
         // const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
         return [k, { x: v.point.x + offX, y: v.point.y + offY }]
@@ -181,7 +185,7 @@
           brushState = e.shiftKey ? BrushState.Erase : BrushState.Select
         } else if (brushState === BrushState.Paste && !e.ctrlKey && !e.shiftKey) {
           // paste current selection
-          Editor.placeTiles($server, $rmap, mouseRange.start, brushBuffer)
+          Editor.placeTiles($server, rmap, mouseRange.start, brushBuffer)
         } else if (brushState === BrushState.Paste && e.shiftKey) {
           // start a fill selection
           brushState = BrushState.Fill
@@ -198,7 +202,7 @@
       if (e.buttons === 1) {
         // left click
         if (brushState === BrushState.Paste) {
-          Editor.drawLine($server, $rmap, mouseRange.start, curPos, brushBuffer)
+          Editor.drawLine($server, rmap, mouseRange.start, curPos, brushBuffer)
         }
       }
 
@@ -214,18 +218,18 @@
         // end selection
         brushRange.end = mouseRange.end
         brushRange = Editor.normalizeRange(brushRange)
-        brushBuffer = Editor.makeBoxSelection($rmap.map, g, selectedTilesLayers, brushRange)
+        brushBuffer = Editor.makeBoxSelection(rmap.map, g, selectedTilesLayers, brushRange)
         brushState = BrushState.Paste
         updateMouseRange()
       } else if (brushState === BrushState.Fill) {
         // fill selection with brush buffer
-        Editor.fill($server, $rmap, Editor.normalizeRange(mouseRange), brushBuffer)
+        Editor.fill($server, rmap, Editor.normalizeRange(mouseRange), brushBuffer)
         brushState = BrushState.Paste
       } else if (brushState === BrushState.Erase) {
         // erase selection
         const range = Editor.normalizeRange(mouseRange)
-        const buffer = Editor.makeEmptySelection($rmap.map, g, selectedTilesLayers, range)
-        Editor.fill($server, $rmap, range, buffer)
+        const buffer = Editor.makeEmptySelection(rmap.map, g, selectedTilesLayers, range)
+        Editor.fill($server, rmap, range, buffer)
         brushState = brushBuffer === null ? BrushState.Empty : BrushState.Paste
       }
     }
@@ -339,10 +343,10 @@
   }
 
   function updateEnvelopes(t: number) {
-    for (let env of $rmap.map.envelopes) {
+    for (let env of rmap.map.envelopes) {
       env.update(t)
     }
-    for (const rgroup of $rmap.groups) {
+    for (const rgroup of rmap.groups) {
       for (const rlayer of rgroup.layers) {
         if (rlayer instanceof RenderQuadsLayer) {
           rlayer.recomputeEnvelope() // COMBAK: maybe better perfs?
@@ -359,7 +363,7 @@
         tiles: e.detail,
       }]
     }
-    brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, $selected.map(s => s[1]))
+    brushBuffer = Editor.adaptBrushToLayers(rmap.map, brushBuffer, $selected.map(s => s[1]))
 
     if (brushBuffer === null) {
       brushState = BrushState.Empty
@@ -402,14 +406,14 @@
       return
     }
 
-    brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, sel.map(s => s[1]))
+    brushBuffer = Editor.adaptBrushToLayers(rmap.map, brushBuffer, sel.map(s => s[1]))
   }
 </script>
 
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  id="canvas-container"
+  class="canvas-container"
   bind:this={cont}
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
