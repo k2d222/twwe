@@ -65,7 +65,8 @@ export class Viewport {
     this.cont.addEventListener('mousemove', this.onmousemove.bind(this))
     this.cont.addEventListener('mouseup', this.onmouseup.bind(this))
     this.cont.addEventListener('wheel', this.onwheel.bind(this))
-    window.addEventListener('resize', this.onresize.bind(this))
+    new ResizeObserver(this.onresize.bind(this)).observe(this.cont)
+    // window.addEventListener('resize', this.onresize.bind(this))
     this.cont.addEventListener('keydown', this.onkeydown.bind(this))
   }
 
@@ -103,19 +104,19 @@ export class Viewport {
   }
 
   private onresize() {
-    this.canvas.width = window.innerWidth
-    this.canvas.height = window.innerHeight
+    this.canvas.width = this.cont.clientWidth
+    this.canvas.height = this.cont.clientHeight
   }
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
-    const [canvasX, canvasY] = this.pixelToCanvas(e.clientX, e.clientY)
+    const [canvasX, canvasY] = this.pixelToCanvas(e.offsetX, e.offsetY)
 
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
-    const [canvasX, canvasY] = this.pixelToCanvas(e.clientX, e.clientY)
+    const [canvasX, canvasY] = this.pixelToCanvas(e.offsetX, e.offsetY)
     const [worldX, worldY] = this.canvasToWorld(canvasX, canvasY)
     this.mousePos.x = worldX
     this.mousePos.y = worldY
@@ -129,7 +130,7 @@ export class Viewport {
 
   private onwheel(e: WheelEvent) {
     const direction = e.deltaY < 0 ? 1 : -1
-    this.onZoom(0.1 * direction, e.clientX, e.clientY)
+    this.onZoom(0.1 * direction, e.offsetX, e.offsetY)
   }
 
   private onkeydown(e: KeyboardEvent) {
@@ -170,13 +171,13 @@ export class Viewport {
   }
 
   // ------------------------------------------------------------
-  private onZoom(factor: number, clientX: number, clientY: number) {
+  private onZoom(factor: number, offsetX: number, offsetY: number) {
     let delta = factor * this.scale
 
     if (this.scale + delta > this.maxScale) delta = this.maxScale - this.scale
     if (this.scale + delta < this.minScale) delta = this.minScale - this.scale
 
-    const [canvasX, canvasY] = this.pixelToCanvas(clientX, clientY)
+    const [canvasX, canvasY] = this.pixelToCanvas(offsetX, offsetY)
 
     const zoom = (this.scale + delta) / this.scale
 

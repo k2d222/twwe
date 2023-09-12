@@ -146,17 +146,24 @@ $header-h: 3rem;
   }
 }
 
-.canvas-container {
-  position: absolute;
+.map-view {
   width: 100%;
   height: 100%;
-  clip: rect(0, auto, auto, 0);
 }
 
-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
+#map-editor {
+  position: absolute;
+  clip-path: content-box;
+  width: 100%;
+  height: 100%;
+
+  .map-view {
+    position: fixed;
+    inset: 0;
+  }
+}
+
+.map-view canvas, .tiles > canvas {
   background-image: url('/editor/checker.png');
   background-repeat: repeat;
 }
@@ -460,7 +467,7 @@ canvas {
 
   .picker {
     background: white;
-    position: fixed;
+    position: absolute;
     bottom: 7rem;
     left: 50%;
     transform: translateX(-50%);
@@ -473,8 +480,8 @@ canvas {
   }
 
   .tiles {
-    $top-off: 14rem;
-    $side-off: 4rem;
+    $top-off: 16rem;
+    $side-off: 6rem;
     position: relative;
     width: min(calc(100vh - $top-off), calc(100vw - $side-off));
     height: min(calc(100vh - $top-off), calc(100vw - $side-off));
@@ -575,6 +582,10 @@ canvas {
 
 nav.hidden .context {
   display: none;
+}
+
+#brush-events {
+  inset: 0;
 }
 
 #brush-outline {

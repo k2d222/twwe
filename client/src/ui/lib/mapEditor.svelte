@@ -49,8 +49,6 @@
     $rmap.setActiveLayer(rlayer)
   }
 
-  let cont: HTMLElement
-
   let time = 0
   let animTime = 0
   $: if (!$anim && $rmap) updateEnvelopes(0)
@@ -202,8 +200,6 @@
 
     $server.on('cursors', onCursors)
     cursorInterval = setInterval(updateCursors, 100) as any
-
-    cont.prepend(viewport.cont)
 
     renderLoop(0)
   })
@@ -538,44 +534,48 @@
 
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div
-  class="canvas-container"
-  bind:this={cont}
+<div id="map-editor"
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
   on:mousemove={onMouseMove}
   on:contextmenu={onContextMenu}
 >
-  <MapView map={$map} bind:this={mapView} />
-  <div id="clip-outline" style={clipOutlineStyle} />
-  {#if rlayer && rlayer.layer instanceof AnyTilesLayer}
+  <MapView map={$map} bind:this={mapView}>
+
+    <div id="clip-outline" style={clipOutlineStyle} />
     <div id="brush-outline" style={brushOutlineStyle} />
     <div id="layer-outline" style={layerOutlineStyle} />
-  {:else if rlayer && rlayer.layer instanceof QuadsLayer}
-    <QuadsView layer={rlayer.layer} />
-  {/if}
-  {#each Object.values($cursorAnim) as cur}
-    <img class="cursor" src="/assets/gui_cursor.png" alt=""
-      style:top={(cur.y - viewport.pos.y) * viewport.scale + 'px'}
-      style:left={(cur.x - viewport.pos.x) * viewport.scale + 'px'}
+
+    {#if rlayer && rlayer.layer instanceof QuadsLayer}
+      <QuadsView layer={rlayer.layer} />
+    {/if}
+
+    <div id="cursors">
+      {#each Object.values($cursorAnim) as cur}
+        <img class="cursor" src="/assets/gui_cursor.png" alt=""
+          style:top={(cur.y - viewport.pos.y) * viewport.scale + 'px'}
+          style:left={(cur.x - viewport.pos.x) * viewport.scale + 'px'}
+        />
+      {/each}
+    </div>
+
+  </MapView>
+
+  {#if brushBuffer !== null}
+    <BrushEditor
+      brush={brushBuffer}
+      on:change={onBrushChange}
     />
-  {/each}
-  <!-- <Statusbar /> -->
+  {/if}
+
+  {#if rlayer instanceof RenderAnyTilesLayer}
+    <TilePicker
+      rlayer={rlayer}
+      on:select={onTilePick}
+    />
+  {/if}
+
 </div>
-
-{#if brushBuffer !== null}
-  <BrushEditor
-    brush={brushBuffer}
-    on:change={onBrushChange}
-  />
-{/if}
-
-{#if rlayer instanceof RenderAnyTilesLayer}
-  <TilePicker
-    rlayer={rlayer}
-    on:select={onTilePick}
-  />
-{/if}
 
 {#if import.meta.env.MODE === 'development'}
   <Stats {time} />
