@@ -7,11 +7,7 @@
     ApplyAutomapper,
     AutomapperConfigs,
   } from '../../server/protocol'
-  import type { Layer } from '../../twmap/layer'
-  import type { Group } from '../../twmap/group'
   import { LayerType } from '../../twmap/types'
-  import type { RenderGroup } from '../../gl/renderGroup'
-  import type { RenderLayer } from '../../gl/renderLayer'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { onMount, onDestroy } from 'svelte'
   import { server, rmap, selected, automappers, anim, peers } from '../global'
@@ -35,6 +31,7 @@
   import type * as MapDir from '../../twmap/mapdir'
   import * as Actions from '../actions'
   import { viewport } from '../../gl/global'
+  import Fence from './fence.svelte'
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -57,7 +54,13 @@
       l = $selected[$selected.length - 1][1]
     }
   }
-  $: ll = $selected.map(([_, l]) => l).filter(l => l !== -1 && $rmap.map.groups[g].layers[l].type === LayerType.TILES)
+
+  let selectedTileLayers: number[] = []
+  $: if ($rmap) {
+    selectedTileLayers = $selected
+      .map(([_, l]) => l)
+      .filter(l => l !== -1 && $rmap.map.groups[g].layers[l].type === LayerType.TILES)
+  }
 
   function onCreateGroup() {
     $server.query('creategroup', { name: '' })
@@ -132,6 +135,11 @@
     navigate('/')
   }
 
+  let signalLoaded: () => void
+  let loadSignal: Promise<void> = new Promise(resolve => {
+    signalLoaded = resolve
+  })
+
   onMount(() => {
     $selected = [$rmap.map.physicsLayerIndex(GameLayer)]
     $server.socket.addEventListener('close', onServerClosed, { once: true })
@@ -145,6 +153,8 @@
     $server.send('listusers')
 
     viewport.canvas.addEventListener('mouseenter', onHoverCanvas)
+
+    signalLoaded()
   })
 
   onDestroy(() => {
@@ -233,7 +243,9 @@
     <Pane size={100 - envPaneSize}>
       <Splitpanes dblClickSplitter={false}>
         <Pane class="layers" bind:size={layerPaneSize}>
-          <TreeView />
+          <Fence signal={loadSignal}>
+            <TreeView />
+          </Fence>
           <Button
             id="create-group"
             size="field"
@@ -253,8 +265,8 @@
           {#if $selected.length > 1}
             <div class="edit-multiple">
               <h3 class="bx--modal-header__heading">Multiple selection</h3>
-              {#if ll.length > 1}
-                <span>You selected {ll.length} tile layers.</span>
+              {#if selectedTileLayers.length > 1}
+                <span>You selected {selectedTileLayers.length} tile layers.</span>
                 <span>You can edit the tiles from these layers together with your brush (clone, delete and repeat).</span>
               {:else}
                 <span>You selected multiple layers.</span>

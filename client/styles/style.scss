@@ -11,6 +11,7 @@
   // Emit CSS Custom Properties for the current theme
   @include themes.theme();
 }
+
 #lobby {
   display: flex;
   flex-direction: column;
@@ -984,5 +985,28 @@ nav.hidden .context {
     padding: .2rem;
     overflow: auto;
     height: calc(100vh - 15rem); // COMBAK: this is a bit gross
+  }
+}
+
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 1rem;
+  overflow: hidden;
+
+  &.fullscreen {
+    width: 100vw;
+    height: 100vh;
+
+    > .content > .text {
+      margin-top: 10rem;
+    }
+  }
+  > .content > .text {
+    z-index: 7000;
+    margin: 1rem;
   }
 }

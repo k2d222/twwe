@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     Layers as LayersIcon,
-    Activity as EnvelopesIcon,
+    // Activity as EnvelopesIcon,
     Save as SaveIcon,
     Play as PlayIcon,
     Pause as PauseIcon,
@@ -16,7 +16,7 @@
     ModalBody,
     ModalHeader,
   } from 'carbon-components-svelte'
-  import { peers, rmap, anim, view, View } from '../global'
+  import { peers, map, anim, view, View } from '../global'
   import * as Actions from '../actions'
   import InfoEditor from './editInfo.svelte'
   import TeesIcon from '../../../assets/ddnet/tees_symbolic.svg?component'
@@ -114,7 +114,7 @@
     </OverflowMenu>
   </div>
   <div class="middle">
-    <span id="map-name">{$rmap.map.name}</span>
+    <span id="map-name">{$map.name}</span>
   </div>
   <div class="right">
     <div id="users">
@@ -129,7 +129,7 @@
   >
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
-      <InfoEditor info={$rmap.map.info} />
+      <InfoEditor info={$map.info} />
     </ModalBody>
   </ComposedModal>
 

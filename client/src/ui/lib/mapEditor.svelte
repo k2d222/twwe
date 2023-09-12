@@ -1,7 +1,7 @@
 
 <script lang="ts">
   import * as Editor from './editor'
-  import { server, selected, anim, peers, rmap, serverConfig } from '../global'
+  import { server, selected, anim, peers, rmap, map, serverConfig } from '../global'
   import { AnyTilesLayer, GameLayer } from "../../twmap/tilesLayer"
   import { spring } from "svelte/motion"
   import { type Coord, LayerType } from "../../twmap/types"
@@ -17,6 +17,9 @@
   import { RenderAnyTilesLayer } from "../../gl/renderTilesLayer"
   import { viewport, renderer } from '../../gl/global'
   import { externalImageUrl, queryImageData } from './util'
+  import MapView from './mapView.svelte'
+  import type { RenderGroup } from '../../gl/renderGroup'
+  import type { RenderLayer } from '../../gl/renderLayer'
 
   let g: number, l: number
   $: {
@@ -30,27 +33,27 @@
     }
   }
 
+  let mapView: MapView
+
   // computed (read-only)
-  $: rgroup = g === -1 ? null : $rmap.groups[g]
-  $: rlayer = l === -1 ? null : rgroup.layers[l]
-  $: layer = rlayer === null ? null : rlayer.layer
-  $: selectedTilesLayers = $selected
-    .map(([_, l]) => l)
-    .filter(l => l !== -1 && $rmap.map.groups[g].layers[l].type === LayerType.TILES)
+  let rgroup: RenderGroup | null = null
+  let rlayer: RenderLayer | null = null
+  let selectedTileLayers: number[] = []
+  $: if ($rmap) {
+    rgroup = g === -1 ? null : $rmap.groups[g]
+    rlayer = l === -1 ? null : rgroup.layers[l]
+    selectedTileLayers = $selected
+      .map(([_, l]) => l)
+      .filter(l => l !== -1 && $rmap.map.groups[g].layers[l].type === LayerType.TILES)
 
-  $: activeRgroup = g === -1 ? null : $rmap.groups[g]
-  $: activeRlayer = l === -1 ? null : activeRgroup.layers[l]
-  $: activeGroup = activeRgroup === null ? null : activeRgroup.group
-  $: activeLayer = activeRlayer === null ? null : activeRlayer.layer
-
-  // active layer
-  $: $rmap.setActiveLayer(activeRlayer)
+    $rmap.setActiveLayer(rlayer)
+  }
 
   let cont: HTMLElement
 
   let time = 0
   let animTime = 0
-  $: if (!$anim) updateEnvelopes(0)
+  $: if (!$anim && $rmap) updateEnvelopes(0)
 
   // brush styling
   let brushOutlineStyle = ''
@@ -84,8 +87,8 @@
   let brushRange = Editor.createRange() // start and end pos of copied buffer (if any)
   let brushBuffer: Editor.Brush | null = null
   $: onLayerSelectionChanged($selected)
-  $: $rmap.setBrush(brushBuffer)
-  $: $rmap.moveBrush(mouseRange.start)
+  $: if($rmap) $rmap.setBrush(brushBuffer)
+  $: if($rmap) $rmap.moveBrush(mouseRange.start)
 
   let destroyed = false
 
@@ -129,17 +132,17 @@
     $rmap.deleteLayer(e)
     $selected = $selected.filter(([g, l]) => g !== e.group || l !== e.layer)
     if ($selected.length === 0) {
-      $selected = (activeGroup.layers.length === 0) ?
+      $selected = (rgroup.layers.length === 0) ?
         [$rmap.map.physicsLayerIndex(GameLayer)] :
-        [[g, Math.min(activeGroup.layers.length - 1, e.layer)]]
+        [[g, Math.min(rgroup.layers.length - 1, e.layer)]]
     }
   }
   function onReorderGroup(e: ReorderGroup) {
     $rmap.reorderGroup(e)
     $selected.pop() // remove active
     const active: [number, number] =
-       activeLayer ? $rmap.map.layerIndex(activeLayer) :
-       activeGroup ? [$rmap.map.groupIndex(activeGroup), -1] :
+       rlayer ? $rmap.map.layerIndex(rlayer.layer) :
+       rgroup ? [$rmap.map.groupIndex(rgroup.group), -1] :
        $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
@@ -147,8 +150,8 @@
     $rmap.reorderLayer(e)
     $selected.pop() // remove active
     const active: [number, number] =
-       activeLayer ? $rmap.map.layerIndex(activeLayer) :
-       activeGroup ? [$rmap.map.groupIndex(activeGroup), -1] :
+       rlayer ? $rmap.map.layerIndex(rlayer.layer) :
+       rgroup ? [$rmap.map.groupIndex(rgroup.group), -1] :
        $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
@@ -176,6 +179,8 @@
   }
 
   onMount(() => {
+    $rmap = mapView.getRenderMap()
+  
     // these event hooks have priority because they manage the state of the map.
     $server.on('createquad', onCreateQuad, true)
     $server.on('editquad', onEditQuad, true)
@@ -294,7 +299,7 @@
   }
 
   function onMouseDown(e: MouseEvent) {
-    if (layer instanceof AnyTilesLayer || $selected.length > 1) {
+    if (rlayer && rlayer.layer instanceof AnyTilesLayer || $selected.length > 1) {
       updateMouseRange()
 
       if (e.buttons === 1 && !e.ctrlKey) {
@@ -317,7 +322,7 @@
 
   function onMouseMove(e: MouseEvent) {
     shiftKey = e.shiftKey
-    if (layer instanceof AnyTilesLayer || $selected.length > 1) {
+    if (rlayer && rlayer.layer instanceof AnyTilesLayer || $selected.length > 1) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
 
       if (e.buttons === 1) {
@@ -332,14 +337,14 @@
   }
 
   function onMouseUp(_e: MouseEvent) {
-    if (selectedTilesLayers.length > 0) {
+    if (selectedTileLayers.length > 0) {
       updateMouseRange()
 
       if (brushState === BrushState.Select) {
         // end selection
         brushRange.end = mouseRange.end
         brushRange = Editor.normalizeRange(brushRange)
-        brushBuffer = Editor.makeBoxSelection($rmap.map, g, selectedTilesLayers, brushRange)
+        brushBuffer = Editor.makeBoxSelection($rmap.map, g, selectedTileLayers, brushRange)
         brushState = BrushState.Paste
         updateMouseRange()
       } else if (brushState === BrushState.Fill) {
@@ -349,7 +354,7 @@
       } else if (brushState === BrushState.Erase) {
         // erase selection
         const range = Editor.normalizeRange(mouseRange)
-        const buffer = Editor.makeEmptySelection($rmap.map, g, selectedTilesLayers, range)
+        const buffer = Editor.makeEmptySelection($rmap.map, g, selectedTileLayers, range)
         Editor.fill($server, $rmap, range, buffer)
         brushState = brushBuffer === null ? BrushState.Empty : BrushState.Paste
       }
@@ -384,12 +389,12 @@
   }
 
   function updateLayerOutline() {
-    if (layer instanceof AnyTilesLayer) {
+    if (rlayer && rlayer.layer instanceof AnyTilesLayer) {
       const { scale, pos } = viewport
       const [offX, offY] = rgroup.offset()
       layerOutlineStyle = `
-        width: ${layer.width * scale}px;
-        height: ${layer.height * scale}px;
+        width: ${rlayer.layer.width * scale}px;
+        height: ${rlayer.layer.height * scale}px;
         top: ${(-pos.y + offY) * scale}px;
         left: ${-(pos.x - offX) * scale}px;
       `
@@ -401,7 +406,7 @@
   }
 
   function updateBrushOutline() {
-    if (layer instanceof AnyTilesLayer && brushState !== BrushState.Empty) {
+    if (rlayer && rlayer.layer instanceof AnyTilesLayer && brushState !== BrushState.Empty) {
       const fillColor =
         brushState === BrushState.Fill
           ? 'orange'
@@ -420,8 +425,8 @@
       const brushValid =
         range.start.x >= 0 &&
         range.start.y >= 0 &&
-        range.end.x < layer.width &&
-        range.end.y < layer.height
+        range.end.x < rlayer.layer.width &&
+        range.end.y < rlayer.layer.height
 
       const strokeColor = brushValid ? 'black' : 'red'
 
@@ -541,13 +546,13 @@
   on:mousemove={onMouseMove}
   on:contextmenu={onContextMenu}
 >
-  <!-- here goes the canvas on mount() -->
+  <MapView map={$map} bind:this={mapView} />
   <div id="clip-outline" style={clipOutlineStyle} />
-  {#if layer instanceof AnyTilesLayer}
+  {#if rlayer && rlayer.layer instanceof AnyTilesLayer}
     <div id="brush-outline" style={brushOutlineStyle} />
     <div id="layer-outline" style={layerOutlineStyle} />
-  {:else if layer instanceof QuadsLayer}
-    <QuadsView layer={layer} />
+  {:else if rlayer && rlayer.layer instanceof QuadsLayer}
+    <QuadsView layer={rlayer.layer} />
   {/if}
   {#each Object.values($cursorAnim) as cur}
     <img class="cursor" src="/assets/gui_cursor.png" alt=""

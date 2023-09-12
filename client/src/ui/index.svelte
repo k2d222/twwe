@@ -2,18 +2,34 @@
   import { Router, Route } from 'svelte-routing'
   import Lobby from './routes/lobby.svelte'
   import Edit from './routes/edit.svelte'
-  import JoinServer from './lib/joinServer.svelte'
+  import Fence from './lib/fence.svelte'
+  import storage from '../storage'
+  import { WebSocketServer } from '../server/server'
+  import { server, serverConfig } from './global'
 
   export let url = ''
+
+  function joinServer() {
+    const serverConfs = storage.load('servers')
+    const serverId = storage.load('currentServer')
+
+    $serverConfig = serverConfs[serverId]
+    $server = new WebSocketServer($serverConfig.wsUrl)
+
+    return new Promise((resolve, reject) => {
+      $server.socket.addEventListener('open', resolve, { once: true })
+      $server.socket.addEventListener('error', reject, { once: true })
+    })
+  }
 </script>
 
 <Router {url}>
-  <div>
-    <Route path="edit/*mapName" let:params>
-      <JoinServer><Edit name={params.mapName} /></JoinServer>
-    </Route>
-    <Route path="/">
-      <Lobby />
-    </Route>
-  </div>
+  <Route path="edit/*mapName" let:params>
+    <Fence fullscreen signal={joinServer()} loadText="Connecting to server…">
+      <Edit name={params.mapName} />
+    </Fence>
+  </Route>
+  <Route path="/">
+    <Lobby />
+  </Route>
 </Router>
