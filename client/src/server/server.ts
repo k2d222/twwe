@@ -130,13 +130,19 @@ export class WebSocketServer implements Server {
     return this.broadcastListeners[type] as BroadcastListener<K>[]
   }
 
-  on<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>) {
-    this.getBroadcastListeners(type).push(fn)
+  on<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>, priority: boolean = false) {
+    if (priority)
+      this.getBroadcastListeners(type).unshift(fn)
+    else
+      this.getBroadcastListeners(type).push(fn)
   }
 
   off<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>) {
     const index = this.getBroadcastListeners(type).indexOf(fn)
-    this.getBroadcastListeners(type).splice(index)
+    if (index !== -1)
+      this.getBroadcastListeners(type).splice(index, 1)
+    else
+      console.error('server.off(): could not find listener')
   }
 
   query<K extends Query>(
@@ -183,7 +189,8 @@ export class WebSocketServer implements Server {
       if (data.id !== 0) {
         const fn = this.queryListeners[data.id]
         fn(data)
-      } else if ('ok' in data) {
+      }
+      if ('ok' in data) {
         for (const fn of this.getBroadcastListeners(data.ok.type)) {
           fn(data.ok.content)
         }
@@ -209,6 +216,19 @@ export class WebSocketServer implements Server {
     const message = JSON.stringify(req)
     this.socketSend(message)
   }
+
+//   private predictResponse<K extends Query, U extends Query>(type: K, content: RequestContent[K]): ResponseContent[Query] | null {
+//     const predictables: Query[] = [
+//       'editmap',
+//       'creategroup', 'editgroup', 'reordergroup', 'deletegroup',
+//       'createlayer', 'editlayer', 'reorderlayer', 'deletelayer',
+// edittile edittiles
+//     ]
+//     if (predictables.includes(type))
+//       return content as any // TODO
+//     else
+//       return null
+//   }
 
   send<K extends keyof RequestContent>(type: K, content?: RequestContent[K]) {
     const req: Request<K> = {

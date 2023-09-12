@@ -14,15 +14,13 @@
   import ImagePicker from './imagePicker.svelte'
   import AutomapperPicker from './automapper.svelte'
   // import { automap, parse, type Config as AutomapperConfig } from '../../twmap/automap'
-  import { createEventDispatcher } from 'svelte'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
   import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
-
-  type Events = 'createlayer' | 'editlayer' | 'reorderlayer' | 'deletelayer'
-  type EventMap = { [K in Events]: RequestContent[K] }
-
-  const dispatch = createEventDispatcher<EventMap>()
+  import { sync } from '../../server/util'
+  import type { Writable } from 'svelte/store'
+  import type * as Info from '../../twmap/types'
+  import Number from './number.svelte'
 
   let g: number, l: number
   $: {
@@ -67,18 +65,8 @@
     }
   }
 
-  function onEditLayer(change: EditLayer) {
-    dispatch('editlayer', change)
-  }
-  function onReorderLayer(change: ReorderLayer) {
-    dispatch('reorderlayer', change)
-  }
-  function onDeleteLayer(change: DeleteLayer) {
-    dispatch('deletelayer', change)
-  }
-
-  function layerName(layer: Layer) {
-    const quotedName = layer.name ? " '" + layer.name + "'" : ''
+  function layerName(layer: Layer, name: string) {
+    const quotedName = name ? " '" + name + "'" : ''
     if (layer instanceof AnyTilesLayer) {
       switch (layer.flags) {
         case TilesLayerFlags.FRONT:
@@ -124,11 +112,11 @@
 
     if (e.detail === null) {
       // no image used
-      onEditLayer({ group: g, layer: l, image: null })
+      await $server.query('editlayer', { group: g, layer: l, image: null })
     } else if (e.detail instanceof Image) {
       // use embedded image
       const index = $rmap.map.images.indexOf(e.detail)
-      onEditLayer({ group: g, layer: l, image: index })
+      await $server.query('editlayer', { group: g, layer: l, image: index })
     } else if (e.detail instanceof File) {
       const name = e.detail.name.replace(/\.[^\.]+$/, '')
       uploadImageAndPick(e.detail, name)
@@ -151,7 +139,7 @@
           img.loadExternal(url)
           img.name = name
           $rmap.addImage(img)
-          onEditLayer({ group: g, layer: l, image: index })
+          await $server.query('editlayer', { group: g, layer: l, image: index })
           clearDialog()
         } catch (e) {
           showError('Failed to create external image: ' + e)
@@ -173,7 +161,7 @@
         name,
         index,
       })
-      onEditLayer({ group: g, layer: l, image: index })
+      await $server.query('editlayer', { group: g, layer: l, image: index })
       showInfo('Image uploaded and selected.')
     } catch (e) {
       showError('Failed to upload image: ' + e)
@@ -194,56 +182,91 @@
     }
   }
 
-  function onEditGroup(e: FormInputEvent) {
-    const newGroup = clamp(parseInt(e.currentTarget.value), 0, $rmap.groups.length - 1)
-    if (!isNaN(newGroup)) onReorderLayer({ group: g, layer: l, newGroup, newLayer: 0 })
+  let syncName: Writable<string>
+  let syncDetail: Writable<boolean>
+  let syncWidth: Writable<number>
+  let syncHeight: Writable<number>
+  let syncColor: Writable<Info.Color>
+  let syncColorEnv: Writable<number>
+  let syncColorEnvOff: Writable<number>
+
+  $: syncGroup = sync(g, {
+    server: $server,
+    query: 'reorderlayer',
+    send: s => ({ group: g, layer: l, newGroup: s, newLayer: 0 }),
+    recv: e => e.group === g && e.layer === l ? e.newGroup : null,
+  })
+  $: syncOrder = sync(l, {
+    server: $server,
+    query: 'reorderlayer',
+    send: s => ({ group: g, layer: l, newGroup: g, newLayer: s }),
+    recv: e => e.group === g && e.layer === l ? e.newLayer : null,
+  })
+  $: if (layer) {
+    syncName = sync(layer.name, {
+      server: $server,
+      query: 'editlayer',
+      send: s => ({ group: g, layer: l, name: s, }),
+      recv: e => e.group === g && e.layer === l && 'name' in e ? e.name : null,
+    })
   }
-  function onEditOrder(e: FormInputEvent) {
-    const newLayer = clamp(parseInt(e.currentTarget.value), 0, group.layers.length - 1)
-    if (!isNaN(newLayer)) onReorderLayer({ group: g, layer: l, newGroup: g, newLayer })
+  $: if (layer) {
+    syncDetail = sync(layer.detail, {
+      server: $server,
+      query: 'editlayer',
+      send: s => ({ group: g, layer: l, flags: s ? LayerFlags.DETAIL : LayerFlags.NONE }),
+      recv: e => e.group === g && e.layer === l && 'flags' in e ? (e.flags & LayerFlags.DETAIL) === 1 : null,
+    })
   }
-  function onEditWidth(e: FormInputEvent) {
-    const width = clamp(parseInt(e.currentTarget.value), 2, 10000)
-    if (!isNaN(width)) onEditLayer({ group: g, layer: l, width })
+  $: if (layer && layer instanceof AnyTilesLayer) {
+    syncWidth = sync(layer.width, {
+      server: $server,
+      query: 'editlayer',
+      send: s => ({ group: g, layer: l, width: s }),
+      recv: e => e.group === g && e.layer === l && 'width' in e ? e.width : null,
+    })
   }
-  function onEditHeight(e: FormInputEvent) {
-    const height = clamp(parseInt(e.currentTarget.value), 2, 10000)
-    if (!isNaN(height)) onEditLayer({ group: g, layer: l, height })
+  $: if (layer && layer instanceof AnyTilesLayer) {
+    syncHeight = sync(layer.height, {
+      server: $server,
+      query: 'editlayer',
+      send: s => ({ group: g, layer: l, height: s }),
+      recv: e => e.group === g && e.layer === l && 'height' in e ? e.height : null,
+    })
   }
-  function onEditDetail(_: FormInputEvent) {
-    const flags = layer.detail ? LayerFlags.NONE : LayerFlags.DETAIL
-    onEditLayer({ group: g, layer: l, flags })
+  $: if (layer && layer instanceof AnyTilesLayer) {
+    syncColor = sync(layer.color, {
+      server: $server,
+      query: 'editlayer',
+      send: s => ({ group: g, layer: l, color: s }),
+      recv: e => e.group === g && e.layer === l && 'color' in e ? e.color : null,
+    })
   }
+  $: if (layer && layer instanceof AnyTilesLayer) {
+    syncColorEnv = sync($rmap.map.envelopes.indexOf(layer.colorEnv), {
+      server: $server,
+      query: 'editlayer',
+      send: s => ({ group: g, layer: l, colorEnv: s === -1 ? null : s }),
+      recv: e => e.group === g && e.layer === l && 'colorEnv' in e ? e.colorEnv === null ? -1 : e.colorEnv : null,
+    })
+  }
+  $: if (layer && layer instanceof AnyTilesLayer) {
+    syncColorEnvOff = sync(layer.colorEnvOffset, {
+      server: $server,
+      query: 'editlayer',
+      send: s => ({ group: g, layer: l, colorEnvOffset: s }),
+      recv: e => e.group === g && e.layer === l && 'colorEnvOffset' in e ? e.colorEnvOffset : null,
+    })
+  }
+
   function onEditColor(e: FormInputEvent) {
-    if (layer instanceof TilesLayer) {
-      const color = strToColor(e.currentTarget.value, layer.color.a)
-      onEditLayer({ group: g, layer: l, color })
-    }
+    $syncColor = strToColor(e.currentTarget.value, $syncColor.a)
   }
   function onEditOpacity(e: FormInputEvent) {
-    if (layer instanceof TilesLayer) {
-      const color = { ...layer.color, a: clamp(parseInt(e.currentTarget.value), 0, 255) }
-      onEditLayer({ group: g, layer: l, color })
-    }
-  }
-  function onEditColorEnv(e: FormEvent<HTMLSelectElement>) {
-    if (layer instanceof TilesLayer) {
-      const colorEnv = parseInt(e.currentTarget.value)
-      onEditLayer({ group: g, layer: l, colorEnv })
-    }
-  }
-  function onEditColorEnvOffset(e: FormInputEvent) {
-    if (layer instanceof TilesLayer) {
-      const colorEnvOffset = parseI32(e.currentTarget.value)
-      if (!isNaN(colorEnvOffset)) onEditLayer({ group: g, layer: l, colorEnvOffset })
-    }
-  }
-  function onEditName(e: FormInputEvent) {
-    const name = e.currentTarget.value.substring(0, 11)
-    onEditLayer({ group: g, layer: l, name })
+    $syncColor = { ...$syncColor, a: clamp(parseInt(e.currentTarget.value), 0, 255) }
   }
   function onDelete() {
-    onDeleteLayer({ group: g, layer: l })
+    $server.query('deletelayer', { group: g, layer: l })
   }
   async function onAutomap() {
     // TODO: move this, merge with event received from server
@@ -274,9 +297,9 @@
     //   $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
     // }, 5000)
   }
-  function onAutomapperChange() {
+  async function onAutomapperChange() {
     const automapper = (layer as TilesLayer).automapper
-    onEditLayer({
+    await $server.query('editlayer', {
       group: g,
       layer: l,
       automapper: {
@@ -292,81 +315,46 @@
   {#if layer === null}
     <span>Select a layer in the tree view.</span>
   {:else}
-    <h3 class="bx--modal-header__heading">{layerName(layer)}</h3>
+    <h3 class="bx--modal-header__heading">{layerName(layer, $syncName)}</h3>
     {#if !isPhysicsLayer(layer)}
-      <label>
-        Group <input
-          type="number"
-          min={0}
-          max={$rmap.groups.length - 1}
-          value={g}
-          on:change={onEditGroup}
-        />
-      </label>
+      <Number label="Group" integer min={0} max={$rmap.groups.length - 1} bind:value={$syncGroup} />
     {/if}
-    <label>
-      Order <input
-        type="number"
-        min={0}
-        max={group.layers.length - 1}
-        value={l}
-        on:change={onEditOrder}
-      />
-    </label>
+    <Number label="Order" integer min={0} max={group.layers.length - 1} bind:value={$syncOrder} />
     {#if layer instanceof AnyTilesLayer}
-      <label>
-        Width <input type="number" min={2} max={10000} value={layer.width} on:change={onEditWidth} />
-      </label>
-      <label>
-        Height <input
-          type="number"
-          min={2}
-          max={10000}
-          value={layer.height}
-          on:change={onEditHeight}
-        />
-      </label>
+      <Number label="Width" integer min={2} max={10000} bind:value={$syncWidth} />
+      <Number label="Height" integer min={2} max={10000} bind:value={$syncHeight} />
     {/if}
     {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
       <label>
-        Detail <input type="checkbox" checked={layer.detail} on:change={onEditDetail} />
+        <span>Detail</span>
+        <input type="checkbox" bind:checked={$syncDetail} />
       </label>
       {@const img = layer.image ? layer.image.name : '<none>'}
       <label>
-        Image <input type="button" value={img} on:click={() => (imagePickerOpen = true)} />
+        <span>Image</span>
+        <input type="button" value={img} on:click={() => (imagePickerOpen = true)} />
       </label>
     {/if}
     {#if layer instanceof TilesLayer}
       <label>
-        Color <input type="color" value={colorToStr(layer.color)} on:change={onEditColor} />
+        <span>Color</span>
+        <input type="color" value={colorToStr($syncColor)} on:change={onEditColor} />
       </label>
       <label>
-        Opacity <input
-          type="range"
-          min={0}
-          max={255}
-          value={layer.color.a}
-          on:change={onEditOpacity}
-        />
+        <span>Opacity</span>
+        <input type="range" min={0} max={255} value={layer.color.a} on:change={onEditOpacity} />
       </label>
       <label>
-        Color Envelope <select on:change={onEditColorEnv}>
-          <option selected={layer.colorEnv === null} value={null}>None</option>
+        <span>Color Envelope</span>
+        <select bind:value={$syncColorEnv}>
+          <option value={-1}>None</option>
           {#each colorEnvelopes as env}
             {@const i = $rmap.map.envelopes.indexOf(env)}
-            <option selected={layer.colorEnv === env} value={i}>
-              {'#' + i + ' ' + (env.name || '(unnamed)')}
-            </option>
+            <option value={i}> {'#' + i + ' ' + (env.name || '(unnamed)')} </option>
           {/each}
         </select>
       </label>
-      <label>
-        Color Env. Offset <input
-          type="number"
-          value={layer.colorEnvOffset}
-          on:change={onEditColorEnvOffset}
-        />
-      </label>
+      <Number label="Color Env. Offset" integer bind:value={$syncColorEnvOff} />
       {@const conf = automapperConfig(layer)}
       <label>
         Automapper <input type="button" value={conf ?? 'None'} disabled={layer.image === null} on:click={() => automapperOpen = true} />
@@ -390,7 +378,8 @@
     {/if}
     {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
       <label>
-        Name <input type="text" value={layer.name} maxlength={11} on:change={onEditName} />
+        <span>Name</span>
+        <input type="text" value={$syncName} maxlength={11} on:change={e => $syncName = e.currentTarget.value} />
       </label>
     {/if}
     {#if !(layer instanceof GameLayer)}

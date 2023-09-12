@@ -1,14 +1,19 @@
 import type { Writable } from "svelte/store"
+import { fromFixedNum } from "./convert"
 import type { Query, RequestContent, ResponseContent } from "./protocol"
 import type { Server } from "./server"
+
+let counter = 0
 
 // a svelte store factory that provides a Writable synced with the server.
 export function sync<Q extends Query, T>(val: T, opts: { server: Server, query: Q, send: (val: T) => RequestContent[Q] | null, recv: (e: ResponseContent[Q]) => T | null }): Writable<T> {
   let subs: ((val: T) => void)[] = []
 
-  function cb(e: ResponseContent[Q]) {
+  let count = counter++
+
+  const cb = (e: ResponseContent[Q]) => {
     const newVal = opts.recv(e)
-    if (newVal !== null) {
+    if (newVal !== null && newVal !== val) {
       val = newVal
       subs.forEach(sub => sub(val))
     }
@@ -34,12 +39,16 @@ export function sync<Q extends Query, T>(val: T, opts: { server: Server, query: 
   }
 
   async function set(newVal: T) {
-    subs.forEach(sub => sub(newVal))
+    if (newVal === val)
+      return
+    const oldVal = val
+    val = newVal
+    subs.forEach(sub => sub(val))
     try {
-      await opts.server.query(opts.query, opts.send(newVal))
-      val = newVal
+      await opts.server.query(opts.query, opts.send(val))
     }
     catch {
+      val = oldVal
       subs.forEach(sub => sub(val))
     }
   }

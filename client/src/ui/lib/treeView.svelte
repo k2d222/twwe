@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { onDestroy, onMount } from 'svelte'
+  import { sync } from '../../server/util'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { AnyTilesLayer, TilesLayer } from '../../twmap/tilesLayer'
-  import { rmap, selected } from '../global'
+  import { rmap, selected, server } from '../global'
   import {
     View,
     ViewOff,
@@ -57,6 +59,33 @@
       }
     }
   }
+
+  let sync_ = 0
+  function onSync() {
+    sync_ = sync_ + 1
+  }
+
+  onMount(() => {
+    $server.on('editgroup', onSync)
+    $server.on('reordergroup', onSync)
+    $server.on('creategroup', onSync)
+    $server.on('deletegroup', onSync)
+    $server.on('editlayer', onSync)
+    $server.on('reorderlayer', onSync)
+    $server.on('createlayer', onSync)
+    $server.on('deletelayer', onSync)
+  })
+
+  onDestroy(() => {
+    $server.off('editgroup', onSync)
+    $server.off('reordergroup', onSync)
+    $server.off('creategroup', onSync)
+    $server.off('deletegroup', onSync)
+    $server.off('editlayer', onSync)
+    $server.off('reorderlayer', onSync)
+    $server.off('createlayer', onSync)
+    $server.off('deletelayer', onSync)
+  })
 
   function layerName(layer: Layer) {
     if (layer.name) {
@@ -129,8 +158,9 @@
   }
 </script>
 
+{#key sync_}
 <ul id="tree" role="tree" bind:this={self}>
-  {#each $rmap.groups as rgroup, g}
+  {#each $rmap.groups as rgroup, g (rgroup)}
     {@const group = rgroup.group}
     <li class="group" class:visible={rgroup.visible} class:folded={folded[g]}>
       <div
@@ -154,7 +184,7 @@
       </div>
 
       <ul>
-        {#each rgroup.layers as rlayer, l}
+        {#each rgroup.layers as rlayer, l (rlayer)}
           {@const layer = rlayer.layer}
           <li class="layer" class:visible={rlayer.visible}>
             <div
@@ -183,3 +213,4 @@
     </li>
   {/each}
 </ul>
+{/key}

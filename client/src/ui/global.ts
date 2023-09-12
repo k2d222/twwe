@@ -1,7 +1,8 @@
-import type { RenderMap } from 'src/gl/renderMap'
-import type { WebSocketServer } from 'src/server/server'
-import type { ServerConfig } from 'src/storage'
+import type { WebSocketServer } from '../server/server'
+import type { ServerConfig } from '../storage'
+import type { Map } from '../twmap/map'
 import { writable, type Writable } from 'svelte/store'
+import { RenderMap } from '../gl/renderMap'
 
 export enum View {
   Layers, Automappers, Images, Sounds, Envelopes, Settings // TODO
@@ -9,9 +10,14 @@ export enum View {
 
 export const server: Writable<WebSocketServer> = writable(null)
 export const serverConfig: Writable<ServerConfig> = writable(null)
-export const rmap: Writable<RenderMap> = writable(null)
 export const view: Writable<View> = writable(View.Layers)
+
+// map
+export const rmap: Writable<RenderMap> = writable(null)
+export const map: Writable<Map> = writable(null)
 export const selected: Writable<[number, number][]> = writable([])
+export const visible: Writable<boolean[][]> = writable([])
 export const automappers: Writable<{ [image: string]: string[] }> = writable({})
-export const peers: Writable<number> = writable(0)
 export const anim: Writable<boolean> = writable(false)
+
+export const peers: Writable<number> = writable(0)

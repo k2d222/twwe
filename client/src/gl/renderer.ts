@@ -5,13 +5,13 @@ import { TW_VERT, TW_FRAG } from './shaders'
 import { mat4 } from 'gl-matrix'
 
 export class Renderer {
+  canvas: HTMLCanvasElement
   gl: WebGL2RenderingContext
   shader: Shader
-
   proj: mat4
 
-  constructor(gl: WebGL2RenderingContext) {
-    this.gl = gl
+  constructor(canvas: HTMLCanvasElement) {
+    this.gl = canvas.getContext('webgl2', { antialias: false })
 
     this.proj = mat4.create()
 

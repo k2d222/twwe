@@ -11,7 +11,7 @@
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
   import { Pane, Splitpanes } from "svelte-splitpanes"
-  import Viewport from "./mapView.svelte"
+  import MapView from "./mapView.svelte"
   import { px2vw, rem2px } from "./util"
 
   let editor: HTMLElement
@@ -162,7 +162,7 @@
 
   <Pane>
     <div class="right">
-      <Viewport rmap={$rmap}/>
+      <MapView map={$rmap.map}/>
     </div>
   </Pane>
 

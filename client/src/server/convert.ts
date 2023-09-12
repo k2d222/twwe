@@ -14,7 +14,7 @@ export function curveTypeFromString(str: CurveTypeStr): Info.CurveType {
 }
 
 export function fromFixedNum(x: string, floating: number): number {
-  return parseFloat(x) * Math.pow(2, floating)
+  return Math.round(parseFloat(x) * Math.pow(2, floating))
 }
 export function toFixedNum(x: number, floating: number): string {
   return (x / Math.pow(2, floating)).toString()
