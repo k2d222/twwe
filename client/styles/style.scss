@@ -109,10 +109,19 @@
     outline-color: #da1e28;
   }
 
-  button.primary {
+  button.primary:not(:disabled) {
     color: white;
     background-color: #0f62fe;
+    outline-color: #0f62fe;
+    &:hover {
+      background-color: #0353e9;
+      outline-color: #0353e9;
+    }
   }
+}
+
+button {
+  cursor: pointer;
 }
 
 $header-h: 3rem;
@@ -900,105 +909,120 @@ nav.hidden .context {
 }
 
 #edit-automapper {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
+  .left, .middle, .right {
+    height: 100%;
+  }
 
-  .list {
+  .left {
+    .list {
+      display: flex;
+      flex-direction: column;
+
+      > input[type=text] {
+        margin-top: .5rem;
+      }
+    }
+
+    .row {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      height: 2rem;
+      width: 100%;
+      padding-left: 1rem;
+
+      color: themes.$text-secondary;
+      background-color: themes.$layer-01;
+      user-select: none;
+
+      &:hover {
+        color: themes.$text-primary;
+        background-color: themes.$layer-hover-01;
+      }
+
+      &.selected {
+        color: themes.$text-primary;
+        background-color: themes.$layer-selected-01;
+      }
+
+      &:focus {
+        outline: 2px solid themes.$focus;
+        outline-offset: -2px;
+      }
+
+      &.selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 0.25rem;
+        background: themes.$focus;
+      }
+
+      > .label {
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        flex-grow: 1;
+        padding-right: 0.5rem;
+        height: 100%;
+        display: flex;
+        align-items: center;
+      }
+
+      > button {
+        color: inherit;
+        background: none;
+        width: 2rem;
+        height: 2rem;
+        padding: .5rem;
+        text-align: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+      }
+
+      &:not(:hover) > button {
+        opacity: 0;
+      }
+
+      > button:hover svg {
+        color: #da1e28;
+      }
+    }
+  }
+
+  .middle {
     display: flex;
     flex-direction: column;
 
-    > input[type=text] {
-      margin-top: .5rem;
+    .editor {
+      flex-grow: 1;
+      overflow: auto;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 1px solid #ddd;
+
+      .modified {
+        font-style: italic;
+      }
     }
   }
 
   .right {
-    flex-grow: 1;
-    position: relative;
-    height: 100%;
-  }
-
-  .controls {
-    margin-top: 1rem;
-    text-align: right;
-  }
-
-  .row {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    height: 2rem;
-    width: 100%;
-    padding-left: 1rem;
-
-    color: themes.$text-secondary;
-    background-color: themes.$layer-01;
-    user-select: none;
-
-    &:hover {
-      color: themes.$text-primary;
-      background-color: themes.$layer-hover-01;
-    }
-
-    &.selected {
-      color: themes.$text-primary;
-      background-color: themes.$layer-selected-01;
-    }
-
-    &:focus {
-      outline: 2px solid themes.$focus;
-      outline-offset: -2px;
-    }
-
-    &.selected::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: 0.25rem;
-      background: themes.$focus;
-    }
-
-    > .label {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      white-space: nowrap;
+    .editor {
       flex-grow: 1;
-      padding-right: 0.5rem;
-      height: 100%;
-      display: flex;
-      align-items: center;
+      padding: .2rem;
+      overflow: auto;
+      height: calc(100vh - 15rem); // COMBAK: this is a bit gross
     }
-
-    > button {
-      color: inherit;
-      background: none;
-      width: 2rem;
-      height: 2rem;
-      padding: .5rem;
-      text-align: center;
-      background: none;
-      border: none;
-      cursor: pointer;
-    }
-
-    &:not(:hover) > button {
-      opacity: 0;
-    }
-
-    > button:hover svg {
-      color: #da1e28;
-    }
-  }
-
-  .editor {
-    flex-grow: 1;
-    padding: .2rem;
-    overflow: auto;
-    height: calc(100vh - 15rem); // COMBAK: this is a bit gross
   }
 }
 

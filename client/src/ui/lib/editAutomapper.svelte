@@ -28,6 +28,10 @@
       state: emptyState,
       parent: editor,
     })
+
+    const ams = Object.keys($automappers)
+    if (ams.length)
+      onSelect(ams[0])
   })
 
   function editorState(doc: string) {
@@ -36,8 +40,9 @@
         basicSetup,
         DDNetRules(),
         DDNetRulesLinter,
-        EditorView.lineWrapping,
-        tooltips({ position: 'absolute' })
+        // EditorView.lineWrapping, // This is a bit too laggy
+        tooltips({ position: 'absolute' }), // This is a bit too laggy
+        EditorView.updateListener.of(e => { if (e.docChanged) changed = true })
       ],
       doc
     })
@@ -60,18 +65,27 @@
   }
 
   async function onNew() {
-    // if (!isValidName(newAmName)) return
+    if (changed) {
+      const resp = await showWarning('Discard changes?', 'yesno')
+      if (!resp) return
+    }
 
-    // const name = newAmName
-    // newAmName = ''
-    // await $server.query('uploadautomapper', {
-    //   image: name,
-    //   content: '',
-    // })
-
-    // $automappers[name] = []
-    // $automappers = $automappers
     createAmOpen = true
+  }
+
+  async function onCreate() {
+    if (!isValidName(newAmName)) return
+
+    const name = newAmName
+    newAmName = ''
+    await $server.query('uploadautomapper', {
+      image: name,
+      content: '',
+    })
+
+    $automappers[name] = []
+    $automappers = $automappers
+    createAmOpen = false
   }
 
   async function onSave() {
@@ -153,10 +167,11 @@
 
   <Pane>
     <div class="middle">
-      <div class="editor" bind:this={editor}></div>
       <div class="controls">
+        <span class:modified={changed}>{changed ? '*' : ''}{selected ?? ''}</span>
         <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
       </div>
+      <div class="editor" bind:this={editor}></div>
     </div>
   </Pane>
 
@@ -185,7 +200,7 @@
           <option value="tw" disabled>Teeworlds 0.7 (TODO)</option>
         </select>
       </label>
-      <button class="primary" disabled={!isValidName(newAmName)}>Create</button>
+      <button class="primary large" disabled={!isValidName(newAmName)} on:click={onCreate}>Create</button>
     </div>
   </ModalBody>
 </ComposedModal>
