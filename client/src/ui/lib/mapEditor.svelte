@@ -295,6 +295,9 @@
   }
 
   function onMouseDown(e: MouseEvent) {
+    if (e.target !== viewport.canvas)
+      return
+
     if (rlayer && rlayer.layer instanceof AnyTilesLayer || $selected.length > 1) {
       updateMouseRange()
 

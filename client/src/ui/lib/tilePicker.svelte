@@ -229,11 +229,13 @@
     }
   }
 
+  let pressed = false
   function onKeyDown(e: KeyboardEvent) {
     if (e.ctrlKey || e.shiftKey || e.altKey) return
 
-    if (e.key == ' ') {
+    if (e.key == ' ' && !pressed) {
       tilesVisible = true
+      pressed = true
     }
   }
   function onKeyUp(e: KeyboardEvent) {
@@ -241,6 +243,7 @@
 
     if (e.key == ' ') {
       tilesVisible = false
+      pressed = false
     }
   }
 </script>
