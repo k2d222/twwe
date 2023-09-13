@@ -1,8 +1,5 @@
 <script lang="ts">
-  import type {
-    CreateLayer,
-    RequestContent,
-  } from '../../server/protocol'
+  import type { CreateLayer } from '../../server/protocol'
   import {
     SwitchLayer,
     TuneLayer,
@@ -11,20 +8,12 @@
     TeleLayer,
   } from '../../twmap/tilesLayer'
   import { fromFixedNum, toFixedNum } from '../../server/convert'
-  import { selected, map, server } from '../global'
+  import { map, server } from '../global'
   import { sync } from '../../server/util'
   import Number from './number.svelte'
   import { onDestroy, onMount } from 'svelte'
 
-  let g: number
-  $: {
-    if ($selected.length === 0) {
-      g = -1
-    }
-    else {
-      g = $selected[$selected.length - 1][0]
-    }
-  }
+  export let g: number
 
   $: group = $map.groups[g]
 

@@ -276,9 +276,12 @@
           {:else if l !== -1}
             <LayerEditor />
           {:else if g !== -1}
-            <GroupEditor />
+            <GroupEditor {g} />
           {:else}
-            <span>Select a group or a layer in the left bar.</span>
+            <div class="edit-multiple">
+              <h3 class="bx--modal-header__heading">No selection</h3>
+              <span>Select a group or a layer in the left bar.</span>
+            </div>
           {/if}
         </Pane>
       </Splitpanes>

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
-  import { sync } from '../../server/util'
   import type { Group } from '../../twmap/group'
   import type { Layer } from '../../twmap/layer'
   import { QuadsLayer } from '../../twmap/quadsLayer'

@@ -116,9 +116,9 @@
   }
   function onDeleteGroup(e: DeleteGroup) {
     $rmap.deleteGroup(e)
-    $selected = $selected.filter(([g, _]) => g !== e.group)
-    if ($selected.length === 0)
-      $selected = [[Math.min($rmap.map.groups.length - 1, e.group), -1]]
+    $selected = $selected
+      .filter(([g, _]) => g !== e.group)
+      .map(([g, l]) => g > e.group ? [g -1, l] : [g, l])
   }
   function onReorderGroup(e: ReorderGroup) {
     $rmap.reorderGroup(e)
