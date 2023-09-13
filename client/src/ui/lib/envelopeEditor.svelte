@@ -12,7 +12,7 @@
   import * as Info from '../../twmap/types'
   import { ColorEnvelope, PositionEnvelope, SoundEnvelope, type EnvPoint } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import { showError, clearDialog } from './dialog'
   import { rmap } from '../global'
 
@@ -47,10 +47,6 @@
     | 'pos_y'
     | 'pos_r'
     | 'sound_v'
-
-  // const envTypes: EnvType[] = [
-  //   'invalid', 'sound', 'position', 'color'
-  // ]
 
   const curves: CurveTypeStr[] = [
     'step',
@@ -98,27 +94,9 @@
     sound_v: (x: EnvPoint<any>, val: number) => (x.content = val),
   }
 
-  let lastSelected: Envelope | null = null
-
-  $: if (selected && channelEnabled) {
-    if (selected !== lastSelected) {
-      // we only reset the viewbox when changing active envelope
-      viewBox = makeViewBox(selected)
-      lastSelected = selected
-    }
-    paths = makePaths(selected)
-    colors = makeColors(selected)
-  }
-
-  $: if (!selected) {
-    viewBox = { x: 0, y: 0, w: 0, h: 0 }
-    paths = []
-    colors = []
-    lastSelected = selected
-  }
-
-  // redraw selected when $rmap is updated
-  $: $rmap, selected = selected
+  $: viewBox = selected ? makeViewBox(selected) : { x: 0, y: 0, w: 0, h: 0 }
+  $: sync_, channelEnabled, paths = selected ? makePaths(selected) : []
+  $: sync_, channelEnabled, colors = selected ? makeColors(selected): []
 
   function clampI32(n: number) {
     return clamp(n, -2_147_483_648, 2_147_483_647)
@@ -198,7 +176,9 @@
     const channels = envChannels(env)
     const res = []
 
-    for (const i in channels) if (channelEnabled[channels[i]]) res.push(colors[i])
+    for (const i in channels)
+      if (channelEnabled[channels[i]])
+        res.push(colors[i])
 
     return res
   }
@@ -252,8 +232,27 @@
     return `M${x},${y} M${x},${y} Z`
   }
 
+  let sync_ = 0
+  function onSync() {
+    if (selected && $rmap.map.envelopes.length === 0)
+      selected = null
+    else if (selected === null && $rmap.map.envelopes.length !== 0)
+      selected = $rmap.map.envelopes[0]
+    sync_++
+  }
+
   onMount(() => {
-    if (selected === null && $rmap.map.envelopes.length) selected = $rmap.map.envelopes[0]
+    $server.on('createenvelope', onSync)
+    $server.on('editenvelope', onSync)
+    $server.on('deleteenvelope', onSync)
+    if (selected === null && $rmap.map.envelopes.length)
+      selected = $rmap.map.envelopes[0]
+  })
+
+  onDestroy(() => {
+    $server.off('createenvelope', onSync)
+    $server.off('editenvelope', onSync)
+    $server.off('deleteenvelope', onSync)
   })
 
   async function onRename(e: InputEvent) {
@@ -262,11 +261,7 @@
       name: e.currentTarget.value,
     }
     try {
-      // showInfo('Please wait…')
       await $server.query('editenvelope', change)
-      $rmap.editEnvelope(change)
-      $rmap = $rmap // hack to redraw
-      clearDialog()
     } catch (e) {
       showError('Failed to rename envelope: ' + e)
     }
@@ -280,12 +275,8 @@
       name: '',
     }
     try {
-      // showInfo('Please wait…')
       await $server.query('createenvelope', change)
-      $rmap.createEnvelope(change)
       selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
-      $rmap = $rmap // hack to redraw
-      clearDialog()
     } catch (e) {
       showError('Failed to create envelope: ' + e)
     }
@@ -296,12 +287,8 @@
       index: $rmap.map.envelopes.indexOf(selected),
     }
     try {
-      // showInfo('Please wait…')
       await $server.query('deleteenvelope', change)
-      $rmap.removeEnvelope(change.index)
       selected = $rmap.map.envelopes[change.index - 1] || null
-      $rmap = $rmap // hack to redraw
-      clearDialog()
     } catch (e) {
       showError('Failed to delete envelope: ' + e)
     }
@@ -351,7 +338,7 @@
       point.time = px
       setChannelVal[chan](point, py)
 
-      selected = selected // hack to redraw
+      onSync()
     }
   }
 
@@ -435,7 +422,7 @@
     if (isNaN(val)) return
 
     setChannelVal[chan](point, val)
-    selected = selected // hack to redraw
+    onSync()
 
     const change = makeEnvEdit()
     $server.send('editenvelope', change)
@@ -455,7 +442,7 @@
     if (point !== prev) val = Math.max(val, prev.time)
 
     point.time = val
-    selected = selected // hack to redraw
+    onSync()
 
     const change = makeEnvEdit()
     $server.send('editenvelope', change)
@@ -465,7 +452,7 @@
     selected.points.splice(cm_j, 1)
     cm_j = -1
 
-    selected = selected // hack to redraw
+    onSync()
 
     const change = makeEnvEdit()
     $server.send('editenvelope', change)
@@ -475,7 +462,7 @@
     const point = selected.points[cm_k]
     const val: Info.CurveType = clampI32(parseInt(e.currentTarget.value))
     point.type = val
-    selected = selected // hack to redraw
+    onSync()
 
     const change = makeEnvEdit()
     $server.send('editenvelope', change)
@@ -517,7 +504,7 @@
       setChannelVal[chan](newPoint, Math.floor(channelVal[chan](newPoint)))
 
     selected.points.splice(nextIndex, 0, newPoint)
-    selected = selected // hack to redraw
+    onSync()
 
     const change = makeEnvEdit()
     $server.send('editenvelope', change)
@@ -526,6 +513,7 @@
 
 <svelte:window on:resize={onResize} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
+{#key sync_}
 <div id="envelope-editor">
   <div class="header">
     {#if selected}
@@ -661,3 +649,4 @@
     </div>
   </ContextMenu>
 {/if}
+{/key}

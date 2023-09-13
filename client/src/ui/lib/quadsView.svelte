@@ -160,16 +160,13 @@
     const change = editQuad(q)
     $rmap.editQuad(change)
     $server.send('editquad', change)
-    // quadPoints = quadPoints // hack to redraw
     onSync()
   }
 
   function onDelete(q: number) {
     const change = { group: g, layer: l, quad: q }
-    $server.query('deletequad', change)
-    $rmap.deleteQuad(change)
     hideCM()
-    onSync()
+    $server.query('deletequad', change)
   }
 
   function onCreateQuad() {
@@ -209,8 +206,6 @@
 
     hideCM()
     $server.query('createquad', change)
-    $rmap.createQuad(change)
-    onSync()
   }
 
   function cloneQuad(quad: Quad) {
@@ -275,7 +270,6 @@
 
     hideCM()
     $server.query('createquad', change)
-    $rmap.createQuad(change)
   }
 
   let sync_ = 0
