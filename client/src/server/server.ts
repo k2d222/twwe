@@ -189,8 +189,7 @@ export class WebSocketServer implements Server {
       if (data.id !== 0) {
         const fn = this.queryListeners[data.id]
         fn(data)
-      }
-      if ('ok' in data) {
+      } else if ('ok' in data) {
         for (const fn of this.getBroadcastListeners(data.ok.type)) {
           fn(data.ok.content)
         }

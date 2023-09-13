@@ -8,7 +8,6 @@
   import QuadEditor from './editQuad.svelte'
   import { server } from '../global'
   import { layerIndex } from './util'
-  import { showError, clearDialog } from './dialog'
   import { Button } from 'carbon-components-svelte'
   import { Add as AddIcon } from 'carbon-icons-svelte'
   import { coordToJson, uvToJson } from '../../server/convert'
@@ -19,9 +18,13 @@
   let viewBox: string
   let circleRadius: number
 
-  $: quadPoints = layer.quads.map(q => {
-    return [...q.points]
-  })
+  let quadPoints: Info.Coord[][]
+  $: {
+    sync_
+    quadPoints = layer.quads.map(q => {
+      return [...q.points]
+    })
+  }
   $: [g, l] = layerIndex($rmap.map, layer)
 
   function quadPointsStr(points: Info.Coord[]) {
@@ -43,6 +46,10 @@
   let destroyed = false
 
   onMount(() => {
+    $server.on('editquad', onSync)
+    $server.on('createquad', onSync)
+    $server.on('deletequad', onSync)
+  
     const updateForever = () => {
       viewBox = makeViewBox()
       circleRadius = 100 / viewport.scale
@@ -52,6 +59,9 @@
   })
 
   onDestroy(() => {
+    $server.off('editquad', onSync)
+    $server.off('createquad', onSync)
+    $server.off('deletequad', onSync)
     destroyed = true
   })
 
@@ -117,6 +127,7 @@
 
     const change = editQuad(activeQuad)
     $rmap.editQuad(change)
+    onSync()
   }
 
   function onMouseUp(e: MouseEvent) {
@@ -149,21 +160,16 @@
     const change = editQuad(q)
     $rmap.editQuad(change)
     $server.send('editquad', change)
-    quadPoints = quadPoints // hack to redraw
+    // quadPoints = quadPoints // hack to redraw
+    onSync()
   }
 
   function onDelete(q: number) {
-    try {
-      // showInfo('Please wait…')
-      const change = { group: g, layer: l, quad: q }
-      $server.query('deletequad', change)
-      $rmap.deleteQuad(change)
-      hideCM()
-      layer = layer
-      clearDialog()
-    } catch (e) {
-      showError('Failed to delete quad: ' + e)
-    }
+    const change = { group: g, layer: l, quad: q }
+    $server.query('deletequad', change)
+    $rmap.deleteQuad(change)
+    hideCM()
+    onSync()
   }
 
   function onCreateQuad() {
@@ -201,15 +207,10 @@
       colorEnvOffset: 0,
     }
 
-    try {
-      // showInfo('Please wait…')
-      $server.query('createquad', change)
-      $rmap.createQuad(change)
-      layer = layer
-      clearDialog()
-    } catch (e) {
-      showError('Failed to create quad: ' + e)
-    }
+    hideCM()
+    $server.query('createquad', change)
+    $rmap.createQuad(change)
+    onSync()
   }
 
   function cloneQuad(quad: Quad) {
@@ -272,20 +273,19 @@
       colorEnvOffset,
     }
 
-    try {
-      // showInfo('Please wait…')
-      $server.query('createquad', change)
-      $rmap.createQuad(change)
-      hideCM()
-      layer = layer
-      clearDialog()
-    } catch (e) {
-      showError('Failed to duplicate quad: ' + e)
-    }
+    hideCM()
+    $server.query('createquad', change)
+    $rmap.createQuad(change)
+  }
+
+  let sync_ = 0
+  function onSync() {
+    sync_++
   }
 </script>
 
-<div id="edit-quads">
+{#key sync_}
+<div id="quads-view">
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <svg
     {viewBox}
@@ -293,7 +293,7 @@
     on:mousemove={onMouseMove}
     on:mouseup={onMouseUp}
   >
-    {#each layer.quads as _, q}
+    {#each quadPoints as _, q}
       {@const points = quadPoints[q]}
       <polygon
         points={quadPointsStr(points)}
@@ -388,3 +388,4 @@
     />
   </div>
 </div>
+{/key}

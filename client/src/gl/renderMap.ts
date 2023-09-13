@@ -324,6 +324,7 @@ export class RenderMap {
     const quad = rlayer.layer.quads[change.quad]
 
     if ('position' in change) quad.points[4] =  coordFromJson(change.position, 15)
+    if ('corners' in change) quad.points = [...change.corners.map(c => coordFromJson(c, 15)), quad.points[4]]
     if ('colors' in change) quad.colors = change.colors
     if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => uvFromJson(p, 10))
     if ('posEnv' in change)

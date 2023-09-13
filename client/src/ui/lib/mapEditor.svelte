@@ -108,32 +108,17 @@
   function onDeleteEnvelope(e: DeleteEnvelope) {
     $rmap.removeEnvelope(e.index)
   }
-  function onEditGroup(e: EditGroup) {
-    $rmap.editGroup(e)
-  }
-  async function onEditLayer(e: EditLayer) {
-    $rmap.editLayer(e)
-  }
   function onCreateGroup(e: CreateGroup) {
     $rmap.createGroup(e)
   }
-  function onCreateLayer(e: CreateLayer) {
-    $rmap.createLayer(e)
+  function onEditGroup(e: EditGroup) {
+    $rmap.editGroup(e)
   }
   function onDeleteGroup(e: DeleteGroup) {
     $rmap.deleteGroup(e)
     $selected = $selected.filter(([g, _]) => g !== e.group)
     if ($selected.length === 0)
       $selected = [[Math.min($rmap.map.groups.length - 1, e.group), -1]]
-  }
-  function onDeleteLayer(e: DeleteLayer) {
-    $rmap.deleteLayer(e)
-    $selected = $selected.filter(([g, l]) => g !== e.group || l !== e.layer)
-    if ($selected.length === 0) {
-      $selected = (rgroup.layers.length === 0) ?
-        [$rmap.map.physicsLayerIndex(GameLayer)] :
-        [[g, Math.min(rgroup.layers.length - 1, e.layer)]]
-    }
   }
   function onReorderGroup(e: ReorderGroup) {
     $rmap.reorderGroup(e)
@@ -143,6 +128,21 @@
        rgroup ? [$rmap.map.groupIndex(rgroup.group), -1] :
        $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
+  }
+  function onCreateLayer(e: CreateLayer) {
+    $rmap.createLayer(e)
+  }
+  async function onEditLayer(e: EditLayer) {
+    $rmap.editLayer(e)
+  }
+  function onDeleteLayer(e: DeleteLayer) {
+    $rmap.deleteLayer(e)
+    $selected = $selected.filter(([g, l]) => g !== e.group || l !== e.layer)
+    if ($selected.length === 0) {
+      $selected = (rgroup.layers.length === 0) ?
+        [$rmap.map.physicsLayerIndex(GameLayer)] :
+        [[g, Math.min(rgroup.layers.length - 1, e.layer)]]
+    }
   }
   function onReorderLayer(e: ReorderLayer) {
     $rmap.reorderLayer(e)
