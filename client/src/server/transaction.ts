@@ -41,7 +41,7 @@ type Common<K extends Array<any>, S extends Array<any>> =
     : true
   : false
 
-type FilterCommon<K extends Array<any>, S extends Array<any>> = 
+// type FilterCommon<K extends Array<any>, S extends Array<any>> = 
 
-type Stops = ['map', 'info', 'settings']
-type M = Common<ProtoPath, Stops>
+// type Stops = ['map', 'info', 'settings']
+// type M = Common<ProtoPath, Stops>

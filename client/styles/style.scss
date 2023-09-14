@@ -927,7 +927,8 @@ nav.hidden .context {
       position: relative;
       display: flex;
       justify-content: space-between;
-      gap: 1rem;
+      align-items: center;
+      gap: .5rem;
       height: 2rem;
       width: 100%;
       padding-left: 1rem;
@@ -966,10 +967,14 @@ nav.hidden .context {
         overflow: hidden;
         white-space: nowrap;
         flex-grow: 1;
-        padding-right: 0.5rem;
         height: 100%;
         display: flex;
         align-items: center;
+      }
+
+      > .icon > svg {
+        width: 1rem;
+        height: 1rem;
       }
 
       > button {
@@ -985,7 +990,7 @@ nav.hidden .context {
       }
 
       &:not(:hover) > button {
-        opacity: 0;
+        display: none;
       }
 
       > button:hover svg {

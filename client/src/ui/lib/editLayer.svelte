@@ -96,7 +96,7 @@
       layer.automapper.config === -1 ||
       !layer.image ||
       !(layer.image.name in $automappers) ||
-      layer.automapper.config >= $automappers[layer.image.name].length
+      layer.automapper.config >= $automappers[layer.image.name].configs.length
     ) {
       return null
     }

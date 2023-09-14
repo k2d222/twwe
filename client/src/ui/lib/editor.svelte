@@ -5,7 +5,7 @@
     ListUsers,
     EditTiles,
     ApplyAutomapper,
-    AutomapperConfigs,
+    AutomapperDetail,
   } from '../../server/protocol'
   import { LayerType } from '../../twmap/types'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
@@ -111,8 +111,8 @@
     delete $automappers[e]
     $automappers = $automappers
   }
-  function serverOnUploadAutomapper(e: AutomapperConfigs) {
-    $automappers[e.image] = e.configs
+  function serverOnUploadAutomapper(e: AutomapperDetail) {
+    $automappers[e.file] = e
     $automappers = $automappers
   }
   function serverOnError(e: ServerError) {

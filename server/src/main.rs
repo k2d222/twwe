@@ -590,34 +590,80 @@ impl Server {
         Ok(ResponseContent::Cursors(cursors))
     }
 
+    // TODO: refactor this shit i'm too tired rn
     fn handle_list_automappers(&self, peer: &Peer) -> Res {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
 
         let path = room.path().to_str().ok_or("internal server error")?;
 
+        let mut automappers = HashMap::new();
+
         let rule_files: Vec<_> = glob(&format!("{}/*.rules", path))
             .map(|paths| paths.into_iter().filter_map(|p| p.ok()).collect())
             .unwrap_or_default();
 
-        let automappers: HashMap<_, _> = rule_files
-            .into_iter()
-            .filter_map(|path| -> Option<(String, Vec<String>)> {
-                let file_name = path.file_stem()?.to_string_lossy().into_owned();
+        automappers.extend(rule_files.into_iter().filter_map(
+            |path| -> Option<(String, AutomapperDetail)> {
+                let file = path.file_name()?.to_string_lossy().into_owned();
+                let image = path.file_stem()?.to_string_lossy().into_owned();
                 let file_contents = fs::read_to_string(path).ok()?;
-                let automapper = Automapper::parse(file_name.clone(), &file_contents);
+                let automapper = Automapper::parse(image.clone(), &file_contents);
                 Some((
-                    file_name,
-                    match automapper {
-                        Ok(am) => am.configs.into_iter().map(|c| c.name).collect(),
-                        Err(_) => vec![],
+                    file.to_owned(),
+                    AutomapperDetail {
+                        file,
+                        kind: AutomapperKind::DDNet,
+                        image,
+                        configs: match automapper {
+                            Ok(am) => am.configs.into_iter().map(|c| c.name).collect(),
+                            Err(_) => vec![],
+                        },
                     },
                 ))
-            })
-            .collect();
+            },
+        ));
 
-        Ok(ResponseContent::ListAutomappers(ListAutomappers {
-            configs: automappers,
-        }))
+        let rule_files: Vec<_> = glob(&format!("{}/*.rpp", path))
+            .map(|paths| paths.into_iter().filter_map(|p| p.ok()).collect())
+            .unwrap_or_default();
+
+        automappers.extend(rule_files.into_iter().filter_map(
+            |path| -> Option<(String, AutomapperDetail)> {
+                let file = path.file_name()?.to_string_lossy().into_owned();
+                let image = path.file_stem()?.to_string_lossy().into_owned();
+                Some((
+                    file.to_owned(),
+                    AutomapperDetail {
+                        file,
+                        kind: AutomapperKind::Rpp,
+                        image,
+                        configs: vec![],
+                    },
+                ))
+            },
+        ));
+
+        let rule_files: Vec<_> = glob(&format!("{}/*.json", path))
+            .map(|paths| paths.into_iter().filter_map(|p| p.ok()).collect())
+            .unwrap_or_default();
+
+        automappers.extend(rule_files.into_iter().filter_map(
+            |path| -> Option<(String, AutomapperDetail)> {
+                let file = path.file_name()?.to_string_lossy().into_owned();
+                let image = path.file_stem()?.to_string_lossy().into_owned();
+                Some((
+                    file.to_owned(),
+                    AutomapperDetail {
+                        file,
+                        kind: AutomapperKind::Teeworlds,
+                        image,
+                        configs: vec![],
+                    },
+                ))
+            },
+        ));
+
+        Ok(ResponseContent::ListAutomappers(automappers))
     }
 
     fn check_image_name(&self, name: &str) -> bool {
@@ -629,11 +675,11 @@ impl Server {
         let room = peer.room.clone().ok_or("user is not connected to a map")?;
 
         if !self.check_image_name(&send_automapper) {
-            return Err("invalid image name");
+            return Err("invalid automapper name");
         }
 
         let mut path = room.path().to_owned();
-        path.push(format!("{}.rules", send_automapper));
+        path.push(send_automapper);
 
         let rule_file = fs::read_to_string(path).map_err(|_| "automapper file not found")?;
 
@@ -648,7 +694,7 @@ impl Server {
         }
 
         let mut path = room.path().to_owned();
-        path.push(format!("{}.rules", delete_automapper));
+        path.push(&delete_automapper);
 
         fs::remove_file(path).map_err(|_| "automapper file not found")?;
 
@@ -666,19 +712,31 @@ impl Server {
             return Err("invalid image name");
         }
 
-        let mut path = room.path().to_owned();
-        path.push(format!("{}.rules", upload_automapper.image));
+        let ext = match upload_automapper.kind {
+            AutomapperKind::DDNet => "rules",
+            AutomapperKind::Rpp => "rpp",
+            AutomapperKind::Teeworlds => "json",
+        };
 
-        let configs =
+        let file = format!("{}.{ext}", upload_automapper.image);
+        let mut path = room.path().to_owned();
+        path.push(&file);
+
+        let configs = if upload_automapper.kind == AutomapperKind::DDNet {
             Automapper::parse(upload_automapper.image.clone(), &upload_automapper.content)
                 .map(|am| am.configs.iter().map(|c| c.name.to_owned()).collect())
-                .unwrap_or_default();
+                .unwrap_or_default()
+        } else {
+            vec![]
+        };
 
         fs::write(path, upload_automapper.content).map_err(server_error)?;
 
-        Ok(ResponseContent::UploadAutomapper(AutomapperConfigs {
+        Ok(ResponseContent::UploadAutomapper(AutomapperDetail {
             image: upload_automapper.image.to_owned(),
             configs,
+            kind: upload_automapper.kind,
+            file,
         }))
     }
 

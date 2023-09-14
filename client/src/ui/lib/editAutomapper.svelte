@@ -14,11 +14,16 @@
   import { Pane, Splitpanes } from "svelte-splitpanes"
   import MapView from "./mapView.svelte"
   import { px2vw, rem2px } from "./util"
+  import { AutomapperKind } from "../../server/protocol"
+  import DDNetIcon from "../../../assets/ddnet/ddnet_symbolic.svg?component"
+  import RppIcon from "../../../assets/rpp/rpp_symbolic.svg?component"
+  import { Unknown as UnknownIcon } from 'carbon-icons-svelte'
 
   let editor: HTMLElement
   let selected: string | null = null
   let changed = false
   let newAmName = ''
+  let newAmKind = AutomapperKind.DDNet
   let view: EditorView
   let emptyState = editorState('Select or create an automapper on the left panel.')
 
@@ -35,30 +40,34 @@
       onSelect(ams[0])
   })
 
-  function editorState(doc: string) {
-    return EditorState.create({
-      extensions: [
-        basicSetup,
-        DDNetRules(),
-        DDNetRulesLinter,
-        // EditorView.lineWrapping, // This is a bit too laggy
-        tooltips({ position: 'absolute' }), // This is a bit too laggy
-        EditorView.updateListener.of(e => { if (e.docChanged) changed = true })
-      ],
-      doc
-    })
+  function editorState(doc: string, kind?: AutomapperKind) {
+    let extensions = [
+      basicSetup,
+      // EditorView.lineWrapping, // This is a bit too laggy
+      tooltips({ position: 'absolute' }), // This is a bit too laggy
+      EditorView.updateListener.of(e => { if (e.docChanged) changed = true })
+    ]
+
+    if (kind === AutomapperKind.DDNet) {
+      extensions.push(DDNetRules(), DDNetRulesLinter)
+    }
+    else if (kind === AutomapperKind.Rpp) {
+      extensions.push(Rpp())
+    }
+
+    return EditorState.create({ extensions, doc })
   }
 
-  async function onDelete(name: string) {
-    const resp = await showWarning(`Do you want to delete '${name}'?`, 'yesno')
+  async function onDelete(file: string) {
+    const resp = await showWarning(`Do you want to delete '${file}'?`, 'yesno')
     let sel = selected
 
     if (resp) {
-      await $server.query('deleteautomapper', name)
-      delete $automappers[name]
+      await $server.query('deleteautomapper', file)
+      delete $automappers[file]
       $automappers = $automappers
 
-      if (name === sel) {
+      if (file === sel) {
         selected = null
         view.setState(emptyState)
       }
@@ -77,16 +86,23 @@
   async function onCreate() {
     if (!isValidName(newAmName)) return
 
-    const name = newAmName
+    const image = newAmName
+    const kind = newAmKind
     newAmName = ''
 
     try {
       await $server.query('uploadautomapper', {
-        image: name,
+        kind,
+        image: image,
         content: '',
       })
 
-      $automappers[name] = []
+      let file = ''
+      if (kind === AutomapperKind.DDNet) file = image + '.rules'
+      if (kind === AutomapperKind.Rpp) file = image + '.rpp'
+      if (kind === AutomapperKind.Teeworlds) file = image + '.json'
+
+      $automappers[file] = { file, image, configs: [], kind }
       $automappers = $automappers
       createAmOpen = false
     }
@@ -102,12 +118,14 @@
 
     try {
       showInfo("Uploading...")
+      const { kind, image } = $automappers[selected]
       const resp = await $server.query('uploadautomapper', {
-        image: selected,
+        kind,
+        image,
         content: str
       })
 
-      $automappers[resp.image] = resp.configs
+      $automappers[resp.file] = resp
       $automappers = $automappers
     }
     catch (e) {
@@ -119,17 +137,20 @@
     changed = false
   }
 
-  async function onSelect(image: string) {
-    if (image === selected) return
+  async function onSelect(file: string) {
+    if (file === selected) return
+
+    const am = $automappers[file]
+
     if (changed) {
       const resp = await showWarning('Discard changes?', 'yesno')
       if (!resp) return
     }
 
-    selected = image
+    selected = file
     view.setState(editorState('Loading file...'))
-    const text = await $server.query('sendautomapper', image)
-    view.setState(editorState(text))
+    const text = await $server.query('sendautomapper', file)
+    view.setState(editorState(text, am.kind))
     changed = false
   }
 
@@ -141,6 +162,12 @@
     return name !== '' && !Object.keys($automappers).includes(name)
   }
 
+  function automapperIcon(kind: AutomapperKind) {
+      if (kind === AutomapperKind.DDNet) return DDNetIcon
+      else if (kind === AutomapperKind.Rpp) return RppIcon
+      else return UnknownIcon
+  }
+
 </script>
 
 <div id="edit-automapper">
@@ -148,18 +175,19 @@
 
     <Pane size={px2vw(rem2px(15))}>
       <div class="left list">
-        {#each Object.keys($automappers) as name}
+        {#each Object.entries($automappers).sort(([f1], [f2]) => f1.localeCompare(f2)) as [file, am]}
           <div
             class="row"
-            aria-selected={selected === name}
-            class:selected={selected === name}
+            aria-selected={selected === file}
+            class:selected={selected === file}
             tabindex="0"
             role="tab"
             on:keydown={onKeydown}
-            on:click={() => onSelect(name)}
+            on:click={() => onSelect(file)}
           >
-            <span class="label">{name}</span>
-            <button on:click={() => onDelete(name)}><TrashIcon /></button>
+            <span class="icon"><svelte:component this={automapperIcon(am.kind)} /></span>
+            <span class="label">{am.image}</span>
+            <button on:click={() => onDelete(file)}><TrashIcon /></button>
           </div>
         {/each}
 
@@ -201,10 +229,10 @@
       </label>
       <label>
         Kind
-        <select>
-          <option selected value="ddnet">DDNet</option>
-          <option value="rpp">Rules++</option>
-          <option value="tw" disabled>Teeworlds 0.7 (TODO)</option>
+        <select bind:value={newAmKind}>
+          <option value={AutomapperKind.DDNet}>DDNet</option>
+          <option value={AutomapperKind.Rpp}>Rules++</option>
+          <option value={AutomapperKind.Teeworlds} disabled>Teeworlds (TODO)</option>
         </select>
       </label>
       <button class="primary large" disabled={!isValidName(newAmName)} on:click={onCreate}>Create</button>

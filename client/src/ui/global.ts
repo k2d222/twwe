@@ -3,6 +3,7 @@ import type { ServerConfig } from '../storage'
 import type { Map } from '../twmap/map'
 import { writable, type Writable } from 'svelte/store'
 import { RenderMap } from '../gl/renderMap'
+import type { ListAutomappers } from '../server/protocol'
 
 export enum View {
   Layers, Automappers, Images, Sounds, Envelopes, Settings // TODO
@@ -17,7 +18,7 @@ export const rmap: Writable<RenderMap> = writable(null)
 export const map: Writable<Map> = writable(null)
 export const selected: Writable<[number, number][]> = writable([])
 export const visible: Writable<boolean[][]> = writable([])
-export const automappers: Writable<{ [image: string]: string[] }> = writable({})
+export const automappers: Writable<ListAutomappers> = writable({})
 export const anim: Writable<boolean> = writable(false)
 
 export const peers: Writable<number> = writable(0)

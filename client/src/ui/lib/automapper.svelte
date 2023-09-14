@@ -8,12 +8,13 @@
   import { showError, showInfo, showWarning } from './dialog'
   import { createEventDispatcher } from 'svelte'
   import { server, automappers } from '../global'
+  import { AutomapperKind } from '../../server/protocol'
 
   export let layer: TilesLayer
 
   let dispatch = createEventDispatcher<{change: number}>()
 
-  $: configs = $automappers[layer.image?.name] ?? []
+  $: configs = $automappers[layer.image?.name].configs ?? []
 
   async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
@@ -35,6 +36,7 @@
 
     try {
       await $server.query('uploadautomapper', {
+        kind: AutomapperKind.DDNet,
         image: name,
         content: str,
       })
@@ -44,11 +46,10 @@
       return
     }
 
-    const am = await $server.query("listautomappers", null)
-    $automappers = am.configs
+    $automappers = await $server.query("listautomappers", null)
 
     showInfo(
-      `Uploaded ${$automappers[name].length} rules for '${name}'.`,
+      `Uploaded ${$automappers[file.name].configs.length} rules for '${name}'.`,
       'closable'
     )
   }

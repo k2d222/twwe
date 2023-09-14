@@ -265,11 +265,14 @@ export interface ListMaps {
 
 // AUTOMAPPERS
 
-export interface ListAutomappers {
-  configs: { [k in string]: string[] }
+export enum AutomapperKind {
+  DDNet = 'ddnet',
+  Rpp = 'rpp',
+  Teeworlds = 'teeworlds'
 }
 
 export interface UploadAutomapper {
+  kind: AutomapperKind
   image: string
   content: string
 }
@@ -279,9 +282,15 @@ export interface ApplyAutomapper {
   layer: number
 }
 
-export interface AutomapperConfigs {
-  image: string
-  configs: string[]
+export interface AutomapperDetail {
+  file: string,
+  image: string,
+  configs: string[],
+  kind: AutomapperKind,
+}
+
+export interface ListAutomappers {
+  [k: string]: AutomapperDetail
 }
 
 // IMAGES
@@ -406,7 +415,7 @@ export interface ResponseContent {
   listautomappers: ListAutomappers
   sendautomapper: string
   deleteautomapper: string
-  uploadautomapper: AutomapperConfigs
+  uploadautomapper: AutomapperDetail
   applyautomapper: ApplyAutomapper
 
   createquad: CreateQuad

@@ -400,21 +400,29 @@ pub struct ImageConfig {
     pub index: u16,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ListAutomappers {
-    pub configs: HashMap<String, Vec<String>>,
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AutomapperKind {
+    DDNet,
+    Rpp,
+    Teeworlds,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AutomapperDetail {
+    pub kind: AutomapperKind,
+    pub file: String,
+    pub image: String,
+    pub configs: Vec<String>,
+}
+
+pub type ListAutomappers = HashMap<String, AutomapperDetail>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UploadAutomapper {
+    pub kind: AutomapperKind,
     pub image: String,
     pub content: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AutomapperConfigs {
-    pub image: String,
-    pub configs: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -547,7 +555,7 @@ pub enum ResponseContent {
     ListAutomappers(ListAutomappers),
     SendAutomapper(String),
     DeleteAutomapper(String),
-    UploadAutomapper(AutomapperConfigs),
+    UploadAutomapper(AutomapperDetail),
     ApplyAutomapper(ApplyAutomapper),
 
     CreateImage(CreateImage),

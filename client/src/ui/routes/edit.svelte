@@ -9,18 +9,10 @@
 
   export let name: string
 
-  // $: (async () => {
-  //   await $server.query('joinmap', { name })
-  //   const map_ = await queryMap($serverConfig.httpUrl, name)
-  //   const am = await $server.query('listautomappers', null)
-  //   $automappers = am.configs
-  //   $map = map_
-  // })()
   let loadingSignal = (async () => {
     await $server.query('joinmap', { name })
     const map_ = await queryMap($serverConfig.httpUrl, name)
-    const am = await $server.query('listautomappers', null)
-    $automappers = am.configs
+    $automappers = await $server.query('listautomappers', null)
     $map = map_
   })()
 
