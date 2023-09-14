@@ -10,6 +10,7 @@
   import { EditorView, tooltips } from "@codemirror/view"
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
+  import { Rpp } from './lang-rpp/index'
   import { Pane, Splitpanes } from "svelte-splitpanes"
   import MapView from "./mapView.svelte"
   import { px2vw, rem2px } from "./util"
@@ -78,14 +79,20 @@
 
     const name = newAmName
     newAmName = ''
-    await $server.query('uploadautomapper', {
-      image: name,
-      content: '',
-    })
 
-    $automappers[name] = []
-    $automappers = $automappers
-    createAmOpen = false
+    try {
+      await $server.query('uploadautomapper', {
+        image: name,
+        content: '',
+      })
+
+      $automappers[name] = []
+      $automappers = $automappers
+      createAmOpen = false
+    }
+    catch (e) {
+      showError('Failed to create automapper: ' + e)
+    }
   }
 
   async function onSave() {

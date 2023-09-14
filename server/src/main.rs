@@ -599,17 +599,20 @@ impl Server {
             .map(|paths| paths.into_iter().filter_map(|p| p.ok()).collect())
             .unwrap_or_default();
 
-        let parse_automapper = |path: PathBuf| -> Option<(String, Automapper)> {
-            let file_name = path.file_stem()?.to_string_lossy().into_owned();
-            let file_contents = fs::read_to_string(path).ok()?;
-            let automapper = Automapper::parse(file_name.clone(), &file_contents).ok()?;
-            Some((file_name, automapper))
-        };
-
         let automappers: HashMap<_, _> = rule_files
             .into_iter()
-            .filter_map(parse_automapper)
-            .map(|(img_name, am)| (img_name, am.configs.into_iter().map(|c| c.name).collect()))
+            .filter_map(|path| -> Option<(String, Vec<String>)> {
+                let file_name = path.file_stem()?.to_string_lossy().into_owned();
+                let file_contents = fs::read_to_string(path).ok()?;
+                let automapper = Automapper::parse(file_name.clone(), &file_contents);
+                Some((
+                    file_name,
+                    match automapper {
+                        Ok(am) => am.configs.into_iter().map(|c| c.name).collect(),
+                        Err(_) => vec![],
+                    },
+                ))
+            })
             .collect();
 
         Ok(ResponseContent::ListAutomappers(ListAutomappers {
@@ -666,14 +669,10 @@ impl Server {
         let mut path = room.path().to_owned();
         path.push(format!("{}.rules", upload_automapper.image));
 
-        let automapper =
+        let configs =
             Automapper::parse(upload_automapper.image.clone(), &upload_automapper.content)
-                .map_err(|_| "invalid automapper file")?;
-        let configs: Vec<_> = automapper
-            .configs
-            .iter()
-            .map(|c| c.name.to_owned())
-            .collect();
+                .map(|am| am.configs.iter().map(|c| c.name.to_owned()).collect())
+                .unwrap_or_default();
 
         fs::write(path, upload_automapper.content).map_err(server_error)?;
 
@@ -856,7 +855,7 @@ async fn route_websocket(
     } else {
         String::from("Unknown browser")
     };
-    println!("`{user_agent}` at {addr} connected.");
+    log::info!("`{user_agent}` at {addr} connected.");
 
     ws.on_upgrade(move |socket| async move { server.handle_websocket(socket, addr).await })
 }

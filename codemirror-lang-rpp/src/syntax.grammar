@@ -1,0 +1,197 @@
+@precedence {
+  left @left,
+  right @right
+ }
+
+@top file { token* }
+
+@skip { space | LineComment }
+
+token {
+    Preprocessor
+  | Literal
+  | String
+  | Keyword
+  | Type
+  | Rotation
+  | Ident
+  | Function
+}
+
+Type {
+    @specialize<Ident, "array">
+  | @specialize<Ident, "bool">
+  | @specialize<Ident, "coord">
+  | @specialize<Ident, "float">
+  | @specialize<Ident, "int">
+  | @specialize<Ident, "object">
+  | @specialize<Ident, "range">
+  | @specialize<Ident, "string">
+}
+Rotation {
+    @specialize<Ident, "N">
+  | @specialize<Ident, "V">
+  | @specialize<Ident, "H">
+  | @specialize<Ident, "R">
+  | @specialize<Ident, "VR">
+  | @specialize<Ident, "VH">
+  | @specialize<Ident, "HR">
+  | @specialize<Ident, "VHR">
+}
+Keyword {
+    @specialize<Ident, "anchor">
+  | @specialize<Ident, "and">
+  // | @specialize<Ident, "array">
+  | @specialize<Ident, "assert">
+  | @specialize<Ident, "automapper">
+  // | @specialize<Ident, "bool">
+  | @specialize<Ident, "break">
+  | @specialize<Ident, "continue">
+  // | @specialize<Ident, "coord">
+  | @specialize<Ident, "count">
+  | @specialize<Ident, "empty">
+  | @specialize<Ident, "end">
+  | @specialize<Ident, "error">
+  | @specialize<Ident, "false">
+  // | @specialize<Ident, "float">
+  | @specialize<Ident, "for">
+  | @specialize<Ident, "full">
+  | @specialize<Ident, "function">
+  | @specialize<Ident, "group">
+  | @specialize<Ident, "if">
+  | @specialize<Ident, "index">
+  | @specialize<Ident, "insert">
+  // | @specialize<Ident, "int">
+  | @specialize<Ident, "invoke">
+  | @specialize<Ident, "last">
+  | @specialize<Ident, "nested">
+  | @specialize<Ident, "newrule">
+  | @specialize<Ident, "newrun">
+  | @specialize<Ident, "nocopy">
+  | @specialize<Ident, "nodefault">
+  | @specialize<Ident, "not">
+  | @specialize<Ident, "notindex">
+  | @specialize<Ident, "null">
+  // | @specialize<Ident, "object">
+  | @specialize<Ident, "operator">
+  | @specialize<Ident, "or">
+  | @specialize<Ident, "pos">
+  | @specialize<Ident, "preset">
+  | @specialize<Ident, "random">
+  // | @specialize<Ident, "range">
+  | @specialize<Ident, "return">
+  | @specialize<Ident, "rotate">
+  | @specialize<Ident, "rule">
+  // | @specialize<Ident, "string">
+  | @specialize<Ident, "to">
+  | @specialize<Ident, "true">
+  | @specialize<Ident, "type">
+  | @specialize<Ident, "warning">
+}
+
+@tokens {
+  space { std.whitespace+ }
+  LineComment { "//" ![\n]* }
+  Literal { $[+-]? (@digit+ ("." @digit*)? | "." @digit+) }
+  String { '"' (![\\\n"] | "\\" _)* '"'? }
+  Preprocessor { "#" ![\"\n]* }
+  Ident { $[a-z:] $[a-zA-Z:]* }
+  Function { $[A-Z] $[a-zA-Z:]* }
+
+  // // keywords
+  // "anchor"
+  // "and"
+  // "array"
+  // "assert"
+  // "automapper"
+  // "bool"
+  // "break"
+  // "continue"
+  // "coord"
+  // "count"
+  // "empty"
+  // "end"
+  // "error"
+  // "false"
+  // "float"
+  // "for"
+  // "full"
+  // "function"
+  // "group"
+  // "if"
+  // "index"
+  // "insert"
+  // "int"
+  // "invoke"
+  // "last"
+  // "nested"
+  // "newrule"
+  // "newrun"
+  // "nocopy"
+  // "nodefault"
+  // "not"
+  // "notindex"
+  // "null"
+  // "object"
+  // "operator"
+  // "or"
+  // "pos"
+  // "preset"
+  // "random"
+  // "range"
+  // "return"
+  // "rotate"
+  // "rule"
+  // "string"
+  // "to"
+  // "true"
+  // "type"
+  // "warning"
+
+  // // identifiers
+  // "include"
+  // "path"
+  // "tileset"
+  // "stack"
+
+  // punctuators
+  "]"
+  "["
+  "."
+  ")"
+  "("
+  "."
+  "%"
+  "#"
+  ","
+  ";"
+  "\""
+
+  // operators
+  "=="
+  ">="
+  "<="
+  "!="
+  "->"
+
+  "+"
+  "="
+  "/"
+  ">"
+  "<"
+  "*"
+  "_"
+  "-"
+  "-"
+
+  '+'
+  '='
+  '/'
+  '>'
+  '<'
+  '!'
+  '*'
+  '_'
+  '-'
+  '-'
+}
