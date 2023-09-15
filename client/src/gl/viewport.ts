@@ -48,7 +48,6 @@ export class Viewport {
     this.maxScale = 400
 
     this.createListeners()
-    this.onresize()
   }
 
   // return the screen dimensions in the world space.
@@ -65,7 +64,6 @@ export class Viewport {
     this.cont.addEventListener('mousemove', this.onmousemove.bind(this))
     this.cont.addEventListener('mouseup', this.onmouseup.bind(this))
     this.cont.addEventListener('wheel', this.onwheel.bind(this))
-    new ResizeObserver(this.onresize.bind(this)).observe(this.cont)
     // window.addEventListener('resize', this.onresize.bind(this))
     this.cont.addEventListener('keydown', this.onkeydown.bind(this))
   }
@@ -101,11 +99,6 @@ export class Viewport {
   worldToPixel(x: number, y: number) {
     const [x2, y2] = this.worldToCanvas(x, y)
     return this.canvasToPixel(x2, y2)
-  }
-
-  private onresize() {
-    this.canvas.width = this.cont.clientWidth
-    this.canvas.height = this.cont.clientHeight
   }
 
   // ------------ desktop events --------------------------------

@@ -23,7 +23,14 @@
 
   let destroyed = false
 
+  let resized = false
+  let resizeObserver = new ResizeObserver(() => resized = true)
+
   onMount(() => {
+    canvas.width = cont.clientWidth
+    canvas.height = cont.clientHeight
+    resizeObserver.observe(cont)
+
     renderer = new Renderer(canvas)
     viewport = new Viewport(cont, canvas)
     ctx = { renderer, viewport }
@@ -35,11 +42,18 @@
 
   onDestroy(() => {
     destroyed = true
+    resizeObserver.disconnect()
   })
 
   function renderLoop(t: DOMHighResTimeStamp) {
     if (destroyed)
       return
+
+    if (resized) {
+      canvas.width = cont.clientWidth
+      canvas.height = cont.clientHeight
+      resized = false
+    }
 
     setContext(ctx)
 
