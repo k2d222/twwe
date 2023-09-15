@@ -133,15 +133,27 @@ $header-h: 3rem;
     border: 0;
     margin: 0;
     z-index: unset;
+    background-color: transparent;
+    transition: background-color .2s ease;
 
     &:before,
     &:after {
-      background-color: #888;
+      display: none;
+    }
+
+    &:hover {
+      background-color: #4589ff;
     }
   }
 
-  > .splitpanes__splitter {
-    background-color: white;
+  .splitpanes--vertical > .splitpanes__splitter,
+  &.splitpanes--vertical > .splitpanes__splitter {
+    width: 4px;
+  }
+
+  .splitpanes--horizontal > .splitpanes__splitter,
+  &.splitpanes--horizontal > .splitpanes__splitter {
+    height: 4px;
   }
 
   .splitpanes__pane.viewport {
