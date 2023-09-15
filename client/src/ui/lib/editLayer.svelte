@@ -95,13 +95,13 @@
     if (
       layer.automapper.config === -1 ||
       !layer.image ||
-      !(layer.image.name in $automappers) ||
-      layer.automapper.config >= $automappers[layer.image.name].configs.length
+      !(layer.image.name + '.rules' in $automappers) ||
+      layer.automapper.config >= $automappers[layer.image.name + '.rules'].configs.length
     ) {
       return null
     }
 
-    return $automappers[layer.image.name][layer.automapper.config]
+    return $automappers[layer.image.name + '.rules'][layer.automapper.config]
   }
 
   let imagePickerOpen = false
@@ -368,13 +368,7 @@
           />
         </ModalBody>
       </ComposedModal>
-      <button
-        class="default"
-        disabled={conf === null}
-        on:click={onAutomap}
-      >
-        Apply Automapper
-      </button>
+      <button class="default" disabled={conf === null} on:click={onAutomap}>Apply Automapper</button>
     {/if}
     {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
       <label>

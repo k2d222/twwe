@@ -1,16 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte"
-  import { automappers, server, rmap } from "../global"
-  import { TrashCan as TrashIcon, Add as AddIcon } from "carbon-icons-svelte"
+  import { automappers, server, map } from "../global"
+  import { TrashCan as TrashIcon, Add as AddIcon, Launch } from "carbon-icons-svelte"
   import { clearDialog, showError, showInfo, showWarning } from "./dialog"
   import { Button, ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
-
-  import { basicSetup } from "codemirror"
-  import { EditorState } from "@codemirror/state"
-  import { EditorView, tooltips } from "@codemirror/view"
-  import { DDNetRules } from './lang-ddnet_rules/index'
-  import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
-  import { Rpp } from './lang-rpp/index'
   import { Pane, Splitpanes } from "svelte-splitpanes"
   import MapView from "./mapView.svelte"
   import { px2vw, rem2px } from "./util"
@@ -18,6 +11,16 @@
   import DDNetIcon from "../../../assets/ddnet/ddnet_symbolic.svg?component"
   import RppIcon from "../../../assets/rpp/rpp_symbolic.svg?component"
   import { Unknown as UnknownIcon } from 'carbon-icons-svelte'
+  import type { RenderMap } from "src/gl/renderMap"
+  import { TilesLayer } from "../../twmap/tilesLayer"
+  import { automap, parse } from "../../twmap/automap"
+
+  import { basicSetup } from "codemirror"
+  import { EditorState } from "@codemirror/state"
+  import { EditorView, tooltips } from "@codemirror/view"
+  import { DDNetRules } from './lang-ddnet_rules/index'
+  import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
+  import { Rpp } from './lang-rpp/index'
 
   let editor: HTMLElement
   let selected: string | null = null
@@ -26,6 +29,8 @@
   let newAmKind = AutomapperKind.DDNet
   let view: EditorView
   let emptyState = editorState('Select or create an automapper on the left panel.')
+  let mapView: MapView
+  let rmap: RenderMap
 
   let createAmOpen = false
 
@@ -34,6 +39,8 @@
       state: emptyState,
       parent: editor,
     })
+
+    rmap = mapView.getRenderMap()
 
     const ams = Object.keys($automappers)
     if (ams.length)
@@ -137,6 +144,33 @@
     changed = false
   }
 
+  async function onPreview() {
+    let am = $automappers[selected]
+
+    if (am.kind !== AutomapperKind.DDNet) {
+      showError('Cannot preview non-ddnet automapper yet.')
+      return
+    }
+
+    let configs = parse(view.state.doc.toString())
+
+    $map.groups.forEach((group, g) => {
+      group.layers.forEach((layer, l) => {
+        if (
+          layer instanceof TilesLayer &&
+          layer.image &&
+          layer.image.name === am.image &&
+          layer.automapper.config !== -1 &&
+          layer.automapper.config < configs.length
+        ) {
+          let config = configs[layer.automapper.config]
+          automap(layer, config, layer.automapper.seed)
+          rmap.groups[g].layers[l].recompute()
+        }
+      })
+    })
+  }
+
   async function onSelect(file: string) {
     if (file === selected) return
 
@@ -205,6 +239,7 @@
       <div class="controls">
         <span class:modified={changed}>{changed ? '*' : ''}{selected ?? ''}</span>
         <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
+        <Button size="small" on:click={onPreview} disabled={selected === null} kind="secondary">Preview</Button>
       </div>
       <div class="editor" bind:this={editor}></div>
     </div>
@@ -212,7 +247,7 @@
 
   <Pane>
     <div class="right">
-      <MapView map={$rmap.map}/>
+      <MapView bind:this={mapView} map={$map}/>
     </div>
   </Pane>
 

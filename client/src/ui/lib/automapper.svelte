@@ -14,7 +14,7 @@
 
   let dispatch = createEventDispatcher<{change: number}>()
 
-  $: configs = $automappers[layer.image?.name].configs ?? []
+  $: configs = $automappers[layer.image?.name + '.rules']?.configs ?? []
 
   async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
@@ -70,8 +70,11 @@
     <select bind:value={layer.automapper.config} on:change={onConfig}>
       <option value={-1}>None</option>
       {#each configs as conf, i}
-        <option value={i}>{conf}</option>
+        <option value={i}>#{i} {conf}</option>
       {/each}
+      {#if layer.automapper.config >= configs.length}
+        <option value={layer.automapper.config}>#{layer.automapper.config} (missing)</option>
+      {/if}
     </select>
   </label>
 
