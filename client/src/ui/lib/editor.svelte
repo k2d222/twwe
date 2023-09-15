@@ -1,6 +1,5 @@
 <script lang="ts">
   import type {
-    ServerError,
     EditTile,
     ListUsers,
     EditTiles,
@@ -115,19 +114,8 @@
     $automappers[e.file] = e
     $automappers = $automappers
   }
-  function serverOnError(e: ServerError) {
-    if ('serverError' in e) {
-      showError(
-        'The server met an unexpected error. You should download or save the map, then reload the page.',
-        'closable'
-      )
-    } else if ('mapError' in e) {
-      console.error('map error', e)
-      showError(
-        'The server met an unexpected error and the map got corrupted. Reload the page to rollback to last save.',
-        'closable'
-      )
-    }
+  function serverOnError(e: string) {
+    showError(e)
   }
 
   async function onServerClosed() {

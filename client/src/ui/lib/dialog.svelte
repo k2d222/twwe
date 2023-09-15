@@ -3,8 +3,9 @@
   import Info from '../../../assets/color-info.svg?component'
   import Warning from '../../../assets/color-warning.svg?component'
   import Error from '../../../assets/color-error.svg?component'
+  import { Modal, ModalHeader, ToastNotification } from 'carbon-components-svelte'
 
-  export let type: 'info' | 'warning' | 'error' | '' = ''
+  export let type: 'info' | 'warning' | 'error' = 'info'
   export let controls: 'closable' | 'yesno' | 'none' = 'none'
   export let message = ''
 
@@ -21,25 +22,27 @@
   }
 </script>
 
-<div id="dialog" class={type}>
-  <div class="content">
-    {#if type === 'info'}
-      <Info />
-    {:else if type === 'warning'}
-      <Warning />
-    {:else if type === 'error'}
-      <Error />
-    {/if}
-    {message}
-    <slot />
-  </div>
 
-  {#if controls === 'closable'}
-    <button class="default" on:click={onClose}>Close</button>
-  {:else if controls === 'yesno'}
-    <div class="buttons">
-      <button class="default" on:click={onNo}>No</button>
-      <button class="default" on:click={onYes}>Yes</button>
-    </div>
+<div id="dialog" class={type}>
+  {#if controls === 'yesno'}
+    <Modal
+      modalHeading={message}
+      primaryButtonText="Yes"
+      secondaryButtonText="No"
+      danger
+      preventCloseOnClickOutside
+      on:close={onNo}
+      on:submit={onYes}
+    />
+  {:else}
+    <ToastNotification
+      kind={type}
+      title={message}
+      on:close={onClose}
+      hideCloseButton={controls !== 'closable'}
+    >
+      <slot slot="caption"></slot>
+    </ToastNotification>
   {/if}
 </div>
+

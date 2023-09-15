@@ -458,13 +458,6 @@ pub struct Cursor {
     pub layer: i32,
 }
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Error {
-    ServerError,      // server panicked
-    MapError(String), // map is corrupted
-}
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "lowercase")]
 pub enum RequestContent {
@@ -564,7 +557,7 @@ pub enum ResponseContent {
 
     Cursors(HashMap<String, Cursor>),
 
-    Error(Error),
+    Error(String),
 }
 
 #[derive(Clone, Debug, Deserialize)]

@@ -39,6 +39,7 @@ export interface Server {
 // a server using a websocket
 export class WebSocketServer implements Server {
   socket: WebSocket
+  errorListener: (e: string) => unknown
   queryListeners: { [key: number]: QueryListener<any> }
   broadcastListeners: { [K in keyof ResponseContent]: BroadcastListener<K>[] }
 
@@ -49,6 +50,7 @@ export class WebSocketServer implements Server {
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = e => this.onMessage(e)
+    this.errorListener = () => {}
     this.queryListeners = {}
     this.broadcastListeners = {
       createmap: [],
@@ -114,7 +116,8 @@ export class WebSocketServer implements Server {
     for (const data of this.deferredData) {
       this.socket.send(data)
     }
-    this.socketSend = this.socket.send.bind(this.socket)
+    this.socketSend = (x) => setTimeout(() => this.socket.send(x), 1000)
+    // this.socketSend = this.socket.send.bind(this.socket)
   }
 
   private socketDeferredSend(data: any) {
@@ -128,6 +131,10 @@ export class WebSocketServer implements Server {
   // to help typescript a little
   private getBroadcastListeners<K extends keyof ResponseContent>(type: K) {
     return this.broadcastListeners[type] as BroadcastListener<K>[]
+  }
+
+  onError(fn: (e: any) => unknown) {
+    this.errorListener = fn
   }
 
   on<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>, priority: boolean = false) {
@@ -193,6 +200,11 @@ export class WebSocketServer implements Server {
       if ('ok' in data) {
         for (const fn of this.getBroadcastListeners(data.ok.type)) {
           fn(data.ok.content)
+        }
+      }
+      if ('err' in data) {
+        for (const fn of this.getBroadcastListeners('error')) {
+          fn(data.err)
         }
       }
     } else if (isBroadcast(data)) {

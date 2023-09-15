@@ -3,7 +3,7 @@ import type { RenderMap } from '../../gl/renderMap'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
 import type { WebSocketServer } from 'src/server/server'
-import type { Map } from '../../twmap/map'
+import type { Map, PhysicsLayer } from '../../twmap/map'
 import {
   TilesLayer,
   GameLayer,
@@ -290,39 +290,20 @@ export function placeTiles(
     }
     const width = range.end.x - range.start.x
     const height = range.end.y - range.start.y
-    let changed = false
 
-    for (let y = 0; y < height; ++y) {
-      for (let x = 0; x < width; ++x) {
+    const tiles = truncate(brushLayer.tiles, range)
+    const data = tilesToData(tiles.flat())
 
-        const edit: EditTile = {
-          group: brush.group,
-          layer: brushLayer.layer,
-          x: range.start.x + pos.x + x,
-          y: range.start.y + pos.y + y,
-          ...brushLayer.tiles[range.start.y + y][range.start.x + x]
-        }
-        changed = rmap.editTile(edit) || changed
-
-      }
-    }
-
-    // only send change if succeeded e.g. not redundant
-    if (changed) {
-      const tiles = truncate(brushLayer.tiles, range)
-      const data = tilesToData(tiles.flat())
-      server.send('edittiles', {
-        group: brush.group,
-        layer: brushLayer.layer,
-        x: range.start.x + pos.x,
-        y: range.start.y + pos.y,
-        kind: brushLayer.tiles[0][0].kind,
-        width,
-        height,
-        data,
-      })
-    }
-
+    server.send('edittiles', {
+      group: brush.group,
+      layer: brushLayer.layer,
+      x: range.start.x + pos.x,
+      y: range.start.y + pos.y,
+      kind: brushLayer.tiles[0][0].kind,
+      width,
+      height,
+      data,
+    })
   }
 }
 

@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { server, serverConfig, rmap, map, automappers, view, View } from '../global'
+  import { server, serverConfig, map, automappers, view, View } from '../global'
   import { queryMap } from '../lib/util'
-  import Dialog from '../lib/dialog.svelte'
   import Editor from '../lib/editor.svelte'
   import EditAutomapper from '../lib/editAutomapper.svelte'
   import Headerbar from '../lib/headerbar.svelte'
   import Fence from '../lib/fence.svelte'
+  import { onDestroy } from 'svelte'
 
   export let name: string
 
@@ -15,6 +15,10 @@
     $automappers = await $server.query('listautomappers', null)
     $map = map_
   })()
+
+  onDestroy(() => {
+    $server.query('leavemap', null)
+  })
 
 </script>
 

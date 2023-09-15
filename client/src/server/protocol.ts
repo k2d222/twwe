@@ -331,14 +331,6 @@ export type Cursors = {
   [k: string]: Cursor
 }
 
-export type ServerError =
-  | {
-      serverError: null
-    }
-  | {
-      mapError: string
-    }
-
 // queries (name and content type) that can be sent by the client
 export interface RequestContent {
   createmap: CreateMapBlank
@@ -437,7 +429,7 @@ export interface ResponseContent {
 
   cursors: Cursors
 
-  error: ServerError
+  error: string
 }
 
 export type Query = keyof ResponseContent & keyof RequestContent
