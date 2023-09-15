@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte"
+  import { onDestroy, onMount } from "svelte"
   import { automappers, server, map } from "../global"
   import { TrashCan as TrashIcon, Add as AddIcon, Launch } from "carbon-icons-svelte"
   import { clearDialog, showError, showInfo, showWarning } from "./dialog"
@@ -7,7 +7,7 @@
   import { Pane, Splitpanes } from "svelte-splitpanes"
   import MapView from "./mapView.svelte"
   import { px2vw, rem2px } from "./util"
-  import { AutomapperKind } from "../../server/protocol"
+  import { AutomapperKind, type AutomapperDetail } from "../../server/protocol"
   import DDNetIcon from "../../../assets/ddnet/ddnet_symbolic.svg?component"
   import RppIcon from "../../../assets/rpp/rpp_symbolic.svg?component"
   import { Unknown as UnknownIcon } from 'carbon-icons-svelte'
@@ -21,6 +21,7 @@
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
   import { Rpp } from './lang-rpp/index'
+  import type { Tile } from "../../twmap/types"
 
   let editor: HTMLElement
   let selected: string | null = null
@@ -31,6 +32,7 @@
   let emptyState = editorState('Select or create an automapper on the left panel.')
   let mapView: MapView
   let rmap: RenderMap
+  let tilesCache: [number, number, Tile[]][] = []
 
   let createAmOpen = false
 
@@ -45,7 +47,31 @@
     const ams = Object.keys($automappers)
     if (ams.length)
       onSelect(ams[0])
+
+    $server.on('uploadautomapper', onUploadAutomapper)
+    $server.on('deleteautomapper', onDeleteAutomapper)
   })
+
+  onDestroy(() => {
+    // restore preview layers
+    for (const [g, l, tiles] of tilesCache) {
+      let layer = $map.groups[g].layers[l] as TilesLayer
+      layer.tiles = tiles
+    }
+
+    $server.off('uploadautomapper', onUploadAutomapper)
+    $server.off('deleteautomapper', onDeleteAutomapper)
+  })
+
+  function onUploadAutomapper(e: AutomapperDetail) {
+    $automappers[e.file] = e
+    $automappers = $automappers
+  }
+
+  function onDeleteAutomapper(e: string) {
+    delete $automappers[e]
+    $automappers = $automappers
+  }
 
   function editorState(doc: string, kind?: AutomapperKind) {
     let extensions = [
@@ -71,8 +97,6 @@
 
     if (resp) {
       await $server.query('deleteautomapper', file)
-      delete $automappers[file]
-      $automappers = $automappers
 
       if (file === sel) {
         selected = null
@@ -104,13 +128,6 @@
         content: '',
       })
 
-      let file = ''
-      if (kind === AutomapperKind.DDNet) file = image + '.rules'
-      if (kind === AutomapperKind.Rpp) file = image + '.rpp'
-      if (kind === AutomapperKind.Teeworlds) file = image + '.json'
-
-      $automappers[file] = { file, image, configs: [], kind }
-      $automappers = $automappers
       createAmOpen = false
     }
     catch (e) {
@@ -131,9 +148,6 @@
         image,
         content: str
       })
-
-      $automappers[resp.file] = resp
-      $automappers = $automappers
     }
     catch (e) {
       showError("Saving failed: " + e)
@@ -154,6 +168,14 @@
 
     let configs = parse(view.state.doc.toString())
 
+    // restore preview layers
+    for (const [g, l, tiles] of tilesCache) {
+      let layer = $map.groups[g].layers[l] as TilesLayer
+      layer.tiles = tiles
+      rmap.groups[g].layers[l].recompute()
+    }
+    tilesCache = []
+
     $map.groups.forEach((group, g) => {
       group.layers.forEach((layer, l) => {
         if (
@@ -163,6 +185,7 @@
           layer.automapper.config !== -1 &&
           layer.automapper.config < configs.length
         ) {
+          tilesCache.push([g, l, layer.tiles.slice()])
           let config = configs[layer.automapper.config]
           automap(layer, config, layer.automapper.seed)
           rmap.groups[g].layers[l].recompute()

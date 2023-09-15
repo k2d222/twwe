@@ -75,12 +75,14 @@ impl Peer {
 
 struct Server {
     rooms: Mutex<HashMap<String, Arc<Room>>>,
+    rpp_path: PathBuf,
 }
 
 impl Server {
-    fn new() -> Self {
+    fn new(cli: &Cli) -> Self {
         Server {
             rooms: Mutex::new(HashMap::new()),
+            rpp_path: cli.rpp_path.clone().unwrap_or(PathBuf::from("rpp")),
         }
     }
 
@@ -732,6 +734,38 @@ impl Server {
 
         fs::write(path, upload_automapper.content).map_err(server_error)?;
 
+        // run the rpp compiler
+        if upload_automapper.kind == AutomapperKind::Rpp {
+            let exec = std::process::Command::new(&self.rpp_path)
+                .current_dir(room.path())
+                .arg(&file)
+                .output();
+
+            match exec {
+                Ok(r) => {
+                    log::info!("rpp: {}", String::from_utf8_lossy(&r.stdout));
+                    let file = format!("{}.rules", upload_automapper.image);
+                    let mut path = room.path().to_owned();
+                    path.push(&file);
+                    if let Ok(content) = fs::read_to_string(path) {
+                        let configs = Automapper::parse(upload_automapper.image.clone(), &content)
+                            .map(|am| am.configs.iter().map(|c| c.name.to_owned()).collect())
+                            .unwrap_or_default();
+                        self.broadcast_to_room(
+                            &room,
+                            ResponseContent::UploadAutomapper(AutomapperDetail {
+                                kind: AutomapperKind::DDNet,
+                                file,
+                                image: upload_automapper.image.to_owned(),
+                                configs,
+                            }),
+                        )
+                    }
+                }
+                Err(e) => log::error!("rpp: {}", e),
+            }
+        }
+
         Ok(ResponseContent::UploadAutomapper(AutomapperDetail {
             image: upload_automapper.image.to_owned(),
             configs,
@@ -859,8 +893,8 @@ impl Server {
     // }
 }
 
-fn create_server() -> Server {
-    let server = Server::new();
+fn create_server(cli: &Cli) -> Server {
+    let server = Server::new(cli);
     {
         let mut server_rooms = server.rooms();
         let rooms = glob("maps/*/map.map")
@@ -900,6 +934,10 @@ struct Cli {
     /// Directory of static files to serve
     #[clap(name = "static", value_parser, short, long)]
     static_dir: Option<PathBuf>,
+
+    /// path to rules++ executable
+    #[clap(name = "rpp", value_parser, long)]
+    rpp_path: Option<PathBuf>,
 }
 
 async fn route_websocket(
@@ -1145,7 +1183,7 @@ async fn route_create_image(
 
 #[tokio::main]
 async fn run_server(args: Cli) {
-    let state = Arc::new(create_server());
+    let state = Arc::new(create_server(&args));
 
     let addr: SocketAddr = args.addr.parse().expect("not a valid server address");
     log::info!("Listening on: {}", addr);
