@@ -1047,6 +1047,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "partial_derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c58661a5a8e998b65bd6784ac480f12dbde347e9d3ffab0fa5250e3c1bb6c0b6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1436,6 +1447,7 @@ dependencies = [
  "log",
  "ndarray",
  "parking_lot",
+ "partial_derive",
  "pretty_env_logger",
  "regex",
  "rustls-pemfile",

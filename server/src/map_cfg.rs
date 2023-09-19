@@ -15,5 +15,6 @@ impl Default for MapAccess {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct MapConfig {
+    pub name: String,
     pub access: MapAccess,
 }

@@ -38,3 +38,4 @@ bytemuck = "1.13.1"
 vek = { version = "0.15.10", features = ["rgba", "serde"] }
 thiserror = "1.0.44"
 sanitize-filename = "0.5.0"
+partial_derive = "0.1.0"
