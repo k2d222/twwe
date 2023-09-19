@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
@@ -290,6 +290,10 @@ pub enum PartialLayer {
     // Sounds(SoundsLayer), // TODO
 }
 
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct PartialAutomapper {}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MapGetReq {
@@ -303,6 +307,8 @@ pub enum MapGetReq {
     // Group(u16),
     Layers(u16),
     // Layer(u16, u16),
+    Automappers,
+    Automapper(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -311,6 +317,7 @@ pub enum MapPutReq {
     Envelope(Box<PartialEnvelope>),
     Group(Box<PartialGroup>),
     Layer(u16, Box<PartialLayer>),
+    Automapper(String, String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -322,6 +329,7 @@ pub enum MapPostReq {
     Group(u16, Box<PartialGroup>),
     Layer(u16, u16, Box<PartialLayer>),
     Tiles(u16, u16, Box<Tiles>),
+    Automap(u16, u16),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -338,6 +346,7 @@ pub enum MapDelReq {
     Envelope(u16),
     Group(u16),
     Layer(u16, u16),
+    Automapper(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -372,11 +381,18 @@ pub enum PostReq {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum DeleteReq {
+    Map(String),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Request {
     Map(MapReq),
     Get(GetReq),
     Put(PutReq),
     Post(PostReq),
+    Delete(DeleteReq),
     Join(String),
     Leave(String),
 }
@@ -394,6 +410,8 @@ pub enum Response {
     // Group(Box<twmap::Group>),
     Layers(Vec<String>),
     // Layer(Box<twmap::Layer>),
+    Automappers(Vec<String>),
+    Automapper(String),
     Users(usize),
     Cursors(HashMap<String, Cursor>),
 }

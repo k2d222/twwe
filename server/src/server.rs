@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex, MutexGuard, OnceLock},
 };
 
@@ -155,11 +155,20 @@ impl Server {
                         MapGetReq::Layers(g) => {
                             self.get_layers(map_name, g).map(|r| Response::Layers(r))
                         }
+                        MapGetReq::Automappers => self
+                            .get_automappers(map_name)
+                            .map(|r| Response::Automappers(r)),
+                        MapGetReq::Automapper(am) => self
+                            .get_automapper(map_name, &am)
+                            .map(|r| Response::Automapper(r)),
                     },
                     MapReq::Put(req) => match req {
                         MapPutReq::Envelope(req) => self.put_envelope(map_name, *req),
                         MapPutReq::Group(req) => self.put_group(map_name, *req),
                         MapPutReq::Layer(g, req) => self.put_layer(map_name, g, *req),
+                        MapPutReq::Automapper(am, file) => {
+                            self.put_automapper(map_name, &am, &file)
+                        }
                     }
                     .map(|()| Response::Ok),
                     MapReq::Post(req) => match req {
@@ -169,6 +178,7 @@ impl Server {
                         MapPostReq::Group(g, req) => self.post_group(map_name, g, *req),
                         MapPostReq::Layer(g, l, req) => self.post_layer(map_name, g, l, *req),
                         MapPostReq::Tiles(g, l, req) => self.post_tiles(map_name, g, l, *req),
+                        MapPostReq::Automap(g, l) => self.apply_automapper(map_name, g, l),
                     }
                     .map(|()| Response::Ok),
                     MapReq::Patch(req) => match req {
@@ -181,6 +191,7 @@ impl Server {
                         MapDelReq::Envelope(e) => self.delete_envelope(map_name, e),
                         MapDelReq::Group(g) => self.delete_group(map_name, g),
                         MapDelReq::Layer(g, l) => self.delete_layer(map_name, g, l),
+                        MapDelReq::Automapper(am) => self.delete_automapper(map_name, &am),
                     }
                     .map(|()| Response::Ok),
                     MapReq::Cursor(req) => self
@@ -202,6 +213,9 @@ impl Server {
                 PostReq::Map(map_name, req) => {
                     self.post_map(&map_name, *req).map(|()| Response::Ok)
                 }
+            },
+            Request::Delete(req) => match req {
+                DeleteReq::Map(map_name) => self.delete_map(&map_name).map(|()| Response::Ok),
             },
             Request::Join(map_name) => self.peer_join(peer, &map_name).map(|()| Response::Ok),
             Request::Leave(map_name) => self.peer_leave(peer, &map_name).map(|()| Response::Ok),
@@ -233,6 +247,11 @@ impl Server {
                 Request::Post(req) => match req {
                     PostReq::Map(map_name, _) => self.broadcast_to_lobby(Message::Broadcast(
                         Broadcast::MapCreated(map_name.clone()),
+                    )),
+                },
+                Request::Delete(req) => match req {
+                    DeleteReq::Map(map_name) => self.broadcast_to_lobby(Message::Broadcast(
+                        Broadcast::MapDeleted(map_name.clone()),
                     )),
                 },
                 Request::Leave(map_name) | Request::Join(map_name) => self.broadcast_to_others(
@@ -306,6 +325,11 @@ fn check_map_path(fname: &str) -> bool {
     re.is_match(fname)
 }
 
+fn check_file_name(name: &str) -> bool {
+    // this is a very primitive sanitization to prevent path traversal attacks.
+    !(name.chars().any(std::path::is_separator) || name.starts_with(".") || name.is_empty())
+}
+
 pub fn set_layer_width<T: twmap::TilemapLayer>(
     layer: &mut T,
     width: usize,
@@ -344,6 +368,20 @@ pub fn set_layer_height<T: twmap::TilemapLayer>(
     }
 
     Ok(())
+}
+
+fn is_automapper(path: &Path) -> bool {
+    let extensions = &["rules", "rpp", "json"];
+
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        if extensions.contains(&ext) {
+            true
+        } else {
+            false
+        }
+    } else {
+        false
+    }
 }
 
 impl Server {
@@ -915,6 +953,128 @@ impl Server {
         map.groups.remove(group_index as usize);
 
         Ok(())
+    }
+
+    pub fn get_automappers(&self, map_name: &str) -> Result<Vec<String>, Error> {
+        let path = self.room(map_name)?.path().to_owned();
+
+        Ok(std::fs::read_dir(path)
+            .map_err(|e| Error::ServerError(e.to_string().into()))?
+            .filter_map(|e| e.ok())
+            .filter_map(|e| {
+                let path = e.path();
+                if is_automapper(&path) {
+                    Some(e.file_name().to_string_lossy().into_owned())
+                } else {
+                    None
+                }
+            })
+            .collect())
+    }
+
+    pub fn get_automapper(&self, map_name: &str, am: &str) -> Result<String, Error> {
+        if !check_file_name(am) {
+            return Err(Error::InvalidFileName);
+        }
+
+        let mut path = self.room(map_name)?.path().to_owned();
+        path.push(am);
+
+        if !is_automapper(&path) {
+            return Err(Error::AutomapperNotFound);
+        }
+
+        let file = std::fs::read_to_string(&path).map_err(|_| Error::AutomapperNotFound)?;
+
+        Ok(file)
+    }
+
+    pub fn put_automapper(&self, map_name: &str, am: &str, file: &str) -> Result<(), Error> {
+        if !check_file_name(am) {
+            return Err(Error::InvalidFileName);
+        }
+
+        let mut path = self.room(map_name)?.path().to_owned();
+        path.push(am);
+
+        if !is_automapper(&path) {
+            return Err(Error::InvalidFileName);
+        }
+
+        std::fs::write(path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
+
+        Ok(())
+    }
+
+    pub fn delete_automapper(&self, map_name: &str, am: &str) -> Result<(), Error> {
+        if !check_file_name(am) {
+            return Err(Error::InvalidFileName);
+        }
+
+        let mut path = self.room(map_name)?.path().to_owned();
+        path.push(am);
+
+        if !is_automapper(&path) {
+            return Err(Error::InvalidFileName);
+        }
+
+        std::fs::remove_file(path).map_err(|e| Error::ServerError(e.to_string().into()))?;
+
+        Ok(())
+    }
+
+    pub fn apply_automapper(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+    ) -> Result<(), Error> {
+        let room = self.room(map_name)?;
+        let mut map = room.map();
+
+        let image_name = {
+            let layer = map
+                .groups
+                .get(group_index as usize)
+                .ok_or(Error::GroupNotFound)?
+                .layers
+                .get(layer_index as usize)
+                .ok_or(Error::LayerNotFound)?;
+
+            if let twmap::Layer::Tiles(layer) = layer {
+                let index = layer.image.ok_or(Error::LayerHasNoImage)?;
+                map.images
+                    .get(index as usize)
+                    .ok_or(Error::ImageNotFound)?
+                    .name()
+                    .to_owned()
+            } else {
+                return Err(Error::WrongLayerType);
+            }
+        };
+
+        let layer = map
+            .groups
+            .get_mut(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get_mut(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        if let twmap::Layer::Tiles(layer) = layer {
+            let mut path = room.path().to_owned();
+            path.push(format!("{image_name}.rules"));
+            let file = std::fs::read_to_string(path)
+                .map_err(|e| Error::ServerError(e.to_string().into()))?;
+            let automapper = twmap::automapper::Automapper::parse(image_name, &file)
+                .map_err(|e| Error::AutomapperError(e.to_string()))?;
+            layer
+                .run_automapper(&automapper)
+                .map_err(|_| Error::AutomapperError("config out of bounds".to_owned()))?;
+            Ok(())
+        } else {
+            Err(Error::WrongLayerType)
+        }
     }
 
     pub fn post_tiles(
