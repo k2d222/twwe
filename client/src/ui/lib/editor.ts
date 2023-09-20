@@ -1,7 +1,7 @@
 import type { RenderMap } from '../../gl/renderMap'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
-import type { WebSocketServer } from 'src/server/server'
+import type { WebSocketServer } from '../../server/server'
 import type { Map, PhysicsLayer } from '../../twmap/map'
 import {
   TilesLayer,
@@ -16,7 +16,7 @@ import * as Info from '../../twmap/types'
 import * as MapDir from '../../twmap/mapdir'
 import type { Layer } from '../../twmap/layer'
 import { QuadsLayer } from '../../twmap/quadsLayer'
-import { tilesToData } from 'src/server/convert'
+import { tilesToData } from '../../server/convert'
 
 // list of layers -> 2d array of tiles
 export type Brush = {
@@ -200,8 +200,13 @@ function adaptTile(tile: Info.AnyTile, kind: MapDir.LayerKind): Info.AnyTile {
       id: tile.id,
       number: 0,
     }
+  } else if (kind === MapDir.LayerKind.Tune) {
+    return {
+      id: tile.id,
+      number: 0,
+    }
   } else {
-    throw 'Unsupported layer kind'
+    throw 'Unsupported layer kind ' + kind
   }
 }
 

@@ -1,10 +1,12 @@
 import type { Layer } from '../../twmap/layer'
 import { Map, type PhysicsLayer } from '../../twmap/map'
 import { Image } from '../../twmap/image'
-import { AnyTilesLayer } from '../../twmap/tilesLayer'
+import { AnyTilesLayer, FrontLayer, GameLayer, SpeedupLayer, SwitchLayer, TeleLayer, TilesLayer, TuneLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
-import type { WebSocketServer } from 'src/server/server'
-import type { MapCreation, MapDetail } from 'src/server/protocol'
+import type { WebSocketServer } from '../../server/server'
+import type { MapCreation, MapDetail } from '../../server/protocol'
+import * as MapDir from '../../twmap/mapdir'
+import { QuadsLayer } from '../../twmap/quadsLayer'
 
 export type Ctor<T> = new (...args: any[]) => T
 
@@ -133,6 +135,18 @@ export function layerIndex(map: Map, layer: Layer): [number, number] {
   }
 
   return [-1, -1]
+}
+
+export function layerKind(layer: Layer): MapDir.LayerKind {
+  return layer instanceof TilesLayer ? MapDir.LayerKind.Tiles
+    : layer instanceof GameLayer ? MapDir.LayerKind.Game
+    : layer instanceof FrontLayer ? MapDir.LayerKind.Front
+    : layer instanceof TeleLayer ? MapDir.LayerKind.Tele
+    : layer instanceof SwitchLayer ? MapDir.LayerKind.Switch
+    : layer instanceof SpeedupLayer ? MapDir.LayerKind.Speedup
+    : layer instanceof TuneLayer ? MapDir.LayerKind.Tune
+    : layer instanceof QuadsLayer ? MapDir.LayerKind.Quads
+    : null
 }
 
 export function rem2px(rem: number) {

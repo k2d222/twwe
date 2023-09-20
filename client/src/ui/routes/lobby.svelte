@@ -37,7 +37,7 @@
   } from 'carbon-icons-svelte'
   import { createMap, download, queryMaps, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
-  import type { MapDetail } from 'src/server/protocol'
+  import type { MapDetail } from '../../server/protocol'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'

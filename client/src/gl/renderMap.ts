@@ -34,8 +34,8 @@ import { Texture } from './texture'
 import { isPhysicsLayer, type Ctor } from '../ui/lib/util'
 import { Config as AutomapperConfig, automap } from '../twmap/automap'
 import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, uvFromJson } from '../server/convert'
-import type { Brush } from 'src/ui/lib/editor'
-import type { EditTile, Recv } from 'src/server/protocol'
+import type { Brush } from '../ui/lib/editor'
+import type { EditTile, Recv } from '../server/protocol'
 
 export type Range = {
   start: Info.Coord
@@ -381,7 +381,7 @@ export class RenderMap {
     if ('name' in part)
       rlayer.layer.name = part.name
 
-    if (rlayer instanceof RenderTilesLayer) {
+    if (rlayer instanceof RenderAnyTilesLayer) {
       if ('color' in part)
         rlayer.layer.color = part.color
       if ('width' in part)

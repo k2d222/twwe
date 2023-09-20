@@ -2,6 +2,13 @@ import * as Info from '../twmap/types'
 import * as MapDir from '../twmap/mapdir'
 import * as Parser from '../twmap/parser'
 
+const envTypeStr: MapDir.EnvelopeType[] = [
+  MapDir.EnvelopeType.Sound, // Info.EnvType.INVALID
+  MapDir.EnvelopeType.Sound,
+  MapDir.EnvelopeType.Position,
+  MapDir.EnvelopeType.Color,
+]
+
 const curveTypeStr: MapDir.CurveType[] = [
   MapDir.CurveType.Step,
   MapDir.CurveType.Linear,
@@ -10,6 +17,14 @@ const curveTypeStr: MapDir.CurveType[] = [
   MapDir.CurveType.Smooth,
   MapDir.CurveType.Bezier,
 ]
+
+export function envTypeFromString(type: MapDir.EnvelopeType): Info.EnvType {
+  return envTypeStr.indexOf(type)
+}
+
+export function envTypeToString(type: Info.EnvType): MapDir.EnvelopeType {
+  return envTypeStr[type]
+}
 
 export function curveTypeToString(curve: Info.CurveType): MapDir.CurveType {
   return curveTypeStr[curve]

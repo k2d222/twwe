@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
-  import { type FormEvent, type FormInputEvent, uploadImage } from './util'
+  import { type FormEvent, type FormInputEvent, uploadImage, layerKind } from './util'
   import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
@@ -21,17 +21,7 @@
   import type * as Info from '../../twmap/types'
   import Number from './number.svelte'
 
-  let g: number, l: number
-  $: {
-    if ($selected.length === 0) {
-      g = -1
-      l = -1
-    }
-    else {
-      g = $selected[$selected.length - 1][0]
-      l = $selected[$selected.length - 1][1]
-    }
-  }
+  export let g: number, l: number
 
   $: rgroup = g === -1 ? null : $rmap.groups[g]
   $: rlayer = l === -1 ? null : rgroup.layers[l]
@@ -109,11 +99,11 @@
 
     if (e.detail === null) {
       // no image used
-      await $server.query('map/post/layer', [g, l, { image: null }])
+      await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: null }])
     } else if (e.detail instanceof Image) {
       // use embedded image
       const index = $rmap.map.images.indexOf(e.detail)
-      await $server.query('map/post/layer', [g, l, { image: resIndexToString(index, e.detail.name) }])
+      await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, e.detail.name) }])
     } else if (e.detail instanceof File) {
       const name = e.detail.name.replace(/\.[^\.]+$/, '')
       uploadImageAndPick(e.detail, name)
@@ -136,7 +126,7 @@
           img.loadExternal(url)
           img.name = name
           $rmap.addImage(img)
-          await $server.query('map/post/layer', [g, l, { image: resIndexToString(index, name) }])
+          await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
           clearDialog()
         } catch (e) {
           showError('Failed to create external image: ' + e)
@@ -155,7 +145,7 @@
       $rmap.addImage(img)
       await uploadImage($serverConfig.httpUrl, $rmap.map.name, name, file) // TODO return index
       const index = $rmap.map.images.length
-      await $server.query('map/post/layer', [g, l, { image: resIndexToString(index, name) }])
+      await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
       showInfo('Image uploaded and selected.')
     } catch (e) {
       showError('Failed to upload image: ' + e)
@@ -200,7 +190,7 @@
     syncName = sync(layer.name, {
       server: $server,
       query: 'map/post/layer',
-      send: s => [g, l, { name: s, }],
+      send: s => [g, l, { type: layerKind(layer), name: s }],
       recv: ([eg, el, e]) => eg === g && el === l && 'name' in e ? e.name : null,
     })
   }
@@ -208,7 +198,7 @@
     syncDetail = sync(layer.detail, {
       server: $server,
       query: 'map/post/layer',
-      send: s => [g, l, { detail: s }],
+      send: s => [g, l, { type: layerKind(layer), detail: s }],
       recv: ([eg, el, e]) => eg === g && el === l && 'detail' in e ? e.detail : null,
     })
   }
@@ -216,7 +206,7 @@
     syncWidth = sync(layer.width, {
       server: $server,
       query: 'map/post/layer',
-      send: s => [g, l, { width: s }],
+      send: s => [g, l, { type: layerKind(layer), width: s }],
       recv: ([eg, el, e]) => eg === g && el === l && 'width' in e ? e.width : null,
     })
   }
@@ -224,7 +214,7 @@
     syncHeight = sync(layer.height, {
       server: $server,
       query: 'map/post/layer',
-      send: s => [g, l, { height: s }],
+      send: s => [g, l, { type: layerKind(layer), height: s }],
       recv: ([eg, el, e]) => eg === g && el === l && 'height' in e ? e.height : null,
     })
   }
@@ -232,7 +222,7 @@
     syncColor = sync(layer.color, {
       server: $server,
       query: 'map/post/layer',
-      send: s => [g, l, { color: s }],
+      send: s => [g, l, { type: layerKind(layer), color: s }],
       recv: ([eg, el, e]) => eg === g && el === l && 'color' in e ? e.color : null,
     })
   }
@@ -240,7 +230,7 @@
     syncColorEnv = sync($rmap.map.envelopes.indexOf(layer.colorEnv), {
       server: $server,
       query: 'map/post/layer',
-      send: s => [g, l, { color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name) }],
+      send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name) }],
       recv: ([eg, el, e]) => eg === g && el === l && 'color_env' in e ? e.color_env === null ? -1 : stringToResIndex(e.color_env)[0] : null,
     })
   }
@@ -248,7 +238,7 @@
     syncColorEnvOff = sync(layer.colorEnvOffset, {
       server: $server,
       query: 'map/post/layer',
-      send: s => [g, l, { color_env_offset: s }],
+      send: s => [g, l, { type: layerKind(layer), color_env_offset: s }],
       recv: ([eg, el, e]) => eg === g && el === l && 'color_env_offset' in e ? e.color_env_offset : null,
     })
   }
@@ -287,6 +277,7 @@
   async function onAutomapperChange() {
     const automapper = (layer as TilesLayer).automapper
     await $server.query('map/post/layer', [g, l, {
+      type: layerKind(layer),
       automapper_config: {
         config: automapper.config === -1 ? null : automapper.config,
         seed: automapper.seed,

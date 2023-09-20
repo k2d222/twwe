@@ -123,15 +123,15 @@ impl Room {
             return None;
         }
 
-        let name = path.file_name()?.to_string_lossy().to_string();
-
         let mut config_path = path.clone();
         config_path.push(CFG_FILE_NAME);
 
-        let config = File::open(config_path)
+        let mut config: MapConfig = File::open(config_path)
             .ok()
             .and_then(|file| serde_json::from_reader(file).ok())
             .unwrap_or_default();
+
+        config.name = path.file_name()?.to_string_lossy().to_string();
 
         Some(Room {
             path,

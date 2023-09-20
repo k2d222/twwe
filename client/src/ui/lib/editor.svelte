@@ -24,7 +24,7 @@
   import * as Actions from '../actions'
   import { viewport } from '../../gl/global'
   import Fence from './fence.svelte'
-  import type { AutomapperKind, Recv, Tiles } from 'src/server/protocol'
+  import type { AutomapperKind, Recv, Tiles } from '../../server/protocol'
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -36,7 +36,7 @@
   let closedPaneThreshold = px2vw(rem2px(2))
 
   // computed (readonly)
-  let g: number, l: number
+  let g: number = -1, l: number = -1
   $: {
     if ($selected.length === 0) {
       g = -1
@@ -124,7 +124,8 @@
     $server.on('map/delete/automapper', serverOnDeleteAutomapper)
     $server.on('map/put/automapper', serverOnUploadAutomapper)
     $server.onError(serverOnError)
-    $server.send('map/get/users')
+    $server.query('map/get/users', undefined)
+      .then(u => $peers = u)
 
     viewport.canvas.addEventListener('mouseenter', onHoverCanvas)
 
@@ -246,7 +247,7 @@
               {/if}
             </div>
           {:else if l !== -1}
-            <LayerEditor />
+            <LayerEditor {g} {l} />
           {:else if g !== -1}
             <GroupEditor {g} />
           {:else}

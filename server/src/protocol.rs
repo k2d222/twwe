@@ -211,18 +211,26 @@ pub struct MapCreation {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub credits: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<Vec<String>>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialEnv<T: Copy> {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub synchronized: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub points: Option<Vec<EnvPoint<T>>>,
 }
 
@@ -238,38 +246,57 @@ pub enum PartialEnvelope {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialGroup {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub offset: Option<Vec2<I27F5>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parallax: Option<Vec2<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub clipping: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub clip: Option<Rect<I27F5, I27F5>>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct PartialPhysicsLayer {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<usize>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialTilesLayer {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Rgba<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color_env: Option<Option<u16>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color_env_offset: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<Option<u16>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub automapper_config: Option<AutomapperConfig>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialQuadsLayer {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<Option<u16>>,
 }
 
@@ -299,10 +326,12 @@ pub enum PartialLayer {
 pub struct PartialAutomapper {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum MapGetReq {
     #[serde(rename = "map/get/users")]
     Users,
+    #[serde(rename = "map/get/cursors")]
+    Cursors,
     #[serde(rename = "map/get/map")]
     Map,
     #[serde(rename = "map/get/images")]
@@ -328,7 +357,7 @@ pub enum MapGetReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum MapPutReq {
     #[serde(rename = "map/put/envelope")]
     Envelope(Box<PartialEnvelope>),
@@ -341,7 +370,7 @@ pub enum MapPutReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum MapPostReq {
     #[serde(rename = "map/post/config")]
     Config(Box<PartialConfig>),
@@ -360,7 +389,7 @@ pub enum MapPostReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum MapPatchReq {
     #[serde(rename = "map/patch/envelope")]
     Envelope(u16, u16),
@@ -371,7 +400,7 @@ pub enum MapPatchReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum MapDelReq {
     #[serde(rename = "map/delete/envelope")]
     Envelope(u16),
@@ -384,9 +413,9 @@ pub enum MapDelReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum MapReq {
-    #[serde(rename = "cursor")]
+    #[serde(rename = "map/cursor")]
     Cursor(Box<Cursor>),
     #[serde(rename = "map/save")]
     Save,
@@ -403,35 +432,35 @@ pub enum MapReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum GetReq {
     #[serde(rename = "get/map")]
     Map(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum PutReq {
     #[serde(rename = "put/map")]
     Map(String, Base64),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum PostReq {
     #[serde(rename = "post/map")]
     Map(String, Box<MapCreation>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum DeleteReq {
     #[serde(rename = "delete/map")]
     Map(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "content")]
 pub enum Request {
     #[serde(rename = "join")]
     Join(String),
@@ -470,7 +499,7 @@ pub enum Response {
 
 // Messages that are sent unrequested from the client.
 #[derive(Clone, Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", content = "content", rename_all = "snake_case")]
 pub enum Broadcast {
     MapCreated(String),
     MapDeleted(String),
@@ -498,6 +527,7 @@ pub struct Packet<T> {
     pub timestamp: u64, // UNIX timestamp set by sender
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<u32>, // same ID will be set by client request
+    #[serde(flatten)]
     pub content: T,
 }
 

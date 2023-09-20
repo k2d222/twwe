@@ -10,7 +10,7 @@
   import DDNetIcon from "../../../assets/ddnet/ddnet_symbolic.svg?component"
   import RppIcon from "../../../assets/rpp/rpp_symbolic.svg?component"
   import { Unknown as UnknownIcon } from 'carbon-icons-svelte'
-  import type { RenderMap } from "src/gl/renderMap"
+  import type { RenderMap } from "../../gl/renderMap"
   import { TilesLayer } from "../../twmap/tilesLayer"
   import { automap, parse } from "../../twmap/automap"
 
@@ -21,7 +21,7 @@
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
   import { Rpp } from './lang-rpp/index'
   import type { Tile } from "../../twmap/types"
-  import { AutomapperKind, type Send } from "src/server/protocol"
+  import { AutomapperKind, type Send } from "../../server/protocol"
 
   let editor: HTMLElement
   let selected: string | null = null

@@ -6,7 +6,7 @@
   import Headerbar from '../lib/headerbar.svelte'
   import Fence from '../lib/fence.svelte'
   import { onDestroy } from 'svelte'
-  import type { AutomapperKind } from 'src/server/protocol'
+  import type { AutomapperKind } from '../../server/protocol'
 
   export let name: string
 

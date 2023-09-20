@@ -3,7 +3,7 @@
   import * as Editor from './editor'
   import { server, selected, anim, peers, rmap, map, serverConfig } from '../global'
   import { AnyTilesLayer, GameLayer } from "../../twmap/tilesLayer"
-  import { spring } from "svelte/motion"
+  import { tweened } from "svelte/motion"
   import { type Coord, LayerType } from "../../twmap/types"
   import { QuadsLayer } from "../../twmap/quadsLayer"
   import { Image } from '../../twmap/image'
@@ -21,8 +21,8 @@
   import type { RenderLayer } from '../../gl/renderLayer'
   import type * as MapDir from '../../twmap/mapdir'
   import type * as Info from '../../twmap/types'
-  import type { Cursors, MapCreateReq, Recv, Resp } from 'src/server/protocol'
-  import { base64ToBytes } from 'src/server/convert'
+  import type { Cursors, MapCreateReq, Recv, Resp } from '../../server/protocol'
+  import { base64ToBytes } from '../../server/convert'
 
   let g: number, l: number
   $: {
@@ -63,11 +63,12 @@
 
   // cursors
   let cursorInterval = 0
+  let cursorDuration = 300
   let cursors: { [k: string]: { x: number, y: number } } = {}
-  let cursorAnim = spring(cursors)
+  let cursorAnim = tweened(cursors, { duration: cursorDuration })
   $: if ($peers === 1) {
     cursors = {}
-    cursorAnim = spring(cursors)
+    cursorAnim = tweened(cursors, { duration: cursorDuration })
   }
 
   // imput state
@@ -202,8 +203,7 @@
     $server.on('map/delete/image', onDeleteImage, true)
     $server.on('map/post/info', onEditInfo, true)
 
-    $server.on('map/cursor', onCursors)
-    cursorInterval = setInterval(updateCursors, 100) as any
+    // cursorInterval = setInterval(updateCursors, cursorDuration) as any
 
     renderLoop(0)
   })
@@ -228,8 +228,6 @@
     $server.off('map/delete/image', onDeleteImage)
     $server.off('map/post/info', onEditInfo)
 
-    $server.off('map/cursor', onCursors)
-
     clearInterval(cursorInterval)
   })
 
@@ -251,7 +249,7 @@
     requestAnimationFrame(renderLoop)
   }
 
-  function onCursors(e: Resp['map/cursor']) {
+  function onCursors(e: Resp['map/get/cursors']) {
     cursors = Object.fromEntries(Object.entries(e).map(([k, v]) => {
       if (0 <= v.g && v.g < $rmap.groups.length) {
         const rgroup = $rmap.groups[v.g]
@@ -271,7 +269,7 @@
     const eq = k1.length === k2.length && k1.every((k, i) => k === k2[i])
 
     if (!eq) {
-      cursorAnim = spring(cursors, { stiffness: 0.1, damping: 0.7 })
+      cursorAnim = tweened(cursors, { duration: cursorDuration })
     }
     else {
       cursorAnim.set(cursors)
@@ -460,12 +458,13 @@
       return
 
     let [ offX, offY ] = rgroup.offset()
-    const cursors = await $server.query('map/cursor', {
+    await $server.query('map/cursor', {
       g,
       l,
       x: viewport.mousePos.x - offX,
       y: viewport.mousePos.y - offY,
     })
+    const cursors = await $server.query('map/get/cursors', undefined)
     onCursors(cursors)
   }
 

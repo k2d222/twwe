@@ -1,6 +1,6 @@
-import type { Packet, Result, SendKey, RecvKey, Recv, Send, Resp } from './protocol'
+import type { SendPacket, Result, SendKey, RecvKey, Recv, Send, Resp, RecvPacket, RespPacket } from './protocol'
 
-type QueryFn<K extends SendKey> = (resp: Send[K]) => unknown
+type QueryFn<K extends SendKey> = (resp: Result<Resp[K]>) => K
 type ListenFn<K extends RecvKey> = (resp: Recv[K]) => unknown
 
 export interface Server {
@@ -57,7 +57,6 @@ export class WebSocketServer implements Server {
       "map/delete/layer": [],
       "map/delete/quad": [],
       "map/delete/automapper": [],
-      "map/cursor": [],
       "post/map": [],
       "delete/map": [],
       "map_created": [],
@@ -121,13 +120,14 @@ export class WebSocketServer implements Server {
       let timeoutID = -1
       let reqID = this.generateID()
 
-      const listener = (x: Result<Resp[K]>) => {
+      const listener: QueryFn<K> = (x: Result<Resp[K]>) => {
         window.clearTimeout(timeoutID)
         delete this.queryListeners[reqID]
 
         if ('ok' in x) resolve(x.ok)
         else if ('err' in x) reject(x.err)
         else console.error('query packet with no result', x)
+        return type
       }
 
       this.queryListeners[reqID] = listener
@@ -137,6 +137,12 @@ export class WebSocketServer implements Server {
           delete this.queryListeners[reqID]
           reject('timeout reached')
         }, timeout)
+      }
+
+      if (type in this.broadcastListeners) {
+        for (const fn of this.broadcastListeners[type as any]) {
+          fn(content)
+        }
       }
 
       this.sendQuery(type, content, reqID)
@@ -149,12 +155,30 @@ export class WebSocketServer implements Server {
       return
     }
 
-    const data = JSON.parse(e.data) as Packet<any, any>
+    const data = JSON.parse(e.data) as RespPacket<any> | RecvPacket<any>
     
     if ('id' in data) {
       const fn = this.queryListeners[data.id]
-      if (!fn) console.error('query response with no listener', data)
-      else fn(data)
+      if (fn) {
+        const type = fn(data)
+        if ('ok' in data && type in this.broadcastListeners) {
+          // TODO: ensure transaction
+          // const pkt = {
+          //   timestamp: data.timestamp,
+          //   type,
+          //   content: data.ok
+          // }
+          // for (const fn of this.broadcastListeners[type]) {
+          //   fn(pkt)
+          // }
+        }
+        else if ('err' in data) {
+          this.errorListener.call(undefined, data.err)
+        }
+      }
+      else {
+        console.error('query response with no listener', data)
+      }
     }
     else {
       for (const fn of this.getBroadcastListeners(data.type)) {
@@ -164,7 +188,7 @@ export class WebSocketServer implements Server {
   }
 
   private sendQuery<K extends SendKey>(type: K, content: Send[K], id: number) {
-    const x: Packet<K, Send[K]> = {
+    const x: SendPacket<K> = {
       timestamp: Date.now(),
       id,
       type,
@@ -174,13 +198,7 @@ export class WebSocketServer implements Server {
     this.socketSend(message)
   }
 
-  send<K extends SendKey>(type: K, content?: Send[K]) {
-    const x: Packet<K, Send[K]> = {
-      timestamp: Date.now(),
-      type,
-      content,
-    }
-    const message = JSON.stringify(x)
-    this.socketSend(message)
+  send<K extends SendKey>(type: K, content: Send[K]) {
+    this.query(type, content)
   }
 }

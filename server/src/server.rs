@@ -140,6 +140,9 @@ impl Server {
                 match req {
                     MapReq::Get(req) => match req {
                         MapGetReq::Users => self.get_users(map_name).map(|r| Response::Users(r)),
+                        MapGetReq::Cursors => {
+                            self.get_cursors(map_name).map(|r| Response::Cursors(r))
+                        }
                         MapGetReq::Map => self.get_map(map_name).map(|r| Response::Map(Base64(r))),
                         MapGetReq::Images => self.get_images(map_name).map(|r| Response::Images(r)),
                         MapGetReq::Image(i) => self
@@ -194,10 +197,7 @@ impl Server {
                         MapDelReq::Automapper(am) => self.delete_automapper(map_name, &am),
                     }
                     .map(|()| Response::Ok),
-                    MapReq::Cursor(req) => self
-                        .set_cursor(peer, *req)
-                        .and_then(|()| self.get_cursors(room.name()))
-                        .map(|r| Response::Cursors(r)),
+                    MapReq::Cursor(req) => self.set_cursor(peer, *req).map(|()| Response::Ok),
                     MapReq::Save => self.save_map(map_name).map(|()| Response::Ok),
                 }
             }
@@ -231,10 +231,10 @@ impl Server {
                     match req {
                         MapReq::Get(_) | MapReq::Cursor(_) => (),
                         MapReq::Put(_) | MapReq::Post(_) | MapReq::Patch(_) | MapReq::Delete(_) => {
-                            self.broadcast_to_room(&room, Message::Request(packet.content.clone()))
+                            self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
                         }
                         MapReq::Save => {
-                            self.broadcast_to_room(&room, Message::Broadcast(Broadcast::Saved))
+                            self.broadcast_to_others(peer, Message::Broadcast(Broadcast::Saved))
                         }
                     }
                 }
@@ -285,7 +285,7 @@ impl Server {
                             self.handle_request(&mut peer, req);
                         }
                         Err(e) => {
-                            log::error!("failed to parse message: {}", e);
+                            log::error!("failed to parse message: {} in {}", e, &text);
                         }
                     };
                 }
@@ -1108,7 +1108,7 @@ impl Server {
 
                 let tiles = structview::View::view_slice(&part_tiles.tiles.0)
                     .map_err(|_| Error::InvalidTiles)?;
-                let tiles = ndarray::ArrayView::from_shape((w, h), tiles)
+                let tiles = ndarray::ArrayView::from_shape((h, w), tiles)
                     .map_err(|_| Error::InvalidTiles)?;
 
                 let mut view = twmap::TilemapLayer::tiles_mut($layer)

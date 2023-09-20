@@ -3,7 +3,7 @@ import type { ServerConfig } from '../storage'
 import type { Map } from '../twmap/map'
 import { writable, type Writable } from 'svelte/store'
 import { RenderMap } from '../gl/renderMap'
-import type { AutomapperDetail } from 'src/server/protocol'
+import type { AutomapperDetail } from '../server/protocol'
 
 export enum View {
   Layers, Automappers, Images, Sounds, Envelopes, Settings // TODO

@@ -1,10 +1,13 @@
-import type * as Info from 'src/twmap/types'
+import type * as Info from '../twmap/types'
 import type * as MapDir from '../twmap/mapdir'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
 
 // MAPS
+
+export type RecPartial<T> = T extends Array<any> ? T : T extends Object ? { [K in keyof T]?: RecPartial<T[K]> } : T
+export type Require<T, U extends keyof T> = Partial<T> & Pick<T, U>
 
 type Base64 = string
 
@@ -70,6 +73,7 @@ export type MapCreation = {
 
 export interface MapGetReq {
   users: undefined
+  cursors: undefined
   map: undefined
   images: undefined
   image: number
@@ -87,6 +91,7 @@ export interface MapGetReq {
 
 export interface MapGetResp {
   users: number
+  cursors: Cursors
   map: Base64
   images: string[]
   image: Base64
@@ -104,9 +109,9 @@ export interface MapGetResp {
 
 export interface MapCreateReq {
   image: [string, Base64 | MapDir.ExternalImage]
-  envelope: Partial<MapDir.Envelope>
+  envelope: Require<MapDir.Envelope, "type">
   group: Partial<MapDir.Group>
-  layer: [number, Partial<MapDir.Layer>]
+  layer: [number, Require<MapDir.Layer, "type">]
   quad: [number, number, MapDir.Quad]
   automapper: [string, string]
 }
@@ -114,9 +119,9 @@ export interface MapCreateReq {
 export interface MapEditReq {
   config: Partial<Config>
   info: Partial<MapDir.Info>
-  envelope: [number, Partial<MapDir.Envelope>]
+  envelope: [number, Require<MapDir.Envelope, "type">]
   group: [number, Partial<MapDir.Group>]
-  layer: [number, number, Partial<MapDir.Layer>]
+  layer: [number, number, Require<MapDir.Layer, "type">]
   tiles: [number, number, Tiles]
   quad: [number, number, number, Partial<MapDir.Quad>]
   automap: [number, number]
@@ -184,13 +189,6 @@ export interface Broadcast {
   saved: undefined
 }
 
-export interface Packet<T, U> {
-  timestamp: number
-  id?: number
-  type: T
-  content: U
-}
-
 export type Result<T> = {
   ok: T
 } | {
@@ -199,6 +197,7 @@ export type Result<T> = {
 
 export interface Send {
   "map/get/users": MapGetReq['users']
+  "map/get/cursors": MapGetReq['cursors']
   "map/get/map": MapGetReq['map']
   "map/get/images": MapGetReq['images']
   "map/get/image": MapGetReq['image']
@@ -248,6 +247,7 @@ export interface Send {
 
 export interface Resp {
   "map/get/users": MapGetResp['users']
+  "map/get/cursors": MapGetResp['cursors']
   "map/get/map": MapGetResp['map']
   "map/get/images": MapGetResp['images']
   "map/get/image": MapGetResp['image']
@@ -285,7 +285,7 @@ export interface Resp {
   "map/delete/layer": undefined
   "map/delete/quad": undefined
   "map/delete/automapper": undefined
-  "map/cursor": Cursors
+  "map/cursor": undefined
   "map/save": undefined
   "get/map": GetResp['map']
   "put/map": undefined
@@ -319,7 +319,6 @@ export interface Recv {
   "map/delete/layer": MapDelReq['layer']
   "map/delete/quad": MapDelReq['quad']
   "map/delete/automapper": MapDelReq['automapper']
-  "map/cursor": Cursors
   "post/map": EditReq['map']
   "delete/map": DeleteReq['map']
   "map_created": string
@@ -328,10 +327,23 @@ export interface Recv {
   "saved": undefined
 }
 
-export type RecPartial<T> = T extends Array<any> ? T : T extends Object ? { [K in keyof T]?: RecPartial<T[K]> } : T
-
 export type SendKey = keyof Send
 export type RecvKey = keyof Recv
-export type SendPacket<K extends SendKey> = Packet<K, Send[K]>
-export type RespPacket<K extends SendKey> = Packet<K, Result<Resp[K]>>
-export type RecvPacket<K extends RecvKey> = Packet<K, Recv[K]>
+
+export interface SendPacket<K extends SendKey> {
+  timestamp: number
+  id: number
+  type: K
+  content: Send[K]
+}
+
+export type RespPacket<K extends SendKey> = {
+  timestamp: number
+  id: number
+} & Result<Resp[K]> 
+
+export interface RecvPacket<K extends RecvKey> {
+  timestamp: number
+  type: K
+  content: Recv[K]
+}

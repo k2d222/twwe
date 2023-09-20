@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Envelope } from '../../twmap/map'
-  import { colorToJson, curveTypeToString, toFixedNum } from '../../server/convert'
+  import { colorToJson, curveTypeToString, envTypeToString, toFixedNum } from '../../server/convert'
   import { server } from '../global'
   import * as Info from '../../twmap/types'
   import { ColorEnvelope, PositionEnvelope, SoundEnvelope, type EnvPoint } from '../../twmap/envelope'
@@ -9,7 +9,7 @@
   import { showError, clearDialog } from './dialog'
   import { rmap } from '../global'
   import * as MapDir from '../../twmap/mapdir'
-  import type { Send } from 'src/server/protocol'
+  import type { Send } from '../../server/protocol'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
   type InputEvent = FormEvent<HTMLInputElement>
@@ -258,6 +258,7 @@
 
   async function onRename(e: InputEvent) {
     const change: Send['map/post/envelope'] = [$rmap.map.envelopes.indexOf(selected), {
+      type: envTypeToString(selected.type),
       name: e.currentTarget.value,
     }]
     try {
@@ -368,6 +369,7 @@
 
     if (selected instanceof ColorEnvelope) {
       return [index, {
+        type: MapDir.EnvelopeType.Color,
         points: selected.points.map(p => ({
           time: p.time,
           content: colorToJson(p.content, 10),
@@ -376,6 +378,7 @@
       }]
     } else if (selected instanceof PositionEnvelope) {
       return [index, {
+        type: MapDir.EnvelopeType.Position,
         points: selected.points.map(p => ({
           time: p.time,
           content: {
@@ -388,6 +391,7 @@
       }]
     } else if (selected instanceof SoundEnvelope) {
       return [index, {
+        type: MapDir.EnvelopeType.Sound,
         points:  selected.points.map(p => ({
           time: p.time,
           content: toFixedNum(p.content, 10),

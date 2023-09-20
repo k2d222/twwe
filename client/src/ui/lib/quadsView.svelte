@@ -11,7 +11,7 @@
   import { Add as AddIcon } from 'carbon-icons-svelte'
   import { coordToJson, resIndexToString, uvToJson } from '../../server/convert'
   import { rmap } from '../global'
-  import type { Send } from 'src/server/protocol'
+  import type { Send } from '../../server/protocol'
 
   export let layer: QuadsLayer
 
