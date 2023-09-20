@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { QuadsLayer, Quad } from '../../twmap/quadsLayer'
-  import type { CreateQuad, EditQuad } from 'src/server/protocol'
   import type * as Info from '../../twmap/types'
   import { viewport } from '../../gl/global'
   import { onMount, onDestroy } from 'svelte'
@@ -10,8 +9,9 @@
   import { layerIndex } from './util'
   import { Button } from 'carbon-components-svelte'
   import { Add as AddIcon } from 'carbon-icons-svelte'
-  import { coordToJson, uvToJson } from '../../server/convert'
+  import { coordToJson, resIndexToString, uvToJson } from '../../server/convert'
   import { rmap } from '../global'
+  import type { Send } from 'src/server/protocol'
 
   export let layer: QuadsLayer
 
@@ -46,9 +46,9 @@
   let destroyed = false
 
   onMount(() => {
-    $server.on('editquad', onSync)
-    $server.on('createquad', onSync)
-    $server.on('deletequad', onSync)
+    $server.on('map/post/quad', onSync)
+    $server.on('map/put/quad', onSync)
+    $server.on('map/delete/quad', onSync)
   
     const updateForever = () => {
       viewBox = makeViewBox()
@@ -59,9 +59,9 @@
   })
 
   onDestroy(() => {
-    $server.off('editquad', onSync)
-    $server.off('createquad', onSync)
-    $server.off('deletequad', onSync)
+    $server.off('map/post/quad', onSync)
+    $server.off('map/put/quad', onSync)
+    $server.off('map/delete/quad', onSync)
     destroyed = true
   })
 
@@ -126,7 +126,7 @@
     quadPoints = quadPoints // hack to redraw quad
 
     const change = editQuad(activeQuad)
-    $rmap.editQuad(change)
+    $rmap.editQuad(...change)
     onSync()
   }
 
@@ -158,15 +158,14 @@
 
   function onChange(q: number) {
     const change = editQuad(q)
-    $rmap.editQuad(change)
-    $server.send('editquad', change)
+    $rmap.editQuad(...change)
+    $server.send('map/post/quad', change)
     onSync()
   }
 
   function onDelete(q: number) {
-    const change = { group: g, layer: l, quad: q }
     hideCM()
-    $server.query('deletequad', change)
+    $server.query('map/delete/quad', [g, l, q])
   }
 
   function onCreateQuad() {
@@ -176,36 +175,38 @@
     const w = (layer.image ? layer.image.width : 64) * 1024
     const h = (layer.image ? layer.image.height : 64) * 1024
 
-    const change: CreateQuad = {
-      group: g,
-      layer: l,
-      position: coordToJson({ x: mx, y: my }, 15),
-      corners: [
-        { x: -w / 2 + mx, y: -h / 2 + my }, // top left
-        { x: w / 2 + mx, y: -h / 2 + my }, // top right
-        { x: -w / 2 + mx, y: h / 2 + my }, // bottom left
-        { x: w / 2 + mx, y: h / 2 + my }, // bottom right
-      ].map(p => coordToJson(p, 15)),
-      colors: [
-        { r: 255, g: 255, b: 255, a: 255 },
-        { r: 255, g: 255, b: 255, a: 255 },
-        { r: 255, g: 255, b: 255, a: 255 },
-        { r: 255, g: 255, b: 255, a: 255 },
-      ],
-      texCoords: [
-        { x: 0, y: 0 },
-        { x: 1024, y: 0 },
-        { x: 0, y: 1024 },
-        { x: 1024, y: 1024 },
-      ].map(p => uvToJson(p, 10)),
-      posEnv: null,
-      posEnvOffset: 0,
-      colorEnv: null,
-      colorEnvOffset: 0,
-    }
+    // TODO: use defaults
+    const change: Send['map/put/quad'] = [
+      g, l,
+      {
+        position: coordToJson({ x: mx, y: my }, 15),
+        corners: [
+          { x: -w / 2 + mx, y: -h / 2 + my }, // top left
+          { x: w / 2 + mx, y: -h / 2 + my }, // top right
+          { x: -w / 2 + mx, y: h / 2 + my }, // bottom left
+          { x: w / 2 + mx, y: h / 2 + my }, // bottom right
+        ].map(p => coordToJson(p, 15)),
+        colors: [
+          { r: 255, g: 255, b: 255, a: 255 },
+          { r: 255, g: 255, b: 255, a: 255 },
+          { r: 255, g: 255, b: 255, a: 255 },
+          { r: 255, g: 255, b: 255, a: 255 },
+        ],
+        texture_coords: [
+          { x: 0, y: 0 },
+          { x: 1024, y: 0 },
+          { x: 0, y: 1024 },
+          { x: 1024, y: 1024 },
+        ].map(p => uvToJson(p, 10)),
+        position_env: null,
+        position_env_offset: 0,
+        color_env: null,
+        color_env_offset: 0,
+      }
+    ]
 
     hideCM()
-    $server.query('createquad', change)
+    $server.query('map/put/quad', change)
   }
 
   function cloneQuad(quad: Quad) {
@@ -225,25 +226,25 @@
     return copy
   }
 
-  function editQuad(q: number): EditQuad {
+  function editQuad(q: number): Send['map/post/quad'] {
     const quad = layer.quads[q]
     const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
     const posEnv_ = $rmap.map.envelopes.indexOf(posEnv)
     const colorEnv_ = $rmap.map.envelopes.indexOf(colorEnv)
 
-    return {
-      group: g,
-      layer: l,
-      quad: q,
-      position: coordToJson(points[4], 15),
-      corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
-      colors,
-      texCoords: texCoords.map(p => uvToJson(p, 10)),
-      posEnv: posEnv_ === -1 ? null : posEnv_,
-      posEnvOffset,
-      colorEnv: colorEnv_ === -1 ? null : colorEnv_,
-      colorEnvOffset,
-    }
+    return [
+      g, l, q,
+      {
+        position: coordToJson(points[4], 15),
+        corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
+        colors,
+        texture_coords: texCoords.map(p => uvToJson(p, 10)),
+        position_env: posEnv_ === -1 ? null : resIndexToString(posEnv_, posEnv.name),
+        position_env_offset: posEnvOffset,
+        color_env: colorEnv_ === -1 ? null : resIndexToString(colorEnv_, colorEnv.name),
+        color_env_offset: colorEnvOffset,
+      }
+    ]
   }
 
   function onDuplicate(q: number) {
@@ -255,21 +256,22 @@
       return { x: p.x + 10 * 1024, y: p.y + 10 * 1024 }
     })
 
-    const change: CreateQuad = {
-      group: g,
-      layer: l,
-      position: coordToJson(points[4], 15),
-      corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
-      colors,
-      texCoords: texCoords.map(p => uvToJson(p, 10)),
-      posEnv: posEnv_ === -1 ? null : posEnv_,
-      posEnvOffset,
-      colorEnv: colorEnv_ === -1 ? null : colorEnv_,
-      colorEnvOffset,
-    }
+    const change: Send['map/put/quad'] = [
+      g, l,
+      {
+        position: coordToJson(points[4], 15),
+        corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
+        colors,
+        texture_coords: texCoords.map(p => uvToJson(p, 10)),
+        position_env: posEnv_ === -1 ? null : resIndexToString(posEnv_, posEnv.name),
+        position_env_offset: posEnvOffset,
+        color_env: colorEnv_ === -1 ? null : resIndexToString(colorEnv_, colorEnv.name),
+        color_env_offset: colorEnvOffset,
+      }
+    ]
 
     hideCM()
-    $server.query('createquad', change)
+    $server.query('map/put/quad', change)
   }
 
   let sync_ = 0

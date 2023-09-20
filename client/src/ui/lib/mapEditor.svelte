@@ -9,17 +9,20 @@
   import { Image } from '../../twmap/image'
   import QuadsView from "./quadsView.svelte"
   import { onDestroy, onMount } from "svelte"
-  import type { CreateEnvelope, CreateGroup, CreateImage, CreateLayer, CreateQuad, Cursors, DeleteEnvelope, DeleteGroup, DeleteImage, DeleteLayer, DeleteQuad, EditEnvelope, EditGroup, EditLayer, EditMap, EditQuad, EditTileParams, ReorderGroup, ReorderLayer } from "../../server/protocol"
   import { RenderQuadsLayer } from "../../gl/renderQuadsLayer"
   import TilePicker from './tilePicker.svelte'
   import BrushEditor from './editBrush.svelte'
   import Stats from './stats.svelte'
   import { RenderAnyTilesLayer } from "../../gl/renderTilesLayer"
   import { viewport, renderer } from '../../gl/global'
-  import { externalImageUrl, queryImageData } from './util'
+  import { decodePng, externalImageUrl, queryImageData } from './util'
   import MapView from './mapView.svelte'
   import type { RenderGroup } from '../../gl/renderGroup'
   import type { RenderLayer } from '../../gl/renderLayer'
+  import type * as MapDir from '../../twmap/mapdir'
+  import type * as Info from '../../twmap/types'
+  import type { Cursors, MapCreateReq, Recv, Resp } from 'src/server/protocol'
+  import { base64ToBytes } from 'src/server/convert'
 
   let g: number, l: number
   $: {
@@ -90,38 +93,38 @@
 
   let destroyed = false
 
-  function onCreateQuad(e: CreateQuad) {
-    $rmap.createQuad(e)
+  function onCreateQuad([g, l, part]: Recv['map/put/quad']) {
+    $rmap.createQuad(g, l, part)
   }
-  function onEditQuad(e: EditQuad) {
-    $rmap.editQuad(e)
+  function onEditQuad([g, l, q, part]: Recv['map/post/quad']) {
+    $rmap.editQuad(g, l, q, part)
   }
-  function onDeleteQuad(e: DeleteQuad) {
-    $rmap.deleteQuad(e)
+  function onDeleteQuad([g, l, q]: Recv['map/delete/quad']) {
+    $rmap.deleteQuad(g, l, q)
   }
-  function onCreateEnvelope(e: CreateEnvelope) {
-    $rmap.createEnvelope(e)
+  function onCreateEnvelope(part: Recv['map/put/envelope']) {
+    $rmap.createEnvelope(part)
   }
-  function onEditEnvelope(e: EditEnvelope) {
-    $rmap.editEnvelope(e)
+  function onEditEnvelope([e, part]: Recv['map/post/envelope']) {
+    $rmap.editEnvelope(e, part)
   }
-  function onDeleteEnvelope(e: DeleteEnvelope) {
-    $rmap.removeEnvelope(e.index)
+  function onDeleteEnvelope(e: Recv['map/delete/envelope']) {
+    $rmap.removeEnvelope(e)
   }
-  function onCreateGroup(e: CreateGroup) {
-    $rmap.createGroup(e)
+  function onCreateGroup(part: Recv['map/put/group']) {
+    $rmap.createGroup(part)
   }
-  function onEditGroup(e: EditGroup) {
-    $rmap.editGroup(e)
+  function onEditGroup([g, part]: Recv['map/post/group']) {
+    $rmap.editGroup(g, part)
   }
-  function onDeleteGroup(e: DeleteGroup) {
-    $rmap.deleteGroup(e)
+  function onDeleteGroup(dg: Recv['map/delete/group']) {
+    $rmap.deleteGroup(dg)
     $selected = $selected
-      .filter(([g, _]) => g !== e.group)
-      .map(([g, l]) => g > e.group ? [g -1, l] : [g, l])
+      .filter(([g, _]) => g !== dg)
+      .map(([g, l]) => g > dg ? [g -1, l] : [g, l])
   }
-  function onReorderGroup(e: ReorderGroup) {
-    $rmap.reorderGroup(e)
+  function onReorderGroup([src, tgt]: Recv['map/patch/group']) {
+    $rmap.reorderGroup(src, tgt)
     $selected.pop() // remove active
     const active: [number, number] =
        rlayer ? $rmap.map.layerIndex(rlayer.layer) :
@@ -129,23 +132,23 @@
        $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
-  function onCreateLayer(e: CreateLayer) {
-    $rmap.createLayer(e)
+  function onCreateLayer([g, part]: Recv['map/put/layer']) {
+    $rmap.createLayer(g, part)
   }
-  async function onEditLayer(e: EditLayer) {
-    $rmap.editLayer(e)
+  async function onEditLayer([g, l, part]: Recv['map/post/layer']) {
+    $rmap.editLayer(g, l, part)
   }
-  function onDeleteLayer(e: DeleteLayer) {
-    $rmap.deleteLayer(e)
-    $selected = $selected.filter(([g, l]) => g !== e.group || l !== e.layer)
+  function onDeleteLayer([dg, dl]: Recv['map/delete/layer']) {
+    $rmap.deleteLayer(dg, dl)
+    $selected = $selected.filter(([g, l]) => g !== dg || l !== dl)
     if ($selected.length === 0) {
       $selected = (rgroup.layers.length === 0) ?
         [$rmap.map.physicsLayerIndex(GameLayer)] :
-        [[g, Math.min(rgroup.layers.length - 1, e.layer)]]
+        [[g, Math.min(rgroup.layers.length - 1, dl)]]
     }
   }
-  function onReorderLayer(e: ReorderLayer) {
-    $rmap.reorderLayer(e)
+  function onReorderLayer([src, tgt]: Recv['map/patch/layer']) {
+    $rmap.reorderLayer(src, tgt)
     $selected.pop() // remove active
     const active: [number, number] =
        rlayer ? $rmap.map.layerIndex(rlayer.layer) :
@@ -153,52 +156,53 @@
        $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
-  async function onCreateImage(e: CreateImage) {
-    if (e.index !== $rmap.map.images.length)
-      return
-    if (e.external) {
+  async function onCreateImage([name, img]: Recv['map/put/image']) {
+    if (typeof img === 'object') { // external image
       const image = new Image()
-      image.loadExternal(externalImageUrl(e.name))
-      image.name = e.name
+      image.loadExternal(externalImageUrl(name))
+      image.name = name
       $rmap.addImage(image)
-    } else {
+    } else { // embedded image
       const image = new Image()
-      image.name = e.name
+      image.name = name
       $rmap.addImage(image)
-      const data = await queryImageData($serverConfig.httpUrl, $rmap.map.name, e.index)
-      image.loadEmbedded(data)
+      const bytes = base64ToBytes(img)
+      const png = await decodePng(new Blob([bytes]))
+      image.loadEmbedded(png)
     }
   }
-  function onDeleteImage(e: DeleteImage) {
-    $rmap.removeImage(e.index)
+  function onDeleteImage(e: Recv['map/delete/image']) {
+    $rmap.removeImage(e)
   }
-  async function onEditMap(e: EditMap) {
-    $rmap.map.info = e.info
+  async function onEditInfo(part: Partial<MapDir.Info>) {
+    for (const k in part) {
+      $rmap.map.info[k] = part[k]
+    }
   }
 
   onMount(() => {
     $rmap = mapView.getRenderMap()
   
     // these event hooks have priority because they manage the state of the map.
-    $server.on('createquad', onCreateQuad, true)
-    $server.on('editquad', onEditQuad, true)
-    $server.on('deletequad', onDeleteQuad, true)
-    $server.on('createenvelope', onCreateEnvelope, true)
-    $server.on('editenvelope', onEditEnvelope, true)
-    $server.on('deleteenvelope', onDeleteEnvelope, true)
-    $server.on('editlayer', onEditLayer, true)
-    $server.on('editgroup', onEditGroup, true)
-    $server.on('creategroup', onCreateGroup, true)
-    $server.on('createlayer', onCreateLayer, true)
-    $server.on('reordergroup', onReorderGroup, true)
-    $server.on('reorderlayer', onReorderLayer, true)
-    $server.on('deletegroup', onDeleteGroup, true)
-    $server.on('deletelayer', onDeleteLayer, true)
-    $server.on('createimage', onCreateImage, true)
-    $server.on('deleteimage', onDeleteImage, true)
-    $server.on('editmap', onEditMap, true)
+    $server.on('map/put/quad', onCreateQuad, true)
+    $server.on('map/post/quad', onEditQuad, true)
+    $server.on('map/delete/quad', onDeleteQuad, true)
+    $server.on('map/put/envelope', onCreateEnvelope, true)
+    $server.on('map/post/envelope', onEditEnvelope, true)
+    $server.on('map/delete/envelope', onDeleteEnvelope, true)
+    $server.on('map/post/layer', onEditLayer, true)
+    $server.on('map/post/group', onEditGroup, true)
+    $server.on('map/put/group', onCreateGroup, true)
+    $server.on('map/put/layer', onCreateLayer, true)
+    $server.on('map/patch/group', onReorderGroup, true)
+    $server.on('map/patch/layer', onReorderLayer, true)
+    $server.on('map/delete/group', onDeleteGroup, true)
+    $server.on('map/delete/layer', onDeleteLayer, true)
+    $server.on('map/put/image', onCreateImage, true)
+    $server.on('map/delete/image', onDeleteImage, true)
+    $server.on('map/post/info', onEditInfo, true)
 
-    $server.on('cursors', onCursors)
+    $server.on('map/cursor', onCursors)
     cursorInterval = setInterval(updateCursors, 100) as any
 
     renderLoop(0)
@@ -206,25 +210,25 @@
 
   onDestroy(() => {
     destroyed = true
-    $server.off('createquad', onCreateQuad)
-    $server.off('editquad', onEditQuad)
-    $server.off('deletequad', onDeleteQuad)
-    $server.off('createenvelope', onCreateEnvelope)
-    $server.off('editenvelope', onEditEnvelope)
-    $server.off('deleteenvelope', onDeleteEnvelope)
-    $server.off('editlayer', onEditLayer)
-    $server.off('editgroup', onEditGroup)
-    $server.off('creategroup', onCreateGroup)
-    $server.off('createlayer', onCreateLayer)
-    $server.off('reordergroup', onReorderGroup)
-    $server.off('reorderlayer', onReorderLayer)
-    $server.off('deletegroup', onDeleteGroup)
-    $server.off('deletelayer', onDeleteLayer)
-    $server.off('createimage', onCreateImage)
-    $server.off('deleteimage', onDeleteImage)
-    $server.off('editmap', onEditMap)
+    $server.off('map/put/quad', onCreateQuad)
+    $server.off('map/post/quad', onEditQuad)
+    $server.off('map/delete/quad', onDeleteQuad)
+    $server.off('map/put/envelope', onCreateEnvelope)
+    $server.off('map/post/envelope', onEditEnvelope)
+    $server.off('map/delete/envelope', onDeleteEnvelope)
+    $server.off('map/post/layer', onEditLayer)
+    $server.off('map/post/group', onEditGroup)
+    $server.off('map/put/group', onCreateGroup)
+    $server.off('map/put/layer', onCreateLayer)
+    $server.off('map/patch/group', onReorderGroup)
+    $server.off('map/patch/layer', onReorderLayer)
+    $server.off('map/delete/group', onDeleteGroup)
+    $server.off('map/delete/layer', onDeleteLayer)
+    $server.off('map/put/image', onCreateImage)
+    $server.off('map/delete/image', onDeleteImage)
+    $server.off('map/post/info', onEditInfo)
 
-    $server.off('cursors', onCursors)
+    $server.off('map/cursor', onCursors)
 
     clearInterval(cursorInterval)
   })
@@ -247,17 +251,17 @@
     requestAnimationFrame(renderLoop)
   }
 
-  function onCursors(e: Cursors) {
+  function onCursors(e: Resp['map/cursor']) {
     cursors = Object.fromEntries(Object.entries(e).map(([k, v]) => {
-      if (0 <= v.group && v.group < $rmap.groups.length) {
-        const rgroup = $rmap.groups[v.group]
+      if (0 <= v.g && v.g < $rmap.groups.length) {
+        const rgroup = $rmap.groups[v.g]
         let [ offX, offY ] = rgroup.offset()
         // const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
-        return [k, { x: v.point.x + offX, y: v.point.y + offY }]
+        return [k, { x: v.x + offX, y: v.y + offY }]
       }
       else {
         // const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
-        return [k, v.point]
+        return [k, [v.x, v.y]]
       }
 
     }))
@@ -456,13 +460,11 @@
       return
 
     let [ offX, offY ] = rgroup.offset()
-    const cursors = await $server.query('cursors', {
-      group: g,
-      layer: l,
-      point: {
-        x: viewport.mousePos.x - offX,
-        y: viewport.mousePos.y - offY,
-      }
+    const cursors = await $server.query('map/cursor', {
+      g,
+      l,
+      x: viewport.mousePos.x - offX,
+      y: viewport.mousePos.y - offY,
     })
     onCursors(cursors)
   }
@@ -480,7 +482,7 @@
     }
   }
 
-  function onTilePick(e: CustomEvent<EditTileParams[][]>) {
+  function onTilePick(e: CustomEvent<Info.Tile[][]>) {
     brushBuffer = {
       group: g,
       layers: [{

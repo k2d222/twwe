@@ -1,464 +1,337 @@
-import type * as Info from '../twmap/types'
+import type * as Info from 'src/twmap/types'
 import type * as MapDir from '../twmap/mapdir'
-import type { AutomapperConfig } from '../twmap/mapdir'
 
 // This file contains the type of messages sent and received via websocket.
 // It must correspond with file protocol.rs in server.
 
 // MAPS
 
-type FixedNum = string
+type Base64 = string
 
-export type MapAccess = 'public' | 'unlisted'
-
-export type MapConfig = {
+export interface Config {
   name: string
-  access: MapAccess
+  access: 'public' | 'unlisted'
 }
 
-export interface CreateMapBlank extends MapConfig {
-  // version: MapVersion // TODO
-  width: number
-  height: number
-  defaultLayers: boolean
-}
-
-export interface CreateMapClone extends MapConfig {
-  clone: string
-}
-
-export type CreateMap = {
-  blank: CreateMapBlank
-} | {
-  clone: CreateMapClone
-} | {
-  upload: MapConfig
-}
-
-export interface JoinMap {
-  name: string
-}
-
-export interface MapListElement {
-  author: string
-  version: string
-  credits: string
-  license: string
-  settings: string[]
-}
-
-export interface EditMap {
-  // name: string, // TODO
-  info: MapListElement
-}
-
-export interface SaveMap {
-  name: string
-}
-
-export interface DeleteMap {
-  name: string
-}
-
-// GROUPS
-
-export interface CreateGroup {
-  name: string
-}
-
-// must have exactly one of the optional fields
-export interface EditGroup {
-  group: number
-  offX?: FixedNum
-  offY?: FixedNum
-  paraX?: number
-  paraY?: number
-  clipping?: boolean
-  clipX?: FixedNum
-  clipY?: FixedNum
-  clipW?: FixedNum
-  clipH?: FixedNum
-  name?: string
-}
-
-export interface ReorderGroup {
-  group: number
-  newGroup: number
-}
-
-export interface DeleteGroup {
-  group: number
-}
-
-// LAYERS
-
-export type CreateLayer = {
-  kind: 'tiles' | 'quads' | 'front' | 'tele' | 'speedup' | 'switch' | 'tune' | 'sounds'
-  group: number
-  name: string
-}
-
-export interface CommonLayerChange {
-  group: number
-  layer: number
-  flags?: number
-  name?: string
-}
-
-export interface EditTilesLayer extends CommonLayerChange {
-  width?: number
-  height?: number
-  color?: Info.Color
-  colorEnv?: number | null
-  colorEnvOffset?: number
-  image?: number | null
-  automapper?: AutomapperConfig
-}
-
-export interface EditQuadsLayer extends CommonLayerChange {
-  // TODO
-  image?: number
-}
-
-export type EditLayer = EditTilesLayer | EditQuadsLayer
-
-export interface ReorderLayer {
-  group: number
-  layer: number
-  newGroup: number
-  newLayer: number
-}
-
-export interface DeleteLayer {
-  group: number
-  layer: number
-}
-
-export type EditTileParams =
-  { kind: MapDir.LayerKind } & (
-    | (Info.Tile & { kind: MapDir.LayerKind.Tiles })
-    | (Info.Tile & { kind: MapDir.LayerKind.Game })
-    | (Info.Tile & { kind: MapDir.LayerKind.Front })
-    | (Info.Tele & { kind: MapDir.LayerKind.Tele })
-    | (Info.Speedup & { kind: MapDir.LayerKind.Speedup })
-    | (Info.Switch & { kind: MapDir.LayerKind.Switch })
-    | (Info.Tune & { kind: MapDir.LayerKind.Tune })
-  )
-
-export type EditTile = EditTileParams & {
-  group: number
-  layer: number
-  x: number
-  y: number
-}
-
-export type EditTiles = {
-  group: number,
-  layer: number,
-  x: number,
-  y: number,
-  kind: 'tiles' | 'game' | 'front' | 'tele' | 'speedup' | 'switch' | 'tune'
-  width: number,
-  height: number,
-  data: string, // binary data format in base64
-}
-
-export interface SendLayer {
-  group: number
-  layer: number
-}
-
-export type CreateQuad = {
-  group: number
-  layer: number
-  position: MapDir.Point<FixedNum>
-  corners: MapDir.Point<FixedNum>[] // 4 points
-  colors: MapDir.Color<number>[]
-  texCoords: MapDir.Uv<FixedNum>[]
-  posEnv: number | null
-  posEnvOffset: number
-  colorEnv: number | null
-  colorEnvOffset: number
-}
-
-export type EditQuad = {
-  group: number
-  layer: number
-  quad: number
-  position: MapDir.Point<FixedNum>
-  corners: MapDir.Point<FixedNum>[] // 4 points
-  colors: MapDir.Color<number>[]
-  texCoords: MapDir.Uv<FixedNum>[]
-  posEnv: number | null
-  posEnvOffset: number
-  colorEnv: number | null
-  colorEnvOffset: number
-}
-
-export interface DeleteQuad {
-  group: number
-  layer: number
-  quad: number
-}
-
-// ENVELOPES
-
-export type EnvType = 'invalid' | 'sound' | 'position' | 'color'
-export const envTypes: EnvType[] = ['invalid', 'sound', 'invalid', 'position', 'color']
-
-export interface CreateEnvelope {
-  name: string
-  kind: 'color' | 'position' | 'sound'
-}
-
-export type CurveTypeStr = 'step' | 'linear' | 'slow' | 'fast' | 'smooth' | 'bezier'
-export const curveTypes: CurveTypeStr[] = ['step', 'linear', 'slow', 'fast', 'smooth', 'bezier']
-
-export interface EnvPoint<T> {
-  time: number
-  content: T
-  type: CurveTypeStr
-}
-
-export interface EditEnvelope {
-  index: number
-  name?: string
-  synchronized?: boolean
-  points?:
-    | {
-        type: 'color'
-        content: EnvPoint<MapDir.Color<FixedNum>>[]
-      }
-    | {
-        type: 'position'
-        content: EnvPoint<{ x: FixedNum; y: FixedNum; rotation: FixedNum }>[]
-      }
-    | {
-        type: 'sound'
-        content: EnvPoint<FixedNum>[]
-      }
-}
-
-export interface DeleteEnvelope {
-  index: number
-}
-
-// MISC
-
-export interface SendMap {
-  name: string
-}
-
-export interface ListUsers {
-  globalCount: number
-  roomCount: number
-}
-
-export interface MapInfo {
+export interface MapDetail {
   name: string
   users: number
 }
 
-export interface ListMaps {
-  maps: MapInfo[]
+export interface Tiles {
+  x: number
+  y: number
+  w: number
+  h: number
+  tiles: Base64
 }
 
-// AUTOMAPPERS
-
-export enum AutomapperKind {
-  DDNet = 'ddnet',
-  Rpp = 'rpp',
-  Teeworlds = 'teeworlds'
-}
-
-export interface UploadAutomapper {
-  kind: AutomapperKind
-  image: string
-  content: string
-}
-
-export interface ApplyAutomapper {
-  group: number
-  layer: number
-}
-
-export interface AutomapperDetail {
-  file: string,
-  image: string,
-  configs: string[],
-  kind: AutomapperKind,
-}
-
-export interface ListAutomappers {
-  [k: string]: AutomapperDetail
-}
-
-// IMAGES
-
-export interface ImageConfig {
-  name: string
-  index: number
-}
-
-export interface CreateImage {
-  name: string
-  index: number
-  external: boolean
-}
-
-export interface DeleteImage {
-  index: number
-}
-
-export interface SendImage {
-  index: number
-}
-
-export interface ImageInfo {
-  name: string
-  index: number
-  width: number
-  height: number
+// TODO
+export type EditTile = Info.AnyTile & {
+  g: number
+  l: number
+  x: number
+  y: number
 }
 
 export interface Cursor {
-  point: Info.Coord
-  group: number
-  layer: number
+  x: number
+  y: number
+  g: number
+  l: number
 }
 
-export type Cursors = {
-  [k: string]: Cursor
+export type Cursors = Record<string, Cursor>
+
+export enum AutomapperKind {
+  DDNet = 'rules',
+  Teeworlds = 'json',
+  RulesPP = 'rpp',
 }
 
-// queries (name and content type) that can be sent by the client
-export interface RequestContent {
-  createmap: CreateMapBlank
-  clonemap: CreateMapClone
-  joinmap: JoinMap
-  leavemap: null
-  editmap: EditMap
-  savemap: SaveMap
-  deletemap: DeleteMap
-
-  creategroup: CreateGroup
-  editgroup: EditGroup
-  reordergroup: ReorderGroup
-  deletegroup: DeleteGroup
-
-  createlayer: CreateLayer
-  editlayer: EditLayer
-  reorderlayer: ReorderLayer
-  deletelayer: DeleteLayer
-
-  edittile: EditTile
-  edittiles: EditTiles
-  sendlayer: SendLayer
-
-  listautomappers: null
-  sendautomapper: string
-  deleteautomapper: string
-  uploadautomapper: UploadAutomapper
-  applyautomapper: ApplyAutomapper
-
-  createquad: CreateQuad
-  editquad: EditQuad
-  deletequad: DeleteQuad
-
-  createenvelope: CreateEnvelope
-  editenvelope: EditEnvelope
-  deleteenvelope: DeleteEnvelope
-
-  sendmap: SendMap
-  listusers: null
-  listmaps: null
-
-  createimage: CreateImage
-  sendimage: SendImage
-  deleteimage: DeleteImage
-
-  cursors: Cursor
+export interface AutomapperDetail {
+  name: string
+  image: string
+  kind: AutomapperKind
+  file: string | null
 }
 
-// queries (name and content type) that can be received from the server
-export interface ResponseContent {
-  createmap: CreateMapBlank
-  clonemap: CreateMapClone
-  joinmap: JoinMap
-  leavemap: null
-  editmap: EditMap
-  savemap: SaveMap
-  deletemap: DeleteMap
-
-  creategroup: CreateGroup
-  editgroup: EditGroup
-  reordergroup: ReorderGroup
-  deletegroup: DeleteGroup
-
-  createlayer: CreateLayer
-  editlayer: EditLayer
-  reorderlayer: ReorderLayer
-  deletelayer: DeleteLayer
-
-  edittile: EditTile
-  edittiles: EditTiles
-  sendlayer: string
-
-  listautomappers: ListAutomappers
-  sendautomapper: string
-  deleteautomapper: string
-  uploadautomapper: AutomapperDetail
-  applyautomapper: ApplyAutomapper
-
-  createquad: CreateQuad
-  editquad: EditQuad
-  deletequad: DeleteQuad
-
-  createenvelope: CreateEnvelope
-  editenvelope: EditEnvelope
-  deleteenvelope: DeleteEnvelope
-
-  sendmap: ArrayBuffer
-  listusers: ListUsers
-  listmaps: ListMaps
-  uploadcomplete: null
-
-  createimage: CreateImage
-  sendimage: ImageInfo
-  deleteimage: DeleteImage
-
-  cursors: Cursors
-
-  error: string
-}
-
-export type Query = keyof ResponseContent & keyof RequestContent
-
-export interface Request<K extends keyof RequestContent> {
-  type: K
-  timestamp: number
-  id: number
-  content: RequestContent[K]
-}
-
-export interface ResponseOk<K extends keyof ResponseContent> {
-  ok: {
-    type: K
-    content: ResponseContent[K]
+export type MapCreation = {
+  version: 'ddnet06' | 'teeworlds07'
+  access: 'public' | 'unlisted'
+} & ({
+  clone: string
+} | {
+  blank: {
+    w: number,
+    h: number
   }
+})
+
+export interface MapGetReq {
+  users: undefined
+  map: undefined
+  images: undefined
+  image: number
+  envelopes: undefined
+  envelope: number
+  groups: undefined
+  group: number
+  layers: number
+  layer: [number, number]
+  tiles: [number, number]
+  quad: [number, number, number]
+  automappers: undefined
+  automapper: string
 }
 
-export interface ResponseErr {
+export interface MapGetResp {
+  users: number
+  map: Base64
+  images: string[]
+  image: Base64
+  envelopes: string[]
+  envelope: MapDir.Envelope
+  groups: string[]
+  group: MapDir.Group
+  layers: string[]
+  layer: MapDir.Layer
+  tiles: Base64
+  quad: MapDir.Quad
+  automappers: string[]
+  automapper: string
+}
+
+export interface MapCreateReq {
+  image: [string, Base64 | MapDir.ExternalImage]
+  envelope: Partial<MapDir.Envelope>
+  group: Partial<MapDir.Group>
+  layer: [number, Partial<MapDir.Layer>]
+  quad: [number, number, MapDir.Quad]
+  automapper: [string, string]
+}
+
+export interface MapEditReq {
+  config: Partial<Config>
+  info: Partial<MapDir.Info>
+  envelope: [number, Partial<MapDir.Envelope>]
+  group: [number, Partial<MapDir.Group>]
+  layer: [number, number, Partial<MapDir.Layer>]
+  tiles: [number, number, Tiles]
+  quad: [number, number, number, Partial<MapDir.Quad>]
+  automap: [number, number]
+}
+
+export interface MapReorderReq {
+  envelope: [number, number]
+  group: [number, number]
+  layer: [[number, number], [number, number]]
+  quad: [[number, number, number], [number, number, number]]
+}
+
+export interface MapDelReq {
+  image: number
+  envelope: number
+  group: number
+  layer: [number, number]
+  quad: [number, number, number]
+  automapper: string
+}
+
+export interface MapReq {
+  get: MapGetReq
+  put: MapCreateReq
+  post: MapEditReq
+  patch: MapReorderReq
+  delete: MapDelReq
+  cursor: Cursor
+  save: undefined
+}
+
+export interface GetReq {
+  map: string
+}
+
+export interface GetResp {
+  map: Base64
+}
+
+export interface CreateReq {
+  map: [string, Base64]
+}
+
+export interface EditReq {
+  map: [string, MapCreation]
+}
+
+export interface DeleteReq {
+  map: string
+}
+
+export interface Request {
+  map: MapReq
+  get: GetReq
+  post: EditReq
+  delete: DeleteReq
+  join: string
+  leave: string
+}
+
+export interface Broadcast {
+  map_created: string
+  map_deleted: string
+  users: number
+  saved: undefined
+}
+
+export interface Packet<T, U> {
+  timestamp: number
+  id?: number
+  type: T
+  content: U
+}
+
+export type Result<T> = {
+  ok: T
+} | {
   err: string
 }
 
-export type Response<K extends keyof ResponseContent> = {
-  timestamp: number
-  id: number
-} & (ResponseOk<K> | ResponseErr)
-
-export interface Broadcast<K extends keyof ResponseContent> {
-  type: K
-  timestamp: number
-  content: ResponseContent[K]
+export interface Send {
+  "map/get/users": MapGetReq['users']
+  "map/get/map": MapGetReq['map']
+  "map/get/images": MapGetReq['images']
+  "map/get/image": MapGetReq['image']
+  "map/get/envelopes": MapGetReq['envelopes']
+  "map/get/envelope": MapGetReq['envelope']
+  "map/get/groups": MapGetReq['groups']
+  "map/get/group": MapGetReq['group']
+  "map/get/layers": MapGetReq['layers']
+  "map/get/layer": MapGetReq['layer']
+  "map/get/tiles": MapGetReq['tiles']
+  "map/get/quad": MapGetReq['quad']
+  "map/get/automappers": MapGetReq['automappers']
+  "map/get/automapper": MapGetReq['automapper']
+  "map/put/image": MapCreateReq['image']
+  "map/put/envelope": MapCreateReq['envelope']
+  "map/put/group": MapCreateReq['group']
+  "map/put/layer": MapCreateReq['layer']
+  "map/put/quad": MapCreateReq['quad']
+  "map/put/automapper": MapCreateReq['automapper']
+  "map/post/config": MapEditReq['config']
+  "map/post/info": MapEditReq['info']
+  "map/post/envelope": MapEditReq['envelope']
+  "map/post/group": MapEditReq['group']
+  "map/post/layer": MapEditReq['layer']
+  "map/post/tiles": MapEditReq['tiles']
+  "map/post/quad": MapEditReq['quad']
+  "map/post/automap": MapEditReq['automap']
+  "map/patch/envelope": MapReorderReq['envelope']
+  "map/patch/group": MapReorderReq['group']
+  "map/patch/layer": MapReorderReq['layer']
+  "map/patch/quad": MapReorderReq['quad']
+  "map/delete/image": MapDelReq['image']
+  "map/delete/envelope": MapDelReq['envelope']
+  "map/delete/group": MapDelReq['group']
+  "map/delete/layer": MapDelReq['layer']
+  "map/delete/quad": MapDelReq['quad']
+  "map/delete/automapper": MapDelReq['automapper']
+  "map/cursor": Cursor
+  "map/save": undefined
+  "get/map": GetReq['map']
+  "put/map": CreateReq['map']
+  "post/map": EditReq['map']
+  "delete/map": DeleteReq['map']
+  "join": string
+  "leave": string
 }
+
+export interface Resp {
+  "map/get/users": MapGetResp['users']
+  "map/get/map": MapGetResp['map']
+  "map/get/images": MapGetResp['images']
+  "map/get/image": MapGetResp['image']
+  "map/get/envelopes": MapGetResp['envelopes']
+  "map/get/envelope": MapGetResp['envelope']
+  "map/get/groups": MapGetResp['groups']
+  "map/get/group": MapGetResp['group']
+  "map/get/layers": MapGetResp['layers']
+  "map/get/layer": MapGetResp['layer']
+  "map/get/tiles": MapGetResp['tiles']
+  "map/get/quad": MapGetResp['quad']
+  "map/get/automappers": MapGetResp['automappers']
+  "map/get/automapper": MapGetResp['automapper']
+  "map/put/image": undefined
+  "map/put/envelope": undefined
+  "map/put/group": undefined
+  "map/put/layer": undefined
+  "map/put/quad": undefined
+  "map/put/automapper": undefined
+  "map/post/config": undefined
+  "map/post/info": undefined
+  "map/post/envelope": undefined
+  "map/post/group": undefined
+  "map/post/layer": undefined
+  "map/post/tiles": undefined
+  "map/post/quad": undefined
+  "map/post/automap": undefined
+  "map/patch/envelope": undefined
+  "map/patch/group": undefined
+  "map/patch/layer": undefined
+  "map/patch/quad": undefined
+  "map/delete/image": undefined
+  "map/delete/envelope": undefined
+  "map/delete/group": undefined
+  "map/delete/layer": undefined
+  "map/delete/quad": undefined
+  "map/delete/automapper": undefined
+  "map/cursor": Cursors
+  "map/save": undefined
+  "get/map": GetResp['map']
+  "put/map": undefined
+  "post/map": undefined
+  "delete/map": undefined
+  "join": undefined
+  "leave": undefined
+}
+
+export interface Recv {
+  "map/put/image": MapCreateReq['image']
+  "map/put/envelope": MapCreateReq['envelope']
+  "map/put/group": MapCreateReq['group']
+  "map/put/layer": MapCreateReq['layer']
+  "map/put/quad": MapCreateReq['quad']
+  "map/put/automapper": MapCreateReq['automapper']
+  "map/post/config": MapEditReq['config']
+  "map/post/info": MapEditReq['info']
+  "map/post/envelope": MapEditReq['envelope']
+  "map/post/group": MapEditReq['group']
+  "map/post/layer": MapEditReq['layer']
+  "map/post/tiles": MapEditReq['tiles']
+  "map/post/quad": MapEditReq['quad']
+  "map/post/automap": MapEditReq['automap']
+  "map/patch/envelope": MapReorderReq['envelope']
+  "map/patch/group": MapReorderReq['group']
+  "map/patch/layer": MapReorderReq['layer']
+  "map/delete/image": MapDelReq['image']
+  "map/delete/envelope": MapDelReq['envelope']
+  "map/delete/group": MapDelReq['group']
+  "map/delete/layer": MapDelReq['layer']
+  "map/delete/quad": MapDelReq['quad']
+  "map/delete/automapper": MapDelReq['automapper']
+  "map/cursor": Cursors
+  "post/map": EditReq['map']
+  "delete/map": DeleteReq['map']
+  "map_created": string
+  "map_deleted": string
+  "users": number
+  "saved": undefined
+}
+
+export type RecPartial<T> = T extends Array<any> ? T : T extends Object ? { [K in keyof T]?: RecPartial<T[K]> } : T
+
+export type SendKey = keyof Send
+export type RecvKey = keyof Recv
+export type SendPacket<K extends SendKey> = Packet<K, Send[K]>
+export type RespPacket<K extends SendKey> = Packet<K, Result<Resp[K]>>
+export type RecvPacket<K extends RecvKey> = Packet<K, Recv[K]>

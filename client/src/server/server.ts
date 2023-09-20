@@ -1,47 +1,28 @@
-import type {
-  Request,
-  Response,
-  RequestContent,
-  ResponseContent,
-  Broadcast,
-  Query,
-} from './protocol'
+import type { Packet, Result, SendKey, RecvKey, Recv, Send, Resp } from './protocol'
 
-type QueryListener<K extends keyof ResponseContent> = (data: Response<K>) => void
-type BroadcastListener<K extends keyof ResponseContent> = (data: ResponseContent[K]) => void
-
-function isResponse(data: any): data is Response<any> {
-  return 'id' in data
-}
-
-function isBroadcast(data: any): data is Broadcast<any> {
-  return 'content' in data
-}
+type QueryFn<K extends SendKey> = (resp: Send[K]) => unknown
+type ListenFn<K extends RecvKey> = (resp: Recv[K]) => unknown
 
 export interface Server {
   // subscribe to a server event with a callback function
-  on<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>): void
+  on<K extends RecvKey>(type: K, fn: ListenFn<K>): void
 
   // unsubscribe to a server event
-  off<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>): void
+  off<K extends RecvKey>(type: K, fn: ListenFn<K>): void
 
   // send a request to the server
-  send<K extends keyof RequestContent>(type: K, content?: RequestContent[K]): void
+  send<K extends SendKey>(type: K, content?: Send[K]): void
 
   // send a request to the server and capture the reply
-  query<K extends Query>(
-    type: K,
-    content: RequestContent[K],
-    timeout?: number
-  ): Promise<ResponseContent[K]>
+  query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]>
 }
 
 // a server using a websocket
 export class WebSocketServer implements Server {
   socket: WebSocket
   errorListener: (e: string) => unknown
-  queryListeners: { [key: number]: QueryListener<any> }
-  broadcastListeners: { [K in keyof ResponseContent]: BroadcastListener<K>[] }
+  queryListeners: { [key: number]: QueryFn<any> }
+  broadcastListeners: { [K in RecvKey]: ListenFn<K>[] }
 
   private socketSend: (data: any) => void
   private deferredData: any[]
@@ -53,53 +34,36 @@ export class WebSocketServer implements Server {
     this.errorListener = () => {}
     this.queryListeners = {}
     this.broadcastListeners = {
-      createmap: [],
-      clonemap: [],
-      joinmap: [],
-      editmap: [],
-      savemap: [],
-      deletemap: [],
-      leavemap: [],
-
-      creategroup: [],
-      editgroup: [],
-      reordergroup: [],
-      deletegroup: [],
-
-      createlayer: [],
-      editlayer: [],
-      reorderlayer: [],
-      deletelayer: [],
-
-      edittile: [],
-      edittiles: [],
-      sendlayer: [],
-
-      listautomappers: [],
-      sendautomapper: [],
-      deleteautomapper: [],
-      uploadautomapper: [],
-      applyautomapper: [],
-
-      createquad: [],
-      editquad: [],
-      deletequad: [],
-
-      createenvelope: [],
-      editenvelope: [],
-      deleteenvelope: [],
-
-      sendmap: [],
-      listusers: [],
-      listmaps: [],
-      uploadcomplete: [],
-      createimage: [],
-      sendimage: [],
-      deleteimage: [],
-
-      cursors: [],
-
-      error: [],
+      "map/put/image": [],
+      "map/put/envelope": [],
+      "map/put/group": [],
+      "map/put/layer": [],
+      "map/put/quad": [],
+      "map/put/automapper": [],
+      "map/post/config": [],
+      "map/post/info": [],
+      "map/post/envelope": [],
+      "map/post/group": [],
+      "map/post/layer": [],
+      "map/post/tiles": [],
+      "map/post/quad": [],
+      "map/post/automap": [],
+      "map/patch/envelope": [],
+      "map/patch/group": [],
+      "map/patch/layer": [],
+      "map/delete/image": [],
+      "map/delete/envelope": [],
+      "map/delete/group": [],
+      "map/delete/layer": [],
+      "map/delete/quad": [],
+      "map/delete/automapper": [],
+      "map/cursor": [],
+      "post/map": [],
+      "delete/map": [],
+      "map_created": [],
+      "map_deleted": [],
+      "users": [],
+      "saved": [],
     }
 
     this.deferredData = []
@@ -129,22 +93,22 @@ export class WebSocketServer implements Server {
   }
 
   // to help typescript a little
-  private getBroadcastListeners<K extends keyof ResponseContent>(type: K) {
-    return this.broadcastListeners[type] as BroadcastListener<K>[]
+  private getBroadcastListeners<K extends RecvKey>(type: K) {
+    return this.broadcastListeners[type] as ListenFn<K>[]
   }
 
   onError(fn: (e: any) => unknown) {
     this.errorListener = fn
   }
 
-  on<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>, priority: boolean = false) {
+  on<K extends RecvKey>(type: K, fn: ListenFn<K>, priority: boolean = false) {
     if (priority)
       this.getBroadcastListeners(type).unshift(fn)
     else
       this.getBroadcastListeners(type).push(fn)
   }
 
-  off<K extends keyof ResponseContent>(type: K, fn: BroadcastListener<K>) {
+  off<K extends RecvKey>(type: K, fn: ListenFn<K>) {
     const index = this.getBroadcastListeners(type).indexOf(fn)
     if (index !== -1)
       this.getBroadcastListeners(type).splice(index, 1)
@@ -152,23 +116,18 @@ export class WebSocketServer implements Server {
       console.error('server.off(): could not find listener')
   }
 
-  query<K extends Query>(
-    type: K,
-    content: RequestContent[K],
-    timeout?: number
-  ): Promise<ResponseContent[K]> {
+  query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]> {
     return new Promise((resolve, reject) => {
       let timeoutID = -1
       let reqID = this.generateID()
 
-      const listener = (x: Response<K>) => {
-        if (x.id && x.id === reqID) {
-          window.clearTimeout(timeoutID)
-          delete this.queryListeners[reqID]
+      const listener = (x: Result<Resp[K]>) => {
+        window.clearTimeout(timeoutID)
+        delete this.queryListeners[reqID]
 
-          if ('ok' in x) resolve(x.ok.content)
-          else reject(x.err)
-        }
+        if ('ok' in x) resolve(x.ok)
+        else if ('err' in x) reject(x.err)
+        else console.error('query packet with no result', x)
       }
 
       this.queryListeners[reqID] = listener
@@ -190,66 +149,38 @@ export class WebSocketServer implements Server {
       return
     }
 
-    const data = JSON.parse(e.data)
-    // this is a query response
-    if (isResponse(data)) {
-      if (data.id !== 0) {
-        const fn = this.queryListeners[data.id]
-        fn(data)
-      }
-      if ('ok' in data) {
-        for (const fn of this.getBroadcastListeners(data.ok.type)) {
-          fn(data.ok.content)
-        }
-      }
-      if ('err' in data) {
-        for (const fn of this.getBroadcastListeners('error')) {
-          fn(data.err)
-        }
-      }
-    } else if (isBroadcast(data)) {
+    const data = JSON.parse(e.data) as Packet<any, any>
+    
+    if ('id' in data) {
+      const fn = this.queryListeners[data.id]
+      if (!fn) console.error('query response with no listener', data)
+      else fn(data)
+    }
+    else {
       for (const fn of this.getBroadcastListeners(data.type)) {
         fn(data.content)
       }
     }
   }
 
-  private sendQuery<K extends keyof RequestContent>(
-    type: K,
-    content: RequestContent[K],
-    id: number
-  ) {
-    const req: Request<K> = {
+  private sendQuery<K extends SendKey>(type: K, content: Send[K], id: number) {
+    const x: Packet<K, Send[K]> = {
       timestamp: Date.now(),
       id,
       type,
       content,
     }
-    const message = JSON.stringify(req)
+    const message = JSON.stringify(x)
     this.socketSend(message)
   }
 
-//   private predictResponse<K extends Query, U extends Query>(type: K, content: RequestContent[K]): ResponseContent[Query] | null {
-//     const predictables: Query[] = [
-//       'editmap',
-//       'creategroup', 'editgroup', 'reordergroup', 'deletegroup',
-//       'createlayer', 'editlayer', 'reorderlayer', 'deletelayer',
-// edittile edittiles
-//     ]
-//     if (predictables.includes(type))
-//       return content as any // TODO
-//     else
-//       return null
-//   }
-
-  send<K extends keyof RequestContent>(type: K, content?: RequestContent[K]) {
-    const req: Request<K> = {
+  send<K extends SendKey>(type: K, content?: Send[K]) {
+    const x: Packet<K, Send[K]> = {
       timestamp: Date.now(),
-      id: 0,
       type,
       content,
     }
-    const message = JSON.stringify(req)
+    const message = JSON.stringify(x)
     this.socketSend(message)
   }
 }

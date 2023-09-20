@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { MapInfo } from '../../server/protocol'
   import { navigate } from 'svelte-routing'
   import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
   import {
@@ -36,8 +35,9 @@
     Login as JoinIcon,
     TrashCan as DeleteIcon,
   } from 'carbon-icons-svelte'
-  import { cloneMap, createMap, download, queryMaps, uploadMap } from '../lib/util'
+  import { createMap, download, queryMaps, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
+  import type { MapDetail } from 'src/server/protocol'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'
@@ -45,7 +45,7 @@
   let serverConfs = storage.load('servers')
   let serverId = storage.load('currentServer')
 
-  let maps: MapInfo[] = []
+  let maps: MapDetail[] = []
 
   interface ModalAddServer {
     open: boolean
@@ -200,18 +200,19 @@
     showInfo('Querying the server…', 'none')
 
     if (method === 'upload') {
-      await uploadMap(serverConfs[serverId].httpUrl, modalCreateMap.uploadFile, { name, access })
+      await uploadMap(serverConfs[serverId].httpUrl, name, modalCreateMap.uploadFile)
     } else if (method === 'blank') {
-      await createMap(serverConfs[serverId].httpUrl, {
-        name,
+      await createMap(serverConfs[serverId].httpUrl, name, {
+        version: 'ddnet06', // TODO
         access,
-        width: modalCreateMap.blankWidth,
-        height: modalCreateMap.blankHeight,
-        defaultLayers: false, // TODO
+        blank: {
+          w: modalCreateMap.blankWidth,
+          h: modalCreateMap.blankHeight,
+        }
       })
     } else if (method === 'clone') {
-      await cloneMap(serverConfs[serverId].httpUrl, {
-        name,
+      await createMap(serverConfs[serverId].httpUrl, name, {
+        version: 'ddnet06',
         access,
         clone: maps[modalCreateMap.clone].name
       })

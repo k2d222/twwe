@@ -1,17 +1,12 @@
 import type { Writable } from "svelte/store"
-import { fromFixedNum } from "./convert"
-import type { Query, RequestContent, ResponseContent } from "./protocol"
+import type { Recv, RecvKey, Send, SendKey } from "./protocol"
 import type { Server } from "./server"
 
-let counter = 0
-
 // a svelte store factory that provides a Writable synced with the server.
-export function sync<Q extends Query, T>(val: T, opts: { server: Server, query: Q, send: (val: T) => RequestContent[Q] | null, recv: (e: ResponseContent[Q]) => T | null }): Writable<T> {
+export function sync<Q extends SendKey & RecvKey, T>(val: T, opts: { server: Server, query: Q, send: (val: T) => Send[Q] | null, recv: (e: Recv[Q]) => T | null }): Writable<T> {
   let subs: ((val: T) => void)[] = []
 
-  let count = counter++
-
-  const cb = (e: ResponseContent[Q]) => {
+  const cb = (e: Recv[Q]) => {
     const newVal = opts.recv(e)
     if (newVal !== null && newVal !== val) {
       val = newVal

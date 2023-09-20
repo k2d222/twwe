@@ -1,23 +1,8 @@
 import type { Map, PhysicsLayer, Envelope } from '../twmap/map'
-import type {
-  EditTile,
-  CreateQuad,
-  EditQuad,
-  DeleteQuad,
-  CreateEnvelope,
-  EditEnvelope,
-  EditLayer,
-  EditGroup,
-  ReorderGroup,
-  ReorderLayer,
-  DeleteGroup,
-  DeleteLayer,
-  CreateGroup,
-  CreateLayer,
-} from '../server/protocol'
 import type { RenderLayer } from './renderLayer'
 import type { Quad } from '../twmap/quadsLayer'
 import * as Info from '../twmap/types'
+import type * as MapDir from '../twmap/mapdir'
 import { PositionEnvelope, ColorEnvelope, SoundEnvelope } from '../twmap/envelope'
 import {
   TilesLayer,
@@ -50,6 +35,7 @@ import { isPhysicsLayer, type Ctor } from '../ui/lib/util'
 import { Config as AutomapperConfig, automap } from '../twmap/automap'
 import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, uvFromJson } from '../server/convert'
 import type { Brush } from 'src/ui/lib/editor'
+import type { EditTile, Recv } from 'src/server/protocol'
 
 export type Range = {
   start: Info.Coord
@@ -224,32 +210,32 @@ export class RenderMap {
     return this.map.envelopes.length - 1
   }
 
-  createEnvelope(change: CreateEnvelope) {
+  createEnvelope(part: Recv['map/put/envelope']) {
     const env =
-      change.kind === 'color'
+      part.type === 'color'
         ? new ColorEnvelope()
-        : change.kind === 'position'
+        : part.type === 'position'
         ? new PositionEnvelope()
-        : change.kind === 'sound'
+        : part.type === 'sound'
         ? new SoundEnvelope()
         : null
-    env.name = change.name
+    env.name = part.name
     this.addEnvelope(env)
   }
 
-  editEnvelope(change: EditEnvelope) {
-    const env = this.map.envelopes[change.index]
-    if ('name' in change) env.name = change.name
-    if ('synchronized' in change) env.synchronized = change.synchronized
-    if ('points' in change) {
-      if (change.points.type === 'color')
-        env.points = change.points.content.map(p => ({
+  editEnvelope(...[e, part]: Recv['map/post/envelope']) {
+    const env = this.map.envelopes[e]
+    if ('name' in part) env.name = part.name
+    if ('synchronized' in part) env.synchronized = part.synchronized
+    if ('points' in part) {
+      if (part.type === 'color')
+        env.points = part.points.map(p => ({
           time: p.time,
           content: colorFromJson(p.content, 10),
           type: curveTypeFromString(p.type),
         }))
-      else if (change.points.type === 'position')
-        env.points = change.points.content.map(p => ({
+      else if (part.type === 'position')
+        env.points = part.points.map(p => ({
           time: p.time,
           content: {
             x: fromFixedNum(p.content.x, 15),
@@ -258,8 +244,8 @@ export class RenderMap {
           },
           type: curveTypeFromString(p.type),
         }))
-      else if (change.points.type === 'sound')
-        env.points = change.points.content.map(p => ({
+      else if (part.type === 'sound')
+        env.points = part.points.map(p => ({
           time: p.time,
           content: fromFixedNum(p.content, 10),
           type: curveTypeFromString(p.type),
@@ -271,177 +257,196 @@ export class RenderMap {
     this.map.envelopes.splice(id, 1)
   }
 
-  editTile(change: EditTile) {
-    const rgroup = this.groups[change.group]
-    const rlayer = rgroup.layers[change.layer] as RenderAnyTilesLayer<PhysicsLayer | TilesLayer>
+  editTile(e: EditTile) {
+    const rgroup = this.groups[e.g]
+    const rlayer = rgroup.layers[e.l] as RenderAnyTilesLayer<PhysicsLayer | TilesLayer>
     const layer = rlayer.layer
 
-    if (change.x < 0 || change.y < 0 || change.x >= layer.width || change.y >= layer.height)
+    if (e.x < 0 || e.y < 0 || e.x >= layer.width || e.y >= layer.height)
       return false
 
-    const tile = layer.getTile(change.x, change.y)
+    const tile = layer.getTile(e.x, e.y)
 
     let changed = false
 
     for (let key in tile) {
-      if (key in change && change[key] !== tile[key]) {
-        tile[key] = change[key]
+      if (key in e && e[key] !== tile[key]) {
+        tile[key] = e[key]
         changed = true
       }
     }
 
     if (changed) {
-      if (rlayer === this.gameLayer) this.gameLayer.recomputeChunk(change.x, change.y)
-      else rlayer.recomputeChunk(change.x, change.y)
+      if (rlayer === this.gameLayer) this.gameLayer.recomputeChunk(e.x, e.y)
+      else rlayer.recomputeChunk(e.x, e.y)
     }
 
     return changed
   }
 
-  createQuad(change: CreateQuad) {
-    const rgroup = this.groups[change.group]
-    const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
+  createQuad(...[g, l, part]: Recv['map/put/quad']) {
+    const rgroup = this.groups[g]
+    const rlayer = rgroup.layers[l] as RenderQuadsLayer
 
     const quad: Quad = {
-      points: [...change.corners.map(p => coordFromJson(p, 15)), coordFromJson(change.position, 15)],
-      colors: change.colors,
-      texCoords: change.texCoords.map(p => uvFromJson(p, 10)),
+      points: [...part.corners.map(p => coordFromJson(p, 15)), coordFromJson(part.position, 15)],
+      colors: part.colors,
+      texCoords: part.texture_coords.map(p => uvFromJson(p, 10)),
       posEnv:
-        change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope),
-      posEnvOffset: change.posEnvOffset,
+        part.position_env === null ? null : (this.map.envelopes[part.position_env] as PositionEnvelope),
+      posEnvOffset: part.position_env_offset,
       colorEnv:
-        change.colorEnv === null ? null : (this.map.envelopes[change.colorEnv] as ColorEnvelope),
-      colorEnvOffset: change.colorEnvOffset,
+        part.color_env === null ? null : (this.map.envelopes[part.color_env] as ColorEnvelope),
+      colorEnvOffset: part.color_env_offset,
     }
 
     rlayer.layer.quads.push(quad)
     rlayer.recompute()
   }
 
-  editQuad(change: EditQuad) {
-    const rgroup = this.groups[change.group]
-    const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
-    const quad = rlayer.layer.quads[change.quad]
+  editQuad(...[g, l, q, part]: Recv['map/post/quad']) {
+    const rgroup = this.groups[g]
+    const rlayer = rgroup.layers[l] as RenderQuadsLayer
+    const quad = rlayer.layer.quads[q]
 
-    if ('position' in change) quad.points[4] =  coordFromJson(change.position, 15)
-    if ('corners' in change) quad.points = [...change.corners.map(c => coordFromJson(c, 15)), quad.points[4]]
-    if ('colors' in change) quad.colors = change.colors
-    if ('texCoords' in change) quad.texCoords = change.texCoords.map(p => uvFromJson(p, 10))
-    if ('posEnv' in change)
-      quad.posEnv =
-        change.posEnv === null ? null : (this.map.envelopes[change.posEnv] as PositionEnvelope)
-    if ('posEnvOffset' in change) quad.posEnvOffset = change.posEnvOffset
-    if ('colorEnv' in change)
-      quad.colorEnv =
-        change.colorEnv === null ? null : (this.map.envelopes[change.colorEnv] as ColorEnvelope)
-    if ('colorEnvOffset' in change) quad.colorEnvOffset = change.colorEnvOffset
+    if ('position' in part)
+      quad.points[4] =  coordFromJson(part.position, 15)
+    if ('corners' in part)
+      quad.points = [...part.corners.map(c => coordFromJson(c, 15)), quad.points[4]]
+    if ('colors' in part)
+      quad.colors = part.colors
+    if ('texture_coords' in part)
+      quad.texCoords = part.texture_coords.map(p => uvFromJson(p, 10))
+    if ('posEnv' in part)
+      quad.posEnv = part.position_env === null ? null : (this.map.envelopes[part.position_env] as PositionEnvelope)
+    if ('position_env_offset' in part)
+      quad.posEnvOffset = part.position_env_offset
+    if ('colorEnv' in part)
+      quad.colorEnv = part.color_env === null ? null : (this.map.envelopes[part.color_env] as ColorEnvelope)
+    if ('color_env_offset' in part)
+      quad.colorEnvOffset = part.color_env_offset
 
     rlayer.recompute()
   }
 
-  deleteQuad(change: DeleteQuad) {
-    const rgroup = this.groups[change.group]
-    const rlayer = rgroup.layers[change.layer] as RenderQuadsLayer
-    rlayer.layer.quads.splice(change.quad, 1)
+  deleteQuad(...[g, l, q]: Recv['map/delete/quad']) {
+    const rgroup = this.groups[g]
+    const rlayer = rgroup.layers[l] as RenderQuadsLayer
+    rlayer.layer.quads.splice(q, 1)
     rlayer.recompute()
   }
 
-  editGroup(change: EditGroup) {
-    const rgroup = this.groups[change.group]
+  editGroup(...[g, part]: Recv['map/post/group']) {
+    const rgroup = this.groups[g]
 
-    if ('offX' in change) rgroup.group.offX = fromFixedNum(change.offX, 5)
-    if ('offY' in change) rgroup.group.offY = fromFixedNum(change.offY, 5)
-    if ('paraX' in change) rgroup.group.paraX = change.paraX
-    if ('paraY' in change) rgroup.group.paraY = change.paraY
-    if ('clipping' in change) rgroup.group.clipping = change.clipping
-    if ('clipX' in change) rgroup.group.clipX = fromFixedNum(change.clipX, 5)
-    if ('clipY' in change) rgroup.group.clipY = fromFixedNum(change.clipY, 5)
-    if ('clipW' in change) rgroup.group.clipW = fromFixedNum(change.clipW, 5)
-    if ('clipH' in change) rgroup.group.clipH = fromFixedNum(change.clipH, 5)
-    if ('name' in change) rgroup.group.name = change.name
+    if ('offset' in part) {
+      rgroup.group.offX = fromFixedNum(part.offset.x, 5)
+      rgroup.group.offY = fromFixedNum(part.offset.y, 5)
+    } 
+    if ('parallax' in part) {
+      rgroup.group.paraX = part.parallax.x
+      rgroup.group.paraY = part.parallax.y
+    } 
+    if ('clipping' in part)
+      rgroup.group.clipping = part.clipping
+    if ('clip' in part) {
+      rgroup.group.clipX = fromFixedNum(part.clip.x, 5)
+      rgroup.group.clipY = fromFixedNum(part.clip.y, 5)
+      rgroup.group.clipW = fromFixedNum(part.clip.w, 5)
+      rgroup.group.clipH = fromFixedNum(part.clip.h, 5)
+    }
+    if ('name' in part)
+      rgroup.group.name = part.name
   }
 
-  reorderGroup(change: ReorderGroup) {
-    const [group] = this.map.groups.splice(change.group, 1)
-    const [rgroup] = this.groups.splice(change.group, 1)
-    this.map.groups.splice(change.newGroup, 0, group)
-    this.groups.splice(change.newGroup, 0, rgroup)
+  reorderGroup(...[src, tgt]: Recv['map/patch/group']) {
+    const [group] = this.map.groups.splice(src, 1)
+    const [rgroup] = this.groups.splice(src, 1)
+    this.map.groups.splice(tgt, 0, group)
+    this.groups.splice(tgt, 0, rgroup)
   }
 
-  deleteGroup(change: DeleteGroup) {
-    this.map.groups.splice(change.group, 1)
-    const [rgroup] = this.groups.splice(change.group, 1)
+  deleteGroup(g: Recv['map/delete/group']) {
+    this.map.groups.splice(g, 1)
+    const [rgroup] = this.groups.splice(g, 1)
     return rgroup
   }
 
-  editLayer(change: EditLayer) {
-    const rgroup = this.groups[change.group]
-    const rlayer = rgroup.layers[change.layer]
+  editLayer(...[g, l, part]: Recv['map/post/layer']) {
+    const rgroup = this.groups[g]
+    const rlayer = rgroup.layers[l]
 
-    if ('flags' in change) rlayer.layer.detail = (change.flags & Info.LayerFlags.DETAIL) === 1
-    if ('name' in change) rlayer.layer.name = change.name
+    if ('detail' in part)
+      rlayer.layer.detail = part.detail
+    if ('name' in part)
+      rlayer.layer.name = part.name
 
-    if (rlayer instanceof RenderAnyTilesLayer) {
-      if ('color' in change) rlayer.layer.color = change.color
-      if ('width' in change) this.setLayerWidth(rgroup, rlayer, change.width)
-      if ('height' in change) this.setLayerHeight(rgroup, rlayer, change.height)
-      if ('colorEnv' in change)
-        rlayer.layer.colorEnv =
-          change.colorEnv === null ? null : this.map.envelopes[change.colorEnv]
-      if ('colorEnvOffset' in change) rlayer.layer.colorEnvOffset = change.colorEnvOffset
-      if ('image' in change) {
-        if (change.image === null) {
+    if (rlayer instanceof RenderTilesLayer) {
+      if ('color' in part)
+        rlayer.layer.color = part.color
+      if ('width' in part)
+        this.setLayerWidth(rgroup, rlayer, part.width)
+      if ('height' in part)
+        this.setLayerHeight(rgroup, rlayer, part.height)
+      if ('color_env' in part)
+        rlayer.layer.colorEnv = part.color_env === null ? null : this.map.envelopes[part.color_env] as ColorEnvelope
+      if ('color_env_offset' in part)
+        rlayer.layer.colorEnvOffset = part.color_env_offset
+      if ('image' in part) {
+        if (part.image === null) {
           rlayer.layer.image = null
           rlayer.texture = this.blankTexture
-        } else {
-          rlayer.layer.image = this.map.images[change.image]
-          rlayer.texture = this.textures[change.image]
+        }
+        else {
+          const index = parseInt(part.image.slice(0, part.image.indexOf('_')))
+          rlayer.layer.image = this.map.images[index]
+          rlayer.texture = this.textures[index]
         }
         rlayer.recompute()
       }
-      if ('automapper' in change) {
-        rlayer.layer.automapper.config = change.automapper.config === null ? -1 : change.automapper.config
-        rlayer.layer.automapper.seed = change.automapper.seed
-        rlayer.layer.automapper.automatic = change.automapper.automatic
+      if ('automapper_config' in part) {
+        rlayer.layer.automapper.config = part.automapper_config.config === null ? -1 : part.automapper_config.config
+        rlayer.layer.automapper.seed = part.automapper_config.seed
+        rlayer.layer.automapper.automatic = part.automapper_config.automatic
       }
     } else if (rlayer instanceof RenderQuadsLayer) {
-      if ('image' in change) {
-        if (change.image === null) {
+      if ('image' in part) {
+        if (part.image === null) {
           rlayer.layer.image = null
           rlayer.texture = this.blankTexture
-        } else {
-          rlayer.layer.image = this.map.images[change.image]
-          rlayer.texture = this.textures[change.image]
+        }
+        else {
+          rlayer.layer.image = this.map.images[part.image]
+          rlayer.texture = this.textures[part.image]
         }
       }
     }
   }
 
-  reorderLayer(change: ReorderLayer) {
-    const rgroup = this.groups[change.group]
-    const [rlayer] = rgroup.layers.splice(change.layer, 1)
-    const [layer] = rgroup.group.layers.splice(change.layer, 1)
-    this.groups[change.newGroup].layers.splice(change.newLayer, 0, rlayer)
-    this.groups[change.newGroup].group.layers.splice(change.newLayer, 0, layer)
+  reorderLayer(...[[g1, l1], [g2, l2]]: Recv['map/patch/layer']) {
+    const rgroup = this.groups[g1]
+    const [rlayer] = rgroup.layers.splice(l1, 1)
+    const [layer] = rgroup.group.layers.splice(l1, 1)
+    this.groups[g2].layers.splice(l2, 0, rlayer)
+    this.groups[g2].group.layers.splice(l2, 0, layer)
   }
 
-  deleteLayer(change: DeleteLayer) {
-    this.map.groups[change.group].layers.splice(change.layer, 1)
-    const [rlayer] = this.groups[change.group].layers.splice(change.layer, 1)
+  deleteLayer(...[g, l]: Recv['map/delete/layer']) {
+    this.map.groups[g].layers.splice(l, 1)
+    const [rlayer] = this.groups[g].layers.splice(l, 1)
     return rlayer
   }
 
-  createGroup(_change: CreateGroup) {
+  createGroup(part: Recv['map/put/group']) {
     const group = new Group()
     const rgroup = new RenderGroup(this, group)
     this.map.groups.push(group)
     this.groups.push(rgroup)
+    this.editGroup(this.groups.length - 1, part)
     return rgroup
   }
 
-  private instLayer(
-    kind: CreateLayer['kind']
-  ): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
+  private instLayer(kind: MapDir.LayerKind): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
     if (kind === 'tiles') return new RenderTilesLayer(this, new TilesLayer())
     else if (kind === 'quads') return new RenderQuadsLayer(this, new QuadsLayer())
     else if (kind === 'front') return new RenderFrontLayer(this, new FrontLayer())
@@ -452,11 +457,11 @@ export class RenderMap {
     else throw 'cannot create layer kind ' + kind
   }
 
-  createLayer(create: CreateLayer) {
-    const group = this.map.groups[create.group]
-    const rgroup = this.groups[create.group]
+  createLayer(...[g, part]: Recv['map/put/layer']) {
+    const group = this.map.groups[g]
+    const rgroup = this.groups[g]
 
-    const rlayer = this.instLayer(create.kind)
+    const rlayer = this.instLayer(part.type)
     const layer = rlayer.layer
 
     if (layer instanceof AnyTilesLayer) {
@@ -465,9 +470,9 @@ export class RenderMap {
       rlayer.recompute()
     }
 
-    rlayer.layer.name = create.name
     group.layers.push(rlayer.layer)
     rgroup.layers.push(rlayer)
+    this.editLayer(g, group.layers.length - 1, part)
     return rlayer
   }
 

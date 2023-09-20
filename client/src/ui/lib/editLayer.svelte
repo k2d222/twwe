@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { EditLayer, DeleteLayer, ReorderLayer, RequestContent } from '../../server/protocol'
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
   import { type FormEvent, type FormInputEvent, uploadImage } from './util'
@@ -16,7 +15,7 @@
   // import { automap, parse, type Config as AutomapperConfig } from '../../twmap/automap'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
-  import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
+  import { dataToTiles, resIndexToString, stringToResIndex, tilesLayerFlagsToLayerKind } from '../../server/convert'
   import { sync } from '../../server/util'
   import type { Writable } from 'svelte/store'
   import type * as Info from '../../twmap/types'
@@ -42,10 +41,6 @@
 
   $: images = $rmap.map.images
   $: image = layer === null ? null : layer.image
-
-  function parseI32(str: string) {
-    return clamp(parseInt(str), -2_147_483_648, 2_147_483_647)
-  }
 
   function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
@@ -92,16 +87,18 @@
   }
 
   function automapperConfig(layer: TilesLayer): string | null {
-    if (
-      layer.automapper.config === -1 ||
-      !layer.image ||
-      !(layer.image.name + '.rules' in $automappers) ||
-      layer.automapper.config >= $automappers[layer.image.name + '.rules'].configs.length
-    ) {
-      return null
-    }
+    // if (
+    //   layer.automapper.config === -1 ||
+    //   !layer.image ||
+    //   !(layer.image.name + '.rules' in $automappers) ||
+    //   layer.automapper.config >= $automappers[layer.image.name + '.rules'].configs.length
+    // ) {
+    //   return null
+    // }
 
-    return $automappers[layer.image.name + '.rules'][layer.automapper.config]
+    // return $automappers[layer.image.name + '.rules'][layer.automapper.config]
+    // TODO
+    return '??'
   }
 
   let imagePickerOpen = false
@@ -112,11 +109,11 @@
 
     if (e.detail === null) {
       // no image used
-      await $server.query('editlayer', { group: g, layer: l, image: null })
+      await $server.query('map/post/layer', [g, l, { image: null }])
     } else if (e.detail instanceof Image) {
       // use embedded image
       const index = $rmap.map.images.indexOf(e.detail)
-      await $server.query('editlayer', { group: g, layer: l, image: index })
+      await $server.query('map/post/layer', [g, l, { image: resIndexToString(index, e.detail.name) }])
     } else if (e.detail instanceof File) {
       const name = e.detail.name.replace(/\.[^\.]+$/, '')
       uploadImageAndPick(e.detail, name)
@@ -134,12 +131,12 @@
         try {
           showInfo('Creating image...', 'none')
           const index = $rmap.map.images.length
-          await $server.query('createimage', { name, index, external: true })
+          await $server.query('map/put/image', [name, { size: { w: 1024, h: 1024 } }])
           const img = new Image()
           img.loadExternal(url)
           img.name = name
           $rmap.addImage(img)
-          await $server.query('editlayer', { group: g, layer: l, image: index })
+          await $server.query('map/post/layer', [g, l, { image: resIndexToString(index, name) }])
           clearDialog()
         } catch (e) {
           showError('Failed to create external image: ' + e)
@@ -151,17 +148,14 @@
   async function uploadImageAndPick(file: Blob, name: string) {
     try {
       showInfo('Uploading image…', 'none')
-      const index = $rmap.map.images.length
       const data = await decodePng(file)
       const img = new Image()
       img.loadEmbedded(data)
       img.name = name
       $rmap.addImage(img)
-      await uploadImage($serverConfig.httpUrl, $rmap.map.name, file, {
-        name,
-        index,
-      })
-      await $server.query('editlayer', { group: g, layer: l, image: index })
+      await uploadImage($serverConfig.httpUrl, $rmap.map.name, name, file) // TODO return index
+      const index = $rmap.map.images.length
+      await $server.query('map/post/layer', [g, l, { image: resIndexToString(index, name) }])
       showInfo('Image uploaded and selected.')
     } catch (e) {
       showError('Failed to upload image: ' + e)
@@ -174,7 +168,7 @@
 
     try {
       const index = $rmap.map.images.indexOf(image)
-      await $server.query('deleteimage', { index })
+      await $server.query('map/delete/image', index)
       $rmap.removeImage(index)
       images = images // update the component
     } catch (e) {
@@ -192,70 +186,70 @@
 
   $: syncGroup = sync(g, {
     server: $server,
-    query: 'reorderlayer',
-    send: s => ({ group: g, layer: l, newGroup: s, newLayer: 0 }),
-    recv: e => e.group === g && e.layer === l ? e.newGroup : null,
+    query: 'map/patch/layer',
+    send: s => [[g, l], [s, 0]],
+    recv: ([[g1, l1], [g2, _]]) => g1 === g && l1 === l ? g2 : null, //  COMBAK: race condition with g/l?
   })
   $: syncOrder = sync(l, {
     server: $server,
-    query: 'reorderlayer',
-    send: s => ({ group: g, layer: l, newGroup: g, newLayer: s }),
-    recv: e => e.group === g && e.layer === l ? e.newLayer : null,
+    query: 'map/patch/layer',
+    send: s => [[g, l], [g, s]],
+    recv: ([[g1, l1], [_, l2]]) => g1 === g && l1 === l ? l2 : null,
   })
   $: if (layer) {
     syncName = sync(layer.name, {
       server: $server,
-      query: 'editlayer',
-      send: s => ({ group: g, layer: l, name: s, }),
-      recv: e => e.group === g && e.layer === l && 'name' in e ? e.name : null,
+      query: 'map/post/layer',
+      send: s => [g, l, { name: s, }],
+      recv: ([eg, el, e]) => eg === g && el === l && 'name' in e ? e.name : null,
     })
   }
   $: if (layer) {
     syncDetail = sync(layer.detail, {
       server: $server,
-      query: 'editlayer',
-      send: s => ({ group: g, layer: l, flags: s ? LayerFlags.DETAIL : LayerFlags.NONE }),
-      recv: e => e.group === g && e.layer === l && 'flags' in e ? (e.flags & LayerFlags.DETAIL) === 1 : null,
+      query: 'map/post/layer',
+      send: s => [g, l, { detail: s }],
+      recv: ([eg, el, e]) => eg === g && el === l && 'detail' in e ? e.detail : null,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncWidth = sync(layer.width, {
       server: $server,
-      query: 'editlayer',
-      send: s => ({ group: g, layer: l, width: s }),
-      recv: e => e.group === g && e.layer === l && 'width' in e ? e.width : null,
+      query: 'map/post/layer',
+      send: s => [g, l, { width: s }],
+      recv: ([eg, el, e]) => eg === g && el === l && 'width' in e ? e.width : null,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncHeight = sync(layer.height, {
       server: $server,
-      query: 'editlayer',
-      send: s => ({ group: g, layer: l, height: s }),
-      recv: e => e.group === g && e.layer === l && 'height' in e ? e.height : null,
+      query: 'map/post/layer',
+      send: s => [g, l, { height: s }],
+      recv: ([eg, el, e]) => eg === g && el === l && 'height' in e ? e.height : null,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncColor = sync(layer.color, {
       server: $server,
-      query: 'editlayer',
-      send: s => ({ group: g, layer: l, color: s }),
-      recv: e => e.group === g && e.layer === l && 'color' in e ? e.color : null,
+      query: 'map/post/layer',
+      send: s => [g, l, { color: s }],
+      recv: ([eg, el, e]) => eg === g && el === l && 'color' in e ? e.color : null,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncColorEnv = sync($rmap.map.envelopes.indexOf(layer.colorEnv), {
       server: $server,
-      query: 'editlayer',
-      send: s => ({ group: g, layer: l, colorEnv: s === -1 ? null : s }),
-      recv: e => e.group === g && e.layer === l && 'colorEnv' in e ? e.colorEnv === null ? -1 : e.colorEnv : null,
+      query: 'map/post/layer',
+      send: s => [g, l, { color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name) }],
+      recv: ([eg, el, e]) => eg === g && el === l && 'color_env' in e ? e.color_env === null ? -1 : stringToResIndex(e.color_env)[0] : null,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncColorEnvOff = sync(layer.colorEnvOffset, {
       server: $server,
-      query: 'editlayer',
-      send: s => ({ group: g, layer: l, colorEnvOffset: s }),
-      recv: e => e.group === g && e.layer === l && 'colorEnvOffset' in e ? e.colorEnvOffset : null,
+      query: 'map/post/layer',
+      send: s => [g, l, { color_env_offset: s }],
+      recv: ([eg, el, e]) => eg === g && el === l && 'color_env_offset' in e ? e.color_env_offset : null,
     })
   }
 
@@ -266,13 +260,13 @@
     $syncColor = { ...$syncColor, a: clamp(parseInt(e.currentTarget.value), 0, 255) }
   }
   function onDelete() {
-    $server.query('deletelayer', { group: g, layer: l })
+    $server.query('map/delete/layer', [g, l])
   }
   async function onAutomap() {
     // TODO: move this, merge with event received from server
-    await $server.query('applyautomapper', { group: g, layer: l })
+    await $server.query('map/post/automap', [g, l])
     const tlayer = layer as TilesLayer
-    const data = await $server.query('sendlayer', { group: g, layer: l })
+    const data = await $server.query('map/get/tiles', [g, l])
     const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(tlayer.flags))
 
     for (let i = 0; i < tiles.length; ++i) {
@@ -280,14 +274,7 @@
       const x = i % tlayer.width
       const y = Math.floor(i / tlayer.width)
 
-      $rmap.editTile({
-        group: g,
-        layer: l,
-        x,
-        y,
-        ...tile
-      })
-    }
+      $rmap.editTile({ g, l, x, y, ...tile }) }
 
     // client-side automapping
     // setTimeout(async () => {
@@ -299,15 +286,13 @@
   }
   async function onAutomapperChange() {
     const automapper = (layer as TilesLayer).automapper
-    await $server.query('editlayer', {
-      group: g,
-      layer: l,
-      automapper: {
+    await $server.query('map/post/layer', [g, l, {
+      automapper_config: {
         config: automapper.config === -1 ? null : automapper.config,
         seed: automapper.seed,
         automatic: automapper.automatic,
       }
-    })
+    }])
   }
 </script>
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { CreateLayer } from '../../server/protocol'
   import {
     SwitchLayer,
     TuneLayer,
@@ -12,6 +11,7 @@
   import { sync } from '../../server/util'
   import Number from './number.svelte'
   import { onDestroy, onMount } from 'svelte'
+  import * as MapDir from '../../twmap/mapdir'
 
   export let g: number
 
@@ -19,69 +19,69 @@
 
   $: syncName = sync(group.name, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, name: s }),
-    recv: e => e.group === g && 'name' in e ? e.name : null,
+    query: 'map/post/group',
+    send: s => [g, { name: s }],
+    recv: ([eg, e]) => eg === g && 'name' in e ? e.name : null,
   })
   $: syncOrder = sync(g, {
     server: $server,
-    query: 'reordergroup',
-    send: s => ({ group: g, newGroup: s }),
-    recv: e => e.group === g ? e.newGroup : null,
+    query: 'map/patch/group',
+    send: s => [g, s],
+    recv: ([src, tgt]) => src === g ? tgt : null, // COMBAK: race cond with g?
   })
   $: syncOffX = sync(group.offX, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, offX: toFixedNum(s, 5) }),
-    recv: e => e.group === g && 'offX' in e ? fromFixedNum(e.offX, 5) : null,
+    query: 'map/post/group',
+    send: s => [g, { offset: { x: toFixedNum(s, 5), y: toFixedNum($syncOffY, 5) } }],
+    recv: ([eg, e]) => eg === g && 'offset' in e ? fromFixedNum(e.offset.x, 5) : null,
   })
   $: syncOffY = sync(group.offY, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, offY: toFixedNum(s, 5) }),
-    recv: e => e.group === g && 'offY' in e ? fromFixedNum(e.offY, 5) : null,
+    query: 'map/post/group',
+    send: s => [g, { offset: { x: toFixedNum($syncOffX, 5), y: toFixedNum(s, 5) } }],
+    recv: ([eg, e]) => eg === g && 'offset' in e ? fromFixedNum(e.offset.y, 5) : null,
   })
   $: syncParaX = sync(group.paraX, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, paraX: s }),
-    recv: e => e.group === g && 'paraX' in e ? e.paraX : null,
+    query: 'map/post/group',
+    send: s => [g, { parallax: { x: s, y: $syncParaY } }],
+    recv: ([eg, e]) => eg === g && 'parallax' in e ? e.parallax.x : null,
   })
   $: syncParaY = sync(group.paraY, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, paraY: s }),
-    recv: e => e.group === g && 'paraY' in e ? e.paraY : null,
+    query: 'map/post/group',
+    send: s => [g, { parallax: { x: $syncParaX, y: s } }],
+    recv: ([eg, e]) => eg === g && 'parallax' in e ? e.parallax.y : null,
   })
   $: syncClipping = sync(group.clipping, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, clipping: s }),
-    recv: e => e.group === g && 'clipping' in e ? e.clipping : null,
+    query: 'map/post/group',
+    send: s => [g, { clipping: s }],
+    recv: ([eg, e]) => eg === g && 'clipping' in e ? e.clipping : null,
   })
   $: syncClipX = sync(group.clipX, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, clipX: toFixedNum(s, 5) }),
-    recv: e => e.group === g && 'clipX' in e ? fromFixedNum(e.clipX, 5) : null,
+    query: 'map/post/group',
+    send: s => [g, { clip: { x: toFixedNum(s, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
+    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.x, 5) : null,
   })
   $: syncClipY = sync(group.clipY, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, clipY: toFixedNum(s, 5) }),
-    recv: e => e.group === g && 'clipY' in e ? fromFixedNum(e.clipY, 5) : null,
+    query: 'map/post/group',
+    send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum(s, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
+    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.x, 5) : null,
   })
   $: syncClipW = sync(group.clipW, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, clipW: toFixedNum(s, 5) }),
-    recv: e => e.group === g && 'clipW' in e ? fromFixedNum(e.clipW, 5) : null,
+    query: 'map/post/group',
+    send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum(s, 5), h: toFixedNum($syncClipH, 5) } }],
+    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.w, 5) : null,
   })
   $: syncClipH = sync(group.clipH, {
     server: $server,
-    query: 'editgroup',
-    send: s => ({ group: g, clipH: toFixedNum(s, 5) }),
-    recv: e => e.group === g && 'clipH' in e ? fromFixedNum(e.clipH, 5) : null,
+    query: 'map/post/group',
+    send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum(s, 5) } }],
+    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.h, 5) : null,
   })
 
 
@@ -91,23 +91,23 @@
   }
 
   onMount(() => {
-    $server.on('createlayer', onSync)
-    $server.on('deletelayer', onSync)
+    $server.on('map/put/layer', onSync)
+    $server.on('map/delete/layer', onSync)
   })
 
   onDestroy(() => {
-    $server.off('createlayer', onSync)
-    $server.off('deletelayer', onSync)
+    $server.off('map/put/layer', onSync)
+    $server.off('map/delete/layer', onSync)
   })
 
-  function onCreateLayer(kind: CreateLayer['kind'], name: string) {
+  function onCreateLayer(type: MapDir.LayerKind, name: string) {
     return function () {
-      $server.query('createlayer', { group: g, kind, name })
+      $server.query('map/put/layer', [g, { type, name }])
     }
   }
 
   function onDeleteGroup() {
-    $server.query('deletegroup', { group: g })
+    $server.query('map/delete/group', g)
   }
 
 </script>
@@ -134,35 +134,35 @@
       <input type="text" value={$syncName} maxlength={11} on:change={e => $syncName = e.currentTarget.value} />
     </label>
   {/if}
-  <button class="default" on:click={onCreateLayer('tiles', '')}>
+  <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tiles, '')}>
     Add tile layer
   </button>
-  <button class="default" on:click={onCreateLayer('quads', '')}>
+  <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Quads, '')}>
     Add quad layer
   </button>
   {#if group === $map.physicsGroup()}
     {#if !$map.physicsLayer(SwitchLayer)}
-      <button class="default" on:click={onCreateLayer('switch', 'Switch')} >
+      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Switch, 'Switch')} >
         Add switch layer
       </button>
     {/if}
     {#if !$map.physicsLayer(FrontLayer)}
-      <button class="default" on:click={onCreateLayer('front', 'Front')} >
+      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Front, 'Front')} >
         Add front layer
       </button>
     {/if}
     {#if !$map.physicsLayer(TuneLayer)}
-      <button class="default" on:click={onCreateLayer('tune', 'Tune')} >
+      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tune, 'Tune')} >
         Add tune layer
       </button>
     {/if}
     {#if !$map.physicsLayer(SpeedupLayer)}
-      <button class="default" on:click={onCreateLayer('speedup', 'Speedup')} >
+      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Speedup, 'Speedup')} >
         Add speedup layer
       </button>
     {/if}
     {#if !$map.physicsLayer(TeleLayer)}
-      <button class="default" on:click={onCreateLayer('tele', 'Tele')} >
+      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tele, 'Tele')} >
         Add tele layer
       </button>
     {/if}

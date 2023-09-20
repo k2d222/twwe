@@ -4,7 +4,7 @@ import { Image } from '../../twmap/image'
 import { AnyTilesLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 import type { WebSocketServer } from 'src/server/server'
-import type { CreateMap, CreateMapBlank, CreateMapClone, ImageConfig, MapConfig, MapInfo } from 'src/server/protocol'
+import type { MapCreation, MapDetail } from 'src/server/protocol'
 
 export type Ctor<T> = new (...args: any[]) => T
 
@@ -25,44 +25,24 @@ export async function download(file: string, name: string) {
   link.remove()
 }
 
-export async function uploadMap(httpRoot: string, file: Blob, upload: MapConfig) {
-  const form = new FormData()
-  const json: CreateMap = { upload }
-  form.append('config', JSON.stringify(json))
-  form.append('file', file)
-  await fetch(`${httpRoot}/maps`, {
-    method: 'POST',
-    body: form
+export async function uploadMap(httpRoot: string, name: string, file: Blob) {
+  await fetch(`${httpRoot}/maps/${name}`, {
+    method: 'PUT',
+    body: file
   })
 }
 
-export async function createMap(httpRoot: string, blank: CreateMapBlank) {
-  const form = new FormData()
-  const json: CreateMap = { blank }
-  form.append('config', JSON.stringify(json))
-  await fetch(`${httpRoot}/maps`, {
+export async function createMap(httpRoot: string, name: string, create: MapCreation) {
+  await fetch(`${httpRoot}/maps/${name}`, {
     method: 'POST',
-    body: form
+    body: JSON.stringify(create)
   })
 }
 
-export async function cloneMap(httpRoot: string, clone: CreateMapClone) {
-  const form = new FormData()
-  const json: CreateMap = { clone }
-  form.append('config', JSON.stringify(json))
-  await fetch(`${httpRoot}/maps`, {
+export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {
+  await fetch(`${httpRoot}/maps/${mapName}/map/images/${imageName}`, {
     method: 'POST',
-    body: form
-  })
-}
-
-export async function uploadImage(httpRoot: string, mapName: string, file: Blob, config: ImageConfig) {
-  const form = new FormData()
-  form.append('config', JSON.stringify(config))
-  form.append('file', file)
-  await fetch(`${httpRoot}/maps/${mapName}/images`, {
-    method: 'POST',
-    body: form
+    body: file
   })
 }
 
@@ -91,8 +71,8 @@ export function externalImageUrl(name: string) {
   return '/mapres/' + name + '.png'
 }
 
-export async function queryMaps(httpRoot: string): Promise<MapInfo[]> {
-  function sortMaps(maps: MapInfo[]): MapInfo[] {
+export async function queryMaps(httpRoot: string): Promise<MapDetail[]> {
+  function sortMaps(maps: MapDetail[]): MapDetail[] {
     return maps.sort((a, b) => {
       if (a.users === b.users) return a.name.localeCompare(b.name)
       else return b.users - a.users
@@ -100,7 +80,7 @@ export async function queryMaps(httpRoot: string): Promise<MapInfo[]> {
   }
 
   const resp = await fetch(`${httpRoot}/maps`)
-  const maps: MapInfo[] = await resp.json()
+  const maps: MapDetail[] = await resp.json()
   sortMaps(maps)
   return maps
 }
@@ -121,11 +101,11 @@ export async function queryImageData(httpRoot: string, mapName: string, imageInd
 }
 
 export async function queryImage(server: WebSocketServer, httpRoot: string, mapName: string, imageIndex: number): Promise<Image> {
-  const imageInfo = await server.query('sendimage', { index: imageIndex })
   const data = await queryImageData(httpRoot, mapName, imageIndex)
   const img = new Image()
+  const images = await server.query('map/get/images', undefined)
   img.loadEmbedded(data)
-  img.name = imageInfo.name
+  img.name = images[imageIndex]
   return img
 }
 

@@ -65,25 +65,25 @@
   }
 
   onMount(() => {
-    $server.on('editgroup', onSync)
-    $server.on('reordergroup', onSync)
-    $server.on('creategroup', onSync)
-    $server.on('deletegroup', onSync)
-    $server.on('editlayer', onSync)
-    $server.on('reorderlayer', onSync)
-    $server.on('createlayer', onSync)
-    $server.on('deletelayer', onSync)
+    $server.on('map/post/group', onSync)
+    $server.on('map/patch/group', onSync)
+    $server.on('map/put/group', onSync)
+    $server.on('map/delete/group', onSync)
+    $server.on('map/post/layer', onSync)
+    $server.on('map/patch/layer', onSync)
+    $server.on('map/put/layer', onSync)
+    $server.on('map/delete/layer', onSync)
   })
 
   onDestroy(() => {
-    $server.off('editgroup', onSync)
-    $server.off('reordergroup', onSync)
-    $server.off('creategroup', onSync)
-    $server.off('deletegroup', onSync)
-    $server.off('editlayer', onSync)
-    $server.off('reorderlayer', onSync)
-    $server.off('createlayer', onSync)
-    $server.off('deletelayer', onSync)
+    $server.off('map/post/group', onSync)
+    $server.off('map/patch/group', onSync)
+    $server.off('map/put/group', onSync)
+    $server.off('map/delete/group', onSync)
+    $server.off('map/post/layer', onSync)
+    $server.off('map/patch/layer', onSync)
+    $server.off('map/put/layer', onSync)
+    $server.off('map/delete/layer', onSync)
   })
 
   function layerName(layer: Layer) {

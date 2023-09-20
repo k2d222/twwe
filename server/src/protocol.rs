@@ -74,8 +74,11 @@ pub struct Tune {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Cursor {
+    #[serde(flatten)]
     pub point: Vec2<f32>,
+    #[serde(rename = "g")]
     pub group: i32,
+    #[serde(rename = "l")]
     pub layer: i32,
 }
 
@@ -272,6 +275,7 @@ pub struct PartialQuadsLayer {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tiles {
+    #[serde(flatten)]
     pub rect: vek::Rect<u32, u32>,
     pub tiles: Base64,
 }
@@ -295,106 +299,154 @@ pub enum PartialLayer {
 pub struct PartialAutomapper {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum MapGetReq {
+    #[serde(rename = "map/get/users")]
     Users,
+    #[serde(rename = "map/get/map")]
     Map,
+    #[serde(rename = "map/get/images")]
     Images,
+    #[serde(rename = "map/get/image")]
     Image(u16),
+    #[serde(rename = "map/get/envelopes")]
     Envelopes,
+    #[serde(rename = "map/get/envelope")]
     Envelope(u16),
+    #[serde(rename = "map/get/groups")]
     Groups,
+    // #[serde(rename = "map/get/group")]
     // Group(u16),
+    #[serde(rename = "map/get/layers")]
     Layers(u16),
+    // #[serde(rename = "map/get/layer")]
     // Layer(u16, u16),
+    #[serde(rename = "map/get/automappers")]
     Automappers,
+    #[serde(rename = "map/get/automapper")]
     Automapper(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum MapPutReq {
+    #[serde(rename = "map/put/envelope")]
     Envelope(Box<PartialEnvelope>),
+    #[serde(rename = "map/put/group")]
     Group(Box<PartialGroup>),
+    #[serde(rename = "map/put/layer")]
     Layer(u16, Box<PartialLayer>),
+    #[serde(rename = "map/put/automapper")]
     Automapper(String, String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum MapPostReq {
+    #[serde(rename = "map/post/config")]
     Config(Box<PartialConfig>),
+    #[serde(rename = "map/post/info")]
     Info(Box<PartialInfo>),
+    #[serde(rename = "map/post/envelope")]
     Envelope(u16, Box<PartialEnvelope>),
+    #[serde(rename = "map/post/group")]
     Group(u16, Box<PartialGroup>),
+    #[serde(rename = "map/post/layer")]
     Layer(u16, u16, Box<PartialLayer>),
+    #[serde(rename = "map/post/tiles")]
     Tiles(u16, u16, Box<Tiles>),
+    #[serde(rename = "map/post/automap")]
     Automap(u16, u16),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum MapPatchReq {
+    #[serde(rename = "map/patch/envelope")]
     Envelope(u16, u16),
+    #[serde(rename = "map/patch/group")]
     Group(u16, u16),
+    #[serde(rename = "map/patch/layer")]
     Layer((u16, u16), (u16, u16)),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum MapDelReq {
+    #[serde(rename = "map/delete/envelope")]
     Envelope(u16),
+    #[serde(rename = "map/delete/group")]
     Group(u16),
+    #[serde(rename = "map/delete/layer")]
     Layer(u16, u16),
+    #[serde(rename = "map/delete/automapper")]
     Automapper(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum MapReq {
-    Get(MapGetReq),
-    Put(MapPutReq),
-    Post(MapPostReq),
-    Patch(MapPatchReq),
-    Delete(MapDelReq),
+    #[serde(rename = "cursor")]
     Cursor(Box<Cursor>),
+    #[serde(rename = "map/save")]
     Save,
+    #[serde(untagged)]
+    Get(MapGetReq),
+    #[serde(untagged)]
+    Put(MapPutReq),
+    #[serde(untagged)]
+    Post(MapPostReq),
+    #[serde(untagged)]
+    Patch(MapPatchReq),
+    #[serde(untagged)]
+    Delete(MapDelReq),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum GetReq {
+    #[serde(rename = "get/map")]
     Map(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum PutReq {
+    #[serde(rename = "put/map")]
     Map(String, Base64),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum PostReq {
+    #[serde(rename = "post/map")]
     Map(String, Box<MapCreation>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum DeleteReq {
+    #[serde(rename = "delete/map")]
     Map(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum Request {
-    Map(MapReq),
-    Get(GetReq),
-    Put(PutReq),
-    Post(PostReq),
-    Delete(DeleteReq),
+    #[serde(rename = "join")]
     Join(String),
+    #[serde(rename = "leave")]
     Leave(String),
+    #[serde(untagged)]
+    Map(MapReq),
+    #[serde(untagged)]
+    Get(GetReq),
+    #[serde(untagged)]
+    Put(PutReq),
+    #[serde(untagged)]
+    Post(PostReq),
+    #[serde(untagged)]
+    Delete(DeleteReq),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -418,7 +470,7 @@ pub enum Response {
 
 // Messages that are sent unrequested from the client.
 #[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum Broadcast {
     MapCreated(String),
     MapDeleted(String),
@@ -426,11 +478,18 @@ pub enum Broadcast {
     Saved,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "Result", rename_all = "lowercase")]
+enum SerdeResult<T, E> {
+    Ok(T),
+    Err(E),
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum Message {
     Request(Request),
-    Response(Result<Response, Error>),
+    Response(#[serde(with = "SerdeResult")] Result<Response, Error>),
     Broadcast(Broadcast),
 }
 
@@ -439,7 +498,6 @@ pub struct Packet<T> {
     pub timestamp: u64, // UNIX timestamp set by sender
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<u32>, // same ID will be set by client request
-    #[serde(flatten)]
     pub content: T,
 }
 

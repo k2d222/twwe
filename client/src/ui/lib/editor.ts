@@ -1,4 +1,3 @@
-import type { EditTile, EditTileParams } from '../../server/protocol'
 import type { RenderMap } from '../../gl/renderMap'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
@@ -13,17 +12,18 @@ import {
   SpeedupLayer,
   TuneLayer,
 } from '../../twmap/tilesLayer'
-import { tilesToData } from '../../server/convert'
+import * as Info from '../../twmap/types'
 import * as MapDir from '../../twmap/mapdir'
 import type { Layer } from '../../twmap/layer'
 import { QuadsLayer } from '../../twmap/quadsLayer'
+import { tilesToData } from 'src/server/convert'
 
 // list of layers -> 2d array of tiles
 export type Brush = {
   group: number,
   layers: {
     layer: number,
-    tiles: EditTileParams[][],
+    tiles: Info.AnyTile[][],
   }[]
 }
 
@@ -64,41 +64,41 @@ export function createRange(): Range {
   }
 }
 
-function makeTileParams(layer: AnyTilesLayer<any>, x: number, y: number): EditTileParams {
-  return layer instanceof TilesLayer
-    ? { kind: MapDir.LayerKind.Tiles, ...layer.getTile(x, y) }
-    : layer instanceof GameLayer
-    ? { kind: MapDir.LayerKind.Game, ...layer.getTile(x, y) }
-    : layer instanceof FrontLayer
-    ? { kind: MapDir.LayerKind.Front, ...layer.getTile(x, y) }
-    : layer instanceof TeleLayer
-    ? { kind: MapDir.LayerKind.Tele, ...layer.getTile(x, y) }
-    : layer instanceof SwitchLayer
-    ? { kind: MapDir.LayerKind.Switch, ...layer.getTile(x, y) }
-    : layer instanceof SpeedupLayer
-    ? { kind: MapDir.LayerKind.Speedup, ...layer.getTile(x, y) }
-    : layer instanceof TuneLayer
-    ? { kind: MapDir.LayerKind.Tune, ...layer.getTile(x, y) }
-    : null
-}
+// function makeTileParams(layer: AnyTilesLayer<any>, x: number, y: number): Info.AnyTile {
+//   return layer instanceof TilesLayer
+//     ? { kind: MapDir.LayerKind.Tiles, ...layer.getTile(x, y) }
+//     : layer instanceof GameLayer
+//     ? { kind: MapDir.LayerKind.Game, ...layer.getTile(x, y) }
+//     : layer instanceof FrontLayer
+//     ? { kind: MapDir.LayerKind.Front, ...layer.getTile(x, y) }
+//     : layer instanceof TeleLayer
+//     ? { kind: MapDir.LayerKind.Tele, ...layer.getTile(x, y) }
+//     : layer instanceof SwitchLayer
+//     ? { kind: MapDir.LayerKind.Switch, ...layer.getTile(x, y) }
+//     : layer instanceof SpeedupLayer
+//     ? { kind: MapDir.LayerKind.Speedup, ...layer.getTile(x, y) }
+//     : layer instanceof TuneLayer
+//     ? { kind: MapDir.LayerKind.Tune, ...layer.getTile(x, y) }
+//     : null
+// }
 
-function makeDefaultTileParams(layer: AnyTilesLayer<any>): EditTileParams {
-  return layer instanceof TilesLayer
-    ? { kind: MapDir.LayerKind.Tiles, ...layer.defaultTile() }
-    : layer instanceof GameLayer
-    ? { kind: MapDir.LayerKind.Game, ...layer.defaultTile() }
-    : layer instanceof FrontLayer
-    ? { kind: MapDir.LayerKind.Front, ...layer.defaultTile() }
-    : layer instanceof TeleLayer
-    ? { kind: MapDir.LayerKind.Tele, ...layer.defaultTile() }
-    : layer instanceof SwitchLayer
-    ? { kind: MapDir.LayerKind.Switch, ...layer.defaultTile() }
-    : layer instanceof SpeedupLayer
-    ? { kind: MapDir.LayerKind.Speedup, ...layer.defaultTile() }
-    : layer instanceof TuneLayer
-    ? { kind: MapDir.LayerKind.Tune, ...layer.defaultTile() }
-    : null
-}
+// function makeDefaultTileParams(layer: AnyTilesLayer<any>): EditTileParams {
+//   return layer instanceof TilesLayer
+//     ? { kind: MapDir.LayerKind.Tiles, ...layer.defaultTile() }
+//     : layer instanceof GameLayer
+//     ? { kind: MapDir.LayerKind.Game, ...layer.defaultTile() }
+//     : layer instanceof FrontLayer
+//     ? { kind: MapDir.LayerKind.Front, ...layer.defaultTile() }
+//     : layer instanceof TeleLayer
+//     ? { kind: MapDir.LayerKind.Tele, ...layer.defaultTile() }
+//     : layer instanceof SwitchLayer
+//     ? { kind: MapDir.LayerKind.Switch, ...layer.defaultTile() }
+//     : layer instanceof SpeedupLayer
+//     ? { kind: MapDir.LayerKind.Speedup, ...layer.defaultTile() }
+//     : layer instanceof TuneLayer
+//     ? { kind: MapDir.LayerKind.Tune, ...layer.defaultTile() }
+//     : null
+// }
 
 export function makeBoxSelection(map: Map, g: number, ll: number[], sel: Range): Brush {
   const res: Brush = {
@@ -110,12 +110,12 @@ export function makeBoxSelection(map: Map, g: number, ll: number[], sel: Range):
 
   for (let l of ll) {
     const layer = group.layers[l] as AnyTilesLayer<any>
-    const tiles: EditTileParams[][] = []
+    const tiles: Info.AnyTile[][] = []
 
     for (let j = sel.start.y; j <= sel.end.y; j++) {
       const row = []
       for (let i = sel.start.x; i <= sel.end.x; i++) {
-        row.push(makeTileParams(layer, i, j))
+        row.push(layer.getTile(i, j))
       }
       tiles.push(row)
     }
@@ -136,12 +136,12 @@ export function makeEmptySelection(map: Map, g: number, ll: number[], sel: Range
 
   for (let l of ll) {
     const layer = group.layers[l] as AnyTilesLayer<any>
-    const tiles: EditTileParams[][] = []
+    const tiles: Info.AnyTile[][] = []
 
     for (let j = sel.start.y; j <= sel.end.y; j++) {
       const row = []
       for (let i = sel.start.x; i <= sel.end.x; i++) {
-        row.push(makeDefaultTileParams(layer))
+        row.push(layer.defaultTile())
       }
       tiles.push(row)
     }
@@ -152,31 +152,38 @@ export function makeEmptySelection(map: Map, g: number, ll: number[], sel: Range
   return res
 }
 
-function adaptTile(tile: EditTileParams, kind: MapDir.LayerKind): EditTileParams {
-  if (tile.kind === kind) {
+function tileKind(tile: Info.AnyTile): MapDir.LayerKind {
+  if ('force' in tile)
+    return MapDir.LayerKind.Speedup
+  else if ('delay' in tile)
+    return MapDir.LayerKind.Switch
+  else if ('flags' in tile)
+    return MapDir.LayerKind.Tiles // or Game or Front
+  else
+    return MapDir.LayerKind.Tele // or Tune
+}
+
+function adaptTile(tile: Info.AnyTile, kind: MapDir.LayerKind): Info.AnyTile {
+  if (tileKind(tile) === kind) { // COMBAK
     return tile
   } else if (kind === MapDir.LayerKind.Tiles) {
     return {
       id: tile.id,
-      kind,
       flags: 0
     }
   } else if (kind === MapDir.LayerKind.Front) {
     return {
       id: tile.id,
-      kind,
       flags: 0
     }
   } else if (kind === MapDir.LayerKind.Game) {
     return {
       id: tile.id,
-      kind,
       flags: 0
     }
   } else if (kind === MapDir.LayerKind.Speedup) {
     return {
       id: tile.id,
-      kind,
       force: 50,
       maxSpeed: 0,
       angle: 0,
@@ -184,7 +191,6 @@ function adaptTile(tile: EditTileParams, kind: MapDir.LayerKind): EditTileParams
   } else if (kind === MapDir.LayerKind.Switch) {
     return {
       id: tile.id,
-      kind,
       flags: 0,
       delay: 0,
       number: 0,
@@ -192,7 +198,6 @@ function adaptTile(tile: EditTileParams, kind: MapDir.LayerKind): EditTileParams
   } else if (kind === MapDir.LayerKind.Tele) {
     return {
       id: tile.id,
-      kind,
       number: 0,
     }
   } else {
@@ -221,7 +226,7 @@ function layerKind(layer: Layer): MapDir.LayerKind {
   }
 }
 
-export function adaptTilesToLayer(map: Map, g: number, l: number, tiles: EditTileParams[][]): EditTileParams[][] {
+export function adaptTilesToLayer(map: Map, g: number, l: number, tiles: Info.AnyTile[][]): Info.AnyTile[][] {
   const layer = map.groups[g].layers[l]
   const kind = layerKind(layer)
 
@@ -276,34 +281,27 @@ export function placeTiles(
     const targetLayer = rmap.groups[brush.group].layers[brushLayer.layer].layer as AnyTilesLayer<any>
 
     // make sure the brush is truncated on the edges of the layer
-    const w = brushLayer.tiles[0].length
-    const h = brushLayer.tiles.length
+    const width = brushLayer.tiles[0].length
+    const height = brushLayer.tiles.length
     const range = {
       start: {
         x: clamp(pos.x, 0, targetLayer.width) - pos.x,
         y: clamp(pos.y, 0, targetLayer.height) - pos.y
       },
       end: {
-        x: clamp(pos.x + w, 0, targetLayer.width) - pos.x,
-        y: clamp(pos.y + h, 0, targetLayer.height) - pos.y,
+        x: clamp(pos.x + width, 0, targetLayer.width) - pos.x,
+        y: clamp(pos.y + height, 0, targetLayer.height) - pos.y,
       }
     }
-    const width = range.end.x - range.start.x
-    const height = range.end.y - range.start.y
 
+    const x = range.start.x + pos.x
+    const y = range.start.y + pos.y
+    const w = range.end.x - range.start.x
+    const h = range.end.y - range.start.y
     const tiles = truncate(brushLayer.tiles, range)
     const data = tilesToData(tiles.flat())
 
-    server.send('edittiles', {
-      group: brush.group,
-      layer: brushLayer.layer,
-      x: range.start.x + pos.x,
-      y: range.start.y + pos.y,
-      kind: brushLayer.tiles[0][0].kind,
-      width,
-      height,
-      data,
-    })
+    server.send('map/post/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
   }
 }
 

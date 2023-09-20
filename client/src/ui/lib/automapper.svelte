@@ -14,7 +14,8 @@
 
   let dispatch = createEventDispatcher<{change: number}>()
 
-  $: configs = $automappers[layer.image?.name + '.rules']?.configs ?? []
+  // $: configs = $automappers[layer.image?.name + '.rules']?.configs ?? []
+  $: configs = [] as string[]
 
   async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
@@ -35,23 +36,16 @@
     }
 
     try {
-      await $server.query('uploadautomapper', {
-        kind: AutomapperKind.DDNet,
-        image: name,
-        content: str,
-      })
+      await $server.query('map/put/automapper', [file.name, str])
     }
     catch (e) {
       showError("Saving failed: " + e)
       return
     }
 
-    $automappers = await $server.query("listautomappers", null)
+    $automappers = await $server.query("map/put/automapper", null)
 
-    showInfo(
-      `Uploaded ${$automappers[file.name].configs.length} rules for '${name}'.`,
-      'closable'
-    )
+    showInfo(`Uploaded '${name}'.`, 'closable')
   }
 
   async function onConfig() {

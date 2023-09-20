@@ -1,6 +1,5 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import type { EditTileParams } from '../../server/protocol'
   import { TileFlags } from '../../twmap/types'
   import {
     TilesLayer,
@@ -12,6 +11,7 @@
   import * as Editor from './editor'
   import { onMount, onDestroy } from 'svelte'
   import { rmap } from '../global'
+  import type * as Info from '../../twmap/types'
 
   import FlipV from '../../../assets/flip-v.svg?component'
   import FlipH from '../../../assets/flip-h.svg?component'
@@ -32,20 +32,20 @@
     Editor.off('keypress', onKeyPress)
   })
 
-  function brushRotateCW(sel: EditTileParams[][]) {
+  function brushRotateCW(sel: Info.AnyTile[][]) {
     return Array.from({ length: sel[0].length }, (_, j) =>
       Array.from({ length: sel.length }, (_, i) => sel[sel.length - 1 - i][j])
     )
   }
-  function brushRotateCCW(sel: EditTileParams[][]) {
+  function brushRotateCCW(sel: Info.AnyTile[][]) {
     return Array.from({ length: sel[0].length }, (_, j) =>
       Array.from({ length: sel.length }, (_, i) => sel[i][sel[0].length - 1 - j])
     )
   }
-  function brushFlipV(sel: EditTileParams[][]) {
+  function brushFlipV(sel: Info.AnyTile[][]) {
     return sel.reverse()
   }
-  function brushFlipH(sel: EditTileParams[][]) {
+  function brushFlipH(sel: Info.AnyTile[][]) {
     // WARN: mutates the array
     return sel.map(row => row.reverse())
   }
@@ -58,28 +58,24 @@
     return [224, 225].includes(id)
   }
 
-  function tilesFlipV(layer: AnyTilesLayer<any>, tiles: EditTileParams[][]) {
-    const flipFn =
-      layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'tiles') {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
-          else tile.flags ^= TileFlags.HFLIP
-        }
+  function tilesFlipV(layer: AnyTilesLayer<any>, tiles: Info.AnyTile[][]) {
+    const flipFn: ((tile: Info.AnyTile) => void) | false =
+      layer instanceof TilesLayer ? (tile: Info.Tile) => {
+        if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
+        else tile.flags ^= TileFlags.HFLIP
       } :
-      layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'game' && isDirectionalGameTile(tile.id)) {
+      layer instanceof GameLayer ? (tile: Info.Tile) => {
+        if (isDirectionalGameTile(tile.id)) {
           if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
-      layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'switch' && isDirectionalSwitchTile(tile.id)) {
+      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
+        if (isDirectionalSwitchTile(tile.id)) {
           if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
-      layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'speedup') {
-          tile.angle = (360 - tile.angle) % 360
-        }
+      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
+        tile.angle = (360 - tile.angle) % 360
       } :
       false
     
@@ -92,28 +88,24 @@
     }
   }
 
-  function tilesFlipH(layer: AnyTilesLayer<any>, tiles: EditTileParams[][]) {
-    const flipFn =
-      layer instanceof TilesLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'tiles') {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
-          else tile.flags ^= TileFlags.VFLIP
-        }
+  function tilesFlipH(layer: AnyTilesLayer<any>, tiles: Info.AnyTile[][]) {
+    const flipFn: ((tile: Info.AnyTile) => void) | false =
+      layer instanceof TilesLayer ? (tile: Info.Tile) => {
+        if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
+        else tile.flags ^= TileFlags.VFLIP
       } :
-      layer instanceof GameLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'game' && isDirectionalGameTile(tile.id)) {
+      layer instanceof GameLayer ? (tile: Info.Tile) => {
+        if (isDirectionalGameTile(tile.id)) {
           if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
-      layer instanceof SwitchLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'switch' && isDirectionalSwitchTile(tile.id)) {
+      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
+        if (isDirectionalSwitchTile(tile.id)) {
           if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
         }
       } :
-      layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'speedup') {
-          tile.angle = (540 - tile.angle) % 360
-        }
+      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
+        tile.angle = (540 - tile.angle) % 360
       } :
       false
 
@@ -126,8 +118,8 @@
     }
   }
 
-  function tilesRotateCW(layer: AnyTilesLayer<any>, tiles: EditTileParams[][]) {
-    function doRotate(tile: EditTileParams) {
+  function tilesRotateCW(layer: AnyTilesLayer<any>, tiles: Info.AnyTile[][]) {
+    function doRotate(tile: Info.AnyTile) {
       if ('flags' in tile) {
         if (tile.flags & TileFlags.ROTATE) {
           tile.flags ^= TileFlags.HFLIP
@@ -137,20 +129,18 @@
       }
     }
 
-    const rotateFn =
-      layer instanceof TilesLayer ? (tile: EditTileParams) => {
+    const rotateFn: ((tile: Info.AnyTile) => void) | false =
+      layer instanceof TilesLayer ? (tile: Info.Tile) => {
         doRotate(tile)
       } :
-      layer instanceof GameLayer ? (tile: EditTileParams) => {
+      layer instanceof GameLayer ? (tile: Info.Tile) => {
         if (isDirectionalGameTile(tile.id)) doRotate(tile)
       } :
-      layer instanceof SwitchLayer ? (tile: EditTileParams) => {
+      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
         if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
       } :
-      layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'speedup') {
-          tile.angle = (tile.angle + 90) % 360
-        }
+      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
+        tile.angle = (tile.angle + 90) % 360
       } :
       false
 
@@ -163,8 +153,8 @@
     }
   }
 
-  function tilesRotateCCW(layer: AnyTilesLayer<any>, tiles: EditTileParams[][]) {
-    function doRotate(tile: EditTileParams) {
+  function tilesRotateCCW(layer: AnyTilesLayer<any>, tiles: Info.AnyTile[][]) {
+    function doRotate(tile: Info.AnyTile) {
       if ('flags' in tile) {
         if (!(tile.flags & TileFlags.ROTATE)) {
           tile.flags ^= TileFlags.HFLIP
@@ -174,20 +164,18 @@
       }
     }
 
-    const rotateFn =
-      layer instanceof TilesLayer ? (tile: EditTileParams) => {
+    const rotateFn: ((tile: Info.AnyTile) => void) | false =
+      layer instanceof TilesLayer ? (tile: Info.Tile) => {
         doRotate(tile)
       } :
-      layer instanceof GameLayer ? (tile: EditTileParams) => {
+      layer instanceof GameLayer ? (tile: Info.Tile) => {
         if (isDirectionalGameTile(tile.id)) doRotate(tile)
       } :
-      layer instanceof SwitchLayer ? (tile: EditTileParams) => {
+      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
         if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
       } :
-      layer instanceof SpeedupLayer ? (tile: EditTileParams) => {
-        if (tile.kind === 'speedup') {
-          tile.angle = (tile.angle + 270) % 360
-        }
+      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
+        tile.angle = (tile.angle + 270) % 360
       } :
       false
 

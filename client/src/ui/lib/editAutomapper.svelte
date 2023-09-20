@@ -7,7 +7,6 @@
   import { Pane, Splitpanes } from "svelte-splitpanes"
   import MapView from "./mapView.svelte"
   import { px2vw, rem2px } from "./util"
-  import { AutomapperKind, type AutomapperDetail } from "../../server/protocol"
   import DDNetIcon from "../../../assets/ddnet/ddnet_symbolic.svg?component"
   import RppIcon from "../../../assets/rpp/rpp_symbolic.svg?component"
   import { Unknown as UnknownIcon } from 'carbon-icons-svelte'
@@ -22,6 +21,7 @@
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
   import { Rpp } from './lang-rpp/index'
   import type { Tile } from "../../twmap/types"
+  import { AutomapperKind, type Send } from "src/server/protocol"
 
   let editor: HTMLElement
   let selected: string | null = null
@@ -44,12 +44,8 @@
 
     rmap = mapView.getRenderMap()
 
-    const ams = Object.keys($automappers)
-    if (ams.length)
-      onSelect(ams[0])
-
-    $server.on('uploadautomapper', onUploadAutomapper)
-    $server.on('deleteautomapper', onDeleteAutomapper)
+    $server.on('map/put/automapper', onUploadAutomapper)
+    $server.on('map/delete/automapper', onDeleteAutomapper)
   })
 
   onDestroy(() => {
@@ -59,17 +55,19 @@
       layer.tiles = tiles
     }
 
-    $server.off('uploadautomapper', onUploadAutomapper)
-    $server.off('deleteautomapper', onDeleteAutomapper)
+    $server.off('map/put/automapper', onUploadAutomapper)
+    $server.off('map/delete/automapper', onDeleteAutomapper)
   })
 
-  function onUploadAutomapper(e: AutomapperDetail) {
-    $automappers[e.file] = e
+  function onUploadAutomapper([name, file]: Send['map/put/automapper']) {
+    const kind = name.slice(name.lastIndexOf('.')) as AutomapperKind
+    const image = name.slice(0, name.lastIndexOf('.'))
+    $automappers[name] = { name, image, kind, file }
     $automappers = $automappers
   }
 
-  function onDeleteAutomapper(e: string) {
-    delete $automappers[e]
+  function onDeleteAutomapper(name: Send['map/delete/automapper']) {
+    delete $automappers[name]
     $automappers = $automappers
   }
 
@@ -84,7 +82,7 @@
     if (kind === AutomapperKind.DDNet) {
       extensions.push(DDNetRules(), DDNetRulesLinter)
     }
-    else if (kind === AutomapperKind.Rpp) {
+    else if (kind === AutomapperKind.RulesPP) {
       extensions.push(Rpp())
     }
 
@@ -96,7 +94,7 @@
     let sel = selected
 
     if (resp) {
-      await $server.query('deleteautomapper', file)
+      await $server.query('map/delete/automapper', file)
 
       if (file === sel) {
         selected = null
@@ -117,16 +115,13 @@
   async function onCreate() {
     if (!isValidName(newAmName)) return
 
-    const image = newAmName
-    const kind = newAmKind
+    const name = `{newAmName}.{newAmKind}`
+    const file = ''
+
     newAmName = ''
 
     try {
-      await $server.query('uploadautomapper', {
-        kind,
-        image: image,
-        content: '',
-      })
+      await $server.query('map/put/automapper', [name, file])
 
       createAmOpen = false
     }
@@ -138,16 +133,12 @@
   async function onSave() {
     if (selected === null) return
 
-    const str = view.state.doc.toString()
+    const file = view.state.doc.toString()
 
     try {
       showInfo("Uploading...")
-      const { kind, image } = $automappers[selected]
-      const resp = await $server.query('uploadautomapper', {
-        kind,
-        image,
-        content: str
-      })
+      const name = $automappers[selected].name
+      await $server.query('map/put/automapper', [name, file])
     }
     catch (e) {
       showError("Saving failed: " + e)
@@ -206,7 +197,7 @@
 
     selected = file
     view.setState(editorState('Loading file...'))
-    const text = await $server.query('sendautomapper', file)
+    const text = await $server.query('map/get/automapper', file)
     view.setState(editorState(text, am.kind))
     changed = false
   }
@@ -221,7 +212,7 @@
 
   function automapperIcon(kind: AutomapperKind) {
       if (kind === AutomapperKind.DDNet) return DDNetIcon
-      else if (kind === AutomapperKind.Rpp) return RppIcon
+      else if (kind === AutomapperKind.RulesPP) return RppIcon
       else return UnknownIcon
   }
 
@@ -289,7 +280,7 @@
         Kind
         <select bind:value={newAmKind}>
           <option value={AutomapperKind.DDNet}>DDNet</option>
-          <option value={AutomapperKind.Rpp}>Rules++</option>
+          <option value={AutomapperKind.RulesPP}>Rules++</option>
           <option value={AutomapperKind.Teeworlds} disabled>Teeworlds (TODO)</option>
         </select>
       </label>

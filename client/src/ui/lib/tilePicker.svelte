@@ -2,7 +2,6 @@
   import { createEventDispatcher } from 'svelte'
   import type * as Info from '../../twmap/types'
   import * as MapDir from '../../twmap/mapdir'
-  import type { EditTileParams } from '../../server/protocol'
   import type { Image } from '../../twmap/image'
   import type { AnyTilesLayer } from '../../twmap/tilesLayer'
   import type { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
@@ -30,10 +29,10 @@
   const tileCount = 16
 
   export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
-  export let selected: EditTileParams[][] = []
+  export let selected: Info.AnyTile[][] = []
 
   const dispatch = createEventDispatcher<{
-    select: EditTileParams[][]
+    select: Info.AnyTile[][]
   }>()
 
   $: dispatch('select', selected)
@@ -68,7 +67,7 @@
   $: currentSpeedup.force = clamp(currentSpeedup.force, 0, 255)
   $: currentTune.number = clamp(currentTune.number, 0, 255)
 
-  let current: EditTileParams
+  let current: Info.AnyTile
   let boxSelect = false
 
   $: current =
@@ -162,8 +161,8 @@
     }
   }
 
-  function makeBoxSelection(cur: EditTileParams, sel: Range): EditTileParams[][] {
-    let res: EditTileParams[][] = []
+  function makeBoxSelection(cur: Info.AnyTile, sel: Range): Info.AnyTile[][] {
+    let res: Info.AnyTile[][] = []
 
     for (let j = sel.start.y; j <= sel.end.y; j++) {
       const row = []

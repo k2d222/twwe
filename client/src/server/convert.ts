@@ -1,15 +1,21 @@
 import * as Info from '../twmap/types'
 import * as MapDir from '../twmap/mapdir'
-import type { CurveTypeStr, EditTileParams } from './protocol'
 import * as Parser from '../twmap/parser'
 
-const curveTypeStr: CurveTypeStr[] = ['step', 'linear', 'slow', 'fast', 'smooth', 'bezier']
+const curveTypeStr: MapDir.CurveType[] = [
+  MapDir.CurveType.Step,
+  MapDir.CurveType.Linear,
+  MapDir.CurveType.Slow,
+  MapDir.CurveType.Fast,
+  MapDir.CurveType.Smooth,
+  MapDir.CurveType.Bezier,
+]
 
-export function curveTypeToString(curve: Info.CurveType): CurveTypeStr {
+export function curveTypeToString(curve: Info.CurveType): MapDir.CurveType {
   return curveTypeStr[curve]
 }
 
-export function curveTypeFromString(str: CurveTypeStr): Info.CurveType {
+export function curveTypeFromString(str: MapDir.CurveType): Info.CurveType {
   return curveTypeStr.indexOf(str)
 }
 
@@ -67,33 +73,30 @@ export function colorFromJson(coord: MapDir.Color<string>, floating: number): In
 }
 
 // see https://developer.mozilla.org/en-US/docs/Glossary/Base64
-function base64ToBytes(base64: string): Uint8Array {
+export function base64ToBytes(base64: string): Uint8Array {
   const binString = window.atob(base64);
   return Uint8Array.from(binString, (m) => m.codePointAt(0));
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
+export function bytesToBase64(bytes: Uint8Array): string {
   const binString = Array.from(bytes, (x) => String.fromCodePoint(x)).join("");
   return window.btoa(binString);
 }
 
-export function tilesToData(tiles: EditTileParams[]): string {
+export function tilesToData(tiles: Info.AnyTile[]): string {
   let arr = []
 
   for (const tile of tiles) {
-    if (tile.kind === 'tiles' || tile.kind === 'game' || tile.kind === 'front') {
-      arr.push(tile.id, tile.flags, 0, 0)
-    }
-    else if (tile.kind === 'tele') {
-      arr.push(tile.number, tile.id)
-    }
-    else if (tile.kind === 'speedup') {
+    if ('force' in tile) { // speedup
       arr.push(tile.force, tile.maxSpeed, tile.id, 0, tile.angle & 0xff, (tile.angle >> 8) & 0xff) // little endian for angle
     }
-    else if (tile.kind === 'switch') {
+    else if ('delay' in tile) { // switch
       arr.push(tile.number, tile.id, tile.flags, tile.delay)
     }
-    else if (tile.kind === 'tune') {
+    else if ('flags' in tile) { // tiles | game | front
+      arr.push(tile.id, tile.flags, 0, 0)
+    }
+    else if ('number' in tile) { // tele | tune
       arr.push(tile.number, tile.id)
     }
     else {
@@ -104,32 +107,27 @@ export function tilesToData(tiles: EditTileParams[]): string {
   return bytesToBase64(new Uint8Array(arr))
 }
 
-export function tileToData(tile: EditTileParams): string {
-  return tilesToData([tile])
-}
+// export function tileToData(tile: EditTileParams): string {
+//   return tilesToData([tile])
+// }
 
-export function dataToTiles(data: string, kind: MapDir.LayerKind): EditTileParams[] {
+export function dataToTiles(data: string, kind: MapDir.LayerKind): Info.AnyTile[] {
   const arr = base64ToBytes(data).buffer
 
   if (kind === 'tiles' || kind === 'game' || kind === 'front') {
     return Parser.parseTiles(arr, arr.byteLength / 4)
-      .map(t => ({ kind, ...t }))
   }
   else if (kind === 'tele') {
     return Parser.parseTeleTiles(arr, arr.byteLength / 2)
-      .map(t => ({ kind, ...t }))
   }
   else if (kind === 'speedup') {
     return Parser.parseSpeedupTiles(arr, arr.byteLength / 6)
-      .map(t => ({ kind, ...t }))
   }
   else if (kind === 'switch') {
     return Parser.parseSwitchTiles(arr, arr.byteLength / 4)
-      .map(t => ({ kind, ...t }))
   }
   else if (kind === 'tune') {
     return Parser.parseTuneTiles(arr, arr.byteLength / 2)
-      .map(t => ({ kind, ...t }))
   }
   else {
     throw 'unsupported tile type ' + kind
@@ -155,4 +153,20 @@ export function layerKindToTilesLayerFlags(kind: MapDir.LayerKind) {
   else if (kind === MapDir.LayerKind.Tiles) return Info.TilesLayerFlags.TILES
   else if (kind === MapDir.LayerKind.Tune) return Info.TilesLayerFlags.TUNE
   else throw "not a tile layer"
+}
+
+export function resIndexToString(index: number, name: string): string {
+  if (name === '') {
+    return index + ''
+  }
+  else {
+    return `${index}_${name}`
+  }
+}
+
+export function stringToResIndex(str: string): [number, string] {
+  const underscore = str.indexOf('_')
+  if (underscore === -1) {
+    return [parseInt(str.slice(0, underscore)), str.slice(underscore + 1)]
+  }
 }

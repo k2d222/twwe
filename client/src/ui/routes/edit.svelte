@@ -6,18 +6,25 @@
   import Headerbar from '../lib/headerbar.svelte'
   import Fence from '../lib/fence.svelte'
   import { onDestroy } from 'svelte'
+  import type { AutomapperKind } from 'src/server/protocol'
 
   export let name: string
 
   let loadingSignal = (async () => {
-    await $server.query('joinmap', { name })
+    await $server.query('join', name)
     const map_ = await queryMap($serverConfig.httpUrl, name)
-    $automappers = await $server.query('listautomappers', null)
+    const ams = await $server.query('map/get/automappers', undefined)
+    $automappers = Object.fromEntries(ams.map(name => [name, {
+      name,
+      kind: name.slice(name.lastIndexOf('.')) as AutomapperKind,
+      image: name.slice(0, name.lastIndexOf('.')),
+      file: null,
+    }]))
     $map = map_
   })()
 
   onDestroy(() => {
-    $server.query('leavemap', null)
+    $server.query('leave', name)
   })
 
 </script>

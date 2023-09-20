@@ -1,11 +1,4 @@
 <script lang="ts">
-  import type {
-    EditTile,
-    ListUsers,
-    EditTiles,
-    ApplyAutomapper,
-    AutomapperDetail,
-  } from '../../server/protocol'
   import { LayerType } from '../../twmap/types'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { onMount, onDestroy } from 'svelte'
@@ -31,6 +24,7 @@
   import * as Actions from '../actions'
   import { viewport } from '../../gl/global'
   import Fence from './fence.svelte'
+  import type { AutomapperKind, Recv, Tiles } from 'src/server/protocol'
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -62,34 +56,27 @@
   }
 
   function onCreateGroup() {
-    $server.query('creategroup', { name: '' })
+    $server.query('map/put/group', { name: '' })
   }
-  function serverOnUsers(e: ListUsers) {
-    $peers = e.roomCount
+  function serverOnUsers(e: number) {
+    $peers = e
   }
-  function serverOnEditTile(e: EditTile) {
-    $rmap.editTile(e)
-  }
-  function serverOnEditTiles(e: EditTiles) {
-    const tiles = dataToTiles(e.data, e.kind as MapDir.LayerKind)
+  function serverOnEditTiles([g, l, e]: [number, number, Tiles]) {
+    let layer = $rmap.map.groups[g].layers[l] as AnyTilesLayer<any>
+    let kind = tilesLayerFlagsToLayerKind(layer.flags)
+    const tiles = dataToTiles(e.tiles, kind)
 
     for (let i = 0; i < tiles.length; ++i) {
       const tile = tiles[i]
-      const x = i % e.width
-      const y = Math.floor(i / e.width)
+      const x = i % e.w
+      const y = Math.floor(i / e.w)
 
-      $rmap.editTile({
-        group: e.group,
-        layer: e.layer,
-        x: x + e.x,
-        y: y + e.y,
-        ...tile
-      })
+      $rmap.editTile({ g, l, x: x + e.x, y: y + e.y, ...tile })
     }
   }
-  async function serverOnApplyAutomapper(e: ApplyAutomapper) {
-    const data = await $server.query('sendlayer', { group: g, layer: l })
-    const layer = $rmap.groups[e.group].layers[e.layer].layer as AnyTilesLayer<any>
+  async function serverOnApplyAutomapper([g, l]: Recv['map/post/automap']) {
+    const data = await $server.query('map/get/tiles', [g, l])
+    const layer = $rmap.groups[g].layers[l].layer as AnyTilesLayer<any>
     const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(layer.flags))
 
     for (let i = 0; i < tiles.length; ++i) {
@@ -97,21 +84,21 @@
       const x = i % layer.width
       const y = Math.floor(i / layer.width)
 
-      $rmap.editTile({
-        group: g,
-        layer: l,
-        x,
-        y,
-        ...tile
-      })
-    }
+      $rmap.editTile({ g, l, x, y, ...tile }) }
   }
-  function serverOnDeleteAutomapper(e: string) {
+  function serverOnDeleteAutomapper(e: Recv['map/delete/automapper']) {
     delete $automappers[e]
     $automappers = $automappers
   }
-  function serverOnUploadAutomapper(e: AutomapperDetail) {
-    $automappers[e.file] = e
+  function serverOnUploadAutomapper([name, file]: Recv['map/put/automapper']) {
+    const kind = name.slice(name.lastIndexOf('.')) as AutomapperKind
+    const image = name.slice(0, name.lastIndexOf('.'))
+    $automappers[name] = {
+      name,
+      image,
+      file,
+      kind,
+    }
     $automappers = $automappers
   }
   function serverOnError(e: string) {
@@ -131,14 +118,13 @@
   onMount(() => {
     $selected = [$rmap.map.physicsLayerIndex(GameLayer)]
     $server.socket.addEventListener('close', onServerClosed, { once: true })
-    $server.on('listusers', serverOnUsers)
-    $server.on('edittile', serverOnEditTile)
-    $server.on('edittiles', serverOnEditTiles)
-    $server.on('applyautomapper', serverOnApplyAutomapper)
-    $server.on('deleteautomapper', serverOnDeleteAutomapper)
-    $server.on('uploadautomapper', serverOnUploadAutomapper)
-    $server.on('error', serverOnError)
-    $server.send('listusers')
+    $server.on('users', serverOnUsers)
+    $server.on('map/post/tiles', serverOnEditTiles)
+    $server.on('map/post/automap', serverOnApplyAutomapper)
+    $server.on('map/delete/automapper', serverOnDeleteAutomapper)
+    $server.on('map/put/automapper', serverOnUploadAutomapper)
+    $server.onError(serverOnError)
+    $server.send('map/get/users')
 
     viewport.canvas.addEventListener('mouseenter', onHoverCanvas)
 
@@ -147,13 +133,11 @@
 
   onDestroy(() => {
     $server.socket.removeEventListener('error', onServerClosed)
-    $server.off('listusers', serverOnUsers)
-    $server.off('edittile', serverOnEditTile)
-    $server.off('edittiles', serverOnEditTiles)
-    $server.off('applyautomapper', serverOnApplyAutomapper)
-    $server.off('deleteautomapper', serverOnDeleteAutomapper)
-    $server.off('uploadautomapper', serverOnUploadAutomapper)
-    $server.off('error', serverOnError)
+    $server.off('users', serverOnUsers)
+    $server.off('map/post/tiles', serverOnEditTiles)
+    $server.off('map/post/automap', serverOnApplyAutomapper)
+    $server.off('map/delete/automapper', serverOnDeleteAutomapper)
+    $server.off('map/put/automapper', serverOnUploadAutomapper)
 
     viewport.canvas.removeEventListener('mouseenter', onHoverCanvas)
   })

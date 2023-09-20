@@ -18,7 +18,7 @@
 
     return new Promise((resolve, reject) => {
       $server.socket.addEventListener('open', resolve, { once: true })
-      $server.socket.addEventListener('error', reject, { once: true })
+      $server.socket.addEventListener('error', () => reject("Failed to connect to the server"), { once: true })
     })
   }
 </script>
