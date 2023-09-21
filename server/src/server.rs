@@ -552,7 +552,7 @@ impl Server {
         }
 
         if room.map().images.len() == 64 as usize {
-            return Err(Error::MaxImagesReached);
+            return Err(Error::MaxImages);
         }
 
         let image = match create {
@@ -622,7 +622,7 @@ impl Server {
         let room = self.room(map_name)?;
 
         if room.map().envelopes.len() == u16::MAX as usize {
-            return Err(Error::MaxEnvelopesReached);
+            return Err(Error::MaxEnvelopes);
         }
 
         // create
@@ -658,9 +658,9 @@ impl Server {
         env_index: u16,
         part_env: PartialEnvelope,
     ) -> Result<(), Error> {
-        part_env.check_self();
+        part_env.check_self()?;
         let room = self.room(map_name)?;
-        part_env.check_map(&room.map());
+        part_env.check_map(&room.map())?;
 
         // edit
         {
@@ -740,7 +740,7 @@ impl Server {
         let mut map = room.map();
 
         if map.groups.len() == u16::MAX as usize {
-            return Err(Error::MaxGroupsReached);
+            return Err(Error::MaxGroups);
         }
 
         let mut group = twmap::Group::default();
@@ -865,7 +865,7 @@ impl Server {
         let layers_count = map.groups.iter().flat_map(|g| g.layers.iter()).count();
 
         if layers_count == u16::MAX as usize {
-            return Err(Error::MaxLayersReached);
+            return Err(Error::MaxLayers);
         }
 
         let game_layer_shape = map
@@ -1030,7 +1030,7 @@ impl Server {
             return Err(Error::DeleteGameLayer);
         }
 
-        map.groups.remove(group_index as usize);
+        group.layers.remove(layer_index as usize);
 
         Ok(())
     }
@@ -1191,7 +1191,7 @@ impl Server {
         if let twmap::Layer::Quads(layer) = layer {
             // COMBAK: this is a lower bound
             if layer.quads.len() == u16::MAX as usize {
-                Err(Error::MaxQuadsReached)
+                Err(Error::MaxQuads)
             } else {
                 layer.quads.push(quad);
                 Ok(())
@@ -1480,7 +1480,7 @@ impl Server {
                 .ok_or(Error::LayerNotFound)?;
 
             if src.0 != tgt.0 && src_layer.kind().is_physics_layer() {
-                return Err(Error::ChangePhysicsLayerGroup);
+                return Err(Error::PhysicsLayerChangeGroup);
             }
 
             let tgt_group = map.groups.get(tgt.0 as usize).ok_or(Error::GroupNotFound)?;

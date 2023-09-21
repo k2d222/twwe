@@ -5,6 +5,7 @@ use serde::{Serialize, Serializer};
 
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
+    // 404 not found
     MapNotFound,
     ImageNotFound,
     EnvelopeNotFound,
@@ -14,12 +15,12 @@ pub enum Error {
     AutomapperNotFound,
     NotFound(&'static str),
 
-    MaxEnvelopesReached,
-    MaxImagesReached,
-    MaxGroupsReached,
-    MaxLayersReached,
-    MaxQuadsReached,
-    TooMany(&'static str),
+    MaxEnvelopes,
+    MaxEnvPoints,
+    MaxImages,
+    MaxGroups,
+    MaxLayers,
+    MaxQuads,
 
     InvalidImage,
     InvalidTiles,
@@ -35,13 +36,18 @@ pub enum Error {
     WrongLayerType,
     WrongTilesImage,
 
+    ImageInUse,
+    EnvelopeInUse,
+
     MapNameTaken,
     UnsupportedMapType,
     RoomNotEmpty,
     TilesOutOfBounds,
     LayerHasNoImage,
 
-    #[serde(serialize_with = "serialize_display")]
+    AlreadyJoined,
+    NotJoined,
+
     MapError(String),
     AutomapperError(String),
     BadRequest(String),
@@ -52,12 +58,8 @@ pub enum Error {
     CreateGameLayer,
     CreatePhysicsLayerOutOfPhysicsGroup,
     CreateDuplicatePhysicsLayer,
-    ChangePhysicsLayerGroup,
+    PhysicsLayerChangeGroup,
     EditPhysicsGroup,
-    AlreadyJoined,
-    NotJoined,
-    ImageInUse,
-    EnvelopeInUse,
 
     // 500 internal server error
     ServerError(Cow<'static, str>),
@@ -65,121 +67,118 @@ pub enum Error {
     ToDo,
 }
 
-impl IntoResponse for Error {
-    fn into_response(self) -> axum::response::Response {
-        let resp: (StatusCode, String) = match self {
-            Error::MapNotFound => (StatusCode::NOT_FOUND, "map not found".to_owned()),
-            Error::ImageNotFound => (StatusCode::NOT_FOUND, "image not found".to_owned()),
-            Error::EnvelopeNotFound => (StatusCode::NOT_FOUND, "envelope not found".to_owned()),
-            Error::GroupNotFound => (StatusCode::NOT_FOUND, "group not found".to_owned()),
-            Error::LayerNotFound => (StatusCode::NOT_FOUND, "layer not found".to_owned()),
-            Error::QuadNotFound => (StatusCode::NOT_FOUND, "quad not found".to_owned()),
-            Error::AutomapperNotFound => (StatusCode::NOT_FOUND, "automapper not found".to_owned()),
-            Error::NotFound(e) => (StatusCode::NOT_FOUND, format!("{e} not found")),
-
-            Error::InvalidMapName => (StatusCode::BAD_REQUEST, "invalid map name".to_owned()),
-            Error::InvalidFileName => (StatusCode::BAD_REQUEST, "invalid file name".to_owned()),
-            Error::MapError(e) => (StatusCode::BAD_REQUEST, format!("map error: {e}")),
-            Error::MapNameTaken => (StatusCode::BAD_REQUEST, "map name is taken".to_owned()),
-            Error::UnsupportedMapType => (
-                StatusCode::BAD_REQUEST,
-                "teeworlds map types are not supported".to_owned(),
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::MapNotFound => write!(f, "map not found"),
+            Error::ImageNotFound => write!(f, "image not found"),
+            Error::EnvelopeNotFound => write!(f, "envelope not found"),
+            Error::GroupNotFound => write!(f, "group not found"),
+            Error::LayerNotFound => write!(f, "layer not found"),
+            Error::QuadNotFound => write!(f, "quad not found"),
+            Error::AutomapperNotFound => write!(f, "automapper not found"),
+            Error::NotFound(x) => write!(f, "{x} not found"),
+            Error::MaxEnvelopes => write!(f, "maximum number of envelopes reached"),
+            Error::MaxEnvPoints => write!(f, "maximum number of envelope points reached"),
+            Error::MaxImages => write!(f, "maximum number of images reached"),
+            Error::MaxGroups => write!(f, "maximum number of groups reached"),
+            Error::MaxLayers => write!(f, "maximum number of layers reached"),
+            Error::MaxQuads => write!(f, "maximum number of quads reached"),
+            Error::InvalidImage => write!(f, "invalid image"),
+            Error::InvalidTiles => write!(f, "invalid tiles"),
+            Error::InvalidMapName => write!(f, "invalid map name"),
+            Error::InvalidFileName => write!(f, "invalid file name"),
+            Error::InvalidLayerDimensions => write!(f, "invalid layer dimensions"),
+            Error::InvalidClip => write!(f, "invalid clip value"),
+            Error::Invalid(x) => write!(f, "invalid {x}"),
+            Error::FieldTooLong(x) => write!(f, "field '{x}' is too long"),
+            Error::WrongEnvelopeType => write!(f, "wrong envelope type"),
+            Error::WrongLayerType => write!(f, "wrong layer type"),
+            Error::WrongTilesImage => write!(f, "wrong tiles type"),
+            Error::ImageInUse => write!(f, "image in use"),
+            Error::EnvelopeInUse => write!(f, "envelope in use"),
+            Error::MapNameTaken => write!(f, "map name already taken"),
+            Error::UnsupportedMapType => write!(f, "unsupported map type"),
+            Error::RoomNotEmpty => write!(f, "room is not empty"),
+            Error::TilesOutOfBounds => write!(f, "tiles out of layer bounds"),
+            Error::LayerHasNoImage => write!(f, "layer has no image"),
+            Error::AlreadyJoined => write!(f, "already joined"),
+            Error::NotJoined => write!(f, "not joined"),
+            Error::MapError(x) => write!(f, "twmap error: {x}"),
+            Error::AutomapperError(x) => write!(f, "automapper error: {x}"),
+            Error::BadRequest(x) => write!(f, "bad request: {x}"),
+            Error::DeletePhysicsGroup => write!(f, "cannot delete the physics group"),
+            Error::DeleteGameLayer => write!(f, "cannot delete the game layer"),
+            Error::CreateGameLayer => write!(f, "cannot create a second game layer"),
+            Error::CreatePhysicsLayerOutOfPhysicsGroup => write!(
+                f,
+                "cannot create a physics layer outside of the physics group"
             ),
-            Error::RoomNotEmpty => (StatusCode::BAD_REQUEST, "room must be empty".to_owned()),
-            Error::WrongEnvelopeType => (StatusCode::BAD_REQUEST, "wrong envelope type".to_owned()),
-            Error::WrongLayerType => (StatusCode::BAD_REQUEST, "wrong layer type".to_owned()),
-            Error::MaxGroupsReached => (
-                StatusCode::BAD_REQUEST,
-                "maximum number of groups reached".to_owned(),
-            ),
-            Error::MaxLayersReached => (
-                StatusCode::BAD_REQUEST,
-                "maximum number of layers reached".to_owned(),
-            ),
-            Error::MaxImagesReached => (
-                StatusCode::BAD_REQUEST,
-                "maximum number of images reached".to_owned(),
-            ),
-            Error::MaxEnvelopesReached => (
-                StatusCode::BAD_REQUEST,
-                "maximum number of envelopes reached".to_owned(),
-            ),
-            Error::MaxQuadsReached => (
-                StatusCode::BAD_REQUEST,
-                "maximum number of quads reached".to_owned(),
-            ),
-            Error::TooMany(e) => (StatusCode::BAD_REQUEST, format!("too many {e}")),
-            Error::InvalidLayerDimensions => (
-                StatusCode::BAD_REQUEST,
-                "invalid layer dimensions".to_owned(),
-            ),
-            Error::TilesOutOfBounds => (StatusCode::BAD_REQUEST, "tiles out of bounds".to_owned()),
-            Error::InvalidTiles => (StatusCode::BAD_REQUEST, "invalid tiles".to_owned()),
-            Error::InvalidImage => (StatusCode::BAD_REQUEST, "invalid image".to_owned()),
-            Error::LayerHasNoImage => (StatusCode::BAD_REQUEST, "layer has no image".to_owned()),
-            Error::FieldTooLong(f) => (StatusCode::BAD_REQUEST, format!("field too long: '{f}'")),
-
-            Error::AutomapperError(e) => {
-                (StatusCode::BAD_REQUEST, format!("automapper error: {e}"))
+            Error::CreateDuplicatePhysicsLayer => {
+                write!(f, "cannot create a second physics layer of same type")
             }
-            Error::BadRequest(e) => (StatusCode::BAD_REQUEST, format!("bad request: {e}")),
-            Error::InvalidClip => (StatusCode::BAD_REQUEST, "invalid clip value".to_owned()),
-            Error::Invalid(e) => (StatusCode::BAD_REQUEST, format!("invalid {e}")),
-            Error::WrongTilesImage => (
-                StatusCode::BAD_REQUEST,
-                "image not suitable for tiles layer".to_owned(),
-            ),
-            Error::EditPhysicsGroup => (
-                StatusCode::BAD_REQUEST,
-                "cannot edit physics group parameters".to_owned(),
-            ),
-
-            Error::DeletePhysicsGroup => (
-                StatusCode::FORBIDDEN,
-                "cannot delete the physics group".to_owned(),
-            ),
-            Error::DeleteGameLayer => (
-                StatusCode::FORBIDDEN,
-                "cannot delete the game layer".to_owned(),
-            ),
-            Error::CreateGameLayer => (
-                StatusCode::FORBIDDEN,
-                "maps can only have one game layer".to_owned(),
-            ),
-            Error::CreatePhysicsLayerOutOfPhysicsGroup => (
-                StatusCode::FORBIDDEN,
-                "physics layers must be created in the physics group".to_owned(),
-            ),
-            Error::CreateDuplicatePhysicsLayer => (
-                StatusCode::FORBIDDEN,
-                "physics layers must be unique".to_owned(),
-            ),
-            Error::ChangePhysicsLayerGroup => (
-                StatusCode::FORBIDDEN,
-                "cannot move a physics layer out of the physics group".to_owned(),
-            ),
-            Error::AlreadyJoined => (
-                StatusCode::FORBIDDEN,
-                "already joined another map".to_owned(),
-            ),
-            Error::NotJoined => (StatusCode::FORBIDDEN, "not joined any map".to_owned()),
-            Error::ImageInUse => (StatusCode::FORBIDDEN, "image in use".to_owned()),
-            Error::EnvelopeInUse => (StatusCode::FORBIDDEN, "envelope in use".to_owned()),
-
-            Error::ServerError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.into_owned()),
-            Error::ToDo => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "not implemented".to_owned(),
-            ),
-        };
-        resp.into_response()
+            Error::PhysicsLayerChangeGroup => {
+                write!(f, "cannot move a physics layer out of the physics group")
+            }
+            Error::EditPhysicsGroup => write!(f, "cannot edit properties of the physics group"),
+            Error::ServerError(x) => write!(f, "internal server error: {x}"),
+            Error::ToDo => write!(f, "this functionality is not implemented yet"),
+        }
     }
 }
 
-fn serialize_display<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-where
-    T: Display,
-    S: Serializer,
-{
-    serializer.collect_str(value)
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        let status_code = match self {
+            Error::MapNotFound => StatusCode::BAD_REQUEST,
+            Error::ImageNotFound => StatusCode::BAD_REQUEST,
+            Error::EnvelopeNotFound => StatusCode::BAD_REQUEST,
+            Error::GroupNotFound => StatusCode::BAD_REQUEST,
+            Error::LayerNotFound => StatusCode::BAD_REQUEST,
+            Error::QuadNotFound => StatusCode::BAD_REQUEST,
+            Error::AutomapperNotFound => StatusCode::BAD_REQUEST,
+            Error::NotFound(_) => StatusCode::BAD_REQUEST,
+            Error::MaxEnvelopes => StatusCode::BAD_REQUEST,
+            Error::MaxEnvPoints => StatusCode::BAD_REQUEST,
+            Error::MaxImages => StatusCode::BAD_REQUEST,
+            Error::MaxGroups => StatusCode::BAD_REQUEST,
+            Error::MaxLayers => StatusCode::BAD_REQUEST,
+            Error::MaxQuads => StatusCode::BAD_REQUEST,
+            Error::InvalidImage => StatusCode::BAD_REQUEST,
+            Error::InvalidTiles => StatusCode::BAD_REQUEST,
+            Error::InvalidMapName => StatusCode::BAD_REQUEST,
+            Error::InvalidFileName => StatusCode::BAD_REQUEST,
+            Error::InvalidLayerDimensions => StatusCode::BAD_REQUEST,
+            Error::InvalidClip => StatusCode::BAD_REQUEST,
+            Error::Invalid(_) => StatusCode::BAD_REQUEST,
+            Error::FieldTooLong(_) => StatusCode::BAD_REQUEST,
+            Error::WrongEnvelopeType => StatusCode::BAD_REQUEST,
+            Error::WrongLayerType => StatusCode::BAD_REQUEST,
+            Error::WrongTilesImage => StatusCode::BAD_REQUEST,
+            Error::ImageInUse => StatusCode::BAD_REQUEST,
+            Error::EnvelopeInUse => StatusCode::BAD_REQUEST,
+            Error::MapNameTaken => StatusCode::BAD_REQUEST,
+            Error::UnsupportedMapType => StatusCode::BAD_REQUEST,
+            Error::RoomNotEmpty => StatusCode::BAD_REQUEST,
+            Error::TilesOutOfBounds => StatusCode::BAD_REQUEST,
+            Error::LayerHasNoImage => StatusCode::BAD_REQUEST,
+            Error::AlreadyJoined => StatusCode::BAD_REQUEST,
+            Error::NotJoined => StatusCode::BAD_REQUEST,
+            Error::MapError(_) => StatusCode::BAD_REQUEST,
+            Error::AutomapperError(_) => StatusCode::BAD_REQUEST,
+            Error::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Error::DeletePhysicsGroup => StatusCode::BAD_REQUEST,
+            Error::DeleteGameLayer => StatusCode::BAD_REQUEST,
+            Error::CreateGameLayer => StatusCode::BAD_REQUEST,
+            Error::CreatePhysicsLayerOutOfPhysicsGroup => StatusCode::BAD_REQUEST,
+            Error::CreateDuplicatePhysicsLayer => StatusCode::BAD_REQUEST,
+            Error::PhysicsLayerChangeGroup => StatusCode::BAD_REQUEST,
+            Error::EditPhysicsGroup => StatusCode::BAD_REQUEST,
+            Error::ServerError(_) => StatusCode::BAD_REQUEST,
+            Error::ToDo => StatusCode::BAD_REQUEST,
+        };
+
+        let resp = (status_code, self.to_string());
+        resp.into_response()
+    }
 }

@@ -101,9 +101,8 @@
     }
     $automappers = $automappers
   }
-  function serverOnError(e: any) {
-    const str = typeof e === 'object' ? JSON.stringify(e) : e
-    showError(str)
+  function serverOnError(e: string) {
+    showError('Server Error: ' + e)
   }
 
   async function onServerClosed() {

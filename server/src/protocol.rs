@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
-use fixed::types::{I17F15, I22F10, I27F5};
+use fixed::types::{I22F10, I27F5};
 use serde::{Deserialize, Serialize};
-use twmap::{AutomapperConfig, EnvPoint, Info, InvalidLayerKind, LayerKind, Position, Volume};
-use vek::{Extent2, Rect, Rgba, Uv, Vec2};
+use twmap::{AutomapperConfig, EnvPoint, Position, Volume};
+use vek::{Extent2, Rect, Rgba, Vec2};
 
-use crate::{base64::Base64, error::Error, map_cfg::MapAccess, twmap_map_checks};
+use crate::{base64::Base64, error::Error, map_cfg::MapAccess, util::serialize_display};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -88,108 +88,6 @@ pub struct Cursor {
     pub layer: i32,
 }
 
-// #[derive(Clone, Debug, Deserialize)]
-// #[serde(tag = "type", content = "content", rename_all = "lowercase")]
-// pub enum RequestContent {
-//     CreateMap(CreateMapBlank),
-//     CloneMap(CreateMapClone),
-//     JoinMap(JoinMap),
-//     LeaveMap,
-//     EditMap(EditMap),
-//     SaveMap(SaveMap),
-//     DeleteMap(DeleteMap),
-//     RenameMap(RenameMap),
-
-//     CreateGroup(CreateGroup),
-//     EditGroup(EditGroup),
-//     ReorderGroup(ReorderGroup),
-//     DeleteGroup(DeleteGroup),
-
-//     CreateLayer(CreateLayer),
-//     EditLayer(EditLayer),
-//     ReorderLayer(ReorderLayer),
-//     DeleteLayer(DeleteLayer),
-
-//     EditTile(EditTile),
-//     EditTiles(EditTiles),
-//     SendLayer(SendLayer),
-
-//     CreateQuad(CreateQuad),
-//     EditQuad(EditQuad),
-//     DeleteQuad(DeleteQuad),
-
-//     CreateEnvelope(CreateEnvelope),
-//     EditEnvelope(EditEnvelope),
-//     DeleteEnvelope(DeleteEnvelope),
-
-//     ListUsers,
-//     ListMaps,
-
-//     ListAutomappers,
-//     SendAutomapper(String),
-//     DeleteAutomapper(String),
-//     UploadAutomapper(UploadAutomapper),
-//     ApplyAutomapper(ApplyAutomapper),
-
-//     CreateImage(CreateImage),
-//     ImageInfo(u16),
-//     DeleteImage(DeleteImage),
-
-//     Cursors(Cursor),
-// }
-
-// #[derive(Clone, Debug, Serialize)]
-// #[serde(tag = "type", content = "content", rename_all = "lowercase")]
-// pub enum ResponseContent {
-//     CreateMap(CreateMapBlank),
-//     CloneMap(CreateMapClone),
-//     JoinMap(JoinMap),
-//     LeaveMap,
-//     EditMap(EditMap),
-//     SaveMap(SaveMap),
-//     DeleteMap(DeleteMap),
-//     RenameMap(RenameMap),
-
-//     CreateGroup(CreateGroup),
-//     EditGroup(EditGroup),
-//     ReorderGroup(ReorderGroup),
-//     DeleteGroup(DeleteGroup),
-
-//     CreateLayer(CreateLayer),
-//     EditLayer(EditLayer),
-//     ReorderLayer(ReorderLayer),
-//     DeleteLayer(DeleteLayer),
-
-//     EditTile(EditTile),
-//     EditTiles(EditTiles),
-//     SendLayer(String),
-
-//     CreateQuad(CreateQuad),
-//     EditQuad(EditQuad),
-//     DeleteQuad(DeleteQuad),
-
-//     CreateEnvelope(CreateEnvelope),
-//     EditEnvelope(EditEnvelope),
-//     DeleteEnvelope(DeleteEnvelope),
-
-//     ListUsers(ListUsers),
-//     ListMaps(ListMaps),
-
-//     ListAutomappers(ListAutomappers),
-//     SendAutomapper(String),
-//     DeleteAutomapper(String),
-//     UploadAutomapper(AutomapperDetail),
-//     ApplyAutomapper(ApplyAutomapper),
-
-//     CreateImage(CreateImage),
-//     ImageInfo(ImageInfo),
-//     DeleteImage(DeleteImage),
-
-//     Cursors(HashMap<String, Cursor>),
-
-//     Error(String),
-// }
-
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialConfig {
@@ -245,7 +143,6 @@ pub struct PartialEnv<T: Copy> {
 pub enum PartialEnvelope {
     Position(PartialEnv<Position>),
     Color(PartialEnv<Rgba<I22F10>>),
-    /// Not available in Teeworlds07 maps.
     Sound(PartialEnv<Volume>),
 }
 
@@ -540,10 +437,11 @@ pub enum Broadcast {
     Saved,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[serde(remote = "Result", rename_all = "lowercase")]
-enum SerdeResult<T, E> {
+enum SerdeResult<T, E: Display> {
     Ok(T),
+    #[serde(serialize_with = "serialize_display")]
     Err(E),
 }
 

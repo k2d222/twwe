@@ -15,13 +15,13 @@
   import Stats from './stats.svelte'
   import { RenderAnyTilesLayer } from "../../gl/renderTilesLayer"
   import { viewport, renderer } from '../../gl/global'
-  import { decodePng, externalImageUrl, queryImageData } from './util'
+  import { decodePng, externalImageUrl } from './util'
   import MapView from './mapView.svelte'
   import type { RenderGroup } from '../../gl/renderGroup'
   import type { RenderLayer } from '../../gl/renderLayer'
   import type * as MapDir from '../../twmap/mapdir'
   import type * as Info from '../../twmap/types'
-  import type { Cursors, MapCreateReq, Recv, Resp } from '../../server/protocol'
+  import type { Recv, Resp } from '../../server/protocol'
   import { base64ToBytes } from '../../server/convert'
 
   let g: number, l: number
@@ -142,11 +142,6 @@
   function onDeleteLayer([dg, dl]: Recv['map/delete/layer']) {
     $rmap.deleteLayer(dg, dl)
     $selected = $selected.filter(([g, l]) => g !== dg || l !== dl)
-    if ($selected.length === 0) {
-      $selected = (rgroup.layers.length === 0) ?
-        [$rmap.map.physicsLayerIndex(GameLayer)] :
-        [[g, Math.min(rgroup.layers.length - 1, dl)]]
-    }
   }
   function onReorderLayer([src, tgt]: Recv['map/patch/layer']) {
     $rmap.reorderLayer(src, tgt)

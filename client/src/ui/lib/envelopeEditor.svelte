@@ -231,6 +231,8 @@
   function onSync() {
     if (selected && $rmap.map.envelopes.length === 0)
       selected = null
+    else if (selected && $rmap.map.envelopes.indexOf(selected) === -1)
+      selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
     else if (selected === null && $rmap.map.envelopes.length !== 0)
       selected = $rmap.map.envelopes[0]
     sync_++

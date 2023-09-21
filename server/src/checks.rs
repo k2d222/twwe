@@ -49,7 +49,7 @@ impl PartialCheck for PartialEnvelope {
                 }
                 if let Some(points) = &$env.points {
                     if points.len() > i32::MAX as usize {
-                        return Err(Error::TooMany("envelope points"));
+                        return Err(Error::MaxEnvPoints);
                     }
                     twmap::EnvPoint::check_all(points, &map)
                         .map_err(|e| Error::MapError(e.to_string()))?;
@@ -76,7 +76,7 @@ impl<T: Copy> PartialCheck for PartialEnv<T> {
         }
         if let Some(points) = &self.points {
             if points.len() > i32::MAX as usize {
-                return Err(Error::TooMany("envelope points"));
+                return Err(Error::MaxEnvPoints);
             }
         }
 

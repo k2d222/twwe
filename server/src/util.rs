@@ -1,8 +1,17 @@
-use std::sync::OnceLock;
+use std::{fmt::Display, sync::OnceLock};
 
 use regex::Regex;
+use serde::Serializer;
 
 use crate::twmap_map_edit::{extend_layer, shrink_layer};
+
+pub(crate) fn serialize_display<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    T: Display,
+    S: Serializer,
+{
+    serializer.collect_str(value)
+}
 
 pub(crate) mod macros {
     macro_rules! apply_partial {

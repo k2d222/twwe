@@ -21,7 +21,7 @@ export interface Server {
 export class WebSocketServer implements Server {
   socket: WebSocket
   errorListener: (e: string) => unknown
-  queryListeners: { [key: number]: [SendKey, QueryFn<any>] }
+  queryListeners: { [key: number]: [SendPacket<any>, QueryFn<any>] }
   broadcastListeners: { [K in RecvKey]: ListenFn<K>[] }
 
   private socketSend: (data: any) => void
@@ -118,22 +118,29 @@ export class WebSocketServer implements Server {
   query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]> {
     return new Promise((resolve, reject) => {
       let timeoutID = -1
-      let reqID = this.generateID()
+      let id = this.generateID()
 
       const listener: QueryFn<K> = (x: Result<Resp[K]>) => {
         window.clearTimeout(timeoutID)
-        delete this.queryListeners[reqID]
+        delete this.queryListeners[id]
 
         if ('ok' in x) resolve(x.ok)
         else if ('err' in x) reject(x.err)
         else console.error('query packet with no result', x)
       }
 
-      this.queryListeners[reqID] = [type, listener]
+      const packet: SendPacket<K> = {
+        timestamp: Date.now(),
+        id,
+        type,
+        content,
+      }
+
+      this.queryListeners[id] = [packet, listener]
 
       if (timeout) {
         timeoutID = window.setTimeout(() => {
-          delete this.queryListeners[reqID]
+          delete this.queryListeners[id]
           reject('timeout reached')
         }, timeout)
       }
@@ -144,8 +151,26 @@ export class WebSocketServer implements Server {
         }
       }
 
-      this.sendQuery(type, content, reqID)
+      const message = JSON.stringify(packet)
+      this.socketSend(message)
     })
+  }
+
+  private handleResp(resp: RespPacket<any>) {
+    const listener = this.queryListeners[resp.id]
+    if (listener) {
+      const [packet, fn] = listener
+      fn(resp)
+      if ('ok' in resp && packet.type in this.broadcastListeners) {
+        // TODO: transaction
+      }
+      else if ('err' in resp) {
+        this.errorListener.call(undefined, resp.err)
+      }
+    }
+    else {
+      console.error('query response with no listener', resp)
+    }
   }
 
   private onMessage(e: MessageEvent) {
@@ -157,20 +182,7 @@ export class WebSocketServer implements Server {
     const data = JSON.parse(e.data) as RespPacket<any> | RecvPacket<any>
     
     if ('id' in data) {
-      const listener = this.queryListeners[data.id]
-      if (listener) {
-        const [type, fn] = listener
-        fn(data)
-        if ('ok' in data && type in this.broadcastListeners) {
-          // TODO: transaction
-        }
-        else if ('err' in data) {
-          this.errorListener.call(undefined, data.err)
-        }
-      }
-      else {
-        console.error('query response with no listener', data)
-      }
+      this.handleResp(data)
     }
     else if ('err' in data) {
       this.errorListener.call(undefined, data.err)
@@ -180,17 +192,6 @@ export class WebSocketServer implements Server {
         fn(data.content)
       }
     }
-  }
-
-  private sendQuery<K extends SendKey>(type: K, content: Send[K], id: number) {
-    const x: SendPacket<K> = {
-      timestamp: Date.now(),
-      id,
-      type,
-      content,
-    }
-    const message = JSON.stringify(x)
-    this.socketSend(message)
   }
 
   send<K extends SendKey>(type: K, content: Send[K]) {

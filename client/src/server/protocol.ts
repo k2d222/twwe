@@ -57,6 +57,7 @@ export interface AutomapperDetail {
   image: string
   kind: AutomapperKind
   file: string | null
+  configs: string[]
 }
 
 export type MapCreation = {
