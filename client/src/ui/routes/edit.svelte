@@ -16,7 +16,7 @@
     const ams = await $server.query('map/get/automappers', undefined)
     $automappers = Object.fromEntries(ams.map(name => [name, {
       name,
-      kind: name.slice(name.lastIndexOf('.')) as AutomapperKind,
+      kind: name.slice(name.lastIndexOf('.') + 1) as AutomapperKind,
       image: name.slice(0, name.lastIndexOf('.')),
       file: null,
     }]))

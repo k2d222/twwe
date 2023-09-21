@@ -43,7 +43,7 @@
       return
     }
 
-    $automappers = await $server.query("map/put/automapper", null)
+    await $server.query("map/put/automapper", null)
 
     showInfo(`Uploaded '${name}'.`, 'closable')
   }

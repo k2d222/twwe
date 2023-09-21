@@ -25,7 +25,6 @@ pub enum Error {
     InvalidTiles,
     InvalidMapName,
     InvalidFileName,
-    InvalidImageDimensions,
     InvalidLayerDimensions,
     InvalidClip,
     Invalid(&'static str),
@@ -45,6 +44,7 @@ pub enum Error {
     #[serde(serialize_with = "serialize_display")]
     MapError(String),
     AutomapperError(String),
+    BadRequest(String),
 
     // 403 forbidden
     DeletePhysicsGroup,
@@ -75,11 +75,11 @@ impl IntoResponse for Error {
             Error::LayerNotFound => (StatusCode::NOT_FOUND, "layer not found".to_owned()),
             Error::QuadNotFound => (StatusCode::NOT_FOUND, "quad not found".to_owned()),
             Error::AutomapperNotFound => (StatusCode::NOT_FOUND, "automapper not found".to_owned()),
-            Error::NotFound(e) => (StatusCode::NOT_FOUND, format!("{} not found", e)),
+            Error::NotFound(e) => (StatusCode::NOT_FOUND, format!("{e} not found")),
 
             Error::InvalidMapName => (StatusCode::BAD_REQUEST, "invalid map name".to_owned()),
             Error::InvalidFileName => (StatusCode::BAD_REQUEST, "invalid file name".to_owned()),
-            Error::MapError(e) => (StatusCode::BAD_REQUEST, format!("map error: {}", e)),
+            Error::MapError(e) => (StatusCode::BAD_REQUEST, format!("map error: {e}")),
             Error::MapNameTaken => (StatusCode::BAD_REQUEST, "map name is taken".to_owned()),
             Error::UnsupportedMapType => (
                 StatusCode::BAD_REQUEST,
@@ -108,11 +108,7 @@ impl IntoResponse for Error {
                 StatusCode::BAD_REQUEST,
                 "maximum number of quads reached".to_owned(),
             ),
-            Error::TooMany(e) => (StatusCode::BAD_REQUEST, format!("too many {}", e)),
-            Error::InvalidImageDimensions => (
-                StatusCode::BAD_REQUEST,
-                "invalid image dimensions".to_owned(),
-            ),
+            Error::TooMany(e) => (StatusCode::BAD_REQUEST, format!("too many {e}")),
             Error::InvalidLayerDimensions => (
                 StatusCode::BAD_REQUEST,
                 "invalid layer dimensions".to_owned(),
@@ -126,8 +122,9 @@ impl IntoResponse for Error {
             Error::AutomapperError(e) => {
                 (StatusCode::BAD_REQUEST, format!("automapper error: {e}"))
             }
+            Error::BadRequest(e) => (StatusCode::BAD_REQUEST, format!("bad request: {e}")),
             Error::InvalidClip => (StatusCode::BAD_REQUEST, "invalid clip value".to_owned()),
-            Error::Invalid(e) => (StatusCode::BAD_REQUEST, format!("invalid {}", e)),
+            Error::Invalid(e) => (StatusCode::BAD_REQUEST, format!("invalid {e}")),
             Error::WrongTilesImage => (
                 StatusCode::BAD_REQUEST,
                 "image not suitable for tiles layer".to_owned(),

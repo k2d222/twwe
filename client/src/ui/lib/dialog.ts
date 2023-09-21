@@ -4,12 +4,18 @@ type DialogType = 'info' | 'warning' | 'error'
 
 type DialogControls = 'closable' | 'yesno' | 'none'
 
-let dialog: Dialog | null = null
+let dialog: Dialog
 
-export function clearDialog() {
-  if (dialog) {
-    dialog.$destroy()
-    dialog = null
+export function setDialog(d: Dialog) {
+  dialog = d
+}
+
+export function clearDialog(id: number | 'all' = 'all') {
+  if (id === 'all') {
+    dialog.$set({ messages: [] })
+  }
+  else {
+    dialog.$set({ messages: dialog.messages.filter(m => m.id !== id) })
   }
 }
 
@@ -18,20 +24,22 @@ export function showDialog(
   message: string,
   controls: DialogControls = 'none'
 ): Promise<boolean> {
-  clearDialog()
-  dialog = new Dialog({
-    target: document.body,
-    props: {
+
+
+  dialog.$set({
+    messages: [{
       type,
       message,
       controls,
-    },
+      id: Math.random()
+    }, ...dialog.messages]
   })
 
   return new Promise(resolve => {
     dialog.$on('close', e => {
-      clearDialog()
-      resolve(e.detail)
+      const [id, status] = e.detail
+      clearDialog(id)
+      resolve(status)
     })
   })
 }

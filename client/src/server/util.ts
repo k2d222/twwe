@@ -40,7 +40,6 @@ export function sync<Q extends SendKey & RecvKey, T>(val: T, opts: { server: Ser
     val = newVal
     subs.forEach(sub => sub(val))
     try {
-      console.log(opts, opts.query, val)
       await opts.server.query(opts.query, opts.send(val))
     }
     catch {

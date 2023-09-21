@@ -52,12 +52,6 @@
     // 'bezier', TODO
   ]
 
-  const envTypes: MapDir.EnvelopeType[] = [
-    MapDir.EnvelopeType.Color,
-    MapDir.EnvelopeType.Position,
-    MapDir.EnvelopeType.Sound,
-  ]
-
   let colorChannels: Chan[] = ['color_r', 'color_g', 'color_b', 'color_a']
   let posChannels: Chan[] = ['pos_x', 'pos_y', 'pos_r']
   let soundChannels: Chan[] = ['sound_v']
@@ -277,6 +271,7 @@
     }
     try {
       await $server.query('map/put/envelope', change)
+      console.log($rmap.map.envelopes.length)
       selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
     } catch (e) {
       showError('Failed to create envelope: ' + e)
@@ -511,7 +506,7 @@
         {#each $rmap.map.envelopes as env}
           {@const i = $rmap.map.envelopes.indexOf(env)}
           <option selected={env === selected} value={i}>
-            {`#${i} ${env.name || ''} (${envTypes[env.type]})`}
+            {`#${i} ${env.name || ''} (${envTypeToString(env.type)})`}
           </option>
         {/each}
       </select>

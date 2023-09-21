@@ -60,7 +60,7 @@
   })
 
   function onUploadAutomapper([name, file]: Send['map/put/automapper']) {
-    const kind = name.slice(name.lastIndexOf('.')) as AutomapperKind
+    const kind = name.slice(name.lastIndexOf('.') + 1) as AutomapperKind
     const image = name.slice(0, name.lastIndexOf('.'))
     $automappers[name] = { name, image, kind, file }
     $automappers = $automappers

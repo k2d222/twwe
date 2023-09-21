@@ -1,48 +1,59 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
-  import Info from '../../../assets/color-info.svg?component'
-  import Warning from '../../../assets/color-warning.svg?component'
-  import Error from '../../../assets/color-error.svg?component'
-  import { Modal, ModalHeader, ToastNotification } from 'carbon-components-svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import { Modal, ToastNotification } from 'carbon-components-svelte'
+  import { fly } from 'svelte/transition'
+  import { flip } from 'svelte/animate'
 
-  export let type: 'info' | 'warning' | 'error' = 'info'
-  export let controls: 'closable' | 'yesno' | 'none' = 'none'
-  export let message = ''
+  interface Message {
+    type: 'info' | 'warning' | 'error'
+    controls: 'closable' | 'yesno' | 'none'
+    message: string
+    id: number
+  }
+
+  export let messages: Message[] = []
 
   const dispatch = createEventDispatcher()
 
-  function onClose() {
-    dispatch('close')
+  function onClose(id: number) {
+    dispatch('close', [id, false])
   }
-  function onYes() {
-    dispatch('close', true)
+  function onYes(id: number) {
+    dispatch('close', [id, true])
   }
-  function onNo() {
-    dispatch('close', false)
+  function onNo(id: number) {
+    dispatch('close', [id, false])
   }
 </script>
 
+<svelte:options accessors/>
 
-<div id="dialog" class={type}>
-  {#if controls === 'yesno'}
-    <Modal
-      modalHeading={message}
-      primaryButtonText="Yes"
-      secondaryButtonText="No"
-      danger
-      preventCloseOnClickOutside
-      on:close={onNo}
-      on:submit={onYes}
-    />
-  {:else}
-    <ToastNotification
-      kind={type}
-      title={message}
-      on:close={onClose}
-      hideCloseButton={controls !== 'closable'}
+<div id="dialog">
+  {#each messages as { type, controls, message, id } (id)}
+    <div class="notification"
+      transition:fly|global={{ delay: 0, duration: 400, x: 200 }}
+      animate:flip = {{ duration: 200 }}
     >
-      <slot slot="caption"></slot>
-    </ToastNotification>
-  {/if}
+      {#if controls === 'yesno'}
+          <Modal
+            modalHeading={message}
+            primaryButtonText="Yes"
+            secondaryButtonText="No"
+            danger
+            preventCloseOnClickOutside
+            on:close={() => onNo(id)}
+            on:submit={() => onYes(id)}
+          />
+      {:else}
+          <ToastNotification
+            kind={type}
+            title={message}
+            on:close={() => onClose(id)}
+            hideCloseButton={controls !== 'closable'}
+          >
+            <slot slot="caption"></slot>
+          </ToastNotification>
+      {/if}
+    </div>
+  {/each}
 </div>
-

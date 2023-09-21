@@ -3,8 +3,9 @@ import * as MapDir from '../twmap/mapdir'
 import * as Parser from '../twmap/parser'
 
 const envTypeStr: MapDir.EnvelopeType[] = [
-  MapDir.EnvelopeType.Sound, // Info.EnvType.INVALID
+  MapDir.EnvelopeType.Color, // INVALID
   MapDir.EnvelopeType.Sound,
+  MapDir.EnvelopeType.Color, // INVALID
   MapDir.EnvelopeType.Position,
   MapDir.EnvelopeType.Color,
 ]

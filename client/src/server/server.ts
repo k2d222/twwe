@@ -1,6 +1,6 @@
 import type { SendPacket, Result, SendKey, RecvKey, Recv, Send, Resp, RecvPacket, RespPacket } from './protocol'
 
-type QueryFn<K extends SendKey> = (resp: Result<Resp[K]>) => K
+type QueryFn<K extends SendKey> = (resp: Result<Resp[K]>) => unknown
 type ListenFn<K extends RecvKey> = (resp: Recv[K]) => unknown
 
 export interface Server {
@@ -21,7 +21,7 @@ export interface Server {
 export class WebSocketServer implements Server {
   socket: WebSocket
   errorListener: (e: string) => unknown
-  queryListeners: { [key: number]: QueryFn<any> }
+  queryListeners: { [key: number]: [SendKey, QueryFn<any>] }
   broadcastListeners: { [K in RecvKey]: ListenFn<K>[] }
 
   private socketSend: (data: any) => void
@@ -127,10 +127,9 @@ export class WebSocketServer implements Server {
         if ('ok' in x) resolve(x.ok)
         else if ('err' in x) reject(x.err)
         else console.error('query packet with no result', x)
-        return type
       }
 
-      this.queryListeners[reqID] = listener
+      this.queryListeners[reqID] = [type, listener]
 
       if (timeout) {
         timeoutID = window.setTimeout(() => {
@@ -158,19 +157,12 @@ export class WebSocketServer implements Server {
     const data = JSON.parse(e.data) as RespPacket<any> | RecvPacket<any>
     
     if ('id' in data) {
-      const fn = this.queryListeners[data.id]
-      if (fn) {
-        const type = fn(data)
+      const listener = this.queryListeners[data.id]
+      if (listener) {
+        const [type, fn] = listener
+        fn(data)
         if ('ok' in data && type in this.broadcastListeners) {
-          // TODO: ensure transaction
-          // const pkt = {
-          //   timestamp: data.timestamp,
-          //   type,
-          //   content: data.ok
-          // }
-          // for (const fn of this.broadcastListeners[type]) {
-          //   fn(pkt)
-          // }
+          // TODO: transaction
         }
         else if ('err' in data) {
           this.errorListener.call(undefined, data.err)
@@ -179,6 +171,9 @@ export class WebSocketServer implements Server {
       else {
         console.error('query response with no listener', data)
       }
+    }
+    else if ('err' in data) {
+      this.errorListener.call(undefined, data.err)
     }
     else {
       for (const fn of this.getBroadcastListeners(data.type)) {

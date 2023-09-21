@@ -91,7 +91,7 @@
     $automappers = $automappers
   }
   function serverOnUploadAutomapper([name, file]: Recv['map/put/automapper']) {
-    const kind = name.slice(name.lastIndexOf('.')) as AutomapperKind
+    const kind = name.slice(name.lastIndexOf('.') + 1) as AutomapperKind
     const image = name.slice(0, name.lastIndexOf('.'))
     $automappers[name] = {
       name,
@@ -101,8 +101,9 @@
     }
     $automappers = $automappers
   }
-  function serverOnError(e: string) {
-    showError(e)
+  function serverOnError(e: any) {
+    const str = typeof e === 'object' ? JSON.stringify(e) : e
+    showError(str)
   }
 
   async function onServerClosed() {

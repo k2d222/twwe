@@ -294,6 +294,11 @@ impl Server {
                         }
                         Err(e) => {
                             log::error!("failed to parse message: {} in {}", e, &text);
+                            self.send(
+                                &peer,
+                                None,
+                                Message::Response(Err(Error::BadRequest(e.to_string()))),
+                            )
                         }
                     };
                 }

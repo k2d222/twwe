@@ -123,11 +123,12 @@ export interface MapEditReq {
   group: [number, Partial<MapDir.Group>]
   layer: [number, number, Require<MapDir.Layer, "type">]
   tiles: [number, number, Tiles]
-  quad: [number, number, number, Partial<MapDir.Quad>]
+  quad: [number, number, number, MapDir.Quad]
   automap: [number, number]
 }
 
 export interface MapReorderReq {
+  image: [number, number]
   envelope: [number, number]
   group: [number, number]
   layer: [[number, number], [number, number]]
@@ -144,13 +145,13 @@ export interface MapDelReq {
 }
 
 export interface MapReq {
+  cursor: Cursor
+  save: undefined
   get: MapGetReq
   put: MapCreateReq
   post: MapEditReq
   patch: MapReorderReq
   delete: MapDelReq
-  cursor: Cursor
-  save: undefined
 }
 
 export interface GetReq {
@@ -346,4 +347,5 @@ export interface RecvPacket<K extends RecvKey> {
   timestamp: number
   type: K
   content: Recv[K]
+  err?: any
 }

@@ -12,8 +12,14 @@
   import Number from './number.svelte'
   import { onDestroy, onMount } from 'svelte'
   import * as MapDir from '../../twmap/mapdir'
+  import type { Writable } from 'svelte/store'
 
   export let g: number
+
+  let syncClipX: Writable<number>
+  let syncClipY: Writable<number>
+  let syncClipW: Writable<number>
+  let syncClipH: Writable<number>
 
   $: group = $map.groups[g]
 
@@ -59,31 +65,32 @@
     send: s => [g, { clipping: s }],
     recv: ([eg, e]) => eg === g && 'clipping' in e ? e.clipping : null,
   })
-  $: syncClipX = sync(group.clipX, {
-    server: $server,
-    query: 'map/post/group',
-    send: s => [g, { clip: { x: toFixedNum(s, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
-    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.x, 5) : null,
-  })
-  $: syncClipY = sync(group.clipY, {
-    server: $server,
-    query: 'map/post/group',
-    send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum(s, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
-    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.x, 5) : null,
-  })
-  $: syncClipW = sync(group.clipW, {
-    server: $server,
-    query: 'map/post/group',
-    send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum(s, 5), h: toFixedNum($syncClipH, 5) } }],
-    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.w, 5) : null,
-  })
-  $: syncClipH = sync(group.clipH, {
-    server: $server,
-    query: 'map/post/group',
-    send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum(s, 5) } }],
-    recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.h, 5) : null,
-  })
-
+  $: {
+    syncClipX = sync(group.clipX, {
+      server: $server,
+      query: 'map/post/group',
+      send: s => [g, { clip: { x: toFixedNum(s, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.x, 5) : null,
+    })
+    syncClipY = sync(group.clipY, {
+      server: $server,
+      query: 'map/post/group',
+      send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum(s, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.y, 5) : null,
+    })
+    syncClipW = sync(group.clipW, {
+      server: $server,
+      query: 'map/post/group',
+      send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum(s, 5), h: toFixedNum($syncClipH, 5) } }],
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.w, 5) : null,
+    })
+    syncClipH = sync(group.clipH, {
+      server: $server,
+      query: 'map/post/group',
+      send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum(s, 5) } }],
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.h, 5) : null,
+    })
+  }
 
   let sync_ = null
   function onSync() {

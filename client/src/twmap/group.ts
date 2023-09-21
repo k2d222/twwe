@@ -25,6 +25,11 @@ export class Group {
     this.offY = 0
     this.paraX = 100
     this.paraY = 100
+    this.clipping = false
+    this.clipX = 0
+    this.clipY = 0
+    this.clipW = 0
+    this.clipH = 0
     this.layers = []
   }
 
