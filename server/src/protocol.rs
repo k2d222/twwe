@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
 use twmap::{AutomapperConfig, EnvPoint, Info, InvalidLayerKind, LayerKind, Position, Volume};
-use vek::{Rect, Rgba, Uv, Vec2};
+use vek::{Extent2, Rect, Rgba, Uv, Vec2};
 
 use crate::{base64::Base64, error::Error, map_cfg::MapAccess, twmap_map_checks};
 
@@ -33,6 +33,12 @@ pub struct MapConfig {
     pub name: String,
     pub access: MapAccess,
     pub version: Option<twmap::Version>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MapDetail {
+    pub name: String,
+    pub users: usize,
 }
 
 // TILES
@@ -344,12 +350,16 @@ pub enum MapGetReq {
     Envelope(u16),
     #[serde(rename = "map/get/groups")]
     Groups,
-    // #[serde(rename = "map/get/group")]
-    // Group(u16),
+    #[serde(rename = "map/get/group")]
+    Group(u16),
     #[serde(rename = "map/get/layers")]
     Layers(u16),
-    // #[serde(rename = "map/get/layer")]
-    // Layer(u16, u16),
+    #[serde(rename = "map/get/layer")]
+    Layer(u16, u16),
+    #[serde(rename = "map/get/tiles")]
+    Tiles(u16, u16),
+    #[serde(rename = "map/get/quad")]
+    Quad(u16, u16, u16),
     #[serde(rename = "map/get/automappers")]
     Automappers,
     #[serde(rename = "map/get/automapper")]
@@ -357,14 +367,25 @@ pub enum MapGetReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Image {
+    External { size: Extent2<u32> },
+    Embedded(Base64),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum MapPutReq {
+    #[serde(rename = "map/put/image")]
+    Image(String, Image),
     #[serde(rename = "map/put/envelope")]
     Envelope(Box<PartialEnvelope>),
     #[serde(rename = "map/put/group")]
     Group(Box<PartialGroup>),
     #[serde(rename = "map/put/layer")]
     Layer(u16, Box<PartialLayer>),
+    #[serde(rename = "map/put/quad")]
+    Quad(u16, u16, Box<twmap::Quad>),
     #[serde(rename = "map/put/automapper")]
     Automapper(String, String),
 }
@@ -384,6 +405,8 @@ pub enum MapPostReq {
     Layer(u16, u16, Box<PartialLayer>),
     #[serde(rename = "map/post/tiles")]
     Tiles(u16, u16, Box<Tiles>),
+    #[serde(rename = "map/post/quad")]
+    Quad(u16, u16, u16, Box<twmap::Quad>),
     #[serde(rename = "map/post/automap")]
     Automap(u16, u16),
 }
@@ -391,23 +414,31 @@ pub enum MapPostReq {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum MapPatchReq {
+    #[serde(rename = "map/patch/image")]
+    Image(u16, u16),
     #[serde(rename = "map/patch/envelope")]
     Envelope(u16, u16),
     #[serde(rename = "map/patch/group")]
     Group(u16, u16),
     #[serde(rename = "map/patch/layer")]
     Layer((u16, u16), (u16, u16)),
+    #[serde(rename = "map/patch/quad")]
+    Quad((u16, u16, u16), u16),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum MapDelReq {
+    #[serde(rename = "map/delete/image")]
+    Image(u16),
     #[serde(rename = "map/delete/envelope")]
     Envelope(u16),
     #[serde(rename = "map/delete/group")]
     Group(u16),
     #[serde(rename = "map/delete/layer")]
     Layer(u16, u16),
+    #[serde(rename = "map/delete/quad")]
+    Quad(u16, u16, u16),
     #[serde(rename = "map/delete/automapper")]
     Automapper(String),
 }
@@ -488,9 +519,11 @@ pub enum Response {
     Envelopes(Vec<String>),
     Envelope(Box<twmap::Envelope>),
     Groups(Vec<String>),
-    // Group(Box<twmap::Group>),
+    Group(Box<twmap::Group>),
     Layers(Vec<String>),
-    // Layer(Box<twmap::Layer>),
+    Layer(Box<twmap::Layer>),
+    Tiles(Base64),
+    Quad(Box<twmap::Quad>),
     Automappers(Vec<String>),
     Automapper(String),
     Users(usize),

@@ -8,6 +8,7 @@ use router::Router;
 use server::Server;
 
 mod base64;
+mod checks;
 mod cli;
 mod error;
 mod map_cfg;
@@ -17,6 +18,7 @@ mod router;
 mod server;
 mod twmap_map_checks;
 mod twmap_map_edit;
+mod util;
 
 use room::Room;
 

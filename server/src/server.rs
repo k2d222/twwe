@@ -2,37 +2,27 @@ use std::{
     collections::HashMap,
     net::SocketAddr,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, MutexGuard, OnceLock},
+    sync::{Arc, Mutex, MutexGuard},
 };
 
 use axum::extract::ws::{self, WebSocket};
 use futures::{channel::mpsc::unbounded, StreamExt, TryStreamExt};
 use image::ImageFormat;
-use regex::Regex;
 
 use crate::{
     base64::Base64,
+    checks::PartialCheck,
     cli::Cli,
     error::Error,
     protocol::*,
     room::{Peer, Room},
     twmap_map_checks::InternalMapChecking,
-    twmap_map_edit::{extend_layer, shrink_layer},
+    util::{macros::apply_partial, *},
 };
 
 pub struct Server {
     rooms: Mutex<HashMap<String, Arc<Room>>>,
     rpp_path: PathBuf,
-}
-
-macro_rules! apply_partial {
-    ($src:expr => $tgt:expr, $($field:ident),*) => {{
-        $(
-            if let Some($field) = $src.$field {
-                $tgt.$field = $field;
-            }
-        )*
-    }};
 }
 
 impl Server {
@@ -155,9 +145,21 @@ impl Server {
                             .get_envelope(map_name, e)
                             .map(|r| Response::Envelope(Box::new(r))),
                         MapGetReq::Groups => self.get_groups(map_name).map(|r| Response::Groups(r)),
+                        MapGetReq::Group(g) => self
+                            .get_group(map_name, g)
+                            .map(|r| Response::Group(Box::new(r))),
                         MapGetReq::Layers(g) => {
                             self.get_layers(map_name, g).map(|r| Response::Layers(r))
                         }
+                        MapGetReq::Layer(g, l) => self
+                            .get_layer(map_name, g, l)
+                            .map(|r| Response::Layer(Box::new(r))),
+                        MapGetReq::Tiles(g, l) => self
+                            .get_tiles(map_name, g, l)
+                            .map(|r| Response::Tiles(Base64(r.into()))),
+                        MapGetReq::Quad(g, l, q) => self
+                            .get_quad(map_name, g, l, q)
+                            .map(|r| Response::Quad(Box::new(r))),
                         MapGetReq::Automappers => self
                             .get_automappers(map_name)
                             .map(|r| Response::Automappers(r)),
@@ -166,9 +168,13 @@ impl Server {
                             .map(|r| Response::Automapper(r)),
                     },
                     MapReq::Put(req) => match req {
+                        MapPutReq::Image(image_name, create) => {
+                            self.put_image(map_name, &image_name, create)
+                        }
                         MapPutReq::Envelope(req) => self.put_envelope(map_name, *req),
                         MapPutReq::Group(req) => self.put_group(map_name, *req),
                         MapPutReq::Layer(g, req) => self.put_layer(map_name, g, *req),
+                        MapPutReq::Quad(g, l, req) => self.put_quad(map_name, g, l, *req),
                         MapPutReq::Automapper(am, file) => {
                             self.put_automapper(map_name, &am, &file)
                         }
@@ -181,19 +187,24 @@ impl Server {
                         MapPostReq::Group(g, req) => self.post_group(map_name, g, *req),
                         MapPostReq::Layer(g, l, req) => self.post_layer(map_name, g, l, *req),
                         MapPostReq::Tiles(g, l, req) => self.post_tiles(map_name, g, l, *req),
+                        MapPostReq::Quad(g, l, q, req) => self.post_quad(map_name, g, l, q, *req),
                         MapPostReq::Automap(g, l) => self.apply_automapper(map_name, g, l),
                     }
                     .map(|()| Response::Ok),
                     MapReq::Patch(req) => match req {
+                        MapPatchReq::Image(src, tgt) => self.patch_image(map_name, src, tgt),
                         MapPatchReq::Envelope(src, tgt) => self.patch_envelope(map_name, src, tgt),
                         MapPatchReq::Group(src, tgt) => self.patch_group(map_name, src, tgt),
                         MapPatchReq::Layer(src, tgt) => self.patch_layer(map_name, src, tgt),
+                        MapPatchReq::Quad(src, tgt) => self.patch_quad(map_name, src, tgt),
                     }
                     .map(|()| Response::Ok),
                     MapReq::Delete(req) => match req {
+                        MapDelReq::Image(i) => self.delete_image(map_name, i),
                         MapDelReq::Envelope(e) => self.delete_envelope(map_name, e),
                         MapDelReq::Group(g) => self.delete_group(map_name, g),
                         MapDelReq::Layer(g, l) => self.delete_layer(map_name, g, l),
+                        MapDelReq::Quad(g, l, q) => self.delete_quad(map_name, g, l, q),
                         MapDelReq::Automapper(am) => self.delete_automapper(map_name, &am),
                     }
                     .map(|()| Response::Ok),
@@ -226,18 +237,15 @@ impl Server {
         self.send(peer, packet.id, Message::Response(resp.clone()));
         if resp.is_ok() {
             match &packet.content {
-                Request::Map(req) => {
-                    let room = peer.room.clone().unwrap(); // safety: map requests require the peer to be in the map to succeed
-                    match req {
-                        MapReq::Get(_) | MapReq::Cursor(_) => (),
-                        MapReq::Put(_) | MapReq::Post(_) | MapReq::Patch(_) | MapReq::Delete(_) => {
-                            self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
-                        }
-                        MapReq::Save => {
-                            self.broadcast_to_others(peer, Message::Broadcast(Broadcast::Saved))
-                        }
+                Request::Map(req) => match req {
+                    MapReq::Get(_) | MapReq::Cursor(_) => (),
+                    MapReq::Put(_) | MapReq::Post(_) | MapReq::Patch(_) | MapReq::Delete(_) => {
+                        self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
                     }
-                }
+                    MapReq::Save => {
+                        self.broadcast_to_others(peer, Message::Broadcast(Broadcast::Saved))
+                    }
+                },
                 Request::Get(_) => (),
                 Request::Put(req) => match req {
                     PutReq::Map(map_name, _) => self.broadcast_to_lobby(Message::Broadcast(
@@ -311,65 +319,6 @@ impl Server {
     }
 }
 
-fn check_map_path(fname: &str) -> bool {
-    // COMBAK: this is too restrictive, but proper sanitization is hard.
-    // TODO: add tests
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let re = RE.get_or_init(|| {
-        let c1 = r"[:alnum:]\(\)\[\]_,\-"; // safe 1st char in word
-        let cn = r"[:alnum:]\(\)\[\]_,\-\s\."; // safe non-first char in word
-        let max_len = 40; // max file name or dir name
-        let word = format!(r"[{}][{}]{{0,{}}}", c1, cn, max_len - 1);
-        Regex::new(&format!(r"^({}/)*({})$", word, word)).unwrap()
-    });
-    re.is_match(fname)
-}
-
-fn check_file_name(name: &str) -> bool {
-    // this is a very primitive sanitization to prevent path traversal attacks.
-    !(name.chars().any(std::path::is_separator) || name.starts_with(".") || name.is_empty())
-}
-
-pub fn set_layer_width<T: twmap::TilemapLayer>(
-    layer: &mut T,
-    width: usize,
-) -> Result<(), &'static str> {
-    let old_width = layer.tiles().shape().w as isize;
-    let diff = width as isize - old_width;
-
-    if width < 2 || width > 10000 {
-        return Err("invalid layer dimensions");
-    }
-
-    if diff > 0 {
-        extend_layer(layer, 0, 0, 0, diff as usize);
-    } else if diff < 0 {
-        shrink_layer(layer, 0, 0, 0, -diff as usize);
-    }
-
-    Ok(())
-}
-
-pub fn set_layer_height<T: twmap::TilemapLayer>(
-    layer: &mut T,
-    height: usize,
-) -> Result<(), &'static str> {
-    let old_height = layer.tiles().shape().h as isize;
-    let diff = height as isize - old_height;
-
-    if height < 2 || height > 10000 {
-        return Err("invalid layer dimensions");
-    }
-
-    if diff > 0 {
-        extend_layer(layer, 0, diff as usize, 0, 0);
-    } else if diff < 0 {
-        shrink_layer(layer, 0, -diff as usize, 0, 0);
-    }
-
-    Ok(())
-}
-
 fn is_automapper(path: &Path) -> bool {
     let extensions = &["rules", "rpp", "json"];
 
@@ -385,8 +334,14 @@ fn is_automapper(path: &Path) -> bool {
 }
 
 impl Server {
-    pub fn get_maps(&self) -> Vec<String> {
-        self.rooms().keys().cloned().collect()
+    pub fn get_maps(&self) -> Vec<MapDetail> {
+        self.rooms()
+            .iter()
+            .map(|(k, v)| MapDetail {
+                name: k.to_owned(),
+                users: v.peer_count(),
+            })
+            .collect()
     }
 
     pub fn get_map(&self, map_name: &str) -> Result<Vec<u8>, Error> {
@@ -414,10 +369,20 @@ impl Server {
         std::fs::create_dir_all(&path).map_err(|e| Error::ServerError(e.to_string().into()))?;
         std::fs::write(&map_path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
 
-        twmap::TwMap::parse_file(&map_path).map_err(|e| {
-            std::fs::remove_file(&map_path).ok();
-            Error::MapError(e.to_string())
-        })?;
+        // ensure file is a valid ddnet06 map
+        twmap::TwMap::parse_file(&map_path)
+            .map_err(|e| Error::MapError(e.to_string()))
+            .and_then(|map| {
+                if map.version != twmap::Version::DDNet06 {
+                    Err(Error::UnsupportedMapType)
+                } else {
+                    Ok(())
+                }
+            })
+            .map_err(|e| {
+                std::fs::remove_file(&map_path).ok();
+                e
+            })?;
 
         log::debug!("uploaded map '{}'", path.display());
 
@@ -449,12 +414,16 @@ impl Server {
                 map
             }
             CreationMethod::Blank { w, h } => {
-                let mut map =
-                    twmap::TwMap::empty(creation.version.unwrap_or(twmap::Version::DDNet06));
+                if let Some(version) = creation.version {
+                    if version != twmap::Version::DDNet06 {
+                        return Err(Error::UnsupportedMapType);
+                    }
+                }
+                let mut map = twmap::TwMap::empty(twmap::Version::DDNet06);
                 let mut group = twmap::Group::physics();
                 let layer = twmap::GameLayer {
                     tiles: twmap::CompressedData::Loaded(ndarray::Array2::default((
-                        w as usize, h as usize,
+                        h as usize, w as usize,
                     ))),
                 };
                 group.layers.push(twmap::Layer::Game(layer));
@@ -491,15 +460,43 @@ impl Server {
 
         self.rooms().remove(map_name);
 
-        let map_path: PathBuf = room.map_path().to_owned().into();
-        let config_path: PathBuf = map_path.with_extension("json");
+        std::fs::remove_file(room.cfg_path()).ok();
+        std::fs::remove_file(room.map_path())
+            .map_err(|e| Error::ServerError(e.to_string().into()))?;
+        std::fs::remove_dir(room.path()).ok();
 
-        std::fs::remove_file(&config_path).ok();
-        std::fs::remove_file(&map_path).map_err(|e| Error::ServerError(e.to_string().into()))?;
+        if room.path().exists() {
+            log::warn!(
+                "directory still exists after map deletion: '{}'",
+                room.path().display()
+            );
+        }
 
-        log::debug!("deleted map '{}'", map_path.display());
+        log::debug!("deleted map '{}'", room.path().display());
 
         Ok(())
+    }
+
+    pub fn get_info(&self, map_name: &str) -> Result<twmap::Info, Error> {
+        Ok(self.room(map_name)?.map().info.clone())
+    }
+
+    pub fn post_info(&self, map_name: &str, part_info: PartialInfo) -> Result<(), Error> {
+        let room = self.room(map_name)?;
+
+        part_info.check_self()?;
+
+        let mut map = room.map();
+        apply_partial!(part_info => map.info, author, version, credits, license, settings);
+
+        Ok(())
+    }
+
+    pub fn post_config(&self, map_name: &str, part_conf: PartialConfig) -> Result<(), Error> {
+        // let room = self.room(map_name)?.clone();
+        // apply_partial!(part_conf => room.config, name, access);
+        // Ok(())
+        Err(Error::ToDo)
     }
 
     pub fn get_images(&self, map_name: &str) -> Result<Vec<String>, Error> {
@@ -538,22 +535,62 @@ impl Server {
         Ok(buf)
     }
 
-    pub fn get_info(&self, map_name: &str) -> Result<twmap::Info, Error> {
-        Ok(self.room(map_name)?.map().info.clone())
-    }
-
-    pub fn post_info(&self, map_name: &str, part_info: PartialInfo) -> Result<(), Error> {
+    pub fn put_image(&self, map_name: &str, image_name: &str, create: Image) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
-        apply_partial!(part_info => map.info, author, version, credits, license, settings);
+
+        if image_name.len() > twmap::Image::MAX_NAME_LENGTH {
+            return Err(Error::InvalidFileName);
+        }
+
+        if !check_file_name(image_name) {
+            return Err(Error::InvalidFileName);
+        }
+
+        if room.map().images.len() == 64 as usize {
+            return Err(Error::MaxImagesReached);
+        }
+
+        let image = match create {
+            Image::External { size: _ } => {
+                // this also checks is_external_name
+                let size = twmap::constants::external_dimensions(image_name, room.map().version)
+                    .ok_or(Error::InvalidImage)?;
+
+                twmap::Image::External(twmap::ExternalImage {
+                    name: image_name.to_owned(),
+                    size,
+                })
+            }
+            Image::Embedded(file) => twmap::Image::Embedded(
+                twmap::EmbeddedImage::from_reader(image_name, std::io::Cursor::new(file.0))
+                    .map_err(|_| Error::InvalidImage)?,
+            ),
+        };
+
+        image
+            .check(&room.map(), &mut ())
+            .map_err(|e| Error::MapError(e.to_string()))?;
+
+        room.map().images.push(image);
         Ok(())
     }
 
-    pub fn post_config(&self, map_name: &str, part_conf: PartialConfig) -> Result<(), Error> {
-        // let room = self.room(map_name)?.clone();
-        // apply_partial!(part_conf => room.config, name, access);
-        // Ok(())
-        Err(Error::ToDo)
+    pub fn delete_image(&self, map_name: &str, image_index: u16) -> Result<(), Error> {
+        let room = self.room(map_name)?;
+        let mut map = room.map();
+
+        if image_index as usize >= map.images.len() {
+            return Err(Error::ImageNotFound);
+        }
+
+        if map.is_image_in_use(image_index) {
+            return Err(Error::ImageInUse);
+        }
+
+        map.images.remove(image_index as usize);
+        map.edit_image_indices(|i| i.map(|i| if i > image_index { i - 1 } else { i }));
+
+        Ok(())
     }
 
     pub fn get_envelopes(&self, map_name: &str) -> Result<Vec<String>, Error> {
@@ -578,20 +615,36 @@ impl Server {
 
     pub fn put_envelope(&self, map_name: &str, part_env: PartialEnvelope) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
 
-        if map.envelopes.len() == u16::MAX as usize {
+        if room.map().envelopes.len() == u16::MAX as usize {
             return Err(Error::MaxEnvelopesReached);
         }
 
+        // create
         let env = match part_env {
-            PartialEnvelope::Position(_) => twmap::Envelope::Position(twmap::Env::default()),
-            PartialEnvelope::Color(_) => twmap::Envelope::Color(twmap::Env::default()),
-            PartialEnvelope::Sound(_) => twmap::Envelope::Sound(twmap::Env::default()),
+            PartialEnvelope::Position(part_env) => twmap::Envelope::Position({
+                let mut env = twmap::Env::default();
+                apply_partial!(part_env => env, name, synchronized, points);
+                env
+            }),
+            PartialEnvelope::Color(part_env) => twmap::Envelope::Color({
+                let mut env = twmap::Env::default();
+                apply_partial!(part_env => env, name, synchronized, points);
+                env
+            }),
+            PartialEnvelope::Sound(part_env) => twmap::Envelope::Sound({
+                let mut env = twmap::Env::default();
+                apply_partial!(part_env => env, name, synchronized, points);
+                env
+            }),
         };
-        map.envelopes.push(env);
 
-        self.post_envelope(map_name, map.envelopes.len() as u16 - 1, part_env)
+        // check
+        env.check(&room.map(), &mut ())
+            .map_err(|e| Error::MapError(e.to_string()))?;
+
+        room.map().envelopes.push(env);
+        Ok(())
     }
 
     pub fn post_envelope(
@@ -600,33 +653,9 @@ impl Server {
         env_index: u16,
         part_env: PartialEnvelope,
     ) -> Result<(), Error> {
+        part_env.check_self();
         let room = self.room(map_name)?;
-
-        // checks
-        {
-            let map = room.map();
-
-            match &part_env {
-                PartialEnvelope::Position(part_env) => {
-                    if let Some(points) = &part_env.points {
-                        twmap::EnvPoint::check_all(points, &map)
-                            .map_err(|e| Error::MapError(e.to_string()))?;
-                    }
-                }
-                PartialEnvelope::Color(part_env) => {
-                    if let Some(points) = &part_env.points {
-                        twmap::EnvPoint::check_all(points, &map)
-                            .map_err(|e| Error::MapError(e.to_string()))?;
-                    }
-                }
-                PartialEnvelope::Sound(part_env) => {
-                    if let Some(points) = &part_env.points {
-                        twmap::EnvPoint::check_all(points, &map)
-                            .map_err(|e| Error::MapError(e.to_string()))?;
-                    }
-                }
-            }
-        }
+        part_env.check_map(&room.map());
 
         // edit
         {
@@ -681,7 +710,27 @@ impl Server {
             .collect())
     }
 
+    pub fn get_group(&self, map_name: &str, group_index: u16) -> Result<twmap::Group, Error> {
+        let room = self.room(map_name)?;
+        let map = room.map();
+        let group = map
+            .groups
+            .get(group_index as usize)
+            .ok_or(Error::GroupNotFound)?;
+
+        // we don't want to just group.clone() because of the layers
+        Ok(twmap::Group {
+            name: group.name.clone(),
+            offset: group.offset.clone(),
+            parallax: group.parallax.clone(),
+            layers: Vec::new(),
+            clipping: group.clipping.clone(),
+            clip: group.clip.clone(),
+        })
+    }
+
     pub fn put_group(&self, map_name: &str, part_group: PartialGroup) -> Result<(), Error> {
+        part_group.check_self()?;
         let room = self.room(map_name)?;
         let mut map = room.map();
 
@@ -702,6 +751,7 @@ impl Server {
         group_index: u16,
         part_group: PartialGroup,
     ) -> Result<(), Error> {
+        part_group.check_self()?;
         let room = self.room(map_name)?;
         let mut map = room.map();
         let group = map
@@ -709,9 +759,12 @@ impl Server {
             .get_mut(group_index as usize)
             .ok_or(Error::GroupNotFound)?;
 
-        apply_partial!(part_group => group, name, offset, parallax, clipping, clip);
-
-        Ok(())
+        if group.is_physics_group() {
+            Err(Error::EditPhysicsGroup)
+        } else {
+            apply_partial!(part_group => group, name, offset, parallax, clipping, clip);
+            Ok(())
+        }
     }
 
     pub fn delete_group(&self, map_name: &str, group_index: u16) -> Result<(), Error> {
@@ -744,32 +797,83 @@ impl Server {
             .collect())
     }
 
+    pub fn get_layer(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+    ) -> Result<twmap::Layer, Error> {
+        let room = self.room(map_name)?;
+        let map = room.map();
+        let layer = map
+            .groups
+            .get(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        macro_rules! default_physics_layer {
+            ($kind:ident, $struct:ident) => {
+                twmap::Layer::$kind(twmap::$struct {
+                    tiles: twmap::CompressedData::Loaded(Default::default()),
+                })
+            };
+        }
+
+        // we don't want to just layer.clone() because of the tiles
+        Ok(match layer {
+            twmap::Layer::Game(_) => default_physics_layer!(Game, GameLayer),
+            twmap::Layer::Front(_) => default_physics_layer!(Front, FrontLayer),
+            twmap::Layer::Tele(_) => default_physics_layer!(Tele, TeleLayer),
+            twmap::Layer::Speedup(_) => default_physics_layer!(Speedup, SpeedupLayer),
+            twmap::Layer::Switch(_) => default_physics_layer!(Switch, SwitchLayer),
+            twmap::Layer::Tune(_) => default_physics_layer!(Tune, TuneLayer),
+            twmap::Layer::Tiles(layer) => twmap::Layer::Tiles(twmap::TilesLayer {
+                name: layer.name.clone(),
+                detail: layer.detail.clone(),
+                color: layer.color.clone(),
+                color_env: layer.color_env.clone(),
+                color_env_offset: layer.color_env_offset.clone(),
+                image: layer.image.clone(),
+                tiles: twmap::CompressedData::Loaded(Default::default()),
+                automapper_config: layer.automapper_config.clone(),
+            }),
+            twmap::Layer::Quads(_) | twmap::Layer::Sounds(_) | twmap::Layer::Invalid(_) => {
+                layer.clone()
+            }
+        })
+    }
+
     pub fn put_layer(
         &self,
         map_name: &str,
         group_index: u16,
         part_layer: PartialLayer,
     ) -> Result<(), Error> {
+        part_layer.check_self()?;
         let room = self.room(map_name)?;
+        part_layer.check_map(&room.map())?;
+
         let mut map = room.map();
 
         let layers_count = map.groups.iter().flat_map(|g| g.layers.iter()).count();
+
+        if layers_count == u16::MAX as usize {
+            return Err(Error::MaxLayersReached);
+        }
 
         let game_layer_shape = map
             .find_physics_layer::<twmap::GameLayer>()
             .unwrap()
             .tiles
             .shape();
-        let game_layer_shape = (game_layer_shape.w, game_layer_shape.h);
+        let game_layer_shape = (game_layer_shape.h, game_layer_shape.w);
 
         let group = map
             .groups
             .get_mut(group_index as usize)
             .ok_or(Error::GroupNotFound)?;
-
-        if layers_count == u16::MAX as usize {
-            return Err(Error::MaxLayersReached);
-        }
 
         macro_rules! create_physics_layer {
             ($kind:ident, $struct:ident) => {{
@@ -794,12 +898,14 @@ impl Server {
 
         let layer = match part_layer {
             PartialLayer::Game(_) => return Err(Error::CreateGameLayer),
-            PartialLayer::Tiles(_) => {
-                let layer = twmap::TilesLayer::new(game_layer_shape);
+            PartialLayer::Tiles(part_layer) => {
+                let mut layer = twmap::TilesLayer::new(game_layer_shape);
+                apply_partial!(part_layer => layer, name, detail, color, color_env, color_env_offset, image, automapper_config);
                 twmap::Layer::Tiles(layer)
             }
-            PartialLayer::Quads(_) => {
-                let layer = twmap::QuadsLayer::default();
+            PartialLayer::Quads(part_layer) => {
+                let mut layer = twmap::QuadsLayer::default();
+                apply_partial!(part_layer => layer, name, detail, image);
                 twmap::Layer::Quads(layer)
             }
             PartialLayer::Front(_) => create_physics_layer!(Front, FrontLayer),
@@ -810,13 +916,7 @@ impl Server {
         };
 
         group.layers.push(layer);
-
-        self.post_layer(
-            map_name,
-            group_index,
-            group.layers.len() as u16 - 1,
-            part_layer,
-        )
+        Ok(())
     }
 
     pub fn post_layer(
@@ -826,59 +926,18 @@ impl Server {
         layer_index: u16,
         part_layer: PartialLayer,
     ) -> Result<(), Error> {
+        part_layer.check_self()?;
         let room = self.room(map_name)?;
-
-        // checks
-        {
-            let map = room.map();
-            let layer = map
-                .groups
-                .get(group_index as usize)
-                .ok_or(Error::GroupNotFound)?
-                .layers
-                .get(layer_index as usize)
-                .ok_or(Error::LayerNotFound)?;
-
-            match (layer, &part_layer) {
-                (
-                    twmap::Layer::Tiles(_),
-                    PartialLayer::Tiles(PartialTilesLayer {
-                        image: Some(Some(i)),
-                        ..
-                    }),
-                ) => {
-                    let image = map.images.get(*i as usize).ok_or(Error::ImageNotFound)?;
-                    let tile_dims_ok = image.size().w % 16 == 0 && image.size().h % 16 == 0;
-                    if !tile_dims_ok {
-                        return Err(Error::InvalidImageDimensions);
-                    }
-                }
-                (
-                    twmap::Layer::Tiles(_),
-                    PartialLayer::Tiles(PartialTilesLayer {
-                        color_env: Some(Some(i)),
-                        ..
-                    }),
-                ) => {
-                    let env = map
-                        .envelopes
-                        .get(*i as usize)
-                        .ok_or(Error::EnvelopeNotFound)?;
-                    if !matches!(env, twmap::Envelope::Color(_)) {
-                        return Err(Error::WrongEnvelopeType);
-                    }
-                }
-                _ => {}
-            };
-        }
+        part_layer.check_map(&room.map())?;
 
         // edit
         {
             let mut map = room.map();
-            let layer = map
+            let group = map
                 .groups
                 .get_mut(group_index as usize)
-                .ok_or(Error::GroupNotFound)?
+                .ok_or(Error::GroupNotFound)?;
+            let layer = group
                 .layers
                 .get_mut(layer_index as usize)
                 .ok_or(Error::LayerNotFound)?;
@@ -895,9 +954,25 @@ impl Server {
                 }};
             }
 
+            macro_rules! apply_physics_dimensions {
+                ($src:expr) => {{
+                    for layer in group.layers.iter_mut() {
+                        match layer {
+                            twmap::Layer::Game(layer) => apply_dimensions!($src => layer),
+                            twmap::Layer::Front(layer) => apply_dimensions!($src => layer),
+                            twmap::Layer::Tele(layer) => apply_dimensions!($src => layer),
+                            twmap::Layer::Speedup(layer) => apply_dimensions!($src => layer),
+                            twmap::Layer::Switch(layer) => apply_dimensions!($src => layer),
+                            twmap::Layer::Tune(layer) => apply_dimensions!($src => layer),
+                            _ => (),
+                        }
+                    }
+                }};
+            }
+
             match (layer, part_layer) {
-                (twmap::Layer::Game(layer), PartialLayer::Game(part_layer)) => {
-                    apply_dimensions!(part_layer => layer);
+                (twmap::Layer::Game(_), PartialLayer::Game(part_layer)) => {
+                    apply_physics_dimensions!(part_layer);
                 }
                 (twmap::Layer::Tiles(layer), PartialLayer::Tiles(part_layer)) => {
                     apply_dimensions!(part_layer => layer);
@@ -906,20 +981,20 @@ impl Server {
                 (twmap::Layer::Quads(layer), PartialLayer::Quads(part_layer)) => {
                     apply_partial!(part_layer => layer, name, detail, image);
                 }
-                (twmap::Layer::Front(layer), PartialLayer::Front(part_layer)) => {
-                    apply_dimensions!(part_layer => layer);
+                (twmap::Layer::Front(_), PartialLayer::Front(part_layer)) => {
+                    apply_physics_dimensions!(part_layer);
                 }
-                (twmap::Layer::Tele(layer), PartialLayer::Tele(part_layer)) => {
-                    apply_dimensions!(part_layer => layer);
+                (twmap::Layer::Tele(_), PartialLayer::Tele(part_layer)) => {
+                    apply_physics_dimensions!(part_layer);
                 }
-                (twmap::Layer::Speedup(layer), PartialLayer::Speedup(part_layer)) => {
-                    apply_dimensions!(part_layer => layer);
+                (twmap::Layer::Speedup(_), PartialLayer::Speedup(part_layer)) => {
+                    apply_physics_dimensions!(part_layer);
                 }
-                (twmap::Layer::Switch(layer), PartialLayer::Switch(part_layer)) => {
-                    apply_dimensions!(part_layer => layer);
+                (twmap::Layer::Switch(_), PartialLayer::Switch(part_layer)) => {
+                    apply_physics_dimensions!(part_layer);
                 }
-                (twmap::Layer::Tune(layer), PartialLayer::Tune(part_layer)) => {
-                    apply_dimensions!(part_layer => layer);
+                (twmap::Layer::Tune(_), PartialLayer::Tune(part_layer)) => {
+                    apply_physics_dimensions!(part_layer);
                 }
                 _ => return Err(Error::WrongLayerType),
             }
@@ -953,6 +1028,233 @@ impl Server {
         map.groups.remove(group_index as usize);
 
         Ok(())
+    }
+
+    pub fn get_tiles(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+    ) -> Result<Box<[u8]>, Error> {
+        let room = self.room(map_name)?;
+        let map = room.map();
+
+        let layer = map
+            .groups
+            .get(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        macro_rules! layer_data {
+            ($layer: ident) => {{
+                let data = $layer
+                    .tiles
+                    .unwrap_ref()
+                    .to_owned()
+                    .into_raw_vec()
+                    .into_boxed_slice();
+                let buf = ViewAsBytes::into_boxed_bytes(data);
+                Ok(buf)
+            }};
+        }
+
+        match layer {
+            twmap::Layer::Game(layer) => layer_data!(layer),
+            twmap::Layer::Tiles(layer) => layer_data!(layer),
+            twmap::Layer::Front(layer) => layer_data!(layer),
+            twmap::Layer::Tele(layer) => layer_data!(layer),
+            twmap::Layer::Speedup(layer) => layer_data!(layer),
+            twmap::Layer::Switch(layer) => layer_data!(layer),
+            twmap::Layer::Tune(layer) => layer_data!(layer),
+            twmap::Layer::Invalid(_) | twmap::Layer::Sounds(_) | twmap::Layer::Quads(_) => {
+                Err(Error::WrongLayerType)
+            }
+        }
+    }
+
+    pub fn post_tiles(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+        part_tiles: Tiles,
+    ) -> Result<(), Error> {
+        let room = self.room(map_name)?;
+        let mut map = room.map();
+        let layer = map
+            .groups
+            .get_mut(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get_mut(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        macro_rules! apply_tiles {
+            ($layer:ident) => {{
+                let shape = twmap::TilemapLayer::tiles($layer).shape();
+                let x = part_tiles.rect.x as usize;
+                let y = part_tiles.rect.y as usize;
+                let w = part_tiles.rect.w as usize;
+                let h = part_tiles.rect.h as usize;
+
+                if x + w > shape.w || y + h > shape.h {
+                    return Err(Error::TilesOutOfBounds);
+                }
+
+                let tiles = structview::View::view_slice(&part_tiles.tiles.0)
+                    .map_err(|_| Error::InvalidTiles)?;
+                let tiles = ndarray::ArrayView::from_shape((h, w), tiles)
+                    .map_err(|_| Error::InvalidTiles)?;
+
+                // TODO
+                // for tile in tiles.iter() {
+                //     tile.check()
+                // }
+
+                let mut view = twmap::TilemapLayer::tiles_mut($layer)
+                    .unwrap_mut()
+                    .slice_mut(ndarray::s![y..y + h, x..x + w]);
+                view.assign(&tiles);
+            }};
+        }
+
+        match layer {
+            twmap::Layer::Game(layer) => apply_tiles!(layer),
+            twmap::Layer::Tiles(layer) => apply_tiles!(layer),
+            twmap::Layer::Front(layer) => apply_tiles!(layer),
+            twmap::Layer::Tele(layer) => apply_tiles!(layer),
+            twmap::Layer::Speedup(layer) => apply_tiles!(layer),
+            twmap::Layer::Switch(layer) => apply_tiles!(layer),
+            twmap::Layer::Tune(layer) => apply_tiles!(layer),
+            twmap::Layer::Quads(_) | twmap::Layer::Sounds(_) | twmap::Layer::Invalid(_) => {
+                return Err(Error::WrongLayerType);
+            }
+        };
+
+        Ok(())
+    }
+
+    pub fn get_quad(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+        quad_index: u16,
+    ) -> Result<twmap::Quad, Error> {
+        let room = self.room(map_name)?;
+        let map = room.map();
+        let layer = map
+            .groups
+            .get(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        if let twmap::Layer::Quads(layer) = layer {
+            Ok(layer
+                .quads
+                .get(quad_index as usize)
+                .ok_or(Error::QuadNotFound)?
+                .clone())
+        } else {
+            Err(Error::WrongLayerType)
+        }
+    }
+
+    pub fn put_quad(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+        quad: twmap::Quad,
+    ) -> Result<(), Error> {
+        quad.check_self()?;
+        let room = self.room(map_name)?;
+        let mut map = room.map();
+        quad.check_map(&map)?;
+        let layer = map
+            .groups
+            .get_mut(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get_mut(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        if let twmap::Layer::Quads(layer) = layer {
+            // COMBAK: this is a lower bound
+            if layer.quads.len() == u16::MAX as usize {
+                Err(Error::MaxQuadsReached)
+            } else {
+                layer.quads.push(quad);
+                Ok(())
+            }
+        } else {
+            Err(Error::WrongLayerType)
+        }
+    }
+
+    pub fn post_quad(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+        quad_index: u16,
+        quad: twmap::Quad,
+    ) -> Result<(), Error> {
+        quad.check_self()?;
+        let room = self.room(map_name)?;
+        let mut map = room.map();
+        quad.check_map(&map)?;
+        let layer = map
+            .groups
+            .get_mut(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get_mut(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        if let twmap::Layer::Quads(layer) = layer {
+            let cur_quad = layer
+                .quads
+                .get_mut(quad_index as usize)
+                .ok_or(Error::QuadNotFound)?;
+            let _ = std::mem::replace(cur_quad, quad);
+            Ok(())
+        } else {
+            Err(Error::WrongLayerType)
+        }
+    }
+
+    pub fn delete_quad(
+        &self,
+        map_name: &str,
+        group_index: u16,
+        layer_index: u16,
+        quad_index: u16,
+    ) -> Result<(), Error> {
+        let room = self.room(map_name)?;
+        let mut map = room.map();
+        let layer = map
+            .groups
+            .get_mut(group_index as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get_mut(layer_index as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        if let twmap::Layer::Quads(layer) = layer {
+            if quad_index as usize >= layer.quads.len() {
+                Err(Error::QuadNotFound)
+            } else {
+                layer.quads.remove(quad_index as usize);
+                Ok(())
+            }
+        } else {
+            Err(Error::WrongLayerType)
+        }
     }
 
     pub fn get_automappers(&self, map_name: &str) -> Result<Vec<String>, Error> {
@@ -1077,59 +1379,32 @@ impl Server {
         }
     }
 
-    pub fn post_tiles(
-        &self,
-        map_name: &str,
-        group_index: u16,
-        layer_index: u16,
-        part_tiles: Tiles,
-    ) -> Result<(), Error> {
+    pub fn patch_image(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
         let mut map = room.map();
-        let layer = map
-            .groups
-            .get_mut(group_index as usize)
-            .ok_or(Error::GroupNotFound)?
-            .layers
-            .get_mut(layer_index as usize)
-            .ok_or(Error::LayerNotFound)?;
 
-        macro_rules! apply_tiles {
-            ($layer:ident) => {{
-                let shape = twmap::TilemapLayer::tiles($layer).shape();
-                let x = part_tiles.rect.x as usize;
-                let y = part_tiles.rect.y as usize;
-                let w = part_tiles.rect.w as usize;
-                let h = part_tiles.rect.h as usize;
-
-                if x + w > shape.w || y + h > shape.h {
-                    return Err(Error::TilesOutOfBounds);
-                }
-
-                let tiles = structview::View::view_slice(&part_tiles.tiles.0)
-                    .map_err(|_| Error::InvalidTiles)?;
-                let tiles = ndarray::ArrayView::from_shape((h, w), tiles)
-                    .map_err(|_| Error::InvalidTiles)?;
-
-                let mut view = twmap::TilemapLayer::tiles_mut($layer)
-                    .unwrap_mut()
-                    .slice_mut(ndarray::s![y..y + h, x..x + w]);
-                view.assign(&tiles);
-            }};
+        if src as usize > map.images.len() {
+            return Err(Error::ImageNotFound);
         }
 
-        match layer {
-            twmap::Layer::Game(layer) => apply_tiles!(layer),
-            twmap::Layer::Tiles(layer) => apply_tiles!(layer),
-            twmap::Layer::Front(layer) => apply_tiles!(layer),
-            twmap::Layer::Tele(layer) => apply_tiles!(layer),
-            twmap::Layer::Speedup(layer) => apply_tiles!(layer),
-            twmap::Layer::Switch(layer) => apply_tiles!(layer),
-            twmap::Layer::Tune(layer) => apply_tiles!(layer),
-            twmap::Layer::Quads(_) | twmap::Layer::Sounds(_) | twmap::Layer::Invalid(_) => {
-                return Err(Error::WrongLayerType);
-            }
-        };
+        if tgt as usize > map.images.len() {
+            return Err(Error::ImageNotFound);
+        }
+
+        map.edit_image_indices(|i| {
+            i.map(|i| {
+                if i == src {
+                    tgt
+                } else if src < i && i <= tgt {
+                    i - 1
+                } else {
+                    i
+                }
+            })
+        });
+
+        let env = map.images.remove(src as usize);
+        map.images.insert(tgt as usize, env);
 
         Ok(())
     }
@@ -1145,6 +1420,18 @@ impl Server {
         if tgt as usize > map.envelopes.len() {
             return Err(Error::EnvelopeNotFound);
         }
+
+        map.edit_env_indices(|i| {
+            i.map(|i| {
+                if i == src {
+                    tgt
+                } else if src < i && i <= tgt {
+                    i - 1
+                } else {
+                    i
+                }
+            })
+        });
 
         let env = map.envelopes.remove(src as usize);
         map.envelopes.insert(tgt as usize, env);
@@ -1206,6 +1493,31 @@ impl Server {
             .insert(tgt.1 as usize, layer);
 
         Ok(())
+    }
+
+    pub fn patch_quad(&self, map_name: &str, src: (u16, u16, u16), tgt: u16) -> Result<(), Error> {
+        let room = self.room(map_name)?;
+        let mut map = room.map();
+
+        let layer = map
+            .groups
+            .get_mut(src.0 as usize)
+            .ok_or(Error::GroupNotFound)?
+            .layers
+            .get_mut(src.1 as usize)
+            .ok_or(Error::LayerNotFound)?;
+
+        if let twmap::Layer::Quads(layer) = layer {
+            if src.2 as usize >= layer.quads.len() || tgt as usize >= layer.quads.len() {
+                Err(Error::QuadNotFound)
+            } else {
+                let quad = layer.quads.remove(src.0 as usize);
+                layer.quads.insert(tgt as usize, quad);
+                Ok(())
+            }
+        } else {
+            Err(Error::WrongLayerType)
+        }
     }
 
     pub fn get_users(&self, map_name: &str) -> Result<usize, Error> {

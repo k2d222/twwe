@@ -5,32 +5,45 @@ use serde::{Serialize, Serializer};
 
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
-    // 404 not found
     MapNotFound,
     ImageNotFound,
     EnvelopeNotFound,
     GroupNotFound,
     LayerNotFound,
+    QuadNotFound,
     AutomapperNotFound,
+    NotFound(&'static str),
 
-    // 400 bad request
-    InvalidMapName,
-    InvalidFileName,
-    MapNameTaken,
-    #[serde(serialize_with = "serialize_display")]
-    MapError(String),
-    RoomNotEmpty,
-    WrongEnvelopeType,
-    WrongLayerType,
+    MaxEnvelopesReached,
+    MaxImagesReached,
     MaxGroupsReached,
     MaxLayersReached,
-    MaxImagesReached,
-    MaxEnvelopesReached,
+    MaxQuadsReached,
+    TooMany(&'static str),
+
+    InvalidImage,
+    InvalidTiles,
+    InvalidMapName,
+    InvalidFileName,
     InvalidImageDimensions,
     InvalidLayerDimensions,
+    InvalidClip,
+    Invalid(&'static str),
+
+    FieldTooLong(&'static str),
+
+    WrongEnvelopeType,
+    WrongLayerType,
+    WrongTilesImage,
+
+    MapNameTaken,
+    UnsupportedMapType,
+    RoomNotEmpty,
     TilesOutOfBounds,
-    InvalidTiles,
     LayerHasNoImage,
+
+    #[serde(serialize_with = "serialize_display")]
+    MapError(String),
     AutomapperError(String),
 
     // 403 forbidden
@@ -40,12 +53,15 @@ pub enum Error {
     CreatePhysicsLayerOutOfPhysicsGroup,
     CreateDuplicatePhysicsLayer,
     ChangePhysicsLayerGroup,
+    EditPhysicsGroup,
     AlreadyJoined,
     NotJoined,
+    ImageInUse,
     EnvelopeInUse,
 
     // 500 internal server error
     ServerError(Cow<'static, str>),
+    #[allow(unused)]
     ToDo,
 }
 
@@ -57,12 +73,18 @@ impl IntoResponse for Error {
             Error::EnvelopeNotFound => (StatusCode::NOT_FOUND, "envelope not found".to_owned()),
             Error::GroupNotFound => (StatusCode::NOT_FOUND, "group not found".to_owned()),
             Error::LayerNotFound => (StatusCode::NOT_FOUND, "layer not found".to_owned()),
+            Error::QuadNotFound => (StatusCode::NOT_FOUND, "quad not found".to_owned()),
             Error::AutomapperNotFound => (StatusCode::NOT_FOUND, "automapper not found".to_owned()),
+            Error::NotFound(e) => (StatusCode::NOT_FOUND, format!("{} not found", e)),
 
             Error::InvalidMapName => (StatusCode::BAD_REQUEST, "invalid map name".to_owned()),
             Error::InvalidFileName => (StatusCode::BAD_REQUEST, "invalid file name".to_owned()),
             Error::MapError(e) => (StatusCode::BAD_REQUEST, format!("map error: {}", e)),
             Error::MapNameTaken => (StatusCode::BAD_REQUEST, "map name is taken".to_owned()),
+            Error::UnsupportedMapType => (
+                StatusCode::BAD_REQUEST,
+                "teeworlds map types are not supported".to_owned(),
+            ),
             Error::RoomNotEmpty => (StatusCode::BAD_REQUEST, "room must be empty".to_owned()),
             Error::WrongEnvelopeType => (StatusCode::BAD_REQUEST, "wrong envelope type".to_owned()),
             Error::WrongLayerType => (StatusCode::BAD_REQUEST, "wrong layer type".to_owned()),
@@ -82,6 +104,11 @@ impl IntoResponse for Error {
                 StatusCode::BAD_REQUEST,
                 "maximum number of envelopes reached".to_owned(),
             ),
+            Error::MaxQuadsReached => (
+                StatusCode::BAD_REQUEST,
+                "maximum number of quads reached".to_owned(),
+            ),
+            Error::TooMany(e) => (StatusCode::BAD_REQUEST, format!("too many {}", e)),
             Error::InvalidImageDimensions => (
                 StatusCode::BAD_REQUEST,
                 "invalid image dimensions".to_owned(),
@@ -92,10 +119,23 @@ impl IntoResponse for Error {
             ),
             Error::TilesOutOfBounds => (StatusCode::BAD_REQUEST, "tiles out of bounds".to_owned()),
             Error::InvalidTiles => (StatusCode::BAD_REQUEST, "invalid tiles".to_owned()),
+            Error::InvalidImage => (StatusCode::BAD_REQUEST, "invalid image".to_owned()),
             Error::LayerHasNoImage => (StatusCode::BAD_REQUEST, "layer has no image".to_owned()),
+            Error::FieldTooLong(f) => (StatusCode::BAD_REQUEST, format!("field too long: '{f}'")),
+
             Error::AutomapperError(e) => {
                 (StatusCode::BAD_REQUEST, format!("automapper error: {e}"))
             }
+            Error::InvalidClip => (StatusCode::BAD_REQUEST, "invalid clip value".to_owned()),
+            Error::Invalid(e) => (StatusCode::BAD_REQUEST, format!("invalid {}", e)),
+            Error::WrongTilesImage => (
+                StatusCode::BAD_REQUEST,
+                "image not suitable for tiles layer".to_owned(),
+            ),
+            Error::EditPhysicsGroup => (
+                StatusCode::BAD_REQUEST,
+                "cannot edit physics group parameters".to_owned(),
+            ),
 
             Error::DeletePhysicsGroup => (
                 StatusCode::FORBIDDEN,
@@ -126,6 +166,7 @@ impl IntoResponse for Error {
                 "already joined another map".to_owned(),
             ),
             Error::NotJoined => (StatusCode::FORBIDDEN, "not joined any map".to_owned()),
+            Error::ImageInUse => (StatusCode::FORBIDDEN, "image in use".to_owned()),
             Error::EnvelopeInUse => (StatusCode::FORBIDDEN, "envelope in use".to_owned()),
 
             Error::ServerError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.into_owned()),
