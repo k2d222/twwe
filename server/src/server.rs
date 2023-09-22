@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
 };
 
@@ -321,20 +321,6 @@ impl Server {
         std::fs::remove_file(&upload_path).ok();
 
         log::info!("disconnected {}", &addr);
-    }
-}
-
-fn is_automapper(path: &Path) -> bool {
-    let extensions = &["rules", "rpp", "json"];
-
-    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-        if extensions.contains(&ext) {
-            true
-        } else {
-            false
-        }
-    } else {
-        false
     }
 }
 
@@ -1262,7 +1248,7 @@ impl Server {
         }
     }
 
-    pub fn get_automappers(&self, map_name: &str) -> Result<Vec<String>, Error> {
+    pub fn get_automappers(&self, map_name: &str) -> Result<Vec<AutomapperDetail>, Error> {
         let path = self.room(map_name)?.path().to_owned();
 
         Ok(std::fs::read_dir(path)
@@ -1270,8 +1256,28 @@ impl Server {
             .filter_map(|e| e.ok())
             .filter_map(|e| {
                 let path = e.path();
-                if is_automapper(&path) {
-                    Some(e.file_name().to_string_lossy().into_owned())
+                if let Some(kind) = is_automapper(&path) {
+                    let name = e.file_name().to_string_lossy().into_owned();
+                    let image = path
+                        .file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned();
+                    let configs = (kind == AutomapperKind::DDNet)
+                        .then(|| {
+                            let file = std::fs::read_to_string(&path).ok()?;
+                            let am =
+                                twmap::automapper::Automapper::parse(image.clone(), &file).ok()?;
+                            Some(am.configs.iter().map(|c| c.name.to_owned()).collect())
+                        })
+                        .flatten();
+
+                    Some(AutomapperDetail {
+                        name,
+                        image,
+                        kind,
+                        configs,
+                    })
                 } else {
                     None
                 }
@@ -1287,7 +1293,7 @@ impl Server {
         let mut path = self.room(map_name)?.path().to_owned();
         path.push(am);
 
-        if !is_automapper(&path) {
+        if !is_automapper(&path).is_some() {
             return Err(Error::AutomapperNotFound);
         }
 
@@ -1304,7 +1310,7 @@ impl Server {
         let mut path = self.room(map_name)?.path().to_owned();
         path.push(am);
 
-        if !is_automapper(&path) {
+        if !is_automapper(&path).is_some() {
             return Err(Error::InvalidFileName);
         }
 
@@ -1321,7 +1327,7 @@ impl Server {
         let mut path = self.room(map_name)?.path().to_owned();
         path.push(am);
 
-        if !is_automapper(&path) {
+        if !is_automapper(&path).is_some() {
             return Err(Error::InvalidFileName);
         }
 

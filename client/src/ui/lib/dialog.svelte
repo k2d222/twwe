@@ -36,10 +36,10 @@
     >
       {#if controls === 'yesno'}
           <Modal
+            open
             modalHeading={message}
             primaryButtonText="Yes"
             secondaryButtonText="No"
-            danger
             preventCloseOnClickOutside
             on:close={() => onNo(id)}
             on:submit={() => onYes(id)}

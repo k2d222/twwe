@@ -171,7 +171,7 @@
               <div class="hover">
                 <span>{img.name}</span>
               </div>
-              <button on:click={() => onDeleteImage(img)}>&times;</button>
+              <button on:click|stopPropagation={() => onDeleteImage(img)}>&times;</button>
             </button>
           {/each}
         </div>

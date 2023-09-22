@@ -33,7 +33,7 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, type Ctor } from '../ui/lib/util'
 import { Config as AutomapperConfig, automap } from '../twmap/automap'
-import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, uvFromJson } from '../server/convert'
+import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, stringToResIndex, uvFromJson } from '../server/convert'
 import type { Brush } from '../ui/lib/editor'
 import type { EditTile, Recv } from '../server/protocol'
 
@@ -398,7 +398,7 @@ export class RenderMap {
           rlayer.texture = this.blankTexture
         }
         else {
-          const index = parseInt(part.image.slice(0, part.image.indexOf('_')))
+          const index = stringToResIndex(part.image)[0]
           rlayer.layer.image = this.map.images[index]
           rlayer.texture = this.textures[index]
         }

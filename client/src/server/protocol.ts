@@ -56,8 +56,8 @@ export interface AutomapperDetail {
   name: string
   image: string
   kind: AutomapperKind
-  file: string | null
-  configs: string[]
+  file?: string
+  configs?: string[]
 }
 
 export type MapCreation = {
@@ -104,7 +104,7 @@ export interface MapGetResp {
   layer: MapDir.Layer
   tiles: Base64
   quad: MapDir.Quad
-  automappers: string[]
+  automappers: AutomapperDetail[]
   automapper: string
 }
 

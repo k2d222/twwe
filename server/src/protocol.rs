@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use fixed::types::{I22F10, I27F5};
 use serde::{Deserialize, Serialize};
+use serde_with::{rust::double_option, serde_as, skip_serializing_none, DisplayFromStr};
 use twmap::{AutomapperConfig, EnvPoint, Position, Volume};
 use vek::{Extent2, Rect, Rgba, Vec2};
 
@@ -39,6 +40,24 @@ pub struct MapConfig {
 pub struct MapDetail {
     pub name: String,
     pub users: usize,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub enum AutomapperKind {
+    #[serde(rename = "rules")]
+    DDNet,
+    #[serde(rename = "json")]
+    Teeworlds,
+    #[serde(rename = "rpp")]
+    RulesPP,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AutomapperDetail {
+    pub name: String,
+    pub image: String,
+    pub kind: AutomapperKind,
+    pub configs: Option<Vec<String>>,
 }
 
 // TILES
@@ -169,37 +188,32 @@ pub struct PartialPhysicsLayer {
     pub height: Option<usize>,
 }
 
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialTilesLayer {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub width: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Rgba<u8>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "double_option")]
     pub color_env: Option<Option<u16>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub color_env_offset: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "double_option")]
     pub image: Option<Option<u16>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub automapper_config: Option<AutomapperConfig>,
 }
 
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialQuadsLayer {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(with = "double_option")]
     pub image: Option<Option<u16>>,
 }
 
@@ -421,7 +435,7 @@ pub enum Response {
     Layer(Box<twmap::Layer>),
     Tiles(Base64),
     Quad(Box<twmap::Quad>),
-    Automappers(Vec<String>),
+    Automappers(Vec<AutomapperDetail>),
     Automapper(String),
     Users(usize),
     Cursors(HashMap<String, Cursor>),

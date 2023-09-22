@@ -171,18 +171,26 @@ export function layerKindToTilesLayerFlags(kind: MapDir.LayerKind) {
   else throw "not a tile layer"
 }
 
-export function resIndexToString(index: number, name: string): string {
-  if (name === '') {
-    return index + ''
-  }
-  else {
-    return `${index}_${name}`
-  }
+export function resIndexToString(index: number, _name: string): string {
+  // COMBAK: for now, server does not always support "index_name" notation
+  // if (name === '') {
+  //   return index + ''
+  // }
+  // else {
+  //   return `${index}_${name}`
+  // }
+
+  return index as any
 }
 
 export function stringToResIndex(str: string): [number, string] {
-  const underscore = str.indexOf('_')
-  if (underscore === -1) {
-    return [parseInt(str.slice(0, underscore)), str.slice(underscore + 1)]
-  }
+  // COMBAK: for now, server does not always support "index_name" notation
+  // const underscore = str.indexOf('_')
+  // if (underscore === -1) {
+  //   return [parseInt(str), '']
+  // }
+  // else {
+  //   return [parseInt(str.slice(0, underscore)), str.slice(underscore + 1)]
+  // }
+  return [str as any, '']
 }

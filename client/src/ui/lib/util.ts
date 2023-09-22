@@ -41,12 +41,12 @@ export async function createMap(httpRoot: string, name: string, create: MapCreat
   })
 }
 
-export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {
-  await fetch(`${httpRoot}/maps/${mapName}/map/images/${imageName}`, {
-    method: 'POST',
-    body: file
-  })
-}
+// export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {
+//   await fetch(`${httpRoot}/maps/${mapName}/map/images/${imageName}`, {
+//     method: 'POST',
+//     body: file
+//   })
+// }
 
 export async function decodePng(file: Blob): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {

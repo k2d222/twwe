@@ -1,36 +1,45 @@
 <script lang="ts">
-  import type { MapInfo } from '../../twmap/map'
+  import { sync2 } from '../../server/util'
+  import { server, map } from '../global'
 
-  export let info: MapInfo
+
+  $: syncInfo = sync2($server, $map.info, {
+    query: 'map/post/info'
+  }, (info) => ['map/post/info', info])
 
   function onChangeSettings(e: Event & { currentTarget: HTMLTextAreaElement }) {
-    info.settings = e.currentTarget.value.split('\n').filter(s => s !== '')
+    $syncInfo.settings = e.currentTarget.value.split('\n').filter(s => s !== '')
+    onChange()
+  }
+
+  function onChange() {
+    $syncInfo = { ...$syncInfo }
   }
 </script>
 
 <div class="edit-info">
   <label>
     Author(s)
-    <input type="text" bind:value={info.author} maxlength="31" />
+    <input type="text" on:change={onChange} bind:value={$syncInfo.author} maxlength="31" />
   </label>
   <label>
     Version
-    <input type="text" bind:value={info.version} maxlength="15" />
+    <input type="text" on:change={onChange} bind:value={$syncInfo.version} maxlength="15" />
   </label>
   <label>
     Credits
-    <input type="text" bind:value={info.credits} maxlength="127" />
+    <input type="text" on:change={onChange} bind:value={$syncInfo.credits} maxlength="127" />
   </label>
   <label>
     License
-    <input type="text" bind:value={info.license} maxlength="31" />
+    <input type="text" on:change={onChange} bind:value={$syncInfo.license} maxlength="31" />
   </label>
   <label>
     Server Settings
     <textarea
       rows="5"
       cols="50"
-      value={info.settings.join('\n')}
+      value={$syncInfo.settings.join('\n')}
       on:change={onChangeSettings}
       title="Server settings allow running commands on the server when the map is loaded."
     />

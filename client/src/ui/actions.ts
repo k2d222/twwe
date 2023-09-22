@@ -1,4 +1,4 @@
-import { showDialog, showError, showInfo } from "./lib/dialog"
+import { clearDialog, showDialog, showError, showInfo } from "./lib/dialog"
 import { server, serverConfig, rmap, peers } from "./global"
 import { get } from "svelte/store"
 import { navigate } from 'svelte-routing'
@@ -6,10 +6,10 @@ import { download } from "./lib/util"
 
 export async function saveMap() {
   const server_ = get(server)
-
+  const id = showInfo('Saving map...', 'none')
   try {
-    showInfo('Saving map...', 'none')
     await server_.query('map/save', undefined)
+    clearDialog(id)
     showInfo('Map saved on the server.', 'closable')
   } catch (e) {
     showError('Failed to save map: ' + e)
@@ -51,15 +51,4 @@ export async function goToLobby() {
 
   await server_.query('leave', undefined)
   navigate('/')
-}
-
-export async function saveInfo() {
-  const server_ = get(server)
-  const rmap_ = get(rmap)
-
-  try {
-    await server_.query('map/post/info', rmap_.map.info)
-  } catch (e) {
-    showError('Failed to edit map info: ' + e)
-  }
 }

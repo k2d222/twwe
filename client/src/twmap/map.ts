@@ -22,6 +22,7 @@ import { Group } from './group'
 import { Image } from './image'
 import { ColorEnvelope, PositionEnvelope, SoundEnvelope } from './envelope'
 import { fromString as UuidFromString } from './uuid'
+import { QuadsLayer } from './quadsLayer'
 
 export type Ctor<T> = new (...args: any[]) => T
 export type PhysicsLayer =
@@ -108,6 +109,13 @@ export class Map {
 
   physicsLayer<T extends PhysicsLayer>(ctor: Ctor<T>): T {
     return this.physicsGroup().layers.find(l => l instanceof ctor) as T
+  }
+
+  imageInUse(image: number | Image) {
+    if (typeof image === 'number')
+      image = this.images.at(image)
+
+    return this.groups.findIndex(g => g.layers.findIndex(l => (l instanceof TilesLayer || l instanceof QuadsLayer) && l.image === image) !== -1) !== -1
   }
 
   private loadInfo(df: DataFile) {

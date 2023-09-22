@@ -6,7 +6,6 @@
   import Headerbar from '../lib/headerbar.svelte'
   import Fence from '../lib/fence.svelte'
   import { onDestroy } from 'svelte'
-  import type { AutomapperKind } from '../../server/protocol'
 
   export let name: string
 
@@ -14,12 +13,7 @@
     await $server.query('join', name)
     const map_ = await queryMap($serverConfig.httpUrl, name)
     const ams = await $server.query('map/get/automappers', undefined)
-    $automappers = Object.fromEntries(ams.map(name => [name, {
-      name,
-      kind: name.slice(name.lastIndexOf('.') + 1) as AutomapperKind,
-      image: name.slice(0, name.lastIndexOf('.')),
-      file: null,
-    }]))
+    $automappers = Object.fromEntries(ams.map(am => [am.name, am]))
     $map = map_
   })()
 

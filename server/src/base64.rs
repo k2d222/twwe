@@ -1,6 +1,7 @@
 use base64::Engine;
 use serde::{de::Error, de::Unexpected, Deserialize, Serialize};
 
+// TODO: use serde_with's base64?
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Base64(pub Vec<u8>);
 

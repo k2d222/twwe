@@ -6,16 +6,15 @@
     lintToString,
   } from '../../twmap/automap'
   import { showError, showInfo, showWarning } from './dialog'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { server, automappers } from '../global'
-  import { AutomapperKind } from '../../server/protocol'
+  import type { Recv } from 'src/server/protocol'
 
   export let layer: TilesLayer
 
   let dispatch = createEventDispatcher<{change: number}>()
 
-  // $: configs = $automappers[layer.image?.name + '.rules']?.configs ?? []
-  $: configs = [] as string[]
+  $: configs = $automappers[layer.image?.name + '.rules']?.configs ?? []
 
   async function onFileChange(e: Event) {
     const file = (e.target as HTMLInputElement).files[0]
@@ -51,6 +50,19 @@
   async function onConfig() {
     dispatch('change', layer.automapper.config)
   }
+
+  function onSync([_g, _l, e]: Recv['map/post/layer']) {
+    if ('automapper_config' in e || 'image' in e)
+      layer = layer
+  }
+
+  onMount(() => {
+    $server.on('map/post/layer', onSync)
+  })
+
+  onDestroy(() => {
+    $server.off('map/post/layer', onSync)
+  })
 </script>
 
 <div class="edit-automapper">

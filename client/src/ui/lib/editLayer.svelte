@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
-  import { type FormEvent, type FormInputEvent, uploadImage, layerKind } from './util'
+  import type { Envelope } from '../../twmap/map'
+  import { type FormEvent, type FormInputEvent, layerKind } from './util'
   import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
@@ -15,9 +16,9 @@
   // import { automap, parse, type Config as AutomapperConfig } from '../../twmap/automap'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
-  import { dataToTiles, resIndexToString, stringToResIndex, tilesLayerFlagsToLayerKind } from '../../server/convert'
-  import { sync } from '../../server/util'
-  import type { Writable } from 'svelte/store'
+  import { bytesToBase64, dataToTiles, resIndexToString, stringToResIndex, tilesLayerFlagsToLayerKind } from '../../server/convert'
+  import { pick, read, skip, sync } from '../../server/util'
+  import type { Readable, Writable } from 'svelte/store'
   import type * as Info from '../../twmap/types'
   import Number from './number.svelte'
 
@@ -27,10 +28,6 @@
   $: rlayer = l === -1 ? null : rgroup.layers[l]
   $: group = rgroup === null ? null : rgroup.group
   $: layer = rlayer === null ? null : rlayer.layer as TilesLayer | QuadsLayer
-  $: colorEnvelopes = $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope)
-
-  $: images = $rmap.map.images
-  $: image = layer === null ? null : layer.image
 
   function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
@@ -76,19 +73,8 @@
     }
   }
 
-  function automapperConfig(layer: TilesLayer): string | null {
-    // if (
-    //   layer.automapper.config === -1 ||
-    //   !layer.image ||
-    //   !(layer.image.name + '.rules' in $automappers) ||
-    //   layer.automapper.config >= $automappers[layer.image.name + '.rules'].configs.length
-    // ) {
-    //   return null
-    // }
-
-    // return $automappers[layer.image.name + '.rules'][layer.automapper.config]
-    // TODO
-    return '??'
+  function amCfgName(img: string, cfg: number): string {
+    return $automappers[img + '.rules']?.configs?.at(cfg) ?? 'None'
   }
 
   let imagePickerOpen = false
@@ -122,10 +108,10 @@
           showInfo('Creating image...', 'none')
           const index = $rmap.map.images.length
           await $server.query('map/put/image', [name, { size: { w: 1024, h: 1024 } }])
-          const img = new Image()
-          img.loadExternal(url)
-          img.name = name
-          $rmap.addImage(img)
+          // const img = new Image()
+          // img.loadExternal(url)
+          // img.name = name
+          // $rmap.addImage(img)
           await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
           clearDialog()
         } catch (e) {
@@ -137,33 +123,25 @@
 
   async function uploadImageAndPick(file: Blob, name: string) {
     try {
-      showInfo('Uploading image…', 'none')
-      const data = await decodePng(file)
-      const img = new Image()
-      img.loadEmbedded(data)
-      img.name = name
-      $rmap.addImage(img)
-      await uploadImage($serverConfig.httpUrl, $rmap.map.name, name, file) // TODO return index
-      const index = $rmap.map.images.length
+      // await uploadImage($serverConfig.httpUrl, $rmap.map.name, name, file) // TODO return index
+      const buf = new Uint8Array(await file.arrayBuffer())
+      await $server.query('map/put/image', [name, bytesToBase64(buf)])
+      const index = $rmap.map.images.length - 1
       await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
-      showInfo('Image uploaded and selected.')
     } catch (e) {
       showError('Failed to upload image: ' + e)
     }
-    images = images // update the component
   }
 
   async function onImageDelete(e: Event & { detail: Image }) {
     const image = e.detail
-
-    try {
-      const index = $rmap.map.images.indexOf(image)
-      await $server.query('map/delete/image', index)
-      $rmap.removeImage(index)
-      images = images // update the component
-    } catch (e) {
-      showError('Failed to delete image: ' + e)
+    if ($rmap.map.imageInUse(image)) {
+      showError('Cannot delete image in use')
+      return
     }
+
+    const index = $rmap.map.images.indexOf(image)
+    await $server.query('map/delete/image', index)
   }
 
   let syncName: Writable<string>
@@ -173,25 +151,29 @@
   let syncColor: Writable<Info.Color>
   let syncColorEnv: Writable<number>
   let syncColorEnvOff: Writable<number>
+  let syncImgs: Readable<Image[]>
+  let syncImg: Readable<Image | null>
+  let syncAmCfg: Readable<number | null>
+  let syncColEnvs: Readable<Envelope[]>
 
   $: syncGroup = sync(g, {
     server: $server,
     query: 'map/patch/layer',
     send: s => [[g, l], [s, 0]],
-    recv: ([[g1, l1], [g2, _]]) => g1 === g && l1 === l ? g2 : null, //  COMBAK: race condition with g/l?
+    recv: ([[g1, l1], [g2, _]]) => g1 === g && l1 === l ? g2 : skip, //  COMBAK: race condition with g/l?
   })
   $: syncOrder = sync(l, {
     server: $server,
     query: 'map/patch/layer',
     send: s => [[g, l], [g, s]],
-    recv: ([[g1, l1], [_, l2]]) => g1 === g && l1 === l ? l2 : null,
+    recv: ([[g1, l1], [_, l2]]) => g1 === g && l1 === l ? l2 : skip,
   })
   $: if (layer) {
     syncName = sync(layer.name, {
       server: $server,
       query: 'map/post/layer',
       send: s => [g, l, { type: layerKind(layer), name: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'name' in e ? e.name : null,
+      recv: ([eg, el, e]) => eg === g && el === l && 'name' in e ? e.name : skip,
     })
   }
   $: if (layer) {
@@ -199,7 +181,7 @@
       server: $server,
       query: 'map/post/layer',
       send: s => [g, l, { type: layerKind(layer), detail: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'detail' in e ? e.detail : null,
+      recv: ([eg, el, e]) => eg === g && el === l && 'detail' in e ? e.detail : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
@@ -207,7 +189,7 @@
       server: $server,
       query: 'map/post/layer',
       send: s => [g, l, { type: layerKind(layer), width: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'width' in e ? e.width : null,
+      recv: ([eg, el, e]) => eg === g && el === l && 'width' in e ? e.width : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
@@ -215,7 +197,7 @@
       server: $server,
       query: 'map/post/layer',
       send: s => [g, l, { type: layerKind(layer), height: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'height' in e ? e.height : null,
+      recv: ([eg, el, e]) => eg === g && el === l && 'height' in e ? e.height : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
@@ -223,7 +205,7 @@
       server: $server,
       query: 'map/post/layer',
       send: s => [g, l, { type: layerKind(layer), color: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'color' in e ? e.color : null,
+      recv: ([eg, el, e]) => eg === g && el === l && 'color' in e ? e.color : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
@@ -231,7 +213,7 @@
       server: $server,
       query: 'map/post/layer',
       send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name) }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'color_env' in e ? e.color_env === null ? -1 : stringToResIndex(e.color_env)[0] : null,
+      recv: ([eg, el, e]) => eg === g && el === l && 'color_env' in e ? e.color_env === null ? -1 : stringToResIndex(e.color_env)[0] :  skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
@@ -239,8 +221,45 @@
       server: $server,
       query: 'map/post/layer',
       send: s => [g, l, { type: layerKind(layer), color_env_offset: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'color_env_offset' in e ? e.color_env_offset : null,
+      recv: ([eg, el, e]) => eg === g && el === l && 'color_env_offset' in e ? e.color_env_offset : skip,
     })
+  }
+  $: if (layer && layer instanceof TilesLayer || layer instanceof QuadsLayer) {
+    syncImg = read($server, layer.image, {
+      query: 'map/post/layer',
+      match: [g, l, { image: pick }],
+      apply: () => layer.image,
+    })
+  }
+  $: syncImgs = read($server, $rmap.map.images, [{
+    query: 'map/put/image',
+    match: pick,
+    apply: () => $rmap.map.images,
+  }, {
+    query: 'map/delete/image',
+    match: pick,
+    apply: () => $rmap.map.images,
+  }])
+  $: if (layer && layer instanceof TilesLayer) {
+    syncAmCfg = read($server, layer.automapper.config, {
+      query: 'map/post/layer',
+      match: [g, l, { automapper_config: { config: pick } }],
+    })
+  }
+  $: if (layer && layer instanceof TilesLayer) {
+    syncColEnvs = read($server, $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope), [{
+    query: 'map/put/envelope',
+    match: pick,
+    apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
+  }, {
+    query: 'map/delete/envelope',
+    match: pick,
+    apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
+  }, {
+    query: 'map/post/envelope',
+    match: pick,
+    apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
+  }])
   }
 
   function onEditColor(e: FormInputEvent) {
@@ -305,10 +324,9 @@
         <span>Detail</span>
         <input type="checkbox" bind:checked={$syncDetail} />
       </label>
-      {@const img = layer.image ? layer.image.name : '<none>'}
       <label>
         <span>Image</span>
-        <input type="button" value={img} on:click={() => (imagePickerOpen = true)} />
+        <input type="button" value={$syncImg?.name ?? '(none)'} on:click={() => (imagePickerOpen = true)} />
       </label>
     {/if}
     {#if layer instanceof TilesLayer}
@@ -324,16 +342,15 @@
         <span>Color Envelope</span>
         <select bind:value={$syncColorEnv}>
           <option value={-1}>None</option>
-          {#each colorEnvelopes as env}
+          {#each $syncColEnvs as env}
             {@const i = $rmap.map.envelopes.indexOf(env)}
             <option value={i}> {'#' + i + ' ' + (env.name || '(unnamed)')} </option>
           {/each}
         </select>
       </label>
       <Number label="Color Env. Offset" integer bind:value={$syncColorEnvOff} />
-      {@const conf = automapperConfig(layer)}
       <label>
-        Automapper <input type="button" value={conf ?? 'None'} disabled={layer.image === null} on:click={() => automapperOpen = true} />
+        Automapper <input type="button" value={amCfgName($syncImg?.name, $syncAmCfg)} disabled={layer.image === null} on:click={() => automapperOpen = true} />
       </label>
       <ComposedModal bind:open={automapperOpen} size="sm" selectorPrimaryFocus=".bx--modal-close">
         <ModalHeader title="Automapper" />
@@ -344,7 +361,7 @@
           />
         </ModalBody>
       </ComposedModal>
-      <button class="default" disabled={conf === null} on:click={onAutomap}>Apply Automapper</button>
+      <button class="default" disabled={$syncAmCfg === null} on:click={onAutomap}>Apply Automapper</button>
     {/if}
     {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
       <label>
@@ -362,8 +379,8 @@
   <ModalHeader title="Pick an image" />
   <ModalBody hasForm>
     <ImagePicker
-      {images}
-      {image}
+      images={$syncImgs}
+      image={$syncImg}
       on:pick={onImagePick}
       on:cancel={() => (imagePickerOpen = false)}
       on:delete={onImageDelete}

@@ -8,7 +8,7 @@
   } from '../../twmap/tilesLayer'
   import { fromFixedNum, toFixedNum } from '../../server/convert'
   import { map, server } from '../global'
-  import { sync } from '../../server/util'
+  import { skip, sync } from '../../server/util'
   import Number from './number.svelte'
   import { onDestroy, onMount } from 'svelte'
   import * as MapDir from '../../twmap/mapdir'
@@ -27,68 +27,68 @@
     server: $server,
     query: 'map/post/group',
     send: s => [g, { name: s }],
-    recv: ([eg, e]) => eg === g && 'name' in e ? e.name : null,
+    recv: ([eg, e]) => eg === g && 'name' in e ? e.name : skip,
   })
   $: syncOrder = sync(g, {
     server: $server,
     query: 'map/patch/group',
     send: s => [g, s],
-    recv: ([src, tgt]) => src === g ? tgt : null, // COMBAK: race cond with g?
+    recv: ([src, tgt]) => src === g ? tgt : skip, // COMBAK: race cond with g?
   })
   $: syncOffX = sync(group.offX, {
     server: $server,
     query: 'map/post/group',
     send: s => [g, { offset: { x: toFixedNum(s, 5), y: toFixedNum($syncOffY, 5) } }],
-    recv: ([eg, e]) => eg === g && 'offset' in e ? fromFixedNum(e.offset.x, 5) : null,
+    recv: ([eg, e]) => eg === g && 'offset' in e ? fromFixedNum(e.offset.x, 5) : skip,
   })
   $: syncOffY = sync(group.offY, {
     server: $server,
     query: 'map/post/group',
     send: s => [g, { offset: { x: toFixedNum($syncOffX, 5), y: toFixedNum(s, 5) } }],
-    recv: ([eg, e]) => eg === g && 'offset' in e ? fromFixedNum(e.offset.y, 5) : null,
+    recv: ([eg, e]) => eg === g && 'offset' in e ? fromFixedNum(e.offset.y, 5) : skip,
   })
   $: syncParaX = sync(group.paraX, {
     server: $server,
     query: 'map/post/group',
     send: s => [g, { parallax: { x: s, y: $syncParaY } }],
-    recv: ([eg, e]) => eg === g && 'parallax' in e ? e.parallax.x : null,
+    recv: ([eg, e]) => eg === g && 'parallax' in e ? e.parallax.x : skip,
   })
   $: syncParaY = sync(group.paraY, {
     server: $server,
     query: 'map/post/group',
     send: s => [g, { parallax: { x: $syncParaX, y: s } }],
-    recv: ([eg, e]) => eg === g && 'parallax' in e ? e.parallax.y : null,
+    recv: ([eg, e]) => eg === g && 'parallax' in e ? e.parallax.y : skip,
   })
   $: syncClipping = sync(group.clipping, {
     server: $server,
     query: 'map/post/group',
     send: s => [g, { clipping: s }],
-    recv: ([eg, e]) => eg === g && 'clipping' in e ? e.clipping : null,
+    recv: ([eg, e]) => eg === g && 'clipping' in e ? e.clipping : skip,
   })
   $: {
     syncClipX = sync(group.clipX, {
       server: $server,
       query: 'map/post/group',
       send: s => [g, { clip: { x: toFixedNum(s, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
-      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.x, 5) : null,
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.x, 5) : skip,
     })
     syncClipY = sync(group.clipY, {
       server: $server,
       query: 'map/post/group',
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum(s, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
-      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.y, 5) : null,
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.y, 5) : skip,
     })
     syncClipW = sync(group.clipW, {
       server: $server,
       query: 'map/post/group',
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum(s, 5), h: toFixedNum($syncClipH, 5) } }],
-      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.w, 5) : null,
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.w, 5) : skip,
     })
     syncClipH = sync(group.clipH, {
       server: $server,
       query: 'map/post/group',
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum(s, 5) } }],
-      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.h, 5) : null,
+      recv: ([eg, e]) => eg === g && 'clip' in e ? fromFixedNum(e.clip.h, 5) : skip,
     })
   }
 

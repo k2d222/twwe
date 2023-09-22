@@ -53,7 +53,6 @@
 
   async function onInfoClose() {
     infoEditorVisible = false
-    Actions.saveInfo()
   }
 
   function onRenameMap() {
@@ -129,7 +128,7 @@
   >
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
-      <InfoEditor info={$map.info} />
+      <InfoEditor />
     </ModalBody>
   </ComposedModal>
 

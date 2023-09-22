@@ -155,16 +155,16 @@
   async function onCreateImage([name, img]: Recv['map/put/image']) {
     if (typeof img === 'object') { // external image
       const image = new Image()
-      image.loadExternal(externalImageUrl(name))
       image.name = name
+      image.loadExternal(externalImageUrl(name))
       $rmap.addImage(image)
     } else { // embedded image
       const image = new Image()
       image.name = name
-      $rmap.addImage(image)
       const bytes = base64ToBytes(img)
       const png = await decodePng(new Blob([bytes]))
       image.loadEmbedded(png)
+      $rmap.addImage(image)
     }
   }
   function onDeleteImage(e: Recv['map/delete/image']) {

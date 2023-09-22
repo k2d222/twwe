@@ -1,10 +1,15 @@
-use std::{fmt::Display, sync::OnceLock};
+use std::{fmt::Display, path::Path, sync::OnceLock};
 
 use regex::Regex;
-use serde::Serializer;
+use serde::{Deserialize, Deserializer, Serializer};
+use serde_with::serde_conv;
 
-use crate::twmap_map_edit::{extend_layer, shrink_layer};
+use crate::{
+    protocol::AutomapperKind,
+    twmap_map_edit::{extend_layer, shrink_layer},
+};
 
+// TODO: use serde_with's DisplayFromStr?
 pub(crate) fn serialize_display<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
 where
     T: Display,
@@ -97,4 +102,22 @@ pub(crate) fn set_layer_height<T: twmap::TilemapLayer>(
     }
 
     Ok(())
+}
+
+pub(crate) fn is_automapper(path: &Path) -> Option<AutomapperKind> {
+    let extensions = &[
+        ("rules", AutomapperKind::DDNet),
+        ("rpp", AutomapperKind::RulesPP),
+        ("json", AutomapperKind::Teeworlds),
+    ];
+
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        extensions
+            .iter()
+            .find(|(str, kind)| *str == ext)
+            .map(|(_, ext)| ext)
+            .copied()
+    } else {
+        None
+    }
 }
