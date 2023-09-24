@@ -129,17 +129,15 @@
 
     const file = view.state.doc.toString()
 
+    const id = showInfo('Uploading...', 'none')
     try {
-      showInfo("Uploading...")
       const name = $automappers[selected].name
       await $server.query('map/put/automapper', [name, file])
     }
-    catch (e) {
-      showError("Saving failed: " + e)
-      return
+    finally {
+      clearDialog(id)
     }
 
-    clearDialog()
     changed = false
   }
 

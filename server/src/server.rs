@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     net::SocketAddr,
     path::{Path, PathBuf},
+    process::ExitStatus,
     sync::{Arc, Mutex, MutexGuard},
 };
 
@@ -22,14 +23,14 @@ use crate::{
 
 pub struct Server {
     rooms: Mutex<HashMap<String, Arc<Room>>>,
-    rpp_path: PathBuf,
+    rpp_path: Option<PathBuf>,
 }
 
 impl Server {
     pub fn new(cli: &Cli) -> Self {
         Server {
             rooms: Mutex::new(HashMap::new()),
-            rpp_path: cli.rpp_path.clone().unwrap_or(PathBuf::from("rpp")),
+            rpp_path: cli.rpp_path.clone(),
         }
     }
 
@@ -176,7 +177,7 @@ impl Server {
                         MapPutReq::Layer(g, req) => self.put_layer(map_name, g, *req),
                         MapPutReq::Quad(g, l, req) => self.put_quad(map_name, g, l, *req),
                         MapPutReq::Automapper(am, file) => {
-                            self.put_automapper(map_name, &am, &file)
+                            self.put_automapper(peer, map_name, &am, &file)
                         }
                     }
                     .map(|()| Response::Ok),
@@ -1303,6 +1304,11 @@ impl Server {
     }
 
     pub fn compile_rpp(&self, path: &Path) -> Result<(), Error> {
+        let rpp_path = self
+            .rpp_path
+            .as_ref()
+            .ok_or(Error::ServerError("rpp path not provided".into()))?;
+
         let root = path
             .parent()
             .ok_or(Error::ServerError("no parent".into()))?;
@@ -1318,31 +1324,51 @@ impl Server {
                 .to_string_lossy()
         );
 
-        let exec = std::process::Command::new(&self.rpp_path)
+        let mut rpp_exe = rpp_path.clone();
+        rpp_exe.push("rpp");
+
+        let mut rpp_base_r = rpp_path.clone();
+        rpp_base_r.push("base.r");
+
+        let mut rpp_base_p = rpp_path.clone();
+        rpp_base_p.push("base.p");
+
+        let exec = std::process::Command::new(&rpp_exe)
             .current_dir(root)
             .args([
                 "--output",
                 &out_fname,
                 "--memory",
                 "100",
+                "--include",
+                &rpp_base_r.to_string_lossy(),
+                "--include",
+                &rpp_base_p.to_string_lossy(),
                 "--no-pause",
                 &in_fname,
             ])
-            .output();
+            .output()
+            .map_err(|e| Error::ServerError(e.to_string().into()))?;
 
-        match exec {
-            Ok(r) => {
-                log::info!("rpp: {}", String::from_utf8_lossy(&r.stdout));
-                Ok(())
+        match exec.status.code() {
+            Some(0) => Ok(()),
+            Some(_) => {
+                log::info!("rpp: {}", String::from_utf8_lossy(&exec.stderr));
+                Err(Error::AutomapperError(
+                    String::from_utf8_lossy(&exec.stderr).into_owned(),
+                ))
             }
-            Err(e) => {
-                log::error!("rpp: {}", e);
-                Err(Error::AutomapperError(e.to_string()))
-            }
+            None => Err(Error::ServerError("rpp: no exit status".into())),
         }
     }
 
-    pub fn put_automapper(&self, map_name: &str, am: &str, file: &str) -> Result<(), Error> {
+    pub fn put_automapper(
+        &self,
+        peer: &Peer,
+        map_name: &str,
+        am: &str,
+        file: &str,
+    ) -> Result<(), Error> {
         if !check_file_name(am) {
             return Err(Error::InvalidFileName);
         }
@@ -1357,20 +1383,24 @@ impl Server {
         std::fs::write(&path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
 
         if kind == AutomapperKind::RulesPP {
-            self.compile_rpp(&path).and_then(|()| {
-                let target = path.with_extension("rules");
-                let file = std::fs::read_to_string(&path)
-                    .map_err(|e| Error::AutomapperError(e.to_string().into()))?;
-                let name = target
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string();
-                let message =
-                    Message::Request(Request::Map(MapReq::Put(MapPutReq::Automapper(name, file))));
-                self.broadcast_to_room(&room, message);
-                Ok(())
-            })?;
+            let res = self
+                .compile_rpp(&path)
+                .and_then(|()| {
+                    let target = path.with_extension("rules");
+                    let file = std::fs::read_to_string(&target)
+                        .map_err(|e| Error::AutomapperError(e.to_string().into()))?;
+                    let name = target
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
+                    let message = Message::Request(Request::Map(MapReq::Put(
+                        MapPutReq::Automapper(name, file),
+                    )));
+                    self.broadcast_to_room(&room, message);
+                    Ok(())
+                })
+                .unwrap_or_else(|err| self.send(peer, None, Message::Response(Err(err))));
         }
 
         Ok(())
