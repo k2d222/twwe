@@ -47,8 +47,5 @@ export async function deleteMap() {
 }
 
 export async function goToLobby() {
-  const server_ = get(server)
-
-  await server_.query('leave', undefined)
   navigate('/')
 }

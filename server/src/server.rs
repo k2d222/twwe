@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex, MutexGuard},
 };
 
@@ -130,9 +130,9 @@ impl Server {
                 match req {
                     MapReq::Get(req) => match req {
                         MapGetReq::Users => self.get_users(map_name).map(|r| Response::Users(r)),
-                        MapGetReq::Cursors => {
-                            self.get_cursors(map_name).map(|r| Response::Cursors(r))
-                        }
+                        MapGetReq::Cursors => self
+                            .get_cursors(map_name, peer)
+                            .map(|r| Response::Cursors(r)),
                         MapGetReq::Map => self.get_map(map_name).map(|r| Response::Map(Base64(r))),
                         MapGetReq::Images => self.get_images(map_name).map(|r| Response::Images(r)),
                         MapGetReq::Image(i) => self
@@ -1302,19 +1302,76 @@ impl Server {
         Ok(file)
     }
 
+    pub fn compile_rpp(&self, path: &Path) -> Result<(), Error> {
+        let root = path
+            .parent()
+            .ok_or(Error::ServerError("no parent".into()))?;
+
+        let in_fname = path
+            .file_name()
+            .ok_or(Error::ServerError("no file name".into()))?
+            .to_string_lossy();
+        let out_fname = format!(
+            "{}.rules",
+            path.file_stem()
+                .ok_or(Error::ServerError("no file name".into()))?
+                .to_string_lossy()
+        );
+
+        let exec = std::process::Command::new(&self.rpp_path)
+            .current_dir(root)
+            .args([
+                "--output",
+                &out_fname,
+                "--memory",
+                "100",
+                "--no-pause",
+                &in_fname,
+            ])
+            .output();
+
+        match exec {
+            Ok(r) => {
+                log::info!("rpp: {}", String::from_utf8_lossy(&r.stdout));
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("rpp: {}", e);
+                Err(Error::AutomapperError(e.to_string()))
+            }
+        }
+    }
+
     pub fn put_automapper(&self, map_name: &str, am: &str, file: &str) -> Result<(), Error> {
         if !check_file_name(am) {
             return Err(Error::InvalidFileName);
         }
 
-        let mut path = self.room(map_name)?.path().to_owned();
+        let room = self.room(map_name)?;
+
+        let mut path = room.path().to_owned();
         path.push(am);
 
-        if !is_automapper(&path).is_some() {
-            return Err(Error::InvalidFileName);
-        }
+        let kind = is_automapper(&path).ok_or(Error::InvalidFileName)?;
 
-        std::fs::write(path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
+        std::fs::write(&path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
+
+        if kind == AutomapperKind::RulesPP {
+            self.compile_rpp(&path).and_then(|()| {
+                let target = path.with_extension("rules");
+                let file = std::fs::read_to_string(&path)
+                    .map_err(|e| Error::AutomapperError(e.to_string().into()))?;
+                let name = target
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                let message =
+                    Message::Request(Request::Map(MapReq::Put(MapPutReq::Automapper(name, file))));
+                self.broadcast_to_room(&room, message);
+                Ok(())
+            })?;
+        }
 
         Ok(())
     }
@@ -1536,12 +1593,19 @@ impl Server {
         Ok(room.peer_count())
     }
 
-    pub fn get_cursors(&self, map_name: &str) -> Result<HashMap<String, Cursor>, Error> {
+    pub fn get_cursors(
+        &self,
+        map_name: &str,
+        peer: &Peer,
+    ) -> Result<HashMap<String, Cursor>, Error> {
         let room = self.room(map_name)?;
+
+        let peer_id = room.peers().get(&peer.addr).ok_or(Error::NotJoined)?.id;
 
         let cursors = room
             .peers()
             .iter()
+            .filter(|(_, v)| v.id != peer_id)
             .filter_map(|(_, v)| {
                 if let Some(cursor) = &v.cursor {
                     Some((v.id.to_string(), cursor.clone()))

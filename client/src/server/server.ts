@@ -79,8 +79,8 @@ export class WebSocketServer implements Server {
     for (const data of this.deferredData) {
       this.socket.send(data)
     }
-    this.socketSend = (x) => setTimeout(() => this.socket.send(x), 1000)
-    // this.socketSend = this.socket.send.bind(this.socket)
+    // this.socketSend = (x) => setTimeout(() => this.socket.send(x), 1000)
+    this.socketSend = this.socket.send.bind(this.socket)
   }
 
   private socketDeferredSend(data: any) {

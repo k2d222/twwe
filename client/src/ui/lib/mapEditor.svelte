@@ -198,7 +198,7 @@
     $server.on('map/delete/image', onDeleteImage, true)
     $server.on('map/post/info', onEditInfo, true)
 
-    // cursorInterval = setInterval(updateCursors, cursorDuration) as any
+    cursorInterval = setInterval(updateCursors, cursorDuration) as any
 
     renderLoop(0)
   })
@@ -254,7 +254,7 @@
       }
       else {
         // const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
-        return [k, [v.x, v.y]]
+        return [k, { x: v.x, y: v.y }]
       }
 
     }))
