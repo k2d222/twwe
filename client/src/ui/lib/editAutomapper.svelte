@@ -115,19 +115,13 @@
   async function onCreate() {
     if (!isValidName(newAmName)) return
 
-    const name = `{newAmName}.{newAmKind}`
+    const name = `${newAmName}.${newAmKind}`
     const file = ''
 
     newAmName = ''
 
-    try {
-      await $server.query('map/put/automapper', [name, file])
-
-      createAmOpen = false
-    }
-    catch (e) {
-      showError('Failed to create automapper: ' + e)
-    }
+    await $server.query('map/put/automapper', [name, file])
+    createAmOpen = false
   }
 
   async function onSave() {
@@ -167,6 +161,11 @@
     }
     tilesCache = []
 
+    if (configs.length === 0) {
+      showError('Cannot preview: the current automapper has no config.')
+      return
+    }
+
     $map.groups.forEach((group, g) => {
       group.layers.forEach((layer, l) => {
         if (
@@ -183,6 +182,11 @@
         }
       })
     })
+
+    if (tilesCache.length === 0) {
+      let confs = configs.map(c => `'${c.name}'`).join(', ')
+      showError(`Cannot preview: no layer uses image '${am.image}' with one of the automapper configs: ${confs}.`)
+    }
   }
 
   async function onSelect(file: string) {

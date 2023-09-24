@@ -20,7 +20,6 @@
   } from 'carbon-components-svelte'
   import { navigate } from 'svelte-routing'
   import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
-  import type * as MapDir from '../../twmap/mapdir'
   import * as Actions from '../actions'
   import { viewport } from '../../gl/global'
   import Fence from './fence.svelte'

@@ -273,7 +273,6 @@
     }
     try {
       await $server.query('map/put/envelope', change)
-      console.log($rmap.map.envelopes.length)
       selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
     } catch (e) {
       showError('Failed to create envelope: ' + e)

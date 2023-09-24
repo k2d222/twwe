@@ -115,7 +115,7 @@ export function makeBoxSelection(map: Map, g: number, ll: number[], sel: Range):
     for (let j = sel.start.y; j <= sel.end.y; j++) {
       const row = []
       for (let i = sel.start.x; i <= sel.end.x; i++) {
-        row.push(layer.getTile(i, j))
+        row.push({ ...layer.getTile(i, j) })
       }
       tiles.push(row)
     }

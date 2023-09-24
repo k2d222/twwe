@@ -83,19 +83,23 @@
   async function onImagePick(e: Event & { detail: File | Image | string | null }) {
     imagePickerOpen = false
 
+    // no image used
     if (e.detail === null) {
-      // no image used
       await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: null }])
-    } else if (e.detail instanceof Image) {
-      // use embedded image
+    }
+    // use existing image
+    else if (e.detail instanceof Image) {
       const index = $rmap.map.images.indexOf(e.detail)
       await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, e.detail.name) }])
-    } else if (e.detail instanceof File) {
+    }
+    // new uploaded image
+    else if (e.detail instanceof File) {
       const name = e.detail.name.replace(/\.[^\.]+$/, '')
       uploadImageAndPick(e.detail, name)
-    } else {
+    }
+    // new image from gallery
+    else {
       const name = e.detail
-      // new external image
       const url = externalImageUrl(e.detail)
       const embed = await showInfo('Do you wish to embed this image?', 'yesno')
       if (embed) {
@@ -103,15 +107,12 @@
         const file = await resp.blob()
         const name = e.detail
         uploadImageAndPick(file, name)
-      } else {
+      }
+      else {
         try {
           showInfo('Creating image...', 'none')
-          const index = $rmap.map.images.length
           await $server.query('map/put/image', [name, { size: { w: 1024, h: 1024 } }])
-          // const img = new Image()
-          // img.loadExternal(url)
-          // img.name = name
-          // $rmap.addImage(img)
+          const index = $rmap.map.images.length - 1
           await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
           clearDialog()
         } catch (e) {

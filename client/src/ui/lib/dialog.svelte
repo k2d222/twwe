@@ -43,6 +43,7 @@
             preventCloseOnClickOutside
             on:close={() => onNo(id)}
             on:submit={() => onYes(id)}
+            on:click:button--secondary={() => onNo(id)}
           />
       {:else}
           <ToastNotification

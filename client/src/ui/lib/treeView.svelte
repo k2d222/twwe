@@ -121,19 +121,19 @@
 
   function onKeyDown(g: number, l: number, e: KeyboardEvent) {
     if (l === -1) {
-      if (['ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(e.key)) {
+      if (['ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) {
         e.preventDefault()
       }
       if (e.key === 'ArrowLeft') {
         folded[g] = true
       } else if (e.key == 'ArrowRight') {
         folded[g] = false
-      } else if (e.key === 'Enter' || e.key === ' ') {
+      } else if (e.key === 'Enter') {
         folded[g] = !folded[g]
         select(g, l, e)
       }
     } else {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === 'Enter') {
         select(g, l, e)
       }
     }

@@ -156,15 +156,15 @@
     if (typeof img === 'object') { // external image
       const image = new Image()
       image.name = name
-      image.loadExternal(externalImageUrl(name))
       $rmap.addImage(image)
-    } else { // embedded image
+      image.loadExternal(externalImageUrl(name))
+    }
+    else { // embedded image
       const image = new Image()
       image.name = name
-      const bytes = base64ToBytes(img)
-      const png = await decodePng(new Blob([bytes]))
-      image.loadEmbedded(png)
       $rmap.addImage(image)
+      const bytes = base64ToBytes(img)
+      image.loadExternal(URL.createObjectURL(new Blob([bytes])))
     }
   }
   function onDeleteImage(e: Recv['map/delete/image']) {

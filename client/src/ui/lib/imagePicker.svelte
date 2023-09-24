@@ -122,14 +122,16 @@
   function getImgURL(image: Image) {
     if (image.img !== null) {
       return image.img.src
-    } else if (image.data instanceof ImageData) {
+    }
+    else if (image.data instanceof ImageData) {
       const canvas = document.createElement('canvas')
       canvas.width = image.data.width
       canvas.height = image.data.height
       const ctx = canvas.getContext('2d')
       ctx.putImageData(image.data, 0, 0)
       return canvas.toDataURL()
-    } else {
+    }
+    else {
       console.warn('unsupported image data type:', image)
       return ''
     }
@@ -161,7 +163,7 @@
           <p>No embedded images available. Upload an image or embed an external image first.</p>
         {/if}
         <div class="list">
-          {#each images.filter(i => !i.img) as img}
+          {#each images as img}
             <button
               class="default image"
               class:selected={image === img}
