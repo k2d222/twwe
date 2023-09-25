@@ -145,6 +145,7 @@ export class WebSocketServer implements Server {
         }, timeout)
       }
 
+      // we predict an ok response from the server and call the callbacks right away.
       if (type in this.broadcastListeners) {
         for (const fn of this.broadcastListeners[type as any]) {
           fn(content)

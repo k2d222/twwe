@@ -76,6 +76,7 @@ export interface LayerCommon {
 
 export interface QuadsLayer extends LayerCommon {
   type: LayerKind.Quads
+  image: string | null
   quads: Quad[]
 }
 

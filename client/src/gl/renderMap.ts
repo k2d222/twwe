@@ -293,10 +293,10 @@ export class RenderMap {
       colors: part.colors,
       texCoords: part.texture_coords.map(p => uvFromJson(p, 10)),
       posEnv:
-        part.position_env === null ? null : (this.map.envelopes[part.position_env] as PositionEnvelope),
+        part.position_env === null ? null : (this.map.envelopes[stringToResIndex(part.position_env)[0]] as PositionEnvelope),
       posEnvOffset: part.position_env_offset,
       colorEnv:
-        part.color_env === null ? null : (this.map.envelopes[part.color_env] as ColorEnvelope),
+        part.color_env === null ? null : (this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope),
       colorEnvOffset: part.color_env_offset,
     }
 
@@ -318,11 +318,11 @@ export class RenderMap {
     if ('texture_coords' in part)
       quad.texCoords = part.texture_coords.map(p => uvFromJson(p, 10))
     if ('posEnv' in part)
-      quad.posEnv = part.position_env === null ? null : (this.map.envelopes[part.position_env] as PositionEnvelope)
+      quad.posEnv = part.position_env === null ? null : (this.map.envelopes[stringToResIndex(part.position_env)[0]] as PositionEnvelope)
     if ('position_env_offset' in part)
       quad.posEnvOffset = part.position_env_offset
     if ('colorEnv' in part)
-      quad.colorEnv = part.color_env === null ? null : (this.map.envelopes[part.color_env] as ColorEnvelope)
+      quad.colorEnv = part.color_env === null ? null : (this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope)
     if ('color_env_offset' in part)
       quad.colorEnvOffset = part.color_env_offset
 
@@ -381,7 +381,7 @@ export class RenderMap {
     if ('name' in part)
       rlayer.layer.name = part.name
 
-    if (rlayer instanceof RenderAnyTilesLayer) {
+    if (rlayer instanceof RenderTilesLayer) {
       if ('color' in part)
         rlayer.layer.color = part.color
       if ('width' in part)
@@ -389,7 +389,7 @@ export class RenderMap {
       if ('height' in part)
         this.setLayerHeight(rgroup, rlayer, part.height)
       if ('color_env' in part)
-        rlayer.layer.colorEnv = part.color_env === null ? null : this.map.envelopes[part.color_env] as ColorEnvelope
+        rlayer.layer.colorEnv = part.color_env === null ? null : this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope
       if ('color_env_offset' in part)
         rlayer.layer.colorEnvOffset = part.color_env_offset
       if ('image' in part) {
