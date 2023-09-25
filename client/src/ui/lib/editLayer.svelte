@@ -17,7 +17,7 @@
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
   import { bytesToBase64, dataToTiles, resIndexToString, stringToResIndex, tilesLayerFlagsToLayerKind } from '../../server/convert'
-  import { pick, read, skip, sync } from '../../server/util'
+  import { cont, pick, read, skip, sync, sync2, _ } from '../../server/util'
   import type { Readable, Writable } from 'svelte/store'
   import type * as Info from '../../twmap/types'
   import Number from './number.svelte'
@@ -157,72 +157,64 @@
   let syncAmCfg: Readable<number | null>
   let syncColEnvs: Readable<Envelope[]>
 
-  $: syncGroup = sync(g, {
-    server: $server,
+  $: syncGroup = sync2($server, g, {
     query: 'map/patch/layer',
+    match: [[g, l], [pick, _]],
     send: s => [[g, l], [s, 0]],
-    recv: ([[g1, l1], [g2, _]]) => g1 === g && l1 === l ? g2 : skip, //  COMBAK: race condition with g/l?
   })
-  $: syncOrder = sync(l, {
-    server: $server,
+  $: syncOrder = sync2($server, l, {
     query: 'map/patch/layer',
+    match: [[g, l], [_, pick]],
     send: s => [[g, l], [g, s]],
-    recv: ([[g1, l1], [_, l2]]) => g1 === g && l1 === l ? l2 : skip,
   })
   $: if (layer) {
-    syncName = sync(layer.name, {
-      server: $server,
+    syncName = sync2($server, layer.name, {
       query: 'map/post/layer',
+      match: [g, l, { name: pick }],
       send: s => [g, l, { type: layerKind(layer), name: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'name' in e ? e.name : skip,
     })
   }
   $: if (layer) {
-    syncDetail = sync(layer.detail, {
-      server: $server,
+    syncDetail = sync2($server, layer.detail, {
       query: 'map/post/layer',
+      match: [g, l, { detail: pick }],
       send: s => [g, l, { type: layerKind(layer), detail: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'detail' in e ? e.detail : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncWidth = sync(layer.width, {
-      server: $server,
+    syncWidth = sync2($server, layer.width, {
       query: 'map/post/layer',
+      match: [g, l, { width: pick }],
       send: s => [g, l, { type: layerKind(layer), width: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'width' in e ? e.width : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncHeight = sync(layer.height, {
-      server: $server,
+    syncHeight = sync2($server, layer.height, {
       query: 'map/post/layer',
+      match: [g, l, { height: pick }],
       send: s => [g, l, { type: layerKind(layer), height: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'height' in e ? e.height : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncColor = sync(layer.color, {
-      server: $server,
+    syncColor = sync2($server, layer.color, {
       query: 'map/post/layer',
+      match: [g, l, { color: pick }],
       send: s => [g, l, { type: layerKind(layer), color: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'color' in e ? e.color : skip,
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncColorEnv = sync($rmap.map.envelopes.indexOf(layer.colorEnv), {
-      server: $server,
+    syncColorEnv = sync2($server, $rmap.map.envelopes.indexOf(layer.colorEnv), {
       query: 'map/post/layer',
-      send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name) }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'color_env' in e ? e.color_env === null ? -1 : stringToResIndex(e.color_env)[0] :  skip,
+      match: [g, l, { color_env: pick }],
+      apply: s => s === null ? -1 : stringToResIndex(s)[0],
+      send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s) }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncColorEnvOff = sync(layer.colorEnvOffset, {
-      server: $server,
+    syncColorEnvOff = sync2($server, layer.colorEnvOffset, {
       query: 'map/post/layer',
+      match: [g, l, { color_env_offset: pick }],
       send: s => [g, l, { type: layerKind(layer), color_env_offset: s }],
-      recv: ([eg, el, e]) => eg === g && el === l && 'color_env_offset' in e ? e.color_env_offset : skip,
     })
   }
   $: if (layer && layer instanceof TilesLayer || layer instanceof QuadsLayer) {

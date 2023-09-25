@@ -76,13 +76,14 @@ type Pick = typeof pick
 
 export const cont: unique symbol = Symbol()
 type Cont = typeof cont
+export const _: Cont = cont // alias for placeholder
 
 function patternValue(pat: any, val: any) {
   if (pat === pick) {
     return val
   }
-  else if (pat === skip) {
-    return skip
+  else if (pat === skip || pat === cont) {
+    return pat
   }
   else if (typeof val !== typeof pat) {
     return skip
@@ -105,7 +106,7 @@ function patternValue(pat: any, val: any) {
   }
 }
 
-type Pattern<T> = Skip | Pick | (T extends Object ? { [K in keyof T]?: Pattern<T[K]> } : T)
+type Pattern<T> = Skip | Pick | Cont | (T extends Object ? { [K in keyof T]?: Pattern<T[K]> } : T)
 
 type ReadOpt<Q extends SendKey & RecvKey, T> = {
   query: Q,
@@ -170,44 +171,40 @@ export function read<Q extends SendKey & RecvKey, T>(
   return { subscribe }
 }
 
+type SyncOpt<Q extends SendKey & RecvKey, T> = {
+  query: Q,
+  match?: Pattern<Recv[Q]>,
+  apply?: (v: any) => T,
+  send?: (val: T) => Send[Q] | Skip,
+}
+
 export function sync2<Q extends SendKey & RecvKey, T>(
   server: Server,
   val: T,
-  opts: ReadOpt<Q, T> | ReadOpt<Q, T>[],
-  send: (val: T) => [Q, Send[Q]] | Skip): Writable<T>
+  opt: SyncOpt<Q, T>): Writable<T>
 {
-  if (!Array.isArray(opts))
-    opts = [opts]
+  if (!opt.match)
+    opt.match = pick
 
-  for (const opt of opts)
-    if (!opt.apply)
-      opt.apply = (v: any) => v
+  if (!opt.apply)
+    opt.apply = (v: any) => v
 
-  for (const opt of opts)
-    if (!opt.match)
-      opt.match = pick
+  if (!opt.send)
+    opt.send = (v: T) => v as any
 
-  function cb (opt: ReadOpt<Q, T>) {
-    return (e: Recv[Q]) => {
-      let val = patternValue(opt.match, e)
-      if (val !== skip && val !== cont) {
-        val = opt.apply(val)
-        subs.forEach(sub => sub(val))
-      }
+  const cb = (e: Recv[Q]) => {
+    let val = patternValue(opt.match, e)
+    if (val !== skip && val !== cont) {
+      val = opt.apply(val)
+      subs.forEach(sub => sub(val))
     }
   }
-
-  const callbacks = opts.map(cb)
 
   function on() {
-    for (const k in opts) {
-      server.on(opts[k].query, callbacks[k])
-    }
+    server.on(opt.query, cb)
   }
   function off() {
-    for (const k in opts) {
-      server.off(opts[k].query, callbacks[k])
-    }
+    server.off(opt.query, cb)
   }
 
   let subs: ((val: T) => void)[] = []
@@ -230,10 +227,10 @@ export function sync2<Q extends SendKey & RecvKey, T>(
     const oldVal = val
     val = newVal
     subs.forEach(sub => sub(val))
-    const query = send(val)
+    const query = opt.send(val)
     if (query !== skip) {
       try {
-        await server.query(...query)
+        await server.query(opt.query, query)
       }
       catch {
         val = oldVal

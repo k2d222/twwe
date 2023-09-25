@@ -171,7 +171,7 @@ export function layerKindToTilesLayerFlags(kind: MapDir.LayerKind) {
   else throw "not a tile layer"
 }
 
-export function resIndexToString(index: number, _name: string): string {
+export function resIndexToString(index: number, _name?: string): string {
   // COMBAK: for now, server does not always support "index_name" notation
   // if (name === '') {
   //   return index + ''

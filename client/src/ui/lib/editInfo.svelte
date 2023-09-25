@@ -4,8 +4,8 @@
 
 
   $: syncInfo = sync2($server, $map.info, {
-    query: 'map/post/info'
-  }, (info) => ['map/post/info', info])
+    query: 'map/post/info',
+  }) 
 
   function onChangeSettings(e: Event & { currentTarget: HTMLTextAreaElement }) {
     $syncInfo.settings = e.currentTarget.value.split('\n').filter(s => s !== '')
