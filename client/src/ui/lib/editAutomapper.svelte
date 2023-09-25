@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte"
   import { automappers, server, map } from "../global"
-  import { TrashCan as TrashIcon, Add as AddIcon, Launch } from "carbon-icons-svelte"
+  import { TrashCan as TrashIcon, Add as AddIcon } from "carbon-icons-svelte"
   import { clearDialog, showError, showInfo, showWarning } from "./dialog"
   import { Button, ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { Pane, Splitpanes } from "svelte-splitpanes"

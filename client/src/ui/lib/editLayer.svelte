@@ -2,13 +2,13 @@
   import type { Layer } from '../../twmap/layer'
   import type { Color } from '../../twmap/types'
   import type { Envelope } from '../../twmap/map'
-  import { type FormEvent, type FormInputEvent, layerKind } from './util'
-  import { TilesLayerFlags, LayerFlags } from '../../twmap/types'
+  import { type FormInputEvent, layerKind } from './util'
+  import { TilesLayerFlags } from '../../twmap/types'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
-  import { server, serverConfig, selected, automappers } from '../global'
-  import { decodePng, externalImageUrl, isPhysicsLayer } from './util'
+  import { server, automappers } from '../global'
+  import { externalImageUrl, isPhysicsLayer } from './util'
   import { Image } from '../../twmap/image'
   import { ColorEnvelope } from '../../twmap/envelope'
   import ImagePicker from './imagePicker.svelte'
@@ -17,7 +17,7 @@
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
   import { bytesToBase64, dataToTiles, resIndexToString, stringToResIndex, tilesLayerFlagsToLayerKind } from '../../server/convert'
-  import { cont, pick, read, skip, sync, sync2, _ } from '../../server/util'
+  import { pick, read, sync, _ } from '../../server/util'
   import type { Readable, Writable } from 'svelte/store'
   import type * as Info from '../../twmap/types'
   import Number from './number.svelte'
@@ -157,53 +157,53 @@
   let syncAmCfg: Readable<number | null>
   let syncColEnvs: Readable<Envelope[]>
 
-  $: syncGroup = sync2($server, g, {
+  $: syncGroup = sync($server, g, {
     query: 'map/patch/layer',
     match: [[g, l], [pick, _]],
     send: s => [[g, l], [s, 0]],
   })
-  $: syncOrder = sync2($server, l, {
+  $: syncOrder = sync($server, l, {
     query: 'map/patch/layer',
     match: [[g, l], [_, pick]],
     send: s => [[g, l], [g, s]],
   })
   $: if (layer) {
-    syncName = sync2($server, layer.name, {
+    syncName = sync($server, layer.name, {
       query: 'map/post/layer',
       match: [g, l, { name: pick }],
       send: s => [g, l, { type: layerKind(layer), name: s }],
     })
   }
   $: if (layer) {
-    syncDetail = sync2($server, layer.detail, {
+    syncDetail = sync($server, layer.detail, {
       query: 'map/post/layer',
       match: [g, l, { detail: pick }],
       send: s => [g, l, { type: layerKind(layer), detail: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncWidth = sync2($server, layer.width, {
+    syncWidth = sync($server, layer.width, {
       query: 'map/post/layer',
       match: [g, l, { width: pick }],
       send: s => [g, l, { type: layerKind(layer), width: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncHeight = sync2($server, layer.height, {
+    syncHeight = sync($server, layer.height, {
       query: 'map/post/layer',
       match: [g, l, { height: pick }],
       send: s => [g, l, { type: layerKind(layer), height: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncColor = sync2($server, layer.color, {
+    syncColor = sync($server, layer.color, {
       query: 'map/post/layer',
       match: [g, l, { color: pick }],
       send: s => [g, l, { type: layerKind(layer), color: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncColorEnv = sync2($server, $rmap.map.envelopes.indexOf(layer.colorEnv), {
+    syncColorEnv = sync($server, $rmap.map.envelopes.indexOf(layer.colorEnv), {
       query: 'map/post/layer',
       match: [g, l, { color_env: pick }],
       apply: s => s === null ? -1 : stringToResIndex(s)[0],
@@ -211,7 +211,7 @@
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
-    syncColorEnvOff = sync2($server, layer.colorEnvOffset, {
+    syncColorEnvOff = sync($server, layer.colorEnvOffset, {
       query: 'map/post/layer',
       match: [g, l, { color_env_offset: pick }],
       send: s => [g, l, { type: layerKind(layer), color_env_offset: s }],

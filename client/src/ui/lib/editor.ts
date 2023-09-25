@@ -2,7 +2,7 @@ import type { RenderMap } from '../../gl/renderMap'
 import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
 import type { WebSocketServer } from '../../server/server'
-import type { Map, PhysicsLayer } from '../../twmap/map'
+import type { Map } from '../../twmap/map'
 import {
   TilesLayer,
   GameLayer,

@@ -6,7 +6,7 @@
   import { ColorEnvelope, PositionEnvelope, SoundEnvelope, type EnvPoint } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
   import { onDestroy, onMount } from 'svelte'
-  import { showError, clearDialog } from './dialog'
+  import { showError } from './dialog'
   import { rmap } from '../global'
   import * as MapDir from '../../twmap/mapdir'
   import type { Send } from '../../server/protocol'

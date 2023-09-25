@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { sync2 } from '../../server/util'
+  import { sync } from '../../server/util'
   import { server, map } from '../global'
 
 
-  $: syncInfo = sync2($server, $map.info, {
-    query: 'map/post/info',
-  }) 
+  $: syncInfo = sync($server, $map.info, { query: 'map/post/info' }) 
 
   function onChangeSettings(e: Event & { currentTarget: HTMLTextAreaElement }) {
     $syncInfo.settings = e.currentTarget.value.split('\n').filter(s => s !== '')

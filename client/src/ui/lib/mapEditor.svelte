@@ -1,7 +1,7 @@
 
 <script lang="ts">
   import * as Editor from './editor'
-  import { server, selected, anim, peers, rmap, map, serverConfig } from '../global'
+  import { server, selected, anim, peers, rmap, map } from '../global'
   import { AnyTilesLayer, GameLayer } from "../../twmap/tilesLayer"
   import { tweened } from "svelte/motion"
   import { type Coord, LayerType } from "../../twmap/types"
@@ -15,7 +15,7 @@
   import Stats from './stats.svelte'
   import { RenderAnyTilesLayer } from "../../gl/renderTilesLayer"
   import { viewport, renderer } from '../../gl/global'
-  import { decodePng, externalImageUrl } from './util'
+  import { externalImageUrl } from './util'
   import MapView from './mapView.svelte'
   import type { RenderGroup } from '../../gl/renderGroup'
   import type { RenderLayer } from '../../gl/renderLayer'

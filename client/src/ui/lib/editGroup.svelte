@@ -8,7 +8,7 @@
   } from '../../twmap/tilesLayer'
   import { fromFixedNum, toFixedNum } from '../../server/convert'
   import { map, server } from '../global'
-  import { pick, skip, sync, sync2 } from '../../server/util'
+  import { pick, sync } from '../../server/util'
   import Number from './number.svelte'
   import { onDestroy, onMount } from 'svelte'
   import * as MapDir from '../../twmap/mapdir'
@@ -23,63 +23,63 @@
 
   $: group = $map.groups[g]
 
-  $: syncName = sync2($server, group.name, {
+  $: syncName = sync($server, group.name, {
     query: 'map/post/group',
     match: [g, { name: pick }],
     send: s => [g, { name: s }],
   })
-  $: syncOrder = sync2($server, g, {
+  $: syncOrder = sync($server, g, {
     query: 'map/patch/group',
     match: [g, pick],
     send: s => [g, s],
   })
-  $: syncOffX = sync2($server, group.offX, {
+  $: syncOffX = sync($server, group.offX, {
     query: 'map/post/group',
     match: [g, { offset: { x: pick } }],
     apply: s => fromFixedNum(s, 5),
     send: s => [g, { offset: { x: toFixedNum(s, 5), y: toFixedNum($syncOffY, 5) } }],
   })
-  $: syncOffY = sync2($server, group.offY, {
+  $: syncOffY = sync($server, group.offY, {
     query: 'map/post/group',
     match: [g, { offset: { y: pick } }],
     apply: s => fromFixedNum(s, 5),
     send: s => [g, { offset: { x: toFixedNum($syncOffX, 5), y: toFixedNum(s, 5) } }],
   })
-  $: syncParaX = sync2($server, group.paraX, {
+  $: syncParaX = sync($server, group.paraX, {
     query: 'map/post/group',
     match: [g, { parallax: { x: pick } }],
     send: s => [g, { parallax: { x: s, y: $syncParaY } }],
   })
-  $: syncParaY = sync2($server, group.paraY, {
+  $: syncParaY = sync($server, group.paraY, {
     query: 'map/post/group',
     match: [g, { parallax: { y: pick } }],
     send: s => [g, { parallax: { x: $syncParaX, y: s } }],
   })
-  $: syncClipping = sync2($server, group.clipping, {
+  $: syncClipping = sync($server, group.clipping, {
     query: 'map/post/group',
     match: [g, { clipping: pick }],
     send: s => [g, { clipping: s }],
   })
   $: {
-    syncClipX = sync2($server, group.clipX, {
+    syncClipX = sync($server, group.clipX, {
       query: 'map/post/group',
       match: [g, { clip: { x: pick } }],
       apply: s => fromFixedNum(s, 5),
       send: s => [g, { clip: { x: toFixedNum(s, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
     })
-    syncClipY = sync2($server, group.clipY, {
+    syncClipY = sync($server, group.clipY, {
       query: 'map/post/group',
       match: [g, { clip: { y: pick } }],
       apply: s => fromFixedNum(s, 5),
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum(s, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
     })
-    syncClipW = sync2($server, group.clipW, {
+    syncClipW = sync($server, group.clipW, {
       query: 'map/post/group',
       match: [g, { clip: { w: pick } }],
       apply: s => fromFixedNum(s, 5),
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum(s, 5), h: toFixedNum($syncClipH, 5) } }],
     })
-    syncClipH = sync2($server, group.clipH, {
+    syncClipH = sync($server, group.clipH, {
       query: 'map/post/group',
       match: [g, { clip: { h: pick } }],
       apply: s => fromFixedNum(s, 5),
