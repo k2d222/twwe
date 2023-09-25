@@ -7,33 +7,46 @@ Teeworlds / DDraceNetwork map editor. Online and collaborative, just like the ga
 A demo server is hosted at [tw.thissma.fr](https://tw.thissma.fr).
 
 
-## Status
+## Development Status (Sep. 2023)
 
-The editor is now close to feature parity with the regular ddnet map editor. It is focused on the ddnet flavour of teeworlds. Support for 0.7 maps is mostly untested for now.
-
-Completed:
- * create, delete, upload, download maps
- * tiles layers, game layer and ddnet physics layers (tele, tune, speedup, switch, front)
- * quads
- * images (upload png files, select layer images)
- * envelopes (color and position envelopes, play animations)
- * map info (author, credits, … and server settings)
- * Auto mappers
- * Select and edit multiple layers at a time
- 
-Still missing:
- * sound layers & sound envelopes
- * Proof and grid lines?
- * Some tools: import / merge maps, auto place game tiles, show tile info, …
- 
-Missing features specific to the online editor:
- * ddnet server running with the edited maps and with reload-on-save (#21)
- * Accounts?, manage permissions
- * Undo / Redo history (#31)
- * Chat?
- 
+The app is now mostly compatible with ddnet editor.
 Bugs are expected. It is advised to save regularly and if a bug happens, log out and back in to roll back to the previous save.
 Maps corruptions are unlikely to happen though thanks to @patiga's [twmap library](https://gitlab.com/Patiga/twmap).
+
+### DDNet Compatibility
+
+The table below shows the feature parity with ddnet's in-game map editor.
+
+|                 | Support | Comment                                                                               |
+|-----------------|---------|---------------------------------------------------------------------------------------|
+| Groups          | ✅      |                                                                                       |
+| Layers          | ✅      |                                                                                       |
+| Images          | ✅      | Image tab planned                                                                     |
+| Envelopes       | ✅      | UX needs improvement                                                                  |
+| Sounds          | ❌      | Not planned                                                                           |
+| Map details     | ✅      |                                                                                       |
+| Tiles           | 🆗      | Missing: Shift tiles, Auto game tiles                                                 |
+| Quads           | 🆗      | Missing: Slice, Square, Align, Aspect ratio                                           |
+| Automappers     | ✅      |                                                                                       |
+| Server settings | 🆗      | Better support for server settings planned (#77)                                      |
+| Misc. Tools     | ❌      | Missing: Append map, Allow/Remove unused, Destructive, Refocus, Goto, Place border    |
+| Misc. display   | ❌      | Missing: Tile info, Grid, Proof, High detail, Zoom                                    |
+
+### Unique features
+
+ * Collaborative editing
+ * Automapper edit and live-preview
+ * Rules++ support (experimental)
+
+### Roadmap to 1.0
+
+ * Desktop client
+ * Server bridging
+ * sync with ddnet server / reload-on-save (#21)
+ * Map passwords and permissions
+ * Undo / Redo history (#31)
+ * More tools: Proof, Quad tools
+ * Bug squashing
 
 ## Usage
 
@@ -67,6 +80,8 @@ Run the server with `RUST_LOG=debug cargo run --release` to run in release mode 
 Use the first command-line argument to change address and port e.g. `cargo run localhost:3333` to run locally on port 3333.
 
 Use the `--cert` and `--key` flags to enable TLS support for websocket. They must point to your PEM certificate and private key.
+
+Use the `--rpp <path>` flat to enable Rules++ support (experimental). `<path>` must be the **absolute** path to a directory containing: `rpp` (the rpp executable), `base.r` and `base.p`.
 
 ### Client
 
