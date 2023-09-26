@@ -85,7 +85,7 @@ impl<T: Copy> PartialCheck for PartialEnv<T> {
 
     fn check_map(&self, map: &twmap::TwMap) -> Result<(), Error> {
         if let Some(points) = &self.points {
-            twmap::EnvPoint::check_all(points, &map).map_err(|e| Error::MapError(e.to_string()))?;
+            twmap::EnvPoint::check_all(points, map).map_err(|e| Error::MapError(e.to_string()))?;
         }
         Ok(())
     }

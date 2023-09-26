@@ -23,7 +23,7 @@ impl<'de> Deserialize<'de> for Base64 {
         let str: &str = Deserialize::deserialize(deserializer)?;
         base64::engine::general_purpose::STANDARD
             .decode(str)
-            .map(|v| Base64(v))
+            .map(Base64)
             .map_err(|_| D::Error::invalid_value(Unexpected::Str(str), &"a base64-encoded string"))
     }
 }

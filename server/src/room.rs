@@ -9,7 +9,6 @@ use std::{
 };
 
 use axum::extract::ws::Message;
-use base64::Engine;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
@@ -40,7 +39,7 @@ fn server_error<E: std::fmt::Display>(err: E) -> &'static str {
 }
 
 fn load_map(path: &Path) -> Result<twmap::TwMap, twmap::Error> {
-    let mut map = twmap::TwMap::parse_file(&path)?;
+    let mut map = twmap::TwMap::parse_file(path)?;
     map.load()?;
     Ok(map)
 }
@@ -68,7 +67,7 @@ impl LazyMap {
     pub fn get(&self) -> MappedMutexGuard<twmap::TwMap> {
         // lazy-load map if not loaded
         let mut map = self.map.lock();
-        if *map == None {
+        if map.is_none() {
             *map = load_map(&self.path).ok();
             log::debug!("loaded map '{}'", self.path.display());
         }

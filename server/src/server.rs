@@ -2,7 +2,6 @@ use std::{
     collections::HashMap,
     net::SocketAddr,
     path::{Path, PathBuf},
-    process::ExitStatus,
     sync::{Arc, Mutex, MutexGuard},
 };
 
@@ -130,28 +129,26 @@ impl Server {
                 let map_name = room.name();
                 match req {
                     MapReq::Get(req) => match req {
-                        MapGetReq::Users => self.get_users(map_name).map(|r| Response::Users(r)),
-                        MapGetReq::Cursors => self
-                            .get_cursors(map_name, peer)
-                            .map(|r| Response::Cursors(r)),
+                        MapGetReq::Users => self.get_users(map_name).map(Response::Users),
+                        MapGetReq::Cursors => {
+                            self.get_cursors(map_name, peer).map(Response::Cursors)
+                        }
                         MapGetReq::Map => self.get_map(map_name).map(|r| Response::Map(Base64(r))),
-                        MapGetReq::Images => self.get_images(map_name).map(|r| Response::Images(r)),
+                        MapGetReq::Images => self.get_images(map_name).map(Response::Images),
                         MapGetReq::Image(i) => self
                             .get_image(map_name, i)
                             .map(|r| Response::Image(Base64(r))),
                         MapGetReq::Envelopes => {
-                            self.get_envelopes(map_name).map(|r| Response::Envelopes(r))
+                            self.get_envelopes(map_name).map(Response::Envelopes)
                         }
                         MapGetReq::Envelope(e) => self
                             .get_envelope(map_name, e)
                             .map(|r| Response::Envelope(Box::new(r))),
-                        MapGetReq::Groups => self.get_groups(map_name).map(|r| Response::Groups(r)),
+                        MapGetReq::Groups => self.get_groups(map_name).map(Response::Groups),
                         MapGetReq::Group(g) => self
                             .get_group(map_name, g)
                             .map(|r| Response::Group(Box::new(r))),
-                        MapGetReq::Layers(g) => {
-                            self.get_layers(map_name, g).map(|r| Response::Layers(r))
-                        }
+                        MapGetReq::Layers(g) => self.get_layers(map_name, g).map(Response::Layers),
                         MapGetReq::Layer(g, l) => self
                             .get_layer(map_name, g, l)
                             .map(|r| Response::Layer(Box::new(r))),
@@ -161,12 +158,12 @@ impl Server {
                         MapGetReq::Quad(g, l, q) => self
                             .get_quad(map_name, g, l, q)
                             .map(|r| Response::Quad(Box::new(r))),
-                        MapGetReq::Automappers => self
-                            .get_automappers(map_name)
-                            .map(|r| Response::Automappers(r)),
-                        MapGetReq::Automapper(am) => self
-                            .get_automapper(map_name, &am)
-                            .map(|r| Response::Automapper(r)),
+                        MapGetReq::Automappers => {
+                            self.get_automappers(map_name).map(Response::Automappers)
+                        }
+                        MapGetReq::Automapper(am) => {
+                            self.get_automapper(map_name, &am).map(Response::Automapper)
+                        }
                     },
                     MapReq::Put(req) => match req {
                         MapPutReq::Image(image_name, create) => {
@@ -265,7 +262,7 @@ impl Server {
                 },
                 Request::Leave(map_name) | Request::Join(map_name) => self.broadcast_to_others(
                     peer,
-                    Message::Broadcast(Broadcast::Users(self.get_users(&map_name).unwrap_or(0))),
+                    Message::Broadcast(Broadcast::Users(self.get_users(map_name).unwrap_or(0))),
                 ),
             }
         }
@@ -285,25 +282,22 @@ impl Server {
         let mut peer = Peer::new(addr, ws_send);
 
         let fut_recv = ws_recv.try_for_each(|msg| {
-            match msg {
-                ws::Message::Text(text) => {
-                    // log::debug!("text message received from {}: {}", addr, text);
+            if let ws::Message::Text(text) = msg {
+                // log::debug!("text message received from {}: {}", addr, text);
 
-                    match serde_json::from_str(&text) {
-                        Ok(req) => {
-                            self.handle_request(&mut peer, req);
-                        }
-                        Err(e) => {
-                            log::error!("failed to parse message: {} in {}", e, &text);
-                            self.send(
-                                &peer,
-                                None,
-                                Message::Response(Err(Error::BadRequest(e.to_string()))),
-                            )
-                        }
-                    };
-                }
-                _ => (),
+                match serde_json::from_str(&text) {
+                    Ok(req) => {
+                        self.handle_request(&mut peer, req);
+                    }
+                    Err(e) => {
+                        log::error!("failed to parse message: {} in {}", e, &text);
+                        self.send(
+                            &peer,
+                            None,
+                            Message::Response(Err(Error::BadRequest(e.to_string()))),
+                        )
+                    }
+                };
             }
 
             futures::future::ok(())
@@ -319,7 +313,7 @@ impl Server {
 
         // if the peer uploaded a map but did not use it, we want to delete it now.
         let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
-        std::fs::remove_file(&upload_path).ok();
+        std::fs::remove_file(upload_path).ok();
 
         log::info!("disconnected {}", &addr);
     }
@@ -348,10 +342,10 @@ impl Server {
     }
 
     pub fn put_map(&self, map_name: &str, file: &[u8]) -> Result<(), Error> {
-        if !check_map_path(&map_name) {
+        if !check_map_path(map_name) {
             return Err(Error::InvalidMapName);
         }
-        if self.room(&map_name).is_ok() {
+        if self.room(map_name).is_ok() {
             return Err(Error::MapNameTaken);
         }
 
@@ -538,7 +532,7 @@ impl Server {
             return Err(Error::InvalidFileName);
         }
 
-        if room.map().images.len() == 64 as usize {
+        if room.map().images.len() == 64usize {
             return Err(Error::MaxImages);
         }
 
@@ -713,11 +707,11 @@ impl Server {
         // we don't want to just group.clone() because of the layers
         Ok(twmap::Group {
             name: group.name.clone(),
-            offset: group.offset.clone(),
-            parallax: group.parallax.clone(),
+            offset: group.offset,
+            parallax: group.parallax,
             layers: Vec::new(),
-            clipping: group.clipping.clone(),
-            clip: group.clip.clone(),
+            clipping: group.clipping,
+            clip: group.clip,
         })
     }
 
@@ -823,11 +817,11 @@ impl Server {
             twmap::Layer::Tune(_) => default_physics_layer!(Tune, TuneLayer),
             twmap::Layer::Tiles(layer) => twmap::Layer::Tiles(twmap::TilesLayer {
                 name: layer.name.clone(),
-                detail: layer.detail.clone(),
-                color: layer.color.clone(),
-                color_env: layer.color_env.clone(),
-                color_env_offset: layer.color_env_offset.clone(),
-                image: layer.image.clone(),
+                detail: layer.detail,
+                color: layer.color,
+                color_env: layer.color_env,
+                color_env_offset: layer.color_env_offset,
+                image: layer.image,
                 tiles: twmap::CompressedData::Loaded(Default::default()),
                 automapper_config: layer.automapper_config.clone(),
             }),
@@ -1294,7 +1288,7 @@ impl Server {
         let mut path = self.room(map_name)?.path().to_owned();
         path.push(am);
 
-        if !is_automapper(&path).is_some() {
+        if is_automapper(&path).is_none() {
             return Err(Error::AutomapperNotFound);
         }
 
@@ -1383,12 +1377,11 @@ impl Server {
         std::fs::write(&path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
 
         if kind == AutomapperKind::RulesPP {
-            let res = self
-                .compile_rpp(&path)
+            self.compile_rpp(&path)
                 .and_then(|()| {
                     let target = path.with_extension("rules");
                     let file = std::fs::read_to_string(&target)
-                        .map_err(|e| Error::AutomapperError(e.to_string().into()))?;
+                        .map_err(|e| Error::AutomapperError(e.to_string()))?;
                     let name = target
                         .file_name()
                         .unwrap_or_default()
@@ -1414,7 +1407,7 @@ impl Server {
         let mut path = self.room(map_name)?.path().to_owned();
         path.push(am);
 
-        if !is_automapper(&path).is_some() {
+        if is_automapper(&path).is_none() {
             return Err(Error::InvalidFileName);
         }
 
@@ -1636,13 +1629,7 @@ impl Server {
             .peers()
             .iter()
             .filter(|(_, v)| v.id != peer_id)
-            .filter_map(|(_, v)| {
-                if let Some(cursor) = &v.cursor {
-                    Some((v.id.to_string(), cursor.clone()))
-                } else {
-                    None
-                }
-            })
+            .filter_map(|(_, v)| v.cursor.as_ref().map(|c| (v.id.to_string(), c.clone())))
             .collect();
 
         Ok(cursors)

@@ -1,8 +1,7 @@
 use std::{fmt::Display, path::Path, sync::OnceLock};
 
 use regex::Regex;
-use serde::{Deserialize, Deserializer, Serializer};
-use serde_with::serde_conv;
+use serde::Serializer;
 
 use crate::{
     protocol::AutomapperKind,
@@ -61,7 +60,7 @@ pub(crate) fn check_map_path(fname: &str) -> bool {
 
 pub(crate) fn check_file_name(name: &str) -> bool {
     // this is a very primitive sanitization to prevent path traversal attacks.
-    !(name.chars().any(std::path::is_separator) || name.starts_with(".") || name.is_empty())
+    !(name.chars().any(std::path::is_separator) || name.starts_with('.') || name.is_empty())
 }
 
 pub(crate) fn set_layer_width<T: twmap::TilemapLayer>(
@@ -114,7 +113,7 @@ pub(crate) fn is_automapper(path: &Path) -> Option<AutomapperKind> {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         extensions
             .iter()
-            .find(|(str, kind)| *str == ext)
+            .find(|(str, _kind)| *str == ext)
             .map(|(_, ext)| ext)
             .copied()
     } else {

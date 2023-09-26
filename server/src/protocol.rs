@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use fixed::types::{I22F10, I27F5};
 use serde::{Deserialize, Serialize};
-use serde_with::{rust::double_option, serde_as, skip_serializing_none, DisplayFromStr};
+use serde_with::{rust::double_option, serde_as, skip_serializing_none};
 use twmap::{AutomapperConfig, EnvPoint, Position, Volume};
 use vek::{Extent2, Rect, Rgba, Vec2};
 

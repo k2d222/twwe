@@ -1,7 +1,7 @@
 use std::{borrow::Cow, fmt::Display};
 
 use axum::{http::StatusCode, response::IntoResponse};
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
@@ -13,6 +13,7 @@ pub enum Error {
     LayerNotFound,
     QuadNotFound,
     AutomapperNotFound,
+    #[allow(unused)]
     NotFound(&'static str),
 
     MaxEnvelopes,

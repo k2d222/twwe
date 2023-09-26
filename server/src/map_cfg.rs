@@ -1,16 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MapAccess {
+    #[default]
     Public,
     Unlisted,
-}
-
-impl Default for MapAccess {
-    fn default() -> Self {
-        MapAccess::Public
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]

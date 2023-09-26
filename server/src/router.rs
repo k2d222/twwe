@@ -176,7 +176,7 @@ async fn route_get_images(
     State(server): State<Arc<Server>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
-    server.get_images(&map).map(|imgs| Json(imgs))
+    server.get_images(&map).map(Json)
 }
 
 async fn route_get_image(
@@ -190,7 +190,7 @@ async fn route_get_info(
     State(server): State<Arc<Server>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
-    server.get_info(&map).map(|info| Json(info))
+    server.get_info(&map).map(Json)
 }
 
 async fn route_post_info(
@@ -205,7 +205,7 @@ async fn route_get_envelopes(
     State(server): State<Arc<Server>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
-    server.get_envelopes(&map).map(|envs| Json(envs))
+    server.get_envelopes(&map).map(Json)
 }
 
 async fn route_put_envelope(
@@ -220,7 +220,7 @@ async fn route_get_envelope(
     State(server): State<Arc<Server>>,
     Path((map, env)): Path<(String, u16)>,
 ) -> impl IntoResponse {
-    server.get_envelope(&map, env).map(|env| Json(env))
+    server.get_envelope(&map, env).map(Json)
 }
 
 async fn route_post_envelope(
@@ -242,7 +242,7 @@ async fn route_get_groups(
     State(server): State<Arc<Server>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
-    server.get_groups(&map).map(|groups| Json(groups))
+    server.get_groups(&map).map(Json)
 }
 
 async fn route_post_group(
@@ -272,7 +272,7 @@ async fn route_get_layers(
     State(server): State<Arc<Server>>,
     Path((map, group)): Path<(String, u16)>,
 ) -> impl IntoResponse {
-    server.get_layers(&map, group).map(|layers| Json(layers))
+    server.get_layers(&map, group).map(Json)
 }
 
 async fn route_put_layer(

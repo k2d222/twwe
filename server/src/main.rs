@@ -28,7 +28,6 @@ fn create_server(cli: &Cli) -> Server {
         let mut server_rooms = server.rooms();
         let rooms = glob("maps/*/map.map")
             .expect("no map found in maps directory")
-            .into_iter()
             .filter_map(|e| e.ok())
             .map(|e| {
                 let dir = e.parent().unwrap().to_owned(); // map must be in a sub-directory
