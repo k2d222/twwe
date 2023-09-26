@@ -50,6 +50,26 @@ export class DataFile {
 
   constructor(data: ArrayBuffer) {
     this.data = data
+    this.version = 0
+    this.crc = 0
+
+    this.size = 0
+    this.swapLen = 0
+    this.numItemTypes = 0
+    this.numItems = 0
+    this.numRawData = 0
+    this.itemSize = 0
+    this.dataSize = 0
+
+    this.itemStart = 0
+    this.dataStart = 0
+
+    this.itemTypes = []
+    this.itemOffsets = []
+
+    this.dataInfos = []
+
+    this.decData = []
 
     this.reader = new DataReader(this.data)
     this.reader.reset()

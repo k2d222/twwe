@@ -20,6 +20,10 @@
   let syncClipY: Writable<number>
   let syncClipW: Writable<number>
   let syncClipH: Writable<number>
+  let syncOffX: Writable<number>
+  let syncOffY: Writable<number>
+  let syncParaX: Writable<number>
+  let syncParaY: Writable<number>
 
   $: group = $map.groups[g]
 
@@ -87,9 +91,9 @@
     })
   }
 
-  let sync_ = null
+  let sync_ = 0
   function onSync() {
-    sync_ = sync_
+    sync_++
   }
 
   onMount(() => {

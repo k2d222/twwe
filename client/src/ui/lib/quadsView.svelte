@@ -211,16 +211,10 @@
 
   function cloneQuad(quad: Quad) {
     const copy: Quad = {
-      points: quad.points.map(p => {
-        return { x: p.x, y: p.y }
-      }),
-      colors: quad.colors.map(c => {
-        return { r: c.r, g: c.g, b: c.b, a: c.a }
-      }),
-      texCoords: quad.texCoords.map(p => {
-        return { x: p.x, y: p.y }
-      }),
       ...quad,
+      points: quad.points.map(({ x, y }) => ({ x, y })),
+      colors: quad.colors.map(({ r, g, b, a}) => ({ r, g, b, a })),
+      texCoords: quad.texCoords.map(({ x, y }) => ({ x, y })),
     }
 
     return copy

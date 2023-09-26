@@ -67,7 +67,7 @@
   $: currentSpeedup.force = clamp(currentSpeedup.force, 0, 255)
   $: currentTune.number = clamp(currentTune.number, 0, 255)
 
-  let current: Info.AnyTile
+  let current: Info.AnyTile | null
   let boxSelect = false
 
   $: current =
@@ -89,7 +89,7 @@
 
   let mounted = false
   onMount(() => {
-    ctx = canvas.getContext('2d')
+    ctx = canvas.getContext('2d')!
     drawLayer()
     Editor.on('keydown', onKeyDown)
     Editor.on('keyup', onKeyUp)
@@ -137,6 +137,8 @@
       return createImageBitmap(image.data)
     } else if (image.img) {
       return image.img
+    } else {
+      return Promise.reject('image has no source')
     }
   }
 
@@ -218,7 +220,7 @@
   }
 
   function onMouseUp(e: MouseEvent) {
-    if (boxSelect) {
+    if (boxSelect && current) {
       const x = Math.floor((e.offsetX / (e.currentTarget as HTMLElement).clientWidth) * tileCount)
       const y = Math.floor((e.offsetY / (e.currentTarget as HTMLElement).clientHeight) * tileCount)
       selection.end = { x, y }

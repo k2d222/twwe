@@ -13,7 +13,7 @@ type Cont = typeof cont
 export const _: Cont = cont // alias for placeholder
 
 
-function patternValue(pat: any, val: any) {
+function patternValue(pat: any, val: any): any {
   if (pat === pick) {
     return val
   }

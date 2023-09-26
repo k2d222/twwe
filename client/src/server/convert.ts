@@ -158,6 +158,7 @@ export function tilesLayerFlagsToLayerKind(flags: Info.TilesLayerFlags) {
   else if (flags === Info.TilesLayerFlags.TELE) return MapDir.LayerKind.Tele
   else if (flags === Info.TilesLayerFlags.TILES) return MapDir.LayerKind.Tiles
   else if (flags === Info.TilesLayerFlags.TUNE) return MapDir.LayerKind.Tune
+  else throw 'not a tile layer'
 }
 
 export function layerKindToTilesLayerFlags(kind: MapDir.LayerKind) {

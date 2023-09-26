@@ -17,7 +17,6 @@ export class Viewport {
   posDragStart: Vec2 // top-left corner when drag started
   posDragLast: Vec2 // top-left corner last frame
   mousePos: Vec2 // mouse world position when hover the canvas
-  mouseHover: boolean // mouse is over the canvas
 
   clickTimeout: number // millis between press and release to be considered click
 

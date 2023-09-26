@@ -13,21 +13,22 @@ import {
 } from './parser'
 
 export function createLayer(flags: Info.TilesLayerFlags) {
-  return flags === Info.TilesLayerFlags.TILES
-    ? new TilesLayer()
-    : flags === Info.TilesLayerFlags.GAME
-    ? new GameLayer()
-    : flags === Info.TilesLayerFlags.FRONT
-    ? new FrontLayer()
-    : flags === Info.TilesLayerFlags.TELE
-    ? new TeleLayer()
-    : flags === Info.TilesLayerFlags.SPEEDUP
-    ? new SpeedupLayer()
-    : flags === Info.TilesLayerFlags.SWITCH
-    ? new SwitchLayer()
-    : flags === Info.TilesLayerFlags.TUNE
-    ? new TuneLayer()
-    : null
+    if (flags === Info.TilesLayerFlags.TILES)
+      return new TilesLayer()
+    else if (flags === Info.TilesLayerFlags.GAME)
+      return new GameLayer()
+    else if (flags === Info.TilesLayerFlags.FRONT)
+      return new FrontLayer()
+    else if (flags === Info.TilesLayerFlags.TELE)
+      return new TeleLayer()
+    else if (flags === Info.TilesLayerFlags.SPEEDUP)
+      return new SpeedupLayer()
+    else if (flags === Info.TilesLayerFlags.SWITCH)
+      return new SwitchLayer()
+    else if (flags === Info.TilesLayerFlags.TUNE)
+      return new TuneLayer()
+    else
+      throw 'unknown layer type: ' + flags
 }
 
 export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
@@ -112,7 +113,7 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
     this.colorEnv = null
     this.colorEnvOffset = 0
     this.automapper = {
-      config: null,
+      config: -1,
       seed: 0,
       automatic: false,
     }
@@ -126,7 +127,7 @@ export class TilesLayer extends AnyTilesLayer<Info.Tile> {
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
     this.width = info.width
     this.height = info.height
     this.color = info.color
@@ -168,7 +169,7 @@ export class GameLayer extends AnyTilesLayer<Info.Tile> {
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
     this.width = info.width
     this.height = info.height
     this.color = info.color
@@ -201,7 +202,7 @@ export class FrontLayer extends AnyTilesLayer<Info.Tile> {
   }
 
   load(map: Map, df: DataFile, info: Info.TilesLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
     this.width = info.width
     this.height = info.height
     this.color = info.color
@@ -211,7 +212,7 @@ export class FrontLayer extends AnyTilesLayer<Info.Tile> {
       this.image = map.images[info.image]
     }
 
-    const tileData = df.getData(info.dataFront)
+    const tileData = df.getData(info.dataFront!)
     this.tiles = parseTiles(tileData, info.width * info.height)
   }
 }
@@ -229,10 +230,10 @@ export class TeleLayer extends AnyTilesLayer<Info.Tele> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
     this.width = info.width
     this.height = info.height
-    const tileData = df.getData(info.dataTele)
+    const tileData = df.getData(info.dataTele!)
     this.tiles = parseTeleTiles(tileData, info.width * info.height)
   }
 }
@@ -250,10 +251,10 @@ export class SpeedupLayer extends AnyTilesLayer<Info.Speedup> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
     this.width = info.width
     this.height = info.height
-    const tileData = df.getData(info.dataSpeedup)
+    const tileData = df.getData(info.dataSpeedup!)
     this.tiles = parseSpeedupTiles(tileData, info.width * info.height)
   }
 }
@@ -271,10 +272,10 @@ export class SwitchLayer extends AnyTilesLayer<Info.Switch> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
     this.width = info.width
     this.height = info.height
-    const tileData = df.getData(info.dataSwitch)
+    const tileData = df.getData(info.dataSwitch!)
     this.tiles = parseSwitchTiles(tileData, info.width * info.height)
   }
 }
@@ -291,10 +292,10 @@ export class TuneLayer extends AnyTilesLayer<Info.Tune> {
   }
 
   load(_: Map, df: DataFile, info: Info.TilesLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
     this.width = info.width
     this.height = info.height
-    const tileData = df.getData(info.dataTune)
+    const tileData = df.getData(info.dataTune!)
     this.tiles = parseTuneTiles(tileData, info.width * info.height)
   }
 }

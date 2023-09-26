@@ -81,6 +81,8 @@
   let automapperOpen = false
 
   async function onImagePick(e: Event & { detail: File | Image | string | null }) {
+    if (!layer)
+      return
     imagePickerOpen = false
 
     // no image used
@@ -123,6 +125,8 @@
   }
 
   async function uploadImageAndPick(file: Blob, name: string) {
+    if (!layer)
+      return
     try {
       // await uploadImage($serverConfig.httpUrl, $rmap.map.name, name, file) // TODO return index
       const buf = new Uint8Array(await file.arrayBuffer())
@@ -287,6 +291,7 @@
     // }, 5000)
   }
   async function onAutomapperChange() {
+    if (!layer) return
     const automapper = (layer as TilesLayer).automapper
     await $server.query('map/post/layer', [g, l, {
       type: layerKind(layer),

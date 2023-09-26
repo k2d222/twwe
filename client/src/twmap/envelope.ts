@@ -89,10 +89,10 @@ export class ColorEnvelope extends Envelope<EnvColor> {
 
   load(_map: Map, df: DataFile, info: Info.Envelope) {
     this.points = []
-    this.name = info.name
+    this.name = info.name ?? ''
 
     const itemSize = info.version <= 2 ? 6 * 4 : 22 * 4
-    const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)
+    const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)!
     const pointsItem = df.getItem(pointsInfo.start)
 
     for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {
@@ -151,10 +151,10 @@ export class PositionEnvelope extends Envelope<EnvPos> {
 
   load(_map: Map, df: DataFile, info: Info.Envelope) {
     this.points = []
-    this.name = info.name
+    this.name = info.name ?? ''
 
     const itemSize = info.version <= 2 ? 6 * 4 : 22 * 4
-    const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)
+    const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)!
     const pointsItem = df.getItem(pointsInfo.start)
 
     for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {
@@ -187,10 +187,10 @@ export class SoundEnvelope extends Envelope<EnvSound> {
 
   load(_map: Map, df: DataFile, info: Info.Envelope) {
     this.points = []
-    this.name = info.name
+    this.name = info.name ?? ''
 
     const itemSize = info.version <= 2 ? 6 * 4 : 22 * 4
-    const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)
+    const pointsInfo = df.getType(Info.ItemType.ENVPOINTS)!
     const pointsItem = df.getItem(pointsInfo.start)
 
     for (let p = info.startPoint; p < info.startPoint + info.numPoints; p++) {

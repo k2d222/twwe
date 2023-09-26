@@ -27,7 +27,7 @@ export class QuadsLayer extends Layer {
   }
 
   load(map: Map, df: DataFile, info: Info.QuadsLayer) {
-    if ('name' in info) this.name = info.name
+    if (info.name !== undefined) this.name = info.name
 
     const quadData = df.getData(info.data)
     this.quads = parseQuads(quadData, info.numQuads).map(q => {

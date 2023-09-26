@@ -142,6 +142,9 @@
   }
 
   async function onPreview() {
+    if (selected === null)
+      return
+
     let am = $automappers[selected]
 
     if (am.kind !== AutomapperKind.DDNet) {
@@ -159,7 +162,7 @@
     }
     tilesCache = []
 
-    if (configs.length === 0) {
+    if (configs === null || configs.length === 0) {
       showError('Cannot preview: the current automapper has no config.')
       return
     }

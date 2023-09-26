@@ -11,7 +11,7 @@ export const UniformLocations = [
 
 type ProgLocations = {
   attrs: { [k in typeof AttributeLocations[number]]: number }
-  unifs: { [k in typeof UniformLocations[number]]: WebGLUniformLocation }
+  unifs: { [k in typeof UniformLocations[number]]: WebGLUniformLocation | null }
 }
 
 export class Shader {
@@ -21,7 +21,7 @@ export class Shader {
   locs: ProgLocations
 
   constructor(gl: WebGL2RenderingContext, vertSrc: string, fragSrc: string) {
-    this.prog = gl.createProgram()
+    this.prog = gl.createProgram()!
     this.vert = Shader.makeShader(gl, vertSrc, gl.VERTEX_SHADER)
     this.frag = Shader.makeShader(gl, fragSrc, gl.FRAGMENT_SHADER)
 
@@ -64,7 +64,7 @@ export class Shader {
   }
 
   private static makeShader(gl: WebGL2RenderingContext, src: string, typ: number) {
-    const shader = gl.createShader(typ)
+    const shader = gl.createShader(typ)!
     gl.shaderSource(shader, src)
     gl.compileShader(shader)
     return shader

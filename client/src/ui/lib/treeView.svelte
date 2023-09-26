@@ -52,7 +52,7 @@
         const node = group.firstElementChild as HTMLElement
         node.focus()
       } else {
-        const layer = group.lastElementChild.children[active_l]
+        const layer = group.lastElementChild!.children[active_l]
         const node = layer.firstElementChild as HTMLElement
         node.focus()
       }

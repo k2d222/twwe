@@ -122,8 +122,8 @@ export class RenderAnyTilesLayer<
       for (let x = 0; x < countX; x++) {
         this.buffers[y][x] = {
           tileCount: -1,
-          vertex: gl.createBuffer(),
-          texCoord: gl.createBuffer(),
+          vertex: gl.createBuffer()!,
+          texCoord: gl.createBuffer()!,
         }
       }
     }
@@ -229,8 +229,8 @@ type TextBuffer = {
 
 function createTextBuffer(): TextBuffer {
   return {
-    vertex: gl.createBuffer(),
-    texCoord: gl.createBuffer(),
+    vertex: gl.createBuffer()!,
+    texCoord: gl.createBuffer()!,
     tileCount: 0,
   }
 }
@@ -730,7 +730,7 @@ function makeTexCoords(tile: { id: number; flags?: number }, atlasSize: number) 
   return [x0, y0, x3, y1, x1, y2, x0, y0, x1, y2, x2, y3]
 }
 
-function makeArrowTexCoords(tile: { angle?: number }) {
+function makeArrowTexCoords(tile: { angle: number }) {
   const cos = Math.cos(tile.angle / 180 * Math.PI)
   const sin = -Math.sin(tile.angle / 180 * Math.PI)
   const x = (cos - sin) / Math.sqrt(2) * 0.5

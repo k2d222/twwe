@@ -5,7 +5,7 @@ import * as Info from './types'
 
 export type Automapper = Config[]
 
-export class Config {
+export interface Config {
   name: string
   runs: Run[]
 }
@@ -563,9 +563,9 @@ export function parse(content: string): Config[] | null {
   const reader = new FileReader(content)
 
   const automappers: Config[] = []
-  let automapper: Config | null = null
-  let run: Run | null = null
-  let indexRule: IndexRule | null = null
+  let automapper: Config | null = null as Config | null
+  let run: Run | null = null as Run | null
+  let indexRule: IndexRule | null = null as IndexRule | null
   let defaultRule = true
 
   function finishIndexRule() {
@@ -579,13 +579,13 @@ export function parse(content: string): Config[] | null {
   function newIndexRule(tile: Info.Tile) {
     finishIndexRule()
     indexRule = { tile, rules: [] }
-    run.indexRules.push(indexRule)
+    run!.indexRules.push(indexRule)
   }
 
   function newRun() {
     finishIndexRule()
     run = { layerCopy: true, indexRules: [] }
-    automapper.runs.push(run)
+    automapper!.runs.push(run)
   }
 
   function newConfig(name: string) {

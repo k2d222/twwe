@@ -34,7 +34,7 @@ export class Group {
   }
 
   load(map: Map, df: DataFile, info: Info.Group) {
-    this.name = info.name
+    this.name = info.name ?? ''
     this.offX = info.offX
     this.offY = info.offY
     this.paraX = info.paraX

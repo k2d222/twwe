@@ -17,6 +17,7 @@ import * as MapDir from '../../twmap/mapdir'
 import type { Layer } from '../../twmap/layer'
 import { QuadsLayer } from '../../twmap/quadsLayer'
 import { tilesToData } from '../../server/convert'
+import { layerKind } from './util'
 
 // list of layers -> 2d array of tiles
 export type Brush = {
@@ -32,10 +33,6 @@ export type Brush = {
 export type Range = {
   start: Coord
   end: Coord
-}
-
-export function getLayerImage(rmap: RenderMap, g: number, l: number) {
-  return rmap.groups[g].layers[l].texture.image
 }
 
 export function normalizeRange(range: Range): Range {
@@ -207,27 +204,6 @@ function adaptTile(tile: Info.AnyTile, kind: MapDir.LayerKind): Info.AnyTile {
     }
   } else {
     throw 'Unsupported layer kind ' + kind
-  }
-}
-
-// TODO: refactor layer to contain kind (mapdir's kind instead of Info's type)
-function layerKind(layer: Layer): MapDir.LayerKind {
-  if (layer instanceof FrontLayer) {
-    return MapDir.LayerKind.Front
-  } else if (layer instanceof GameLayer) {
-    return MapDir.LayerKind.Game
-  } else if (layer instanceof QuadsLayer) {
-    return MapDir.LayerKind.Quads
-  } else if (layer instanceof SpeedupLayer) {
-    return MapDir.LayerKind.Speedup
-  } else if (layer instanceof SwitchLayer) {
-    return MapDir.LayerKind.Switch
-  } else if (layer instanceof TeleLayer) {
-    return MapDir.LayerKind.Tele
-  } else if (layer instanceof TilesLayer) {
-    return MapDir.LayerKind.Tiles
-  } else if (layer instanceof TuneLayer) {
-    return MapDir.LayerKind.Tune
   }
 }
 

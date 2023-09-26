@@ -105,6 +105,7 @@
     if (env instanceof ColorEnvelope) return colorChannels
     else if (env instanceof PositionEnvelope) return posChannels
     else if (env instanceof SoundEnvelope) return soundChannels
+    else throw 'unknown envelope type'
   }
 
   const viewBoxMargin = 0.01 // additional space, relative to the viewbox
@@ -253,6 +254,8 @@
   })
 
   async function onRename(e: InputEvent) {
+    if (!selected)
+      return
     const change: Send['map/post/envelope'] = [$rmap.map.envelopes.indexOf(selected), {
       type: envTypeToString(selected.type),
       name: e.currentTarget.value,
@@ -280,6 +283,8 @@
   }
 
   async function onDelete() {
+    if (!selected)
+      return
     const index = $rmap.map.envelopes.indexOf(selected)
     try {
       await $server.query('map/delete/envelope', index)
@@ -313,6 +318,8 @@
   }
 
   function onMouseMove(e: MouseEvent) {
+    if (!selected)
+      return
     if (activePath !== -1 && activePoint !== -1) {
       const chan = envChannels(selected)[activePath]
       const point = selected.points[activePoint]
@@ -361,7 +368,7 @@
   }
 
   function makeEnvEdit(): Send['map/post/envelope'] {
-    const index = $rmap.map.envelopes.indexOf(selected)
+    const index = $rmap.map.envelopes.indexOf(selected!)
 
     if (selected instanceof ColorEnvelope) {
       return [index, {
@@ -395,12 +402,13 @@
         })),
       }]
     } else {
-      console.warn('unsupported envelope type', selected)
-      return null
+      throw 'unknown envelope type'
     }
   }
 
   function onEditValue(e: InputEvent) {
+    if (!selected)
+      return
     const point = selected.points[cm_j]
     const chan = envChannels(selected)[cm_i]
     const val = clampI32(Math.floor(parseFloat(e.currentTarget.value) * 1024))
@@ -415,6 +423,8 @@
   }
 
   function onEditTime(e: InputEvent) {
+    if (!selected)
+      return
     const point = selected.points[cm_j]
     const prev = selected.points[Math.max(0, cm_j - 1)]
     const next = selected.points[Math.min(selected.points.length - 1, cm_j + 1)]
@@ -435,6 +445,8 @@
   }
 
   function onDeletePoint() {
+    if (!selected)
+      return
     selected.points.splice(cm_j, 1)
     cm_j = -1
 
@@ -445,6 +457,8 @@
   }
 
   function onEditCurve(e: FormEvent<HTMLSelectElement>) {
+    if (!selected)
+      return
     const point = selected.points[cm_k]
     const val: Info.CurveType = clampI32(parseInt(e.currentTarget.value))
     point.type = val
@@ -464,6 +478,8 @@
   }
 
   function addPoint(e: MouseEvent) {
+    if (!selected)
+      return
     if (!(e.target instanceof SVGSVGElement) || e.button !== 0) return
 
     let [px, _] = pixelToSvg(e.clientX, e.clientY)

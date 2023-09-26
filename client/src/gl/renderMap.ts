@@ -2,7 +2,7 @@ import type { Map, PhysicsLayer, Envelope } from '../twmap/map'
 import type { RenderLayer } from './renderLayer'
 import type { Quad } from '../twmap/quadsLayer'
 import * as Info from '../twmap/types'
-import type * as MapDir from '../twmap/mapdir'
+import * as MapDir from '../twmap/mapdir'
 import { PositionEnvelope, ColorEnvelope, SoundEnvelope } from '../twmap/envelope'
 import {
   TilesLayer,
@@ -211,23 +211,28 @@ export class RenderMap {
   }
 
   createEnvelope(part: Recv['map/put/envelope']) {
-    const env =
-      part.type === 'color'
-        ? new ColorEnvelope()
-        : part.type === 'position'
-        ? new PositionEnvelope()
-        : part.type === 'sound'
-        ? new SoundEnvelope()
-        : null
-    env.name = part.name
+    let env: Envelope
+      if (part.type === 'color')
+        env = new ColorEnvelope()
+      else if (part.type === 'position')
+        env = new PositionEnvelope()
+      else if (part.type === 'sound')
+        env = new SoundEnvelope()
+      else {
+        const _unreachable: never = part
+        return _unreachable
+      }
+
+    if (part.name !== undefined)
+      env.name = part.name
     this.addEnvelope(env)
   }
 
   editEnvelope(...[e, part]: Recv['map/post/envelope']) {
     const env = this.map.envelopes[e]
-    if ('name' in part) env.name = part.name
-    if ('synchronized' in part) env.synchronized = part.synchronized
-    if ('points' in part) {
+    if (part.name !== undefined) env.name = part.name
+    if (part.synchronized !== undefined) env.synchronized = part.synchronized
+    if (part.points !== undefined) {
       if (part.type === 'color')
         env.points = part.points.map(p => ({
           time: p.time,
@@ -339,23 +344,23 @@ export class RenderMap {
   editGroup(...[g, part]: Recv['map/post/group']) {
     const rgroup = this.groups[g]
 
-    if ('offset' in part) {
+    if (part.offset !== undefined) {
       rgroup.group.offX = fromFixedNum(part.offset.x, 5)
       rgroup.group.offY = fromFixedNum(part.offset.y, 5)
     } 
-    if ('parallax' in part) {
+    if (part.parallax !== undefined) {
       rgroup.group.paraX = part.parallax.x
       rgroup.group.paraY = part.parallax.y
     } 
-    if ('clipping' in part)
+    if (part.clipping !== undefined)
       rgroup.group.clipping = part.clipping
-    if ('clip' in part) {
+    if (part.clip !== undefined) {
       rgroup.group.clipX = fromFixedNum(part.clip.x, 5)
       rgroup.group.clipY = fromFixedNum(part.clip.y, 5)
       rgroup.group.clipW = fromFixedNum(part.clip.w, 5)
       rgroup.group.clipH = fromFixedNum(part.clip.h, 5)
     }
-    if ('name' in part)
+    if (part.name !== undefined)
       rgroup.group.name = part.name
   }
 
@@ -376,23 +381,23 @@ export class RenderMap {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l]
 
-    if ('detail' in part)
+    if (part.detail !== undefined)
       rlayer.layer.detail = part.detail
-    if ('name' in part)
+    if (part.name !== undefined)
       rlayer.layer.name = part.name
 
-    if (rlayer instanceof RenderTilesLayer) {
-      if ('color' in part)
+    if (rlayer instanceof RenderTilesLayer && part.type === MapDir.LayerKind.Tiles) {
+      if (part.color !== undefined)
         rlayer.layer.color = part.color
-      if ('width' in part)
+      if (part.width !== undefined)
         this.setLayerWidth(rgroup, rlayer, part.width)
-      if ('height' in part)
+      if (part.height !== undefined)
         this.setLayerHeight(rgroup, rlayer, part.height)
-      if ('color_env' in part)
+      if (part.color_env !== undefined)
         rlayer.layer.colorEnv = part.color_env === null ? null : this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope
-      if ('color_env_offset' in part)
+      if (part.color_env_offset !== undefined)
         rlayer.layer.colorEnvOffset = part.color_env_offset
-      if ('image' in part) {
+      if (part.image !== undefined) {
         if (part.image === null) {
           rlayer.layer.image = null
           rlayer.texture = this.blankTexture
@@ -404,20 +409,21 @@ export class RenderMap {
         }
         rlayer.recompute()
       }
-      if ('automapper_config' in part) {
+      if (part.automapper_config !== undefined) {
         rlayer.layer.automapper.config = part.automapper_config.config === null ? -1 : part.automapper_config.config
         rlayer.layer.automapper.seed = part.automapper_config.seed
         rlayer.layer.automapper.automatic = part.automapper_config.automatic
       }
-    } else if (rlayer instanceof RenderQuadsLayer) {
-      if ('image' in part) {
+    }
+    else if (rlayer instanceof RenderQuadsLayer && part.type === MapDir.LayerKind.Quads) {
+      if (part.image !== undefined) {
         if (part.image === null) {
           rlayer.layer.image = null
           rlayer.texture = this.blankTexture
         }
         else {
-          rlayer.layer.image = this.map.images[part.image]
-          rlayer.texture = this.textures[part.image]
+          rlayer.layer.image = this.map.images[stringToResIndex(part.image)[0]]
+          rlayer.texture = this.textures[stringToResIndex(part.image)[0]]
         }
       }
     }

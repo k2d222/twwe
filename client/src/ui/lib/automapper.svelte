@@ -17,7 +17,10 @@
   $: configs = $automappers[layer.image?.name + '.rules']?.configs ?? []
 
   async function onFileChange(e: Event) {
-    const file = (e.target as HTMLInputElement).files[0]
+    const input = e.target as HTMLInputElement
+    if (input.files === null || input.files.length === 0)
+      return
+    const file = input.files[0]
     const name = file.name.replace(/.rules$/, '')
     const str = await file.text()
 
@@ -41,8 +44,6 @@
       showError("Saving failed: " + e)
       return
     }
-
-    await $server.query("map/put/automapper", null)
 
     showInfo(`Uploaded '${name}'.`, 'closable')
   }

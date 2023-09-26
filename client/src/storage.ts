@@ -39,7 +39,7 @@ const entries: StorageEntries = {
 const storage = {
   version: 2,
   init: function () {
-    const storedVersion = parseInt(localStorage.getItem('version'))
+    const storedVersion = parseInt(localStorage.getItem('version') ?? '0')
     if (storedVersion !== storage.version) {
       localStorage.clear()
       localStorage.setItem('version', '' + storage.version)
@@ -49,7 +49,7 @@ const storage = {
     }
   },
   load: function <K extends keyof StorageSpec>(key: K): StorageSpec[K] {
-    return JSON.parse(localStorage.getItem(key))
+    return JSON.parse(localStorage.getItem(key) ?? '')
   },
 
   save: function <K extends keyof StorageSpec>(key: K, val: StorageSpec[K]) {

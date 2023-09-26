@@ -61,7 +61,7 @@ export async function decodePng(file: Blob): Promise<ImageData> {
       const canvas = document.createElement('canvas')
       canvas.width = img.width
       canvas.height = img.height
-      const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d')!
       ctx.drawImage(img, 0, 0)
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
       resolve(data)
@@ -138,15 +138,25 @@ export function layerIndex(map: Map, layer: Layer): [number, number] {
 }
 
 export function layerKind(layer: Layer): MapDir.LayerKind {
-  return layer instanceof TilesLayer ? MapDir.LayerKind.Tiles
-    : layer instanceof GameLayer ? MapDir.LayerKind.Game
-    : layer instanceof FrontLayer ? MapDir.LayerKind.Front
-    : layer instanceof TeleLayer ? MapDir.LayerKind.Tele
-    : layer instanceof SwitchLayer ? MapDir.LayerKind.Switch
-    : layer instanceof SpeedupLayer ? MapDir.LayerKind.Speedup
-    : layer instanceof TuneLayer ? MapDir.LayerKind.Tune
-    : layer instanceof QuadsLayer ? MapDir.LayerKind.Quads
-    : null
+  if (layer instanceof FrontLayer) {
+    return MapDir.LayerKind.Front
+  } else if (layer instanceof GameLayer) {
+    return MapDir.LayerKind.Game
+  } else if (layer instanceof QuadsLayer) {
+    return MapDir.LayerKind.Quads
+  } else if (layer instanceof SpeedupLayer) {
+    return MapDir.LayerKind.Speedup
+  } else if (layer instanceof SwitchLayer) {
+    return MapDir.LayerKind.Switch
+  } else if (layer instanceof TeleLayer) {
+    return MapDir.LayerKind.Tele
+  } else if (layer instanceof TilesLayer) {
+    return MapDir.LayerKind.Tiles
+  } else if (layer instanceof TuneLayer) {
+    return MapDir.LayerKind.Tune
+  } else {
+    throw 'unknown layer kind: ' + layer
+  }
 }
 
 export function rem2px(rem: number) {

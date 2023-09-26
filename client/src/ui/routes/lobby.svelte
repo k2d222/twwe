@@ -199,9 +199,10 @@
 
     showInfo('Querying the server…', 'none')
 
-    if (method === 'upload') {
+    if (method === 'upload' && modalCreateMap.uploadFile !== null) {
       await uploadMap(serverConfs[serverId].httpUrl, name, modalCreateMap.uploadFile)
-    } else if (method === 'blank') {
+    }
+    else if (method === 'blank') {
       await createMap(serverConfs[serverId].httpUrl, name, {
         version: 'ddnet06', // TODO
         access,
@@ -210,7 +211,8 @@
           h: modalCreateMap.blankHeight,
         }
       })
-    } else if (method === 'clone') {
+    }
+    else if (method === 'clone' && modalCreateMap.clone !== undefined) {
       await createMap(serverConfs[serverId].httpUrl, name, {
         version: 'ddnet06',
         access,

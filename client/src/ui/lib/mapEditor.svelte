@@ -272,7 +272,7 @@
   }
 
   function worldPosToTileCoord(pos: Coord): Coord {
-    const [offX, offY] = rgroup.offset()
+    const [offX, offY] = rgroup?.offset() ?? [0, 0]
     return {
       x: Math.floor(pos.x - offX),
       y: Math.floor(pos.y - offY),
@@ -387,7 +387,7 @@
   function updateLayerOutline() {
     if (rlayer && rlayer.layer instanceof AnyTilesLayer) {
       const { scale, pos } = viewport
-      const [offX, offY] = rgroup.offset()
+      const [offX, offY] = rgroup?.offset() ?? [0, 0]
       layerOutlineStyle = `
         width: ${rlayer.layer.width * scale}px;
         height: ${rlayer.layer.height * scale}px;
@@ -414,7 +414,7 @@
 
       const range = Editor.normalizeRange(mouseRange)
       const [x, y] = viewport.worldToPixel(range.start.x, range.start.y)
-      const [offX, offY] = rgroup.offset()
+      const [offX, offY] = rgroup?.offset() ?? [0, 0]
       const w = (range.end.x - range.start.x + 1) * viewport.scale
       const h = (range.end.y - range.start.y + 1) * viewport.scale
 
@@ -476,7 +476,7 @@
     }
   }
 
-  function onTilePick(e: CustomEvent<Info.Tile[][]>) {
+  function onTilePick(e: CustomEvent<Info.AnyTile[][]>) {
     brushBuffer = {
       group: g,
       layers: [{

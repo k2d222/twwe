@@ -1,12 +1,13 @@
 import type { QuadsLayer, Quad } from '../twmap/quadsLayer'
 import type { Texture } from './texture'
 import type { RenderMap } from './renderMap'
+import type * as Info from '../twmap/types'
 import { RenderLayer } from './renderLayer'
 import { gl, shader } from './global'
 
 export class RenderQuadsLayer extends RenderLayer {
   layer: QuadsLayer
-  texture: Texture
+  texture: Texture | null
 
   colorBuf: WebGLBuffer
   vertexBuf: WebGLBuffer
@@ -24,10 +25,10 @@ export class RenderQuadsLayer extends RenderLayer {
       this.texture = rmap.textures[index]
     }
 
-    this.colorBuf = gl.createBuffer()
-    this.vertexBuf = gl.createBuffer()
-    this.texCoordBuf = gl.createBuffer()
-    this.indexBuf = gl.createBuffer()
+    this.colorBuf = gl.createBuffer()!
+    this.vertexBuf = gl.createBuffer()!
+    this.texCoordBuf = gl.createBuffer()!
+    this.indexBuf = gl.createBuffer()!
     this.initBuffers()
   }
 
@@ -37,10 +38,10 @@ export class RenderQuadsLayer extends RenderLayer {
     gl.deleteBuffer(this.texCoordBuf)
     gl.deleteBuffer(this.indexBuf)
 
-    this.colorBuf = gl.createBuffer()
-    this.vertexBuf = gl.createBuffer()
-    this.texCoordBuf = gl.createBuffer()
-    this.indexBuf = gl.createBuffer()
+    this.colorBuf = gl.createBuffer()!
+    this.vertexBuf = gl.createBuffer()!
+    this.texCoordBuf = gl.createBuffer()!
+    this.indexBuf = gl.createBuffer()!
 
     this.initBuffers()
   }
@@ -185,7 +186,7 @@ function makeVertices(q: Quad) {
 }
 
 function makeColors(q: Quad) {
-  let comp = ({ r, g, b, a }) => [r, g, b, a].map(x => x / 255)
+  let comp = ({ r, g, b, a }: Info.Color) => [r, g, b, a].map(x => x / 255)
 
   if (q.colorEnv) {
     let env = q.colorEnv.current.point

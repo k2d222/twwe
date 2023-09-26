@@ -24,9 +24,11 @@ export class Image {
     this.img = document.createElement('img')
     this.img.onerror = () => console.warn('failed to load image:', url)
     this.img.onload = () => {
-      this.data = this.img
-      this.width = this.img.width
-      this.height = this.img.height
+      if (this.img) {
+        this.data = this.img
+        this.width = this.img.width
+        this.height = this.img.height
+      }
     }
     this.img.src = url
   }

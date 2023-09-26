@@ -127,7 +127,7 @@
       const canvas = document.createElement('canvas')
       canvas.width = image.data.width
       canvas.height = image.data.height
-      const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d')!
       ctx.putImageData(image.data, 0, 0)
       return canvas.toDataURL()
     }
