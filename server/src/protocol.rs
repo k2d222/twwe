@@ -20,7 +20,6 @@ use crate::{base64::Base64, error::Error, map_cfg::MapAccess, util::serialize_di
 // message to clients in the order it received it. (and websocket preserves packet order)
 // Downside is, the server can never refuse a request from a client. We assume the client
 // always makes valid requests.
-//clone
 // Other requests, like editing layers / groups can lead to desync between the
 // clients, hence cannot be handled that way. They require a forward-and-back
 // communication with the server to see if it agrees with the transaction.
@@ -117,6 +116,7 @@ pub struct PartialConfig {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CreationMethod {
+    Upload(Base64),
     Clone(String),
     Blank { w: u32, h: u32 },
 }
@@ -243,14 +243,21 @@ pub enum PartialLayer {
 pub struct PartialAutomapper {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Image {
+    External { size: Extent2<u32> },
+    Embedded(Base64),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
-pub enum MapGetReq {
+pub enum GetReq {
+    #[serde(rename = "map/get/map")]
+    Map,
     #[serde(rename = "map/get/users")]
     Users,
     #[serde(rename = "map/get/cursors")]
     Cursors,
-    #[serde(rename = "map/get/map")]
-    Map,
     #[serde(rename = "map/get/images")]
     Images,
     #[serde(rename = "map/get/image")]
@@ -278,68 +285,46 @@ pub enum MapGetReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Image {
-    External { size: Extent2<u32> },
-    Embedded(Base64),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
-pub enum MapPutReq {
-    #[serde(rename = "map/put/image")]
+pub enum CreateReq {
+    #[serde(rename = "map/create/image")]
     Image(String, Image),
-    #[serde(rename = "map/put/envelope")]
+    #[serde(rename = "map/create/envelope")]
     Envelope(Box<PartialEnvelope>),
-    #[serde(rename = "map/put/group")]
+    #[serde(rename = "map/create/group")]
     Group(Box<PartialGroup>),
-    #[serde(rename = "map/put/layer")]
+    #[serde(rename = "map/create/layer")]
     Layer(u16, Box<PartialLayer>),
-    #[serde(rename = "map/put/quad")]
+    #[serde(rename = "map/create/quad")]
     Quad(u16, u16, Box<twmap::Quad>),
-    #[serde(rename = "map/put/automapper")]
+    #[serde(rename = "map/create/automapper")]
     Automapper(String, String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
-pub enum MapPostReq {
-    #[serde(rename = "map/post/config")]
+pub enum EditReq {
+    #[serde(rename = "map/edit/config")]
     Config(Box<PartialConfig>),
-    #[serde(rename = "map/post/info")]
+    #[serde(rename = "map/edit/info")]
     Info(Box<PartialInfo>),
-    #[serde(rename = "map/post/envelope")]
+    #[serde(rename = "map/edit/envelope")]
     Envelope(u16, Box<PartialEnvelope>),
-    #[serde(rename = "map/post/group")]
+    #[serde(rename = "map/edit/group")]
     Group(u16, Box<PartialGroup>),
-    #[serde(rename = "map/post/layer")]
+    #[serde(rename = "map/edit/layer")]
     Layer(u16, u16, Box<PartialLayer>),
-    #[serde(rename = "map/post/tiles")]
+    #[serde(rename = "map/edit/tiles")]
     Tiles(u16, u16, Box<Tiles>),
-    #[serde(rename = "map/post/quad")]
+    #[serde(rename = "map/edit/quad")]
     Quad(u16, u16, u16, Box<twmap::Quad>),
-    #[serde(rename = "map/post/automap")]
+    #[serde(rename = "map/edit/automap")]
     Automap(u16, u16),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
-pub enum MapPatchReq {
-    #[serde(rename = "map/patch/image")]
-    Image(u16, u16),
-    #[serde(rename = "map/patch/envelope")]
-    Envelope(u16, u16),
-    #[serde(rename = "map/patch/group")]
-    Group(u16, u16),
-    #[serde(rename = "map/patch/layer")]
-    Layer((u16, u16), (u16, u16)),
-    #[serde(rename = "map/patch/quad")]
-    Quad((u16, u16, u16), u16),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", content = "content")]
-pub enum MapDelReq {
+pub enum DeleteReq {
     #[serde(rename = "map/delete/image")]
     Image(u16),
     #[serde(rename = "map/delete/envelope")]
@@ -356,68 +341,44 @@ pub enum MapDelReq {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
-pub enum MapReq {
-    #[serde(rename = "map/cursor")]
-    Cursor(Box<Cursor>),
-    #[serde(rename = "map/save")]
-    Save,
-    #[serde(untagged)]
-    Get(MapGetReq),
-    #[serde(untagged)]
-    Put(MapPutReq),
-    #[serde(untagged)]
-    Post(MapPostReq),
-    #[serde(untagged)]
-    Patch(MapPatchReq),
-    #[serde(untagged)]
-    Delete(MapDelReq),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", content = "content")]
-pub enum GetReq {
-    #[serde(rename = "get/map")]
-    Map(String),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", content = "content")]
-pub enum PutReq {
-    #[serde(rename = "put/map")]
-    Map(String, Base64),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", content = "content")]
-pub enum PostReq {
-    #[serde(rename = "post/map")]
-    Map(String, Box<MapCreation>),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", content = "content")]
-pub enum DeleteReq {
-    #[serde(rename = "delete/map")]
-    Map(String),
+pub enum MoveReq {
+    #[serde(rename = "map/move/image")]
+    Image(u16, u16),
+    #[serde(rename = "map/move/envelope")]
+    Envelope(u16, u16),
+    #[serde(rename = "map/move/group")]
+    Group(u16, u16),
+    #[serde(rename = "map/move/layer")]
+    Layer((u16, u16), (u16, u16)),
+    #[serde(rename = "map/move/quad")]
+    Quad((u16, u16, u16), u16),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum Request {
     #[serde(rename = "join")]
-    Join(String),
+    JoinMap(String),
     #[serde(rename = "leave")]
-    Leave(String),
-    #[serde(untagged)]
-    Map(MapReq),
+    LeaveMap(String),
+    #[serde(rename = "create")]
+    CreateMap(String, Box<MapCreation>),
+    #[serde(rename = "delete")]
+    DeleteMap(String),
+    #[serde(rename = "map/save")]
+    Save,
+    #[serde(rename = "map/cursor")]
+    Cursor(Box<Cursor>),
     #[serde(untagged)]
     Get(GetReq),
     #[serde(untagged)]
-    Put(PutReq),
+    Create(CreateReq),
     #[serde(untagged)]
-    Post(PostReq),
+    Edit(EditReq),
     #[serde(untagged)]
     Delete(DeleteReq),
+    #[serde(untagged)]
+    Move(MoveReq),
 }
 
 #[derive(Clone, Debug, Serialize)]

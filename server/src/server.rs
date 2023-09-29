@@ -123,111 +123,91 @@ impl Server {
     }
 
     fn do_request(&self, peer: &mut Peer, req: Request) -> Result<Response, Error> {
+        let map_name = peer
+            .room
+            .as_deref()
+            .map(Room::name)
+            .ok_or(Error::MapNotFound);
+
         match req {
-            Request::Map(req) => {
-                let room = peer.room.clone().ok_or(Error::MapNotFound)?;
-                let map_name = room.name();
-                match req {
-                    MapReq::Get(req) => match req {
-                        MapGetReq::Users => self.get_users(map_name).map(Response::Users),
-                        MapGetReq::Cursors => {
-                            self.get_cursors(map_name, peer).map(Response::Cursors)
-                        }
-                        MapGetReq::Map => self.get_map(map_name).map(|r| Response::Map(Base64(r))),
-                        MapGetReq::Images => self.get_images(map_name).map(Response::Images),
-                        MapGetReq::Image(i) => self
-                            .get_image(map_name, i)
-                            .map(|r| Response::Image(Base64(r))),
-                        MapGetReq::Envelopes => {
-                            self.get_envelopes(map_name).map(Response::Envelopes)
-                        }
-                        MapGetReq::Envelope(e) => self
-                            .get_envelope(map_name, e)
-                            .map(|r| Response::Envelope(Box::new(r))),
-                        MapGetReq::Groups => self.get_groups(map_name).map(Response::Groups),
-                        MapGetReq::Group(g) => self
-                            .get_group(map_name, g)
-                            .map(|r| Response::Group(Box::new(r))),
-                        MapGetReq::Layers(g) => self.get_layers(map_name, g).map(Response::Layers),
-                        MapGetReq::Layer(g, l) => self
-                            .get_layer(map_name, g, l)
-                            .map(|r| Response::Layer(Box::new(r))),
-                        MapGetReq::Tiles(g, l) => self
-                            .get_tiles(map_name, g, l)
-                            .map(|r| Response::Tiles(Base64(r.into()))),
-                        MapGetReq::Quad(g, l, q) => self
-                            .get_quad(map_name, g, l, q)
-                            .map(|r| Response::Quad(Box::new(r))),
-                        MapGetReq::Automappers => {
-                            self.get_automappers(map_name).map(Response::Automappers)
-                        }
-                        MapGetReq::Automapper(am) => {
-                            self.get_automapper(map_name, &am).map(Response::Automapper)
-                        }
-                    },
-                    MapReq::Put(req) => match req {
-                        MapPutReq::Image(image_name, create) => {
-                            self.put_image(map_name, &image_name, create)
-                        }
-                        MapPutReq::Envelope(req) => self.put_envelope(map_name, *req),
-                        MapPutReq::Group(req) => self.put_group(map_name, *req),
-                        MapPutReq::Layer(g, req) => self.put_layer(map_name, g, *req),
-                        MapPutReq::Quad(g, l, req) => self.put_quad(map_name, g, l, *req),
-                        MapPutReq::Automapper(am, file) => {
-                            self.put_automapper(peer, map_name, &am, &file)
-                        }
-                    }
-                    .map(|()| Response::Ok),
-                    MapReq::Post(req) => match req {
-                        MapPostReq::Config(req) => self.post_config(map_name, *req),
-                        MapPostReq::Info(req) => self.post_info(map_name, *req),
-                        MapPostReq::Envelope(e, req) => self.post_envelope(map_name, e, *req),
-                        MapPostReq::Group(g, req) => self.post_group(map_name, g, *req),
-                        MapPostReq::Layer(g, l, req) => self.post_layer(map_name, g, l, *req),
-                        MapPostReq::Tiles(g, l, req) => self.post_tiles(map_name, g, l, *req),
-                        MapPostReq::Quad(g, l, q, req) => self.post_quad(map_name, g, l, q, *req),
-                        MapPostReq::Automap(g, l) => self.apply_automapper(map_name, g, l),
-                    }
-                    .map(|()| Response::Ok),
-                    MapReq::Patch(req) => match req {
-                        MapPatchReq::Image(src, tgt) => self.patch_image(map_name, src, tgt),
-                        MapPatchReq::Envelope(src, tgt) => self.patch_envelope(map_name, src, tgt),
-                        MapPatchReq::Group(src, tgt) => self.patch_group(map_name, src, tgt),
-                        MapPatchReq::Layer(src, tgt) => self.patch_layer(map_name, src, tgt),
-                        MapPatchReq::Quad(src, tgt) => self.patch_quad(map_name, src, tgt),
-                    }
-                    .map(|()| Response::Ok),
-                    MapReq::Delete(req) => match req {
-                        MapDelReq::Image(i) => self.delete_image(map_name, i),
-                        MapDelReq::Envelope(e) => self.delete_envelope(map_name, e),
-                        MapDelReq::Group(g) => self.delete_group(map_name, g),
-                        MapDelReq::Layer(g, l) => self.delete_layer(map_name, g, l),
-                        MapDelReq::Quad(g, l, q) => self.delete_quad(map_name, g, l, q),
-                        MapDelReq::Automapper(am) => self.delete_automapper(map_name, &am),
-                    }
-                    .map(|()| Response::Ok),
-                    MapReq::Cursor(req) => self.set_cursor(peer, *req).map(|()| Response::Ok),
-                    MapReq::Save => self.save_map(map_name).map(|()| Response::Ok),
-                }
+            Request::JoinMap(map_name) => self.peer_join(peer, &map_name).map(|()| Response::Ok),
+            Request::LeaveMap(map_name) => self.peer_leave(peer, &map_name).map(|()| Response::Ok),
+            Request::CreateMap(map_name, content) => {
+                self.create_map(&map_name, *content).map(|()| Response::Ok)
             }
+            Request::DeleteMap(map_name) => self.delete_map(&map_name).map(|()| Response::Ok),
+            Request::Save => self.save_map(map_name?).map(|()| Response::Ok),
+            Request::Cursor(req) => self.set_cursor(peer, *req).map(|()| Response::Ok),
             Request::Get(req) => match req {
-                GetReq::Map(map_name) => self.get_map(&map_name).map(|r| Response::Map(Base64(r))),
+                GetReq::Users => self.get_users(map_name?).map(Response::Users),
+                GetReq::Cursors => self.get_cursors(map_name?, peer).map(Response::Cursors),
+                GetReq::Map => self.get_map(map_name?).map(|r| Response::Map(Base64(r))),
+                GetReq::Images => self.get_images(map_name?).map(Response::Images),
+                GetReq::Image(i) => self
+                    .get_image(map_name?, i)
+                    .map(|r| Response::Image(Base64(r))),
+                GetReq::Envelopes => self.get_envelopes(map_name?).map(Response::Envelopes),
+                GetReq::Envelope(e) => self
+                    .get_envelope(map_name?, e)
+                    .map(|r| Response::Envelope(Box::new(r))),
+                GetReq::Groups => self.get_groups(map_name?).map(Response::Groups),
+                GetReq::Group(g) => self
+                    .get_group(map_name?, g)
+                    .map(|r| Response::Group(Box::new(r))),
+                GetReq::Layers(g) => self.get_layers(map_name?, g).map(Response::Layers),
+                GetReq::Layer(g, l) => self
+                    .get_layer(map_name?, g, l)
+                    .map(|r| Response::Layer(Box::new(r))),
+                GetReq::Tiles(g, l) => self
+                    .get_tiles(map_name?, g, l)
+                    .map(|r| Response::Tiles(Base64(r.into()))),
+                GetReq::Quad(g, l, q) => self
+                    .get_quad(map_name?, g, l, q)
+                    .map(|r| Response::Quad(Box::new(r))),
+                GetReq::Automappers => self.get_automappers(map_name?).map(Response::Automappers),
+                GetReq::Automapper(am) => self
+                    .get_automapper(map_name?, &am)
+                    .map(Response::Automapper),
             },
-            Request::Put(req) => match req {
-                PutReq::Map(map_name, content) => {
-                    self.put_map(&map_name, &content.0).map(|()| Response::Ok)
+            Request::Create(req) => match req {
+                CreateReq::Image(image_name, create) => {
+                    self.put_image(map_name?, &image_name, create)
                 }
-            },
-            Request::Post(req) => match req {
-                PostReq::Map(map_name, req) => {
-                    self.post_map(&map_name, *req).map(|()| Response::Ok)
-                }
-            },
+                CreateReq::Envelope(req) => self.put_envelope(map_name?, *req),
+                CreateReq::Group(req) => self.put_group(map_name?, *req),
+                CreateReq::Layer(g, req) => self.put_layer(map_name?, g, *req),
+                CreateReq::Quad(g, l, req) => self.put_quad(map_name?, g, l, *req),
+                CreateReq::Automapper(am, file) => self.put_automapper(peer, map_name?, &am, &file),
+            }
+            .map(|()| Response::Ok),
+            Request::Edit(req) => match req {
+                EditReq::Config(req) => self.edit_config(map_name?, *req),
+                EditReq::Info(req) => self.edit_info(map_name?, *req),
+                EditReq::Envelope(e, req) => self.edit_envelope(map_name?, e, *req),
+                EditReq::Group(g, req) => self.edit_group(map_name?, g, *req),
+                EditReq::Layer(g, l, req) => self.edit_layer(map_name?, g, l, *req),
+                EditReq::Tiles(g, l, req) => self.edit_tiles(map_name?, g, l, *req),
+                EditReq::Quad(g, l, q, req) => self.edit_quad(map_name?, g, l, q, *req),
+                EditReq::Automap(g, l) => self.apply_automapper(map_name?, g, l),
+            }
+            .map(|()| Response::Ok),
             Request::Delete(req) => match req {
-                DeleteReq::Map(map_name) => self.delete_map(&map_name).map(|()| Response::Ok),
-            },
-            Request::Join(map_name) => self.peer_join(peer, &map_name).map(|()| Response::Ok),
-            Request::Leave(map_name) => self.peer_leave(peer, &map_name).map(|()| Response::Ok),
+                DeleteReq::Image(i) => self.delete_image(map_name?, i),
+                DeleteReq::Envelope(e) => self.delete_envelope(map_name?, e),
+                DeleteReq::Group(g) => self.delete_group(map_name?, g),
+                DeleteReq::Layer(g, l) => self.delete_layer(map_name?, g, l),
+                DeleteReq::Quad(g, l, q) => self.delete_quad(map_name?, g, l, q),
+                DeleteReq::Automapper(am) => self.delete_automapper(map_name?, &am),
+            }
+            .map(|()| Response::Ok),
+            Request::Move(req) => match req {
+                MoveReq::Image(src, tgt) => self.move_image(map_name?, src, tgt),
+                MoveReq::Envelope(src, tgt) => self.move_envelope(map_name?, src, tgt),
+                MoveReq::Group(src, tgt) => self.move_group(map_name?, src, tgt),
+                MoveReq::Layer(src, tgt) => self.move_layer(map_name?, src, tgt),
+                MoveReq::Quad(src, tgt) => self.move_quad(map_name?, src, tgt),
+            }
+            .map(|()| Response::Ok),
         }
     }
 
@@ -235,35 +215,28 @@ impl Server {
         self.send(peer, packet.id, Message::Response(resp.clone()));
         if resp.is_ok() {
             match &packet.content {
-                Request::Map(req) => match req {
-                    MapReq::Get(_) | MapReq::Cursor(_) => (),
-                    MapReq::Put(_) | MapReq::Post(_) | MapReq::Patch(_) | MapReq::Delete(_) => {
-                        self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
-                    }
-                    MapReq::Save => {
-                        self.broadcast_to_others(peer, Message::Broadcast(Broadcast::Saved))
-                    }
-                },
-                Request::Get(_) => (),
-                Request::Put(req) => match req {
-                    PutReq::Map(map_name, _) => self.broadcast_to_lobby(Message::Broadcast(
-                        Broadcast::MapCreated(map_name.clone()),
-                    )),
-                },
-                Request::Post(req) => match req {
-                    PostReq::Map(map_name, _) => self.broadcast_to_lobby(Message::Broadcast(
-                        Broadcast::MapCreated(map_name.clone()),
-                    )),
-                },
-                Request::Delete(req) => match req {
-                    DeleteReq::Map(map_name) => self.broadcast_to_lobby(Message::Broadcast(
-                        Broadcast::MapDeleted(map_name.clone()),
-                    )),
-                },
-                Request::Leave(map_name) | Request::Join(map_name) => self.broadcast_to_others(
-                    peer,
-                    Message::Broadcast(Broadcast::Users(self.get_users(map_name).unwrap_or(0))),
-                ),
+                Request::LeaveMap(map_name) | Request::JoinMap(map_name) => self
+                    .broadcast_to_others(
+                        peer,
+                        Message::Broadcast(Broadcast::Users(self.get_users(map_name).unwrap_or(0))),
+                    ),
+                Request::CreateMap(map_name, _) => {
+                    self.broadcast_to_lobby(Message::Broadcast(Broadcast::MapCreated(
+                        map_name.clone(),
+                    )));
+                }
+                Request::DeleteMap(map_name) => {
+                    self.broadcast_to_lobby(Message::Broadcast(Broadcast::MapDeleted(
+                        map_name.clone(),
+                    )));
+                }
+                Request::Save => {
+                    self.broadcast_to_others(peer, Message::Broadcast(Broadcast::Saved))
+                }
+                Request::Create(_) | Request::Edit(_) | Request::Delete(_) | Request::Move(_) => {
+                    self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
+                }
+                Request::Cursor(_) | Request::Get(_) => (),
             }
         }
     }
@@ -341,47 +314,7 @@ impl Server {
         Ok(buf)
     }
 
-    pub fn put_map(&self, map_name: &str, file: &[u8]) -> Result<(), Error> {
-        if !check_map_path(map_name) {
-            return Err(Error::InvalidMapName);
-        }
-        if self.room(map_name).is_ok() {
-            return Err(Error::MapNameTaken);
-        }
-
-        let path = PathBuf::from(format!("maps/{}", map_name));
-        let map_path = PathBuf::from(format!("maps/{}/map.map", map_name));
-
-        std::fs::create_dir_all(&path).map_err(|e| Error::ServerError(e.to_string().into()))?;
-        std::fs::write(&map_path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
-
-        // ensure file is a valid ddnet06 map
-        twmap::TwMap::parse_file(&map_path)
-            .map_err(|e| Error::MapError(e.to_string()))
-            .and_then(|map| {
-                if map.version != twmap::Version::DDNet06 {
-                    Err(Error::UnsupportedMapType)
-                } else {
-                    Ok(())
-                }
-            })
-            .map_err(|e| {
-                std::fs::remove_file(&map_path).ok();
-                e
-            })?;
-
-        log::debug!("uploaded map '{}'", path.display());
-
-        let new_room = Room::new(path).ok_or(Error::ServerError("map creation failed".into()))?;
-        new_room
-            .save_config()
-            .map_err(|s| Error::ServerError(s.into()))?;
-        self.rooms().insert(map_name.to_owned(), Arc::new(new_room));
-
-        Ok(())
-    }
-
-    pub fn post_map(&self, map_name: &str, creation: MapCreation) -> Result<(), Error> {
+    pub fn create_map(&self, map_name: &str, creation: MapCreation) -> Result<(), Error> {
         if !check_map_path(map_name) {
             return Err(Error::InvalidMapName);
         }
@@ -394,6 +327,12 @@ impl Server {
         let map_path = PathBuf::from(format!("maps/{}/map.map", map_name));
 
         let mut map = match creation.method {
+            CreationMethod::Upload(file) => {
+                let map =
+                    twmap::TwMap::parse(&file.0).map_err(|e| Error::MapError(e.to_string()))?;
+                // self.put_map(map_name, &file.0)?;
+                map
+            }
             CreationMethod::Clone(clone_name) => {
                 let room = self.room(&clone_name)?;
                 let map = room.map().clone();
@@ -467,7 +406,7 @@ impl Server {
         Ok(self.room(map_name)?.map().info.clone())
     }
 
-    pub fn post_info(&self, map_name: &str, part_info: PartialInfo) -> Result<(), Error> {
+    pub fn edit_info(&self, map_name: &str, part_info: PartialInfo) -> Result<(), Error> {
         let room = self.room(map_name)?;
 
         part_info.check_self()?;
@@ -478,7 +417,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn post_config(&self, map_name: &str, part_conf: PartialConfig) -> Result<(), Error> {
+    pub fn edit_config(&self, map_name: &str, part_conf: PartialConfig) -> Result<(), Error> {
         // let room = self.room(map_name)?.clone();
         // apply_partial!(part_conf => room.config, name, access);
         // Ok(())
@@ -633,7 +572,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn post_envelope(
+    pub fn edit_envelope(
         &self,
         map_name: &str,
         env_index: u16,
@@ -731,7 +670,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn post_group(
+    pub fn edit_group(
         &self,
         map_name: &str,
         group_index: u16,
@@ -905,7 +844,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn post_layer(
+    pub fn edit_layer(
         &self,
         map_name: &str,
         group_index: u16,
@@ -1060,7 +999,7 @@ impl Server {
         }
     }
 
-    pub fn post_tiles(
+    pub fn edit_tiles(
         &self,
         map_name: &str,
         group_index: u16,
@@ -1182,7 +1121,7 @@ impl Server {
         }
     }
 
-    pub fn post_quad(
+    pub fn edit_quad(
         &self,
         map_name: &str,
         group_index: u16,
@@ -1387,9 +1326,8 @@ impl Server {
                         .unwrap_or_default()
                         .to_string_lossy()
                         .to_string();
-                    let message = Message::Request(Request::Map(MapReq::Put(
-                        MapPutReq::Automapper(name, file),
-                    )));
+                    let message =
+                        Message::Request(Request::Create(CreateReq::Automapper(name, file)));
                     self.broadcast_to_room(&room, message);
                     Ok(())
                 })
@@ -1470,7 +1408,7 @@ impl Server {
         }
     }
 
-    pub fn patch_image(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
+    pub fn move_image(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
         let mut map = room.map();
 
@@ -1500,7 +1438,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn patch_envelope(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
+    pub fn move_envelope(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
         let mut map = room.map();
 
@@ -1530,7 +1468,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn patch_group(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
+    pub fn move_group(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
         let mut map = room.map();
 
@@ -1548,7 +1486,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn patch_layer(
+    pub fn move_layer(
         &self,
         map_name: &str,
         src: (u16, u16),
@@ -1586,7 +1524,7 @@ impl Server {
         Ok(())
     }
 
-    pub fn patch_quad(&self, map_name: &str, src: (u16, u16, u16), tgt: u16) -> Result<(), Error> {
+    pub fn move_quad(&self, map_name: &str, src: (u16, u16, u16), tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
         let mut map = room.map();
 

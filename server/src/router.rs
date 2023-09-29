@@ -15,7 +15,7 @@ use tower_http::{
     services::{ServeDir, ServeFile},
 };
 
-use crate::protocol::*;
+use crate::{base64::Base64, protocol::*};
 use crate::{Cli, Server};
 
 pub struct Router {
@@ -154,7 +154,12 @@ async fn route_put_map(
     Path(map): Path<String>,
     file: Bytes,
 ) -> impl IntoResponse {
-    server.put_map(&map, &file)
+    let content = MapCreation {
+        version: Default::default(),
+        access: Default::default(),
+        method: CreationMethod::Upload(Base64(file.to_vec())),
+    };
+    server.create_map(&map, content)
 }
 
 async fn route_post_map(
@@ -162,7 +167,7 @@ async fn route_post_map(
     Path(map): Path<String>,
     Json(map_create): Json<MapCreation>,
 ) -> impl IntoResponse {
-    server.post_map(&map, map_create)
+    server.create_map(&map, map_create)
 }
 
 async fn route_delete_map(
@@ -198,7 +203,7 @@ async fn route_post_info(
     Path(map): Path<String>,
     Json(part_info): Json<PartialInfo>,
 ) -> impl IntoResponse {
-    server.post_info(&map, part_info)
+    server.edit_info(&map, part_info)
 }
 
 async fn route_get_envelopes(
@@ -228,7 +233,7 @@ async fn route_post_envelope(
     Path((map, env)): Path<(String, u16)>,
     Json(part_env): Json<PartialEnvelope>,
 ) -> impl IntoResponse {
-    server.post_envelope(&map, env, part_env)
+    server.edit_envelope(&map, env, part_env)
 }
 
 async fn route_delete_envelope(
@@ -250,7 +255,7 @@ async fn route_post_group(
     Path((map, group)): Path<(String, u16)>,
     Json(part_group): Json<PartialGroup>,
 ) -> impl IntoResponse {
-    server.post_group(&map, group, part_group)
+    server.edit_group(&map, group, part_group)
 }
 
 async fn route_put_group(
