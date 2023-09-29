@@ -46,8 +46,8 @@
   let destroyed = false
 
   onMount(() => {
-    $server.on('map/post/quad', onSync)
-    $server.on('map/put/quad', onSync)
+    $server.on('map/edit/quad', onSync)
+    $server.on('map/create/quad', onSync)
     $server.on('map/delete/quad', onSync)
   
     const updateForever = () => {
@@ -59,8 +59,8 @@
   })
 
   onDestroy(() => {
-    $server.off('map/post/quad', onSync)
-    $server.off('map/put/quad', onSync)
+    $server.off('map/edit/quad', onSync)
+    $server.off('map/create/quad', onSync)
     $server.off('map/delete/quad', onSync)
     destroyed = true
   })
@@ -159,7 +159,7 @@
   function onChange(q: number) {
     const change = editQuad(q)
     $rmap.editQuad(...change)
-    $server.send('map/post/quad', change)
+    $server.send('map/edit/quad', change)
     onSync()
   }
 
@@ -176,7 +176,7 @@
     const h = (layer.image ? layer.image.height : 64) * 1024
 
     // TODO: use defaults
-    const change: Send['map/put/quad'] = [
+    const change: Send['map/create/quad'] = [
       g, l,
       {
         position: coordToJson({ x: mx, y: my }, 15),
@@ -206,7 +206,7 @@
     ]
 
     hideCM()
-    $server.query('map/put/quad', change)
+    $server.query('map/create/quad', change)
   }
 
   function cloneQuad(quad: Quad) {
@@ -220,7 +220,7 @@
     return copy
   }
 
-  function editQuad(q: number): Send['map/post/quad'] {
+  function editQuad(q: number): Send['map/edit/quad'] {
     const quad = layer.quads[q]
     const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
     const posEnv_ = $rmap.map.envelopes.indexOf(posEnv)
@@ -250,7 +250,7 @@
       return { x: p.x + 10 * 1024, y: p.y + 10 * 1024 }
     })
 
-    const change: Send['map/put/quad'] = [
+    const change: Send['map/create/quad'] = [
       g, l,
       {
         position: coordToJson(points[4], 15),
@@ -265,7 +265,7 @@
     ]
 
     hideCM()
-    $server.query('map/put/quad', change)
+    $server.query('map/create/quad', change)
   }
 
   let sync_ = 0

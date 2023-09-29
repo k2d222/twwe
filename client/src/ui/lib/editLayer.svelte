@@ -87,12 +87,12 @@
 
     // no image used
     if (e.detail === null) {
-      await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: null }])
+      await $server.query('map/edit/layer', [g, l, { type: layerKind(layer), image: null }])
     }
     // use existing image
     else if (e.detail instanceof Image) {
       const index = $rmap.map.images.indexOf(e.detail)
-      await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, e.detail.name) }])
+      await $server.query('map/edit/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, e.detail.name) }])
     }
     // new uploaded image
     else if (e.detail instanceof File) {
@@ -113,9 +113,9 @@
       else {
         try {
           showInfo('Creating image...', 'none')
-          await $server.query('map/put/image', [name, { size: { w: 1024, h: 1024 } }])
+          await $server.query('map/create/image', [name, { size: { w: 1024, h: 1024 } }])
           const index = $rmap.map.images.length - 1
-          await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
+          await $server.query('map/edit/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
           clearDialog()
         } catch (e) {
           showError('Failed to create external image: ' + e)
@@ -130,9 +130,9 @@
     try {
       // await uploadImage($serverConfig.httpUrl, $rmap.map.name, name, file) // TODO return index
       const buf = new Uint8Array(await file.arrayBuffer())
-      await $server.query('map/put/image', [name, bytesToBase64(buf)])
+      await $server.query('map/create/image', [name, bytesToBase64(buf)])
       const index = $rmap.map.images.length - 1
-      await $server.query('map/post/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
+      await $server.query('map/edit/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
     } catch (e) {
       showError('Failed to upload image: ' + e)
     }
@@ -162,53 +162,53 @@
   let syncColEnvs: Readable<Envelope[]>
 
   $: syncGroup = sync($server, g, {
-    query: 'map/patch/layer',
+    query: 'map/move/layer',
     match: [[g, l], [pick, _]],
     send: s => [[g, l], [s, 0]],
   })
   $: syncOrder = sync($server, l, {
-    query: 'map/patch/layer',
+    query: 'map/move/layer',
     match: [[g, l], [_, pick]],
     send: s => [[g, l], [g, s]],
   })
   $: if (layer) {
     syncName = sync($server, layer.name, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { name: pick }],
       send: s => [g, l, { type: layerKind(layer), name: s }],
     })
   }
   $: if (layer) {
     syncDetail = sync($server, layer.detail, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { detail: pick }],
       send: s => [g, l, { type: layerKind(layer), detail: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncWidth = sync($server, layer.width, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { width: pick }],
       send: s => [g, l, { type: layerKind(layer), width: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncHeight = sync($server, layer.height, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { height: pick }],
       send: s => [g, l, { type: layerKind(layer), height: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncColor = sync($server, layer.color, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { color: pick }],
       send: s => [g, l, { type: layerKind(layer), color: s }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncColorEnv = sync($server, $rmap.map.envelopes.indexOf(layer.colorEnv), {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { color_env: pick }],
       apply: s => s === null ? -1 : stringToResIndex(s)[0],
       send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s) }],
@@ -216,20 +216,20 @@
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
     syncColorEnvOff = sync($server, layer.colorEnvOffset, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { color_env_offset: pick }],
       send: s => [g, l, { type: layerKind(layer), color_env_offset: s }],
     })
   }
   $: if (layer && layer instanceof TilesLayer || layer instanceof QuadsLayer) {
     syncImg = read($server, layer.image, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { image: pick }],
       apply: () => layer.image,
     })
   }
   $: syncImgs = read($server, $rmap.map.images, [{
-    query: 'map/put/image',
+    query: 'map/create/image',
     match: pick,
     apply: () => $rmap.map.images,
   }, {
@@ -239,13 +239,13 @@
   }])
   $: if (layer && layer instanceof TilesLayer) {
     syncAmCfg = read($server, layer.automapper.config, {
-      query: 'map/post/layer',
+      query: 'map/edit/layer',
       match: [g, l, { automapper_config: { config: pick } }],
     })
   }
   $: if (layer && layer instanceof TilesLayer) {
     syncColEnvs = read($server, $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope), [{
-    query: 'map/put/envelope',
+    query: 'map/create/envelope',
     match: pick,
     apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
   }, {
@@ -253,7 +253,7 @@
     match: pick,
     apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
   }, {
-    query: 'map/post/envelope',
+    query: 'map/edit/envelope',
     match: pick,
     apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
   }])
@@ -270,7 +270,7 @@
   }
   async function onAutomap() {
     // TODO: move this, merge with event received from server
-    await $server.query('map/post/automap', [g, l])
+    await $server.query('map/edit/automap', [g, l])
     const tlayer = layer as TilesLayer
     const data = await $server.query('map/get/tiles', [g, l])
     const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(tlayer.flags))
@@ -293,7 +293,7 @@
   async function onAutomapperChange() {
     if (!layer) return
     const automapper = (layer as TilesLayer).automapper
-    await $server.query('map/post/layer', [g, l, {
+    await $server.query('map/edit/layer', [g, l, {
       type: layerKind(layer),
       automapper_config: {
         config: automapper.config === -1 ? null : automapper.config,

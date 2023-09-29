@@ -20,9 +20,12 @@ export interface Server {
 // a server using a websocket
 export class WebSocketServer implements Server {
   socket: WebSocket
+
   errorListener: (e: string) => unknown
   queryListeners: { [key: number]: [SendPacket<any>, QueryFn<any>] }
   broadcastListeners: { [K in RecvKey]: ListenFn<K>[] }
+
+  history: History
 
   private socketSend: (data: any) => void
   private deferredData: any[]
@@ -31,34 +34,33 @@ export class WebSocketServer implements Server {
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = e => this.onMessage(e)
+
     this.errorListener = () => {}
     this.queryListeners = {}
     this.broadcastListeners = {
-      "map/put/image": [],
-      "map/put/envelope": [],
-      "map/put/group": [],
-      "map/put/layer": [],
-      "map/put/quad": [],
-      "map/put/automapper": [],
-      "map/post/config": [],
-      "map/post/info": [],
-      "map/post/envelope": [],
-      "map/post/group": [],
-      "map/post/layer": [],
-      "map/post/tiles": [],
-      "map/post/quad": [],
-      "map/post/automap": [],
-      "map/patch/envelope": [],
-      "map/patch/group": [],
-      "map/patch/layer": [],
+      "map/create/image": [],
+      "map/create/envelope": [],
+      "map/create/group": [],
+      "map/create/layer": [],
+      "map/create/quad": [],
+      "map/create/automapper": [],
+      "map/edit/config": [],
+      "map/edit/info": [],
+      "map/edit/envelope": [],
+      "map/edit/group": [],
+      "map/edit/layer": [],
+      "map/edit/tiles": [],
+      "map/edit/quad": [],
+      "map/edit/automap": [],
+      "map/move/envelope": [],
+      "map/move/group": [],
+      "map/move/layer": [],
       "map/delete/image": [],
       "map/delete/envelope": [],
       "map/delete/group": [],
       "map/delete/layer": [],
       "map/delete/quad": [],
       "map/delete/automapper": [],
-      "post/map": [],
-      "delete/map": [],
       "map_created": [],
       "map_deleted": [],
       "users": [],

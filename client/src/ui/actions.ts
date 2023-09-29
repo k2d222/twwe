@@ -38,7 +38,7 @@ export async function deleteMap() {
   if (res) {
     try {
       await server_.query('leave', rmap_.map.name)
-      await server_.query('delete/map', rmap_.map.name)
+      await server_.query('delete', rmap_.map.name)
       navigate('/')
     } catch (e) {
       showError('Map deletion failed: ' + e)

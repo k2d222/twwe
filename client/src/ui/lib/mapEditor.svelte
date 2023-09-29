@@ -94,28 +94,28 @@
 
   let destroyed = false
 
-  function onCreateQuad([g, l, part]: Recv['map/put/quad']) {
+  function onCreateQuad([g, l, part]: Recv['map/create/quad']) {
     $rmap.createQuad(g, l, part)
   }
-  function onEditQuad([g, l, q, part]: Recv['map/post/quad']) {
+  function onEditQuad([g, l, q, part]: Recv['map/edit/quad']) {
     $rmap.editQuad(g, l, q, part)
   }
   function onDeleteQuad([g, l, q]: Recv['map/delete/quad']) {
     $rmap.deleteQuad(g, l, q)
   }
-  function onCreateEnvelope(part: Recv['map/put/envelope']) {
+  function onCreateEnvelope(part: Recv['map/create/envelope']) {
     $rmap.createEnvelope(part)
   }
-  function onEditEnvelope([e, part]: Recv['map/post/envelope']) {
+  function onEditEnvelope([e, part]: Recv['map/edit/envelope']) {
     $rmap.editEnvelope(e, part)
   }
   function onDeleteEnvelope(e: Recv['map/delete/envelope']) {
     $rmap.removeEnvelope(e)
   }
-  function onCreateGroup(part: Recv['map/put/group']) {
+  function onCreateGroup(part: Recv['map/create/group']) {
     $rmap.createGroup(part)
   }
-  function onEditGroup([g, part]: Recv['map/post/group']) {
+  function onEditGroup([g, part]: Recv['map/edit/group']) {
     $rmap.editGroup(g, part)
   }
   function onDeleteGroup(dg: Recv['map/delete/group']) {
@@ -124,7 +124,7 @@
       .filter(([g, _]) => g !== dg)
       .map(([g, l]) => g > dg ? [g -1, l] : [g, l])
   }
-  function onReorderGroup([src, tgt]: Recv['map/patch/group']) {
+  function onReorderGroup([src, tgt]: Recv['map/move/group']) {
     $rmap.reorderGroup(src, tgt)
     $selected.pop() // remove active
     const active: [number, number] =
@@ -133,17 +133,17 @@
        $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
-  function onCreateLayer([g, part]: Recv['map/put/layer']) {
+  function onCreateLayer([g, part]: Recv['map/create/layer']) {
     $rmap.createLayer(g, part)
   }
-  async function onEditLayer([g, l, part]: Recv['map/post/layer']) {
+  async function onEditLayer([g, l, part]: Recv['map/edit/layer']) {
     $rmap.editLayer(g, l, part)
   }
   function onDeleteLayer([dg, dl]: Recv['map/delete/layer']) {
     $rmap.deleteLayer(dg, dl)
     $selected = $selected.filter(([g, l]) => g !== dg || l !== dl)
   }
-  function onReorderLayer([src, tgt]: Recv['map/patch/layer']) {
+  function onReorderLayer([src, tgt]: Recv['map/move/layer']) {
     $rmap.reorderLayer(src, tgt)
     $selected.pop() // remove active
     const active: [number, number] =
@@ -152,7 +152,7 @@
        $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
-  async function onCreateImage([name, img]: Recv['map/put/image']) {
+  async function onCreateImage([name, img]: Recv['map/create/image']) {
     if (typeof img === 'object') { // external image
       const image = new Image()
       image.name = name
@@ -180,23 +180,23 @@
     $rmap = mapView.getRenderMap()
   
     // these event hooks have priority because they manage the state of the map.
-    $server.on('map/put/quad', onCreateQuad, true)
-    $server.on('map/post/quad', onEditQuad, true)
+    $server.on('map/create/quad', onCreateQuad, true)
+    $server.on('map/edit/quad', onEditQuad, true)
     $server.on('map/delete/quad', onDeleteQuad, true)
-    $server.on('map/put/envelope', onCreateEnvelope, true)
-    $server.on('map/post/envelope', onEditEnvelope, true)
+    $server.on('map/create/envelope', onCreateEnvelope, true)
+    $server.on('map/edit/envelope', onEditEnvelope, true)
     $server.on('map/delete/envelope', onDeleteEnvelope, true)
-    $server.on('map/post/layer', onEditLayer, true)
-    $server.on('map/post/group', onEditGroup, true)
-    $server.on('map/put/group', onCreateGroup, true)
-    $server.on('map/put/layer', onCreateLayer, true)
-    $server.on('map/patch/group', onReorderGroup, true)
-    $server.on('map/patch/layer', onReorderLayer, true)
+    $server.on('map/edit/layer', onEditLayer, true)
+    $server.on('map/edit/group', onEditGroup, true)
+    $server.on('map/create/group', onCreateGroup, true)
+    $server.on('map/create/layer', onCreateLayer, true)
+    $server.on('map/move/group', onReorderGroup, true)
+    $server.on('map/move/layer', onReorderLayer, true)
     $server.on('map/delete/group', onDeleteGroup, true)
     $server.on('map/delete/layer', onDeleteLayer, true)
-    $server.on('map/put/image', onCreateImage, true)
+    $server.on('map/create/image', onCreateImage, true)
     $server.on('map/delete/image', onDeleteImage, true)
-    $server.on('map/post/info', onEditInfo, true)
+    $server.on('map/edit/info', onEditInfo, true)
 
     cursorInterval = setInterval(updateCursors, cursorDuration) as any
 
@@ -205,23 +205,23 @@
 
   onDestroy(() => {
     destroyed = true
-    $server.off('map/put/quad', onCreateQuad)
-    $server.off('map/post/quad', onEditQuad)
+    $server.off('map/create/quad', onCreateQuad)
+    $server.off('map/edit/quad', onEditQuad)
     $server.off('map/delete/quad', onDeleteQuad)
-    $server.off('map/put/envelope', onCreateEnvelope)
-    $server.off('map/post/envelope', onEditEnvelope)
+    $server.off('map/create/envelope', onCreateEnvelope)
+    $server.off('map/edit/envelope', onEditEnvelope)
     $server.off('map/delete/envelope', onDeleteEnvelope)
-    $server.off('map/post/layer', onEditLayer)
-    $server.off('map/post/group', onEditGroup)
-    $server.off('map/put/group', onCreateGroup)
-    $server.off('map/put/layer', onCreateLayer)
-    $server.off('map/patch/group', onReorderGroup)
-    $server.off('map/patch/layer', onReorderLayer)
+    $server.off('map/edit/layer', onEditLayer)
+    $server.off('map/edit/group', onEditGroup)
+    $server.off('map/create/group', onCreateGroup)
+    $server.off('map/create/layer', onCreateLayer)
+    $server.off('map/move/group', onReorderGroup)
+    $server.off('map/move/layer', onReorderLayer)
     $server.off('map/delete/group', onDeleteGroup)
     $server.off('map/delete/layer', onDeleteLayer)
-    $server.off('map/put/image', onCreateImage)
+    $server.off('map/create/image', onCreateImage)
     $server.off('map/delete/image', onDeleteImage)
-    $server.off('map/post/info', onEditInfo)
+    $server.off('map/edit/info', onEditInfo)
 
     clearInterval(cursorInterval)
   })

@@ -240,28 +240,28 @@
   }
 
   onMount(() => {
-    $server.on('map/put/envelope', onSync)
-    $server.on('map/post/envelope', onSync)
+    $server.on('map/create/envelope', onSync)
+    $server.on('map/edit/envelope', onSync)
     $server.on('map/delete/envelope', onSync)
     if (selected === null && $rmap.map.envelopes.length)
       selected = $rmap.map.envelopes[0]
   })
 
   onDestroy(() => {
-    $server.off('map/put/envelope', onSync)
-    $server.off('map/post/envelope', onSync)
+    $server.off('map/create/envelope', onSync)
+    $server.off('map/edit/envelope', onSync)
     $server.off('map/delete/envelope', onSync)
   })
 
   async function onRename(e: InputEvent) {
     if (!selected)
       return
-    const change: Send['map/post/envelope'] = [$rmap.map.envelopes.indexOf(selected), {
+    const change: Send['map/edit/envelope'] = [$rmap.map.envelopes.indexOf(selected), {
       type: envTypeToString(selected.type),
       name: e.currentTarget.value,
     }]
     try {
-      await $server.query('map/post/envelope', change)
+      await $server.query('map/edit/envelope', change)
     } catch (e) {
       showError('Failed to rename envelope: ' + e)
     }
@@ -270,12 +270,12 @@
   async function onNewEnv(e: FormEvent<HTMLSelectElement>) {
     const type: MapDir.EnvelopeType = e.currentTarget.value as any
     e.currentTarget.selectedIndex = 0 // reset the select to the default value
-    const change: Send['map/put/envelope'] = {
+    const change: Send['map/create/envelope'] = {
       type,
       name: '',
     }
     try {
-      await $server.query('map/put/envelope', change)
+      await $server.query('map/create/envelope', change)
       selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
     } catch (e) {
       showError('Failed to create envelope: ' + e)
@@ -310,7 +310,7 @@
   function onMouseUp() {
     if (activePath !== -1 && activePoint !== -1) {
       const change = makeEnvEdit()
-      $server.send('map/post/envelope', change)
+      $server.send('map/edit/envelope', change)
 
       activePath = -1
       activePoint = -1
@@ -367,7 +367,7 @@
     cm_k = -1
   }
 
-  function makeEnvEdit(): Send['map/post/envelope'] {
+  function makeEnvEdit(): Send['map/edit/envelope'] {
     const index = $rmap.map.envelopes.indexOf(selected!)
 
     if (selected instanceof ColorEnvelope) {
@@ -419,7 +419,7 @@
     onSync()
 
     const change = makeEnvEdit()
-    $server.send('map/post/envelope', change)
+    $server.send('map/edit/envelope', change)
   }
 
   function onEditTime(e: InputEvent) {
@@ -441,7 +441,7 @@
     onSync()
 
     const change = makeEnvEdit()
-    $server.send('map/post/envelope', change)
+    $server.send('map/edit/envelope', change)
   }
 
   function onDeletePoint() {
@@ -453,7 +453,7 @@
     onSync()
 
     const change = makeEnvEdit()
-    $server.send('map/post/envelope', change)
+    $server.send('map/edit/envelope', change)
   }
 
   function onEditCurve(e: FormEvent<HTMLSelectElement>) {
@@ -465,7 +465,7 @@
     onSync()
 
     const change = makeEnvEdit()
-    $server.send('map/post/envelope', change)
+    $server.send('map/edit/envelope', change)
   }
 
   function onMouseWheel(e: WheelEvent) {
@@ -509,7 +509,7 @@
     onSync()
 
     const change = makeEnvEdit()
-    $server.send('map/post/envelope', change)
+    $server.send('map/edit/envelope', change)
   }
 </script>
 

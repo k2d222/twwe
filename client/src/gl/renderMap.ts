@@ -32,7 +32,7 @@ import { gl } from './global'
 import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, type Ctor } from '../ui/lib/util'
-import { Config as AutomapperConfig, automap } from '../twmap/automap'
+import { type Config as AutomapperConfig, automap } from '../twmap/automap'
 import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, stringToResIndex, uvFromJson } from '../server/convert'
 import type { Brush } from '../ui/lib/editor'
 import type { EditTile, Recv } from '../server/protocol'
@@ -210,7 +210,7 @@ export class RenderMap {
     return this.map.envelopes.length - 1
   }
 
-  createEnvelope(part: Recv['map/put/envelope']) {
+  createEnvelope(part: Recv['map/create/envelope']) {
     let env: Envelope
       if (part.type === 'color')
         env = new ColorEnvelope()
@@ -228,7 +228,7 @@ export class RenderMap {
     this.addEnvelope(env)
   }
 
-  editEnvelope(...[e, part]: Recv['map/post/envelope']) {
+  editEnvelope(...[e, part]: Recv['map/edit/envelope']) {
     const env = this.map.envelopes[e]
     if (part.name !== undefined) env.name = part.name
     if (part.synchronized !== undefined) env.synchronized = part.synchronized
@@ -289,7 +289,7 @@ export class RenderMap {
     return changed
   }
 
-  createQuad(...[g, l, part]: Recv['map/put/quad']) {
+  createQuad(...[g, l, part]: Recv['map/create/quad']) {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l] as RenderQuadsLayer
 
@@ -309,7 +309,7 @@ export class RenderMap {
     rlayer.recompute()
   }
 
-  editQuad(...[g, l, q, part]: Recv['map/post/quad']) {
+  editQuad(...[g, l, q, part]: Recv['map/edit/quad']) {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l] as RenderQuadsLayer
     const quad = rlayer.layer.quads[q]
@@ -341,7 +341,7 @@ export class RenderMap {
     rlayer.recompute()
   }
 
-  editGroup(...[g, part]: Recv['map/post/group']) {
+  editGroup(...[g, part]: Recv['map/edit/group']) {
     const rgroup = this.groups[g]
 
     if (part.offset !== undefined) {
@@ -364,7 +364,7 @@ export class RenderMap {
       rgroup.group.name = part.name
   }
 
-  reorderGroup(...[src, tgt]: Recv['map/patch/group']) {
+  reorderGroup(...[src, tgt]: Recv['map/move/group']) {
     const [group] = this.map.groups.splice(src, 1)
     const [rgroup] = this.groups.splice(src, 1)
     this.map.groups.splice(tgt, 0, group)
@@ -377,7 +377,7 @@ export class RenderMap {
     return rgroup
   }
 
-  editLayer(...[g, l, part]: Recv['map/post/layer']) {
+  editLayer(...[g, l, part]: Recv['map/edit/layer']) {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l]
 
@@ -429,7 +429,7 @@ export class RenderMap {
     }
   }
 
-  reorderLayer(...[[g1, l1], [g2, l2]]: Recv['map/patch/layer']) {
+  reorderLayer(...[[g1, l1], [g2, l2]]: Recv['map/move/layer']) {
     const rgroup = this.groups[g1]
     const [rlayer] = rgroup.layers.splice(l1, 1)
     const [layer] = rgroup.group.layers.splice(l1, 1)
@@ -443,7 +443,7 @@ export class RenderMap {
     return rlayer
   }
 
-  createGroup(part: Recv['map/put/group']) {
+  createGroup(part: Recv['map/create/group']) {
     const group = new Group()
     const rgroup = new RenderGroup(this, group)
     this.map.groups.push(group)
@@ -463,7 +463,7 @@ export class RenderMap {
     else throw 'cannot create layer kind ' + kind
   }
 
-  createLayer(...[g, part]: Recv['map/put/layer']) {
+  createLayer(...[g, part]: Recv['map/create/layer']) {
     const group = this.map.groups[g]
     const rgroup = this.groups[g]
 

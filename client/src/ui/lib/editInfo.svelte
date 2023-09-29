@@ -3,7 +3,7 @@
   import { server, map } from '../global'
 
 
-  $: syncInfo = sync($server, $map.info, { query: 'map/post/info' }) 
+  $: syncInfo = sync($server, $map.info, { query: 'map/edit/info' }) 
 
   function onChangeSettings(e: Event & { currentTarget: HTMLTextAreaElement }) {
     $syncInfo.settings = e.currentTarget.value.split('\n').filter(s => s !== '')

@@ -3,19 +3,8 @@ import type { AnyTilesLayer } from '../../twmap/tilesLayer'
 import type { Coord } from '../../twmap/types'
 import type { WebSocketServer } from '../../server/server'
 import type { Map } from '../../twmap/map'
-import {
-  TilesLayer,
-  GameLayer,
-  FrontLayer,
-  TeleLayer,
-  SwitchLayer,
-  SpeedupLayer,
-  TuneLayer,
-} from '../../twmap/tilesLayer'
 import * as Info from '../../twmap/types'
 import * as MapDir from '../../twmap/mapdir'
-import type { Layer } from '../../twmap/layer'
-import { QuadsLayer } from '../../twmap/quadsLayer'
 import { tilesToData } from '../../server/convert'
 import { layerKind } from './util'
 
@@ -282,7 +271,7 @@ export function placeTiles(
     const tiles = truncate(brushLayer.tiles, range)
     const data = tilesToData(tiles.flat())
 
-    server.send('map/post/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
+    server.send('map/edit/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
   }
 }
 

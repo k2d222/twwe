@@ -55,7 +55,7 @@
   }
 
   function onCreateGroup() {
-    $server.query('map/put/group', { name: '' })
+    $server.query('map/create/group', { name: '' })
   }
   function serverOnUsers(e: number) {
     $peers = e
@@ -73,7 +73,7 @@
       $rmap.editTile({ g, l, x: x + e.x, y: y + e.y, ...tile })
     }
   }
-  async function serverOnApplyAutomapper([g, l]: Recv['map/post/automap']) {
+  async function serverOnApplyAutomapper([g, l]: Recv['map/edit/automap']) {
     const data = await $server.query('map/get/tiles', [g, l])
     const layer = $rmap.groups[g].layers[l].layer as AnyTilesLayer<any>
     const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(layer.flags))
@@ -89,7 +89,7 @@
     delete $automappers[e]
     $automappers = $automappers
   }
-  function serverOnUploadAutomapper([name, file]: Recv['map/put/automapper']) {
+  function serverOnUploadAutomapper([name, file]: Recv['map/create/automapper']) {
     const kind = name.slice(name.lastIndexOf('.') + 1) as AutomapperKind
     const image = name.slice(0, name.lastIndexOf('.'))
     $automappers[name] = {
@@ -118,10 +118,10 @@
     $selected = [$rmap.map.physicsLayerIndex(GameLayer)]
     $server.socket.addEventListener('close', onServerClosed, { once: true })
     $server.on('users', serverOnUsers)
-    $server.on('map/post/tiles', serverOnEditTiles)
-    $server.on('map/post/automap', serverOnApplyAutomapper)
+    $server.on('map/edit/tiles', serverOnEditTiles)
+    $server.on('map/edit/automap', serverOnApplyAutomapper)
     $server.on('map/delete/automapper', serverOnDeleteAutomapper)
-    $server.on('map/put/automapper', serverOnUploadAutomapper)
+    $server.on('map/create/automapper', serverOnUploadAutomapper)
     $server.onError(serverOnError)
     $server.query('map/get/users', undefined)
       .then(u => $peers = u)
@@ -134,10 +134,10 @@
   onDestroy(() => {
     $server.socket.removeEventListener('error', onServerClosed)
     $server.off('users', serverOnUsers)
-    $server.off('map/post/tiles', serverOnEditTiles)
-    $server.off('map/post/automap', serverOnApplyAutomapper)
+    $server.off('map/edit/tiles', serverOnEditTiles)
+    $server.off('map/edit/automap', serverOnApplyAutomapper)
     $server.off('map/delete/automapper', serverOnDeleteAutomapper)
-    $server.off('map/put/automapper', serverOnUploadAutomapper)
+    $server.off('map/create/automapper', serverOnUploadAutomapper)
 
     viewport.canvas.removeEventListener('mouseenter', onHoverCanvas)
   })

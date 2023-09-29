@@ -44,7 +44,7 @@
 
     rmap = mapView.getRenderMap()
 
-    $server.on('map/put/automapper', onUploadAutomapper)
+    $server.on('map/create/automapper', onUploadAutomapper)
     $server.on('map/delete/automapper', onDeleteAutomapper)
   })
 
@@ -55,11 +55,11 @@
       layer.tiles = tiles
     }
 
-    $server.off('map/put/automapper', onUploadAutomapper)
+    $server.off('map/create/automapper', onUploadAutomapper)
     $server.off('map/delete/automapper', onDeleteAutomapper)
   })
 
-  function onUploadAutomapper([name, file]: Send['map/put/automapper']) {
+  function onUploadAutomapper([name, file]: Send['map/create/automapper']) {
     const kind = name.slice(name.lastIndexOf('.') + 1) as AutomapperKind
     const image = name.slice(0, name.lastIndexOf('.'))
     $automappers[name] = { name, image, kind, file }
@@ -120,7 +120,7 @@
 
     newAmName = ''
 
-    await $server.query('map/put/automapper', [name, file])
+    await $server.query('map/create/automapper', [name, file])
     createAmOpen = false
   }
 
@@ -132,7 +132,7 @@
     const id = showInfo('Uploading...', 'none')
     try {
       const name = $automappers[selected].name
-      await $server.query('map/put/automapper', [name, file])
+      await $server.query('map/create/automapper', [name, file])
     }
     finally {
       clearDialog(id)

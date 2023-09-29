@@ -69,7 +69,9 @@ export type MapCreation = {
   blank: {
     w: number,
     h: number
-  }
+  } 
+} | {
+  upload: Base64
 })
 
 export interface MapGetReq {
@@ -149,9 +151,9 @@ export interface MapReq {
   cursor: Cursor
   save: undefined
   get: MapGetReq
-  put: MapCreateReq
-  post: MapEditReq
-  patch: MapReorderReq
+  create: MapCreateReq
+  edit: MapEditReq
+  move: MapReorderReq
   delete: MapDelReq
 }
 
@@ -161,10 +163,6 @@ export interface GetReq {
 
 export interface GetResp {
   map: Base64
-}
-
-export interface CreateReq {
-  map: [string, Base64]
 }
 
 export interface EditReq {
@@ -178,7 +176,7 @@ export interface DeleteReq {
 export interface Request {
   map: MapReq
   get: GetReq
-  post: EditReq
+  edit: EditReq
   delete: DeleteReq
   join: string
   leave: string
@@ -213,24 +211,24 @@ export interface Send {
   "map/get/quad": MapGetReq['quad']
   "map/get/automappers": MapGetReq['automappers']
   "map/get/automapper": MapGetReq['automapper']
-  "map/put/image": MapCreateReq['image']
-  "map/put/envelope": MapCreateReq['envelope']
-  "map/put/group": MapCreateReq['group']
-  "map/put/layer": MapCreateReq['layer']
-  "map/put/quad": MapCreateReq['quad']
-  "map/put/automapper": MapCreateReq['automapper']
-  "map/post/config": MapEditReq['config']
-  "map/post/info": MapEditReq['info']
-  "map/post/envelope": MapEditReq['envelope']
-  "map/post/group": MapEditReq['group']
-  "map/post/layer": MapEditReq['layer']
-  "map/post/tiles": MapEditReq['tiles']
-  "map/post/quad": MapEditReq['quad']
-  "map/post/automap": MapEditReq['automap']
-  "map/patch/envelope": MapReorderReq['envelope']
-  "map/patch/group": MapReorderReq['group']
-  "map/patch/layer": MapReorderReq['layer']
-  "map/patch/quad": MapReorderReq['quad']
+  "map/create/image": MapCreateReq['image']
+  "map/create/envelope": MapCreateReq['envelope']
+  "map/create/group": MapCreateReq['group']
+  "map/create/layer": MapCreateReq['layer']
+  "map/create/quad": MapCreateReq['quad']
+  "map/create/automapper": MapCreateReq['automapper']
+  "map/edit/config": MapEditReq['config']
+  "map/edit/info": MapEditReq['info']
+  "map/edit/envelope": MapEditReq['envelope']
+  "map/edit/group": MapEditReq['group']
+  "map/edit/layer": MapEditReq['layer']
+  "map/edit/tiles": MapEditReq['tiles']
+  "map/edit/quad": MapEditReq['quad']
+  "map/edit/automap": MapEditReq['automap']
+  "map/move/envelope": MapReorderReq['envelope']
+  "map/move/group": MapReorderReq['group']
+  "map/move/layer": MapReorderReq['layer']
+  "map/move/quad": MapReorderReq['quad']
   "map/delete/image": MapDelReq['image']
   "map/delete/envelope": MapDelReq['envelope']
   "map/delete/group": MapDelReq['group']
@@ -239,12 +237,10 @@ export interface Send {
   "map/delete/automapper": MapDelReq['automapper']
   "map/cursor": Cursor
   "map/save": undefined
-  "get/map": GetReq['map']
-  "put/map": CreateReq['map']
-  "post/map": EditReq['map']
-  "delete/map": DeleteReq['map']
   "join": string
   "leave": string
+  "create": EditReq['map']
+  "delete": DeleteReq['map']
 }
 
 export interface Resp {
@@ -263,24 +259,24 @@ export interface Resp {
   "map/get/quad": MapGetResp['quad']
   "map/get/automappers": MapGetResp['automappers']
   "map/get/automapper": MapGetResp['automapper']
-  "map/put/image": undefined
-  "map/put/envelope": undefined
-  "map/put/group": undefined
-  "map/put/layer": undefined
-  "map/put/quad": undefined
-  "map/put/automapper": undefined
-  "map/post/config": undefined
-  "map/post/info": undefined
-  "map/post/envelope": undefined
-  "map/post/group": undefined
-  "map/post/layer": undefined
-  "map/post/tiles": undefined
-  "map/post/quad": undefined
-  "map/post/automap": undefined
-  "map/patch/envelope": undefined
-  "map/patch/group": undefined
-  "map/patch/layer": undefined
-  "map/patch/quad": undefined
+  "map/create/image": undefined
+  "map/create/envelope": undefined
+  "map/create/group": undefined
+  "map/create/layer": undefined
+  "map/create/quad": undefined
+  "map/create/automapper": undefined
+  "map/edit/config": undefined
+  "map/edit/info": undefined
+  "map/edit/envelope": undefined
+  "map/edit/group": undefined
+  "map/edit/layer": undefined
+  "map/edit/tiles": undefined
+  "map/edit/quad": undefined
+  "map/edit/automap": undefined
+  "map/move/envelope": undefined
+  "map/move/group": undefined
+  "map/move/layer": undefined
+  "map/move/quad": undefined
   "map/delete/image": undefined
   "map/delete/envelope": undefined
   "map/delete/group": undefined
@@ -289,40 +285,36 @@ export interface Resp {
   "map/delete/automapper": undefined
   "map/cursor": undefined
   "map/save": undefined
-  "get/map": GetResp['map']
-  "put/map": undefined
-  "post/map": undefined
-  "delete/map": undefined
   "join": undefined
   "leave": undefined
+  "create": undefined
+  "delete": undefined
 }
 
 export interface Recv {
-  "map/put/image": MapCreateReq['image']
-  "map/put/envelope": MapCreateReq['envelope']
-  "map/put/group": MapCreateReq['group']
-  "map/put/layer": MapCreateReq['layer']
-  "map/put/quad": MapCreateReq['quad']
-  "map/put/automapper": MapCreateReq['automapper']
-  "map/post/config": MapEditReq['config']
-  "map/post/info": MapEditReq['info']
-  "map/post/envelope": MapEditReq['envelope']
-  "map/post/group": MapEditReq['group']
-  "map/post/layer": MapEditReq['layer']
-  "map/post/tiles": MapEditReq['tiles']
-  "map/post/quad": MapEditReq['quad']
-  "map/post/automap": MapEditReq['automap']
-  "map/patch/envelope": MapReorderReq['envelope']
-  "map/patch/group": MapReorderReq['group']
-  "map/patch/layer": MapReorderReq['layer']
+  "map/create/image": MapCreateReq['image']
+  "map/create/envelope": MapCreateReq['envelope']
+  "map/create/group": MapCreateReq['group']
+  "map/create/layer": MapCreateReq['layer']
+  "map/create/quad": MapCreateReq['quad']
+  "map/create/automapper": MapCreateReq['automapper']
+  "map/edit/config": MapEditReq['config']
+  "map/edit/info": MapEditReq['info']
+  "map/edit/envelope": MapEditReq['envelope']
+  "map/edit/group": MapEditReq['group']
+  "map/edit/layer": MapEditReq['layer']
+  "map/edit/tiles": MapEditReq['tiles']
+  "map/edit/quad": MapEditReq['quad']
+  "map/edit/automap": MapEditReq['automap']
+  "map/move/envelope": MapReorderReq['envelope']
+  "map/move/group": MapReorderReq['group']
+  "map/move/layer": MapReorderReq['layer']
   "map/delete/image": MapDelReq['image']
   "map/delete/envelope": MapDelReq['envelope']
   "map/delete/group": MapDelReq['group']
   "map/delete/layer": MapDelReq['layer']
   "map/delete/quad": MapDelReq['quad']
   "map/delete/automapper": MapDelReq['automapper']
-  "post/map": EditReq['map']
-  "delete/map": DeleteReq['map']
   "map_created": string
   "map_deleted": string
   "users": number
