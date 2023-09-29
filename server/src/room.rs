@@ -112,6 +112,7 @@ pub struct Room {
 
 const MAP_FILE_NAME: &str = "map.map";
 const CFG_FILE_NAME: &str = "config.json";
+const AUTOMAPPER_DIR: &str = "automappers";
 
 impl Room {
     pub fn new(path: PathBuf) -> Option<Self> {
@@ -161,6 +162,12 @@ impl Room {
         let mut cfg_path = self.path.clone();
         cfg_path.push(CFG_FILE_NAME);
         cfg_path
+    }
+
+    pub fn automapper_path(&self) -> PathBuf {
+        let mut am_path = self.path.clone();
+        am_path.push(AUTOMAPPER_DIR);
+        am_path
     }
 
     pub fn add_peer(&self, peer: &Peer) {

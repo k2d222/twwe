@@ -31,7 +31,18 @@ fn create_server(cli: &Cli) -> Server {
             .filter_map(|e| e.ok())
             .map(|e| {
                 let dir = e.parent().unwrap().to_owned(); // map must be in a sub-directory
-                Arc::new(Room::new(dir).expect("failed to load one of the map dirs"))
+                let room = Room::new(dir).expect("failed to load one of the map dirs");
+
+                // ensure the room has all the required resources
+                if !room.cfg_path().exists() {
+                    room.save_config().expect("failed to create config file");
+                }
+                if !room.automapper_path().exists() {
+                    std::fs::create_dir(room.automapper_path())
+                        .expect("failed to create automapper dir");
+                }
+
+                Arc::new(room)
             });
         for r in rooms {
             server_rooms.insert(r.name().to_owned(), r);
