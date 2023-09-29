@@ -16,7 +16,7 @@
 
   import { basicSetup } from "codemirror"
   import { EditorState } from "@codemirror/state"
-  import { EditorView, tooltips } from "@codemirror/view"
+  import { EditorView, tooltips, keymap } from "@codemirror/view"
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
   import { Rpp } from './lang-rpp/index'
@@ -74,6 +74,10 @@
   function editorState(doc: string, kind?: AutomapperKind) {
     let extensions = [
       basicSetup,
+      keymap.of([
+        { key: 'Ctrl-s', run: () => { onSave(); return true; } },
+        { key: 'Ctrl-p', run: () => { onPreview(); return true; } },
+      ]),
       // EditorView.lineWrapping, // This is a bit too laggy
       tooltips({ position: 'absolute' }), // This is a bit too laggy
       EditorView.updateListener.of(e => { if (e.docChanged) changed = true })
@@ -245,6 +249,7 @@
         {/each}
 
         <Button
+          style="width: 100%; max-width: unset;"
           size="field"
           kind="ghost"
           icon={AddIcon}

@@ -62,6 +62,8 @@ Key/Mouse bindings:
  * Rotate brush clockwise / counterclockwise -> `r` / `shift+r`
  * Toggle layers view / envelope view -> `tab`
  * Save map -> `ctrl+s`
+ * Save automapper -> `ctrl+s`
+ * Preview automapper -> `ctrl+p`
  * `right_click` opens context-menus on quad points, envelope points and envelope lines.
  * Select multiple layers with `shift`.
 
