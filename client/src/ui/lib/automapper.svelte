@@ -38,7 +38,7 @@
     }
 
     try {
-      await $server.query('map/create/automapper', [file.name, str])
+      await $server.query('create/automapper', [file.name, str])
     }
     catch (e) {
       showError("Saving failed: " + e)
@@ -52,17 +52,17 @@
     dispatch('change', layer.automapper.config)
   }
 
-  function onSync([_g, _l, e]: Recv['map/edit/layer']) {
+  function onSync([_g, _l, e]: Recv['edit/layer']) {
     if ('automapper_config' in e || 'image' in e)
       layer = layer
   }
 
   onMount(() => {
-    $server.on('map/edit/layer', onSync)
+    $server.on('edit/layer', onSync)
   })
 
   onDestroy(() => {
-    $server.off('map/edit/layer', onSync)
+    $server.off('edit/layer', onSync)
   })
 </script>
 

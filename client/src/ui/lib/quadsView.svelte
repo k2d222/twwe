@@ -46,9 +46,9 @@
   let destroyed = false
 
   onMount(() => {
-    $server.on('map/edit/quad', onSync)
-    $server.on('map/create/quad', onSync)
-    $server.on('map/delete/quad', onSync)
+    $server.on('edit/quad', onSync)
+    $server.on('create/quad', onSync)
+    $server.on('delete/quad', onSync)
   
     const updateForever = () => {
       viewBox = makeViewBox()
@@ -59,9 +59,9 @@
   })
 
   onDestroy(() => {
-    $server.off('map/edit/quad', onSync)
-    $server.off('map/create/quad', onSync)
-    $server.off('map/delete/quad', onSync)
+    $server.off('edit/quad', onSync)
+    $server.off('create/quad', onSync)
+    $server.off('delete/quad', onSync)
     destroyed = true
   })
 
@@ -159,13 +159,13 @@
   function onChange(q: number) {
     const change = editQuad(q)
     $rmap.editQuad(...change)
-    $server.send('map/edit/quad', change)
+    $server.send('edit/quad', change)
     onSync()
   }
 
   function onDelete(q: number) {
     hideCM()
-    $server.query('map/delete/quad', [g, l, q])
+    $server.query('delete/quad', [g, l, q])
   }
 
   function onCreateQuad() {
@@ -176,7 +176,7 @@
     const h = (layer.image ? layer.image.height : 64) * 1024
 
     // TODO: use defaults
-    const change: Send['map/create/quad'] = [
+    const change: Send['create/quad'] = [
       g, l,
       {
         position: coordToJson({ x: mx, y: my }, 15),
@@ -206,7 +206,7 @@
     ]
 
     hideCM()
-    $server.query('map/create/quad', change)
+    $server.query('create/quad', change)
   }
 
   function cloneQuad(quad: Quad) {
@@ -220,7 +220,7 @@
     return copy
   }
 
-  function editQuad(q: number): Send['map/edit/quad'] {
+  function editQuad(q: number): Send['edit/quad'] {
     const quad = layer.quads[q]
     const { points, colors, texCoords, posEnv, posEnvOffset, colorEnv, colorEnvOffset } = quad
     const posEnv_ = $rmap.map.envelopes.indexOf(posEnv)
@@ -250,7 +250,7 @@
       return { x: p.x + 10 * 1024, y: p.y + 10 * 1024 }
     })
 
-    const change: Send['map/create/quad'] = [
+    const change: Send['create/quad'] = [
       g, l,
       {
         position: coordToJson(points[4], 15),
@@ -265,7 +265,7 @@
     ]
 
     hideCM()
-    $server.query('map/create/quad', change)
+    $server.query('create/quad', change)
   }
 
   let sync_ = 0

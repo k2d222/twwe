@@ -55,7 +55,7 @@
   }
 
   function onCreateGroup() {
-    $server.query('map/create/group', { name: '' })
+    $server.query('create/group', { name: '' })
   }
   function serverOnUsers(e: number) {
     $peers = e
@@ -73,8 +73,8 @@
       $rmap.editTile({ g, l, x: x + e.x, y: y + e.y, ...tile })
     }
   }
-  async function serverOnApplyAutomapper([g, l]: Recv['map/edit/automap']) {
-    const data = await $server.query('map/get/tiles', [g, l])
+  async function serverOnApplyAutomapper([g, l]: Recv['edit/automap']) {
+    const data = await $server.query('get/tiles', [g, l])
     const layer = $rmap.groups[g].layers[l].layer as AnyTilesLayer<any>
     const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(layer.flags))
 
@@ -85,11 +85,11 @@
 
       $rmap.editTile({ g, l, x, y, ...tile }) }
   }
-  function serverOnDeleteAutomapper(e: Recv['map/delete/automapper']) {
+  function serverOnDeleteAutomapper(e: Recv['delete/automapper']) {
     delete $automappers[e]
     $automappers = $automappers
   }
-  function serverOnUploadAutomapper([name, file]: Recv['map/create/automapper']) {
+  function serverOnUploadAutomapper([name, file]: Recv['create/automapper']) {
     const kind = name.slice(name.lastIndexOf('.') + 1) as AutomapperKind
     const image = name.slice(0, name.lastIndexOf('.'))
     $automappers[name] = {
@@ -118,12 +118,12 @@
     $selected = [$rmap.map.physicsLayerIndex(GameLayer)]
     $server.socket.addEventListener('close', onServerClosed, { once: true })
     $server.on('users', serverOnUsers)
-    $server.on('map/edit/tiles', serverOnEditTiles)
-    $server.on('map/edit/automap', serverOnApplyAutomapper)
-    $server.on('map/delete/automapper', serverOnDeleteAutomapper)
-    $server.on('map/create/automapper', serverOnUploadAutomapper)
+    $server.on('edit/tiles', serverOnEditTiles)
+    $server.on('edit/automap', serverOnApplyAutomapper)
+    $server.on('delete/automapper', serverOnDeleteAutomapper)
+    $server.on('create/automapper', serverOnUploadAutomapper)
     $server.onError(serverOnError)
-    $server.query('map/get/users', undefined)
+    $server.query('get/users', undefined)
       .then(u => $peers = u)
 
     viewport.canvas.addEventListener('mouseenter', onHoverCanvas)
@@ -134,10 +134,10 @@
   onDestroy(() => {
     $server.socket.removeEventListener('error', onServerClosed)
     $server.off('users', serverOnUsers)
-    $server.off('map/edit/tiles', serverOnEditTiles)
-    $server.off('map/edit/automap', serverOnApplyAutomapper)
-    $server.off('map/delete/automapper', serverOnDeleteAutomapper)
-    $server.off('map/create/automapper', serverOnUploadAutomapper)
+    $server.off('edit/tiles', serverOnEditTiles)
+    $server.off('edit/automap', serverOnApplyAutomapper)
+    $server.off('delete/automapper', serverOnDeleteAutomapper)
+    $server.off('create/automapper', serverOnUploadAutomapper)
 
     viewport.canvas.removeEventListener('mouseenter', onHoverCanvas)
   })

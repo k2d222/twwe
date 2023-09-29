@@ -105,7 +105,7 @@ export async function queryImageData(httpRoot: string, mapName: string, imageInd
 export async function queryImage(server: WebSocketServer, httpRoot: string, mapName: string, imageIndex: number): Promise<Image> {
   const data = await queryImageData(httpRoot, mapName, imageIndex)
   const img = new Image()
-  const images = await server.query('map/get/images', undefined)
+  const images = await server.query('get/images', undefined)
   img.loadEmbedded(data)
   img.name = images[imageIndex]
   return img

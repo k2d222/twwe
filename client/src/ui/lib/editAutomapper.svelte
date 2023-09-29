@@ -44,8 +44,8 @@
 
     rmap = mapView.getRenderMap()
 
-    $server.on('map/create/automapper', onUploadAutomapper)
-    $server.on('map/delete/automapper', onDeleteAutomapper)
+    $server.on('create/automapper', onUploadAutomapper)
+    $server.on('delete/automapper', onDeleteAutomapper)
   })
 
   onDestroy(() => {
@@ -55,18 +55,18 @@
       layer.tiles = tiles
     }
 
-    $server.off('map/create/automapper', onUploadAutomapper)
-    $server.off('map/delete/automapper', onDeleteAutomapper)
+    $server.off('create/automapper', onUploadAutomapper)
+    $server.off('delete/automapper', onDeleteAutomapper)
   })
 
-  function onUploadAutomapper([name, file]: Send['map/create/automapper']) {
+  function onUploadAutomapper([name, file]: Send['create/automapper']) {
     const kind = name.slice(name.lastIndexOf('.') + 1) as AutomapperKind
     const image = name.slice(0, name.lastIndexOf('.'))
     $automappers[name] = { name, image, kind, file }
     $automappers = $automappers
   }
 
-  function onDeleteAutomapper(name: Send['map/delete/automapper']) {
+  function onDeleteAutomapper(name: Send['delete/automapper']) {
     delete $automappers[name]
     $automappers = $automappers
   }
@@ -94,7 +94,7 @@
     let sel = selected
 
     if (resp) {
-      await $server.query('map/delete/automapper', file)
+      await $server.query('delete/automapper', file)
 
       if (file === sel) {
         selected = null
@@ -120,7 +120,7 @@
 
     newAmName = ''
 
-    await $server.query('map/create/automapper', [name, file])
+    await $server.query('create/automapper', [name, file])
     createAmOpen = false
   }
 
@@ -132,7 +132,7 @@
     const id = showInfo('Uploading...', 'none')
     try {
       const name = $automappers[selected].name
-      await $server.query('map/create/automapper', [name, file])
+      await $server.query('create/automapper', [name, file])
     }
     finally {
       clearDialog(id)
@@ -202,7 +202,7 @@
 
     selected = file
     view.setState(editorState('Loading file...'))
-    const text = await $server.query('map/get/automapper', file)
+    const text = await $server.query('get/automapper', file)
     view.setState(editorState(text, am.kind))
     changed = false
   }

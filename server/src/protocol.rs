@@ -252,105 +252,105 @@ pub enum Image {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum GetReq {
-    #[serde(rename = "map/get/map")]
+    #[serde(rename = "get/map")]
     Map,
-    #[serde(rename = "map/get/users")]
+    #[serde(rename = "get/users")]
     Users,
-    #[serde(rename = "map/get/cursors")]
+    #[serde(rename = "get/cursors")]
     Cursors,
-    #[serde(rename = "map/get/images")]
+    #[serde(rename = "get/images")]
     Images,
-    #[serde(rename = "map/get/image")]
+    #[serde(rename = "get/image")]
     Image(u16),
-    #[serde(rename = "map/get/envelopes")]
+    #[serde(rename = "get/envelopes")]
     Envelopes,
-    #[serde(rename = "map/get/envelope")]
+    #[serde(rename = "get/envelope")]
     Envelope(u16),
-    #[serde(rename = "map/get/groups")]
+    #[serde(rename = "get/groups")]
     Groups,
-    #[serde(rename = "map/get/group")]
+    #[serde(rename = "get/group")]
     Group(u16),
-    #[serde(rename = "map/get/layers")]
+    #[serde(rename = "get/layers")]
     Layers(u16),
-    #[serde(rename = "map/get/layer")]
+    #[serde(rename = "get/layer")]
     Layer(u16, u16),
-    #[serde(rename = "map/get/tiles")]
+    #[serde(rename = "get/tiles")]
     Tiles(u16, u16),
-    #[serde(rename = "map/get/quad")]
+    #[serde(rename = "get/quad")]
     Quad(u16, u16, u16),
-    #[serde(rename = "map/get/automappers")]
+    #[serde(rename = "get/automappers")]
     Automappers,
-    #[serde(rename = "map/get/automapper")]
+    #[serde(rename = "get/automapper")]
     Automapper(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum CreateReq {
-    #[serde(rename = "map/create/image")]
+    #[serde(rename = "create/image")]
     Image(String, Image),
-    #[serde(rename = "map/create/envelope")]
+    #[serde(rename = "create/envelope")]
     Envelope(Box<PartialEnvelope>),
-    #[serde(rename = "map/create/group")]
+    #[serde(rename = "create/group")]
     Group(Box<PartialGroup>),
-    #[serde(rename = "map/create/layer")]
+    #[serde(rename = "create/layer")]
     Layer(u16, Box<PartialLayer>),
-    #[serde(rename = "map/create/quad")]
+    #[serde(rename = "create/quad")]
     Quad(u16, u16, Box<twmap::Quad>),
-    #[serde(rename = "map/create/automapper")]
+    #[serde(rename = "create/automapper")]
     Automapper(String, String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum EditReq {
-    #[serde(rename = "map/edit/config")]
+    #[serde(rename = "edit/config")]
     Config(Box<PartialConfig>),
-    #[serde(rename = "map/edit/info")]
+    #[serde(rename = "edit/info")]
     Info(Box<PartialInfo>),
-    #[serde(rename = "map/edit/envelope")]
+    #[serde(rename = "edit/envelope")]
     Envelope(u16, Box<PartialEnvelope>),
-    #[serde(rename = "map/edit/group")]
+    #[serde(rename = "edit/group")]
     Group(u16, Box<PartialGroup>),
-    #[serde(rename = "map/edit/layer")]
+    #[serde(rename = "edit/layer")]
     Layer(u16, u16, Box<PartialLayer>),
-    #[serde(rename = "map/edit/tiles")]
+    #[serde(rename = "edit/tiles")]
     Tiles(u16, u16, Box<Tiles>),
-    #[serde(rename = "map/edit/quad")]
+    #[serde(rename = "edit/quad")]
     Quad(u16, u16, u16, Box<twmap::Quad>),
-    #[serde(rename = "map/edit/automap")]
+    #[serde(rename = "edit/automap")]
     Automap(u16, u16),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum DeleteReq {
-    #[serde(rename = "map/delete/image")]
+    #[serde(rename = "delete/image")]
     Image(u16),
-    #[serde(rename = "map/delete/envelope")]
+    #[serde(rename = "delete/envelope")]
     Envelope(u16),
-    #[serde(rename = "map/delete/group")]
+    #[serde(rename = "delete/group")]
     Group(u16),
-    #[serde(rename = "map/delete/layer")]
+    #[serde(rename = "delete/layer")]
     Layer(u16, u16),
-    #[serde(rename = "map/delete/quad")]
+    #[serde(rename = "delete/quad")]
     Quad(u16, u16, u16),
-    #[serde(rename = "map/delete/automapper")]
+    #[serde(rename = "delete/automapper")]
     Automapper(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum MoveReq {
-    #[serde(rename = "map/move/image")]
+    #[serde(rename = "move/image")]
     Image(u16, u16),
-    #[serde(rename = "map/move/envelope")]
+    #[serde(rename = "move/envelope")]
     Envelope(u16, u16),
-    #[serde(rename = "map/move/group")]
+    #[serde(rename = "move/group")]
     Group(u16, u16),
-    #[serde(rename = "map/move/layer")]
+    #[serde(rename = "move/layer")]
     Layer((u16, u16), (u16, u16)),
-    #[serde(rename = "map/move/quad")]
+    #[serde(rename = "move/quad")]
     Quad((u16, u16, u16), u16),
 }
 
@@ -365,9 +365,9 @@ pub enum Request {
     CreateMap(String, Box<MapCreation>),
     #[serde(rename = "delete")]
     DeleteMap(String),
-    #[serde(rename = "map/save")]
+    #[serde(rename = "save")]
     Save,
-    #[serde(rename = "map/cursor")]
+    #[serde(rename = "cursor")]
     Cursor(Box<Cursor>),
     #[serde(untagged)]
     Get(GetReq),

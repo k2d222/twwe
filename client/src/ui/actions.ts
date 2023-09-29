@@ -8,7 +8,7 @@ export async function saveMap() {
   const server_ = get(server)
   const id = showInfo('Saving map...', 'none')
   try {
-    await server_.query('map/save', undefined)
+    await server_.query('save', undefined)
     clearDialog(id)
     showInfo('Map saved on the server.', 'closable')
   } catch (e) {

@@ -28,63 +28,63 @@
   $: group = $map.groups[g]
 
   $: syncName = sync($server, group.name, {
-    query: 'map/edit/group',
+    query: 'edit/group',
     match: [g, { name: pick }],
     send: s => [g, { name: s }],
   })
   $: syncOrder = sync($server, g, {
-    query: 'map/move/group',
+    query: 'move/group',
     match: [g, pick],
     send: s => [g, s],
   })
   $: syncOffX = sync($server, group.offX, {
-    query: 'map/edit/group',
+    query: 'edit/group',
     match: [g, { offset: { x: pick } }],
     apply: s => fromFixedNum(s, 5),
     send: s => [g, { offset: { x: toFixedNum(s, 5), y: toFixedNum($syncOffY, 5) } }],
   })
   $: syncOffY = sync($server, group.offY, {
-    query: 'map/edit/group',
+    query: 'edit/group',
     match: [g, { offset: { y: pick } }],
     apply: s => fromFixedNum(s, 5),
     send: s => [g, { offset: { x: toFixedNum($syncOffX, 5), y: toFixedNum(s, 5) } }],
   })
   $: syncParaX = sync($server, group.paraX, {
-    query: 'map/edit/group',
+    query: 'edit/group',
     match: [g, { parallax: { x: pick } }],
     send: s => [g, { parallax: { x: s, y: $syncParaY } }],
   })
   $: syncParaY = sync($server, group.paraY, {
-    query: 'map/edit/group',
+    query: 'edit/group',
     match: [g, { parallax: { y: pick } }],
     send: s => [g, { parallax: { x: $syncParaX, y: s } }],
   })
   $: syncClipping = sync($server, group.clipping, {
-    query: 'map/edit/group',
+    query: 'edit/group',
     match: [g, { clipping: pick }],
     send: s => [g, { clipping: s }],
   })
   $: {
     syncClipX = sync($server, group.clipX, {
-      query: 'map/edit/group',
+      query: 'edit/group',
       match: [g, { clip: { x: pick } }],
       apply: s => fromFixedNum(s, 5),
       send: s => [g, { clip: { x: toFixedNum(s, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
     })
     syncClipY = sync($server, group.clipY, {
-      query: 'map/edit/group',
+      query: 'edit/group',
       match: [g, { clip: { y: pick } }],
       apply: s => fromFixedNum(s, 5),
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum(s, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
     })
     syncClipW = sync($server, group.clipW, {
-      query: 'map/edit/group',
+      query: 'edit/group',
       match: [g, { clip: { w: pick } }],
       apply: s => fromFixedNum(s, 5),
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum(s, 5), h: toFixedNum($syncClipH, 5) } }],
     })
     syncClipH = sync($server, group.clipH, {
-      query: 'map/edit/group',
+      query: 'edit/group',
       match: [g, { clip: { h: pick } }],
       apply: s => fromFixedNum(s, 5),
       send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum(s, 5) } }],
@@ -97,23 +97,23 @@
   }
 
   onMount(() => {
-    $server.on('map/create/layer', onSync)
-    $server.on('map/delete/layer', onSync)
+    $server.on('create/layer', onSync)
+    $server.on('delete/layer', onSync)
   })
 
   onDestroy(() => {
-    $server.off('map/create/layer', onSync)
-    $server.off('map/delete/layer', onSync)
+    $server.off('create/layer', onSync)
+    $server.off('delete/layer', onSync)
   })
 
   function onCreateLayer(type: MapDir.LayerKind, name: string) {
     return function () {
-      $server.query('map/create/layer', [g, { type, name }])
+      $server.query('create/layer', [g, { type, name }])
     }
   }
 
   function onDeleteGroup() {
-    $server.query('map/delete/group', g)
+    $server.query('delete/group', g)
   }
 
 </script>

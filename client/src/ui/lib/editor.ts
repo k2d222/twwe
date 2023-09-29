@@ -271,7 +271,7 @@ export function placeTiles(
     const tiles = truncate(brushLayer.tiles, range)
     const data = tilesToData(tiles.flat())
 
-    server.send('map/edit/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
+    server.send('edit/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
   }
 }
 

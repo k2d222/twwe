@@ -210,7 +210,7 @@ export class RenderMap {
     return this.map.envelopes.length - 1
   }
 
-  createEnvelope(part: Recv['map/create/envelope']) {
+  createEnvelope(part: Recv['create/envelope']) {
     let env: Envelope
       if (part.type === 'color')
         env = new ColorEnvelope()
@@ -228,7 +228,7 @@ export class RenderMap {
     this.addEnvelope(env)
   }
 
-  editEnvelope(...[e, part]: Recv['map/edit/envelope']) {
+  editEnvelope(...[e, part]: Recv['edit/envelope']) {
     const env = this.map.envelopes[e]
     if (part.name !== undefined) env.name = part.name
     if (part.synchronized !== undefined) env.synchronized = part.synchronized
@@ -289,7 +289,7 @@ export class RenderMap {
     return changed
   }
 
-  createQuad(...[g, l, part]: Recv['map/create/quad']) {
+  createQuad(...[g, l, part]: Recv['create/quad']) {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l] as RenderQuadsLayer
 
@@ -309,7 +309,7 @@ export class RenderMap {
     rlayer.recompute()
   }
 
-  editQuad(...[g, l, q, part]: Recv['map/edit/quad']) {
+  editQuad(...[g, l, q, part]: Recv['edit/quad']) {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l] as RenderQuadsLayer
     const quad = rlayer.layer.quads[q]
@@ -334,14 +334,14 @@ export class RenderMap {
     rlayer.recompute()
   }
 
-  deleteQuad(...[g, l, q]: Recv['map/delete/quad']) {
+  deleteQuad(...[g, l, q]: Recv['delete/quad']) {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l] as RenderQuadsLayer
     rlayer.layer.quads.splice(q, 1)
     rlayer.recompute()
   }
 
-  editGroup(...[g, part]: Recv['map/edit/group']) {
+  editGroup(...[g, part]: Recv['edit/group']) {
     const rgroup = this.groups[g]
 
     if (part.offset !== undefined) {
@@ -364,20 +364,20 @@ export class RenderMap {
       rgroup.group.name = part.name
   }
 
-  reorderGroup(...[src, tgt]: Recv['map/move/group']) {
+  reorderGroup(...[src, tgt]: Recv['move/group']) {
     const [group] = this.map.groups.splice(src, 1)
     const [rgroup] = this.groups.splice(src, 1)
     this.map.groups.splice(tgt, 0, group)
     this.groups.splice(tgt, 0, rgroup)
   }
 
-  deleteGroup(g: Recv['map/delete/group']) {
+  deleteGroup(g: Recv['delete/group']) {
     this.map.groups.splice(g, 1)
     const [rgroup] = this.groups.splice(g, 1)
     return rgroup
   }
 
-  editLayer(...[g, l, part]: Recv['map/edit/layer']) {
+  editLayer(...[g, l, part]: Recv['edit/layer']) {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l]
 
@@ -429,7 +429,7 @@ export class RenderMap {
     }
   }
 
-  reorderLayer(...[[g1, l1], [g2, l2]]: Recv['map/move/layer']) {
+  reorderLayer(...[[g1, l1], [g2, l2]]: Recv['move/layer']) {
     const rgroup = this.groups[g1]
     const [rlayer] = rgroup.layers.splice(l1, 1)
     const [layer] = rgroup.group.layers.splice(l1, 1)
@@ -437,13 +437,13 @@ export class RenderMap {
     this.groups[g2].group.layers.splice(l2, 0, layer)
   }
 
-  deleteLayer(...[g, l]: Recv['map/delete/layer']) {
+  deleteLayer(...[g, l]: Recv['delete/layer']) {
     this.map.groups[g].layers.splice(l, 1)
     const [rlayer] = this.groups[g].layers.splice(l, 1)
     return rlayer
   }
 
-  createGroup(part: Recv['map/create/group']) {
+  createGroup(part: Recv['create/group']) {
     const group = new Group()
     const rgroup = new RenderGroup(this, group)
     this.map.groups.push(group)
@@ -463,7 +463,7 @@ export class RenderMap {
     else throw 'cannot create layer kind ' + kind
   }
 
-  createLayer(...[g, part]: Recv['map/create/layer']) {
+  createLayer(...[g, part]: Recv['create/layer']) {
     const group = this.map.groups[g]
     const rgroup = this.groups[g]
 
