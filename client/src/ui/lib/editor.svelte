@@ -167,21 +167,34 @@
     $anim = !$anim
   }
 
+  function onUndo() {
+    $server.undo()
+  }
+
+  function onRedo() {
+    $server.redo()
+  }
+
   function onKeyDown(e: KeyboardEvent) {
     const target = e.target as HTMLElement
     if (!target.contains(viewport.canvas)) return
 
     Editor.fire('keydown', e)
 
-    if (e.ctrlKey && ['s', 'd', ' '].includes(e.key)) {
+    if (e.ctrlKey && ['s', ' ', 'z', 'y'].includes(e.key)) {
       e.preventDefault()
 
       if (e.key === 's') {
         Actions.saveMap()
       } else if (e.key === ' ') {
         onToggleAnim()
+      } else if (e.key === 'z') {
+        onUndo()
+      } else if (e.key === 'y') {
+        onRedo()
       }
-    } else if (['Tab'].includes(e.key)) {
+    }
+    else if (['Tab'].includes(e.key)) {
       e.preventDefault()
 
       if (e.key === 'Tab') {

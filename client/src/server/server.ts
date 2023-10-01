@@ -1,4 +1,5 @@
 import type { SendPacket, Result, SendKey, RecvKey, Recv, Send, Resp, RecvPacket, RespPacket } from './protocol'
+import { History } from './history'
 
 type QueryFn<K extends SendKey> = (resp: Result<Resp[K]>) => unknown
 type ListenFn<K extends RecvKey> = (resp: Recv[K]) => unknown
@@ -61,7 +62,7 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
   socket: WebSocket
 
   errorListener: (e: string) => unknown
-  queryListeners: { [key: number]: [SendPacket<any>, QueryFn<any>] }
+  queryListeners: { [key: number]: QueryFn<any> }
 
   history: History
 
@@ -73,10 +74,12 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
 
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
-    this.socket.onmessage = e => this.onMessage(e)
+    this.socket.onmessage = e => this.handleMessage(e)
 
     this.errorListener = () => {}
     this.queryListeners = {}
+
+    this.history = new History()
 
     this.deferredData = []
     this.makeDeferred()
@@ -129,7 +132,8 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
         content,
       }
 
-      this.queryListeners[id] = [packet, listener]
+      this.history.send(packet)
+      this.queryListeners[id] = listener
 
       if (timeout) {
         timeoutID = window.setTimeout(() => {
@@ -142,19 +146,16 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
       this.dispatch(type as any, content)
 
       const message = JSON.stringify(packet)
-      this.socketSend(message)
+      this.socketSend.call(undefined, message)
     })
   }
 
-  private handleResp(resp: RespPacket<any>) {
+  private handleResp(resp: RespPacket<SendKey>) {
     const listener = this.queryListeners[resp.id]
     if (listener) {
-      const [packet, fn] = listener
-      fn(resp)
-      if ('ok' in resp /* && packet.type in this.broadcastListeners */) {
-        // TODO: transaction
-      }
-      else if ('err' in resp) {
+      listener.call(undefined, resp)
+
+      if ('err' in resp) {
         this.errorListener.call(undefined, resp.err)
       }
     }
@@ -163,26 +164,50 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
     }
   }
 
-  private onMessage(e: MessageEvent) {
+  private handleMessage(e: MessageEvent) {
     if (e.data instanceof ArrayBuffer) {
       console.warn('received binary data from the ws server, is the server outdated?')
       return
     }
 
-    const data = JSON.parse(e.data) as RespPacket<any> | RecvPacket<any>
+    const data = JSON.parse(e.data) as RespPacket<SendKey> | RecvPacket<RecvKey>
     
     if ('id' in data) {
+      const ops = this.history.resp(data)
+      if (ops)
+        for (const [type, content] of ops)
+          this.dispatch(type, content)
+
       this.handleResp(data)
     }
     else if ('err' in data) {
       this.errorListener.call(undefined, data.err)
     }
     else {
-      this.dispatch(data.type, data.content)
+      const ops = this.history.recv(data)
+      if (ops)
+        for (const [type, content] of ops)
+          this.dispatch(type, content)
     }
   }
 
   send<K extends SendKey>(type: K, content: Send[K]) {
     this.query(type, content)
+  }
+
+  undo() {
+    const op = this.history.undo()
+    if (op)
+      this.send(...op)
+    else
+      this.errorListener.call(undefined, 'cannot undo')
+  }
+
+  redo() {
+    const op = this.history.redo()
+    if (op)
+      this.send(...op)
+    else
+      this.errorListener.call(undefined, 'cannot redo')
   }
 }

@@ -321,8 +321,11 @@ export interface Recv {
   "saved": undefined
 }
 
+export type Req = Send | Recv
+
 export type SendKey = keyof Send
 export type RecvKey = keyof Recv
+export type ReqKey = keyof Req
 
 export interface SendPacket<K extends SendKey> {
   timestamp: number
