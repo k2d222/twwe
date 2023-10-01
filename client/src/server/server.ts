@@ -17,13 +17,51 @@ export interface Server {
   query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]>
 }
 
+type Listener<E> = (evt: E) => unknown
+
+export class EventDispatcher<E extends Record<string, any>> {
+  private listeners: { [K in keyof E]?: Listener<E[K]>[] }
+
+  constructor() {
+    this.listeners = {}
+  }
+
+  on<K extends keyof E>(type: K, fn: Listener<E[K]>, priority: boolean = false) {
+    if (this.listeners[type] === undefined)
+      this.listeners[type] = []
+
+    if (priority)
+      this.listeners[type].unshift(fn)
+    else
+      this.listeners[type].push(fn)
+  }
+
+  off<K extends keyof E>(type: K, fn: Listener<E[K]>) {
+    if (this.listeners[type] === undefined)
+      console.error('server.off(): could not find listener')
+
+    const index = this.listeners[type].indexOf(fn)
+    if (index !== -1)
+      this.listeners[type].splice(index, 1)
+    else
+      console.error('server.off(): could not find listener')
+  }
+
+  dispatch<K extends keyof E>(type: K, evt: E[K]) {
+    if (this.listeners[type] !== undefined) {
+      for (const fn of this.listeners[type]) {
+        fn(evt)
+      }
+    }
+  }
+}
+
 // a server using a websocket
-export class WebSocketServer implements Server {
+export class WebSocketServer extends EventDispatcher<Recv> implements Server {
   socket: WebSocket
 
   errorListener: (e: string) => unknown
   queryListeners: { [key: number]: [SendPacket<any>, QueryFn<any>] }
-  broadcastListeners: { [K in RecvKey]: ListenFn<K>[] }
 
   history: History
 
@@ -31,41 +69,14 @@ export class WebSocketServer implements Server {
   private deferredData: any[]
 
   constructor(wsUrl: string | URL) {
+    super()
+
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
     this.socket.onmessage = e => this.onMessage(e)
 
     this.errorListener = () => {}
     this.queryListeners = {}
-    this.broadcastListeners = {
-      "create/image": [],
-      "create/envelope": [],
-      "create/group": [],
-      "create/layer": [],
-      "create/quad": [],
-      "create/automapper": [],
-      "edit/config": [],
-      "edit/info": [],
-      "edit/envelope": [],
-      "edit/group": [],
-      "edit/layer": [],
-      "edit/tiles": [],
-      "edit/quad": [],
-      "edit/automap": [],
-      "move/envelope": [],
-      "move/group": [],
-      "move/layer": [],
-      "delete/image": [],
-      "delete/envelope": [],
-      "delete/group": [],
-      "delete/layer": [],
-      "delete/quad": [],
-      "delete/automapper": [],
-      "map_created": [],
-      "map_deleted": [],
-      "users": [],
-      "saved": [],
-    }
 
     this.deferredData = []
     this.makeDeferred()
@@ -93,28 +104,8 @@ export class WebSocketServer implements Server {
     return Math.floor(Math.random() * Math.pow(2, 16))
   }
 
-  // to help typescript a little
-  private getBroadcastListeners<K extends RecvKey>(type: K) {
-    return this.broadcastListeners[type] as ListenFn<K>[]
-  }
-
   onError(fn: (e: any) => unknown) {
     this.errorListener = fn
-  }
-
-  on<K extends RecvKey>(type: K, fn: ListenFn<K>, priority: boolean = false) {
-    if (priority)
-      this.getBroadcastListeners(type).unshift(fn)
-    else
-      this.getBroadcastListeners(type).push(fn)
-  }
-
-  off<K extends RecvKey>(type: K, fn: ListenFn<K>) {
-    const index = this.getBroadcastListeners(type).indexOf(fn)
-    if (index !== -1)
-      this.getBroadcastListeners(type).splice(index, 1)
-    else
-      console.error('server.off(): could not find listener')
   }
 
   query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]> {
@@ -147,12 +138,8 @@ export class WebSocketServer implements Server {
         }, timeout)
       }
 
-      // we predict an ok response from the server and call the callbacks right away.
-      if (type in this.broadcastListeners) {
-        for (const fn of this.broadcastListeners[type as any]) {
-          fn(content)
-        }
-      }
+      // we predict an ok response from the server and dispatch right away.
+      this.dispatch(type as any, content)
 
       const message = JSON.stringify(packet)
       this.socketSend(message)
@@ -164,7 +151,7 @@ export class WebSocketServer implements Server {
     if (listener) {
       const [packet, fn] = listener
       fn(resp)
-      if ('ok' in resp && packet.type in this.broadcastListeners) {
+      if ('ok' in resp /* && packet.type in this.broadcastListeners */) {
         // TODO: transaction
       }
       else if ('err' in resp) {
@@ -191,9 +178,7 @@ export class WebSocketServer implements Server {
       this.errorListener.call(undefined, data.err)
     }
     else {
-      for (const fn of this.getBroadcastListeners(data.type)) {
-        fn(data.content)
-      }
+      this.dispatch(data.type, data.content)
     }
   }
 
