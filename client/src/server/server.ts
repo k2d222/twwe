@@ -188,6 +188,8 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
       if (ops)
         for (const [type, content] of ops)
           this.dispatch(type, content)
+      else
+        this.dispatch(data.type, data.content)
     }
   }
 
@@ -197,17 +199,21 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
 
   undo() {
     const op = this.history.undo()
-    if (op)
+    if (op) {
       this.send(...op)
-    else
-      this.errorListener.call(undefined, 'cannot undo')
+      return true
+    } else {
+      return false
+    }
   }
 
   redo() {
     const op = this.history.redo()
-    if (op)
+    if (op) {
       this.send(...op)
-    else
-      this.errorListener.call(undefined, 'cannot redo')
+      return true
+    } else {
+      return false
+    }
   }
 }

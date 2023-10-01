@@ -168,11 +168,15 @@
   }
 
   function onUndo() {
-    $server.undo()
+    if (!$server.undo()) {
+      console.warn('cannot undo')
+    }
   }
 
   function onRedo() {
-    $server.redo()
+    if (!$server.redo()) {
+      console.warn('cannot redo')
+    }
   }
 
   function onKeyDown(e: KeyboardEvent) {

@@ -1,15 +1,16 @@
 import { ColorEnvelope, PositionEnvelope, SoundEnvelope } from '../twmap/envelope'
 import { QuadsLayer } from '../twmap/quadsLayer'
-import { TilesLayer } from '../twmap/tilesLayer'
+import { AnyTilesLayer, TilesLayer } from '../twmap/tilesLayer'
 import * as MapDir from '../twmap/mapdir'
+import type * as Info from '../twmap/types'
 import type { Map } from '../twmap/map'
-import { colorToJson, coordToJson, curveTypeToString, resIndexToString, toFixedNum, uvToJson } from './convert'
-import type { Recv, RecvKey, RecvPacket, Req, ReqKey, RespPacket, Send, SendKey, SendPacket } from './protocol'
+import { colorToJson, coordToJson, curveTypeToString, dataToTiles, resIndexToString, tilesToData, toFixedNum, uvToJson } from './convert'
+import type { Recv, RecvKey, RecvPacket, Req, ReqKey, RespPacket, Send, SendKey, SendPacket, Tiles } from './protocol'
 import { map } from '../ui/global'
 import { get } from 'svelte/store'
 
 
-function rev_post_envelope(map: Map, ...[e, part]: Recv['edit/envelope']): Send['edit/envelope'] {
+function rev_edit_envelope(map: Map, ...[e, part]: Recv['edit/envelope']): Send['edit/envelope'] {
   const env = map.envelopes[e]
   const rev_part: typeof part = { type: part.type }
 
@@ -46,7 +47,7 @@ function rev_post_envelope(map: Map, ...[e, part]: Recv['edit/envelope']): Send[
   return [e, rev_part]
 }
 
-function rev_post_group(map: Map, ...[g, part]: Recv['edit/group']): Send['edit/group'] {
+function rev_edit_group(map: Map, ...[g, part]: Recv['edit/group']): Send['edit/group'] {
   const group = map.groups[g]
   const rev_part: typeof part = {}
 
@@ -78,7 +79,7 @@ function rev_post_group(map: Map, ...[g, part]: Recv['edit/group']): Send['edit/
   return [g, rev_part]
 }
 
-function rev_post_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['edit/layer'] {
+function rev_edit_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['edit/layer'] {
   const layer = map.groups[g].layers[l]
   const rev_part: typeof part = { type: part.type }
 
@@ -116,7 +117,7 @@ function rev_post_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['ed
   return [g, l, rev_part]
 }
 
-function rev_post_quad(map: Map, ...[g, l, q, part]: Recv['edit/quad']): Send['edit/quad'] {
+function rev_edit_quad(map: Map, ...[g, l, q, part]: Recv['edit/quad']): Send['edit/quad'] {
   const quad = (map.groups[g].layers[l] as QuadsLayer).quads[q]
   const rev_part: typeof part = {
       corners: quad.points.slice(0, 4).map(p => coordToJson(p, 15)),
@@ -130,6 +131,26 @@ function rev_post_quad(map: Map, ...[g, l, q, part]: Recv['edit/quad']): Send['e
   }
 
   return [g, l, q, rev_part]
+}
+
+function rev_edit_tiles(map: Map, ...[g, l, tiles]: Recv['edit/tiles']): Send['edit/tiles'] {
+  const layer = map.groups[g].layers[l] as AnyTilesLayer<any>
+  const cur_tiles: Info.AnyTile[] = []
+
+  for (let j = tiles.y; j < tiles.y + tiles.h; j++) {
+    for (let i = tiles.x; i < tiles.x + tiles.w; i++) {
+      cur_tiles.push({ ...layer.getTile(i, j) })
+    }
+  }
+
+  const rev_tiles: Tiles = {
+    x: tiles.x,
+    y: tiles.y,
+    w: tiles.w,
+    h: tiles.h,
+    tiles: tilesToData(cur_tiles),
+  }
+  return [g, l, rev_tiles]
 }
 
 export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]] | null {
@@ -172,23 +193,24 @@ export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]
   }
   else if (pkt.type === 'edit/envelope') {
     const [e, part] = pkt.content as Send['edit/envelope']
-    return ['edit/envelope', rev_post_envelope(map, e, part)]
+    return ['edit/envelope', rev_edit_envelope(map, e, part)]
   }
   else if (pkt.type === 'edit/group') {
     const [g, part] = pkt.content as Send['edit/group']
-    return ['edit/group', rev_post_group(map, g, part)]
+    return ['edit/group', rev_edit_group(map, g, part)]
   }
   else if (pkt.type === 'edit/layer') {
     const [g, l, part] = pkt.content as Send['edit/layer']
-    return ['edit/layer', rev_post_layer(map, g, l, part)]
+    return ['edit/layer', rev_edit_layer(map, g, l, part)]
   }
   // TODO
   else if (pkt.type === 'edit/tiles') {
-    return null
+    const [g, l, tiles] = pkt.content as Send['edit/tiles']
+    return ['edit/tiles', rev_edit_tiles(map, g, l, tiles)]
   }
   else if (pkt.type === 'edit/quad') {
     const [g, l, q, part] = pkt.content as Send['edit/quad']
-    return ['edit/quad', rev_post_quad(map, g, l, q, part)]
+    return ['edit/quad', rev_edit_quad(map, g, l, q, part)]
   }
   // non-revertible
   else if (pkt.type === 'edit/automap') {
@@ -196,15 +218,15 @@ export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]
   }
   else if (pkt.type === 'move/envelope') {
     const [src, tgt] = pkt.content as Send['move/envelope']
-    return ['edit/envelope', [tgt, src]]
+    return ['move/envelope', [tgt, src]]
   }
   else if (pkt.type === 'move/group') {
     const [src, tgt] = pkt.content as Send['move/group']
-    return ['edit/group', [tgt, src]]
+    return ['move/group', [tgt, src]]
   }
   else if (pkt.type === 'move/layer') {
     const [src, tgt] = pkt.content as Send['move/layer']
-    return ['edit/layer', [tgt, src]]
+    return ['move/layer', [tgt, src]]
   }
   else if (pkt.type === 'delete/image') {
     return null
@@ -402,6 +424,6 @@ export class History {
 
     this.index += 1
     this.skip++ // mark to skip the next send
-    return pkt.reverse
+    return pkt.forward
   }
 }

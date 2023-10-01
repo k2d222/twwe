@@ -264,14 +264,32 @@ export function placeTiles(
       }
     }
 
+    const tiles = truncate(brushLayer.tiles, range)
     const x = range.start.x + pos.x
     const y = range.start.y + pos.y
     const w = range.end.x - range.start.x
     const h = range.end.y - range.start.y
-    const tiles = truncate(brushLayer.tiles, range)
-    const data = tilesToData(tiles.flat())
 
-    server.send('edit/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
+    function isChanged() {
+      for (let j = y; j < y + h; j++) {
+        for (let i = x; i < x + w; i++) {
+          const tile = tiles[j - y][i - x]
+          const targetTile = targetLayer.getTile(i, j)
+
+          for (let key in targetTile) {
+            if (key in tile && tile[key] !== targetTile[key]) {
+              return true
+            }
+          }
+        }
+      }
+      return false
+    }
+
+    if (isChanged()) {
+      const data = tilesToData(tiles.flat())
+      server.send('edit/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
+    }
   }
 }
 
