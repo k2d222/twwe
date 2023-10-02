@@ -1,15 +1,16 @@
 <script lang="ts">
   import type { Envelope } from '../../twmap/map'
-  import { colorToJson, curveTypeToString, envTypeToString, toFixedNum } from '../../server/convert'
+  import { colorFromJson, colorToJson, curveTypeFromString, curveTypeToString, envTypeToString, fromFixedNum, toFixedNum } from '../../server/convert'
   import { server } from '../global'
   import * as Info from '../../twmap/types'
-  import { ColorEnvelope, PositionEnvelope, SoundEnvelope, type EnvPoint } from '../../twmap/envelope'
+  import { ColorEnvelope, PositionEnvelope, SoundEnvelope, type EnvPoint, type EnvPos } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
   import { onDestroy, onMount } from 'svelte'
   import { showError } from './dialog'
   import { rmap } from '../global'
   import * as MapDir from '../../twmap/mapdir'
   import type { Send } from '../../server/protocol'
+  import { pick, sync, type Syncable } from '../../server/util'
 
   type FormEvent<T> = Event & { currentTarget: EventTarget & T }
   type InputEvent = FormEvent<HTMLInputElement>
@@ -26,7 +27,9 @@
     h: number
   }
 
-  export let selected: Envelope | null = null
+  export let e: number = -1
+
+  $: envelope = e === -1 ? null : $rmap.map.envelopes[e]
 
   let viewBox: ViewBox = { x: 0, y: 0, w: 0, h: 0 }
   let paths: Point[][] = []
@@ -89,9 +92,93 @@
     sound_v: (x: EnvPoint<any>, val: number) => (x.content = val),
   }
 
-  $: viewBox = selected ? makeViewBox(selected) : { x: 0, y: 0, w: 0, h: 0 }
-  $: sync_, channelEnabled, paths = selected ? makePaths(selected) : []
-  $: sync_, channelEnabled, colors = selected ? makeColors(selected): []
+  type AnyEnvPoints = EnvPoint<number>[] | EnvPoint<EnvPos>[] | EnvPoint<Info.Color>[]
+  let syncPoints: Syncable<AnyEnvPoints>
+
+  $: if (envelope) {
+    syncPoints = sync($server, clonePoints(envelope.points), {
+      query: 'edit/envelope',
+      match: [e, { points: pick }],
+      apply: points => envPointsFromJson(points),
+      send: points => makeEnvPointEdit(points),
+    })
+  }
+
+  $: viewBox = envelope ? makeViewBox(envelope) : { x: 0, y: 0, w: 0, h: 0 }
+  $: sync_, channelEnabled, paths = envelope ? makePaths(envelope, $syncPoints) : []
+  $: sync_, channelEnabled, colors = envelope ? makeColors(envelope): []
+
+  function clonePoints(points: AnyEnvPoints): AnyEnvPoints {
+    return points.map((p: EnvPoint<any>) => ({
+        ...p,
+        content: typeof p.content === 'object' ? { ...p.content } : p.content
+    }))
+  }
+
+  function envPointsFromJson(points: MapDir.EnvelopePoint<any>[]): EnvPoint<any>[] {
+    if (envelope instanceof ColorEnvelope) {
+      return points.map((p: MapDir.ColorEnvelope['points'][0]) => ({
+          time: p.time,
+          content: colorFromJson(p.content, 10),
+          type: curveTypeFromString(p.type),
+        }))
+    } else if (envelope instanceof PositionEnvelope) {
+      return points.map((p: MapDir.PositionEnvelope['points'][0]) => ({
+          time: p.time,
+          content: {
+            x: fromFixedNum(p.content.x, 15),
+            y: fromFixedNum(p.content.y, 15),
+            rotation: fromFixedNum(p.content.rotation, 10),
+          },
+          type: curveTypeFromString(p.type),
+        }))
+    } else if (envelope instanceof SoundEnvelope) {
+      return  points.map((p: MapDir.SoundEnvelope['points'][0]) => ({
+          time: p.time,
+          content: fromFixedNum(p.content, 10),
+          type: curveTypeFromString(p.type),
+        }))
+    } else {
+      throw 'unknown envelope type'
+    }
+  }
+
+  function makeEnvPointEdit(points: EnvPoint<any>[]): Send['edit/envelope'] {
+    if (envelope instanceof ColorEnvelope) {
+      return [e, {
+        type: MapDir.EnvelopeType.Color,
+        points: points.map(p => ({
+          time: p.time,
+          content: colorToJson(p.content, 10),
+          type: curveTypeToString(p.type),
+        })),
+      }]
+    } else if (envelope instanceof PositionEnvelope) {
+      return [e, {
+        type: MapDir.EnvelopeType.Position,
+        points: points.map(p => ({
+          time: p.time,
+          content: {
+            x: toFixedNum(p.content.x, 15),
+            y: toFixedNum(p.content.y, 15),
+            rotation: toFixedNum(p.content.rotation, 10),
+          },
+          type: curveTypeToString(p.type),
+        })),
+      }]
+    } else if (envelope instanceof SoundEnvelope) {
+      return [e, {
+        type: MapDir.EnvelopeType.Sound,
+        points:  points.map(p => ({
+          time: p.time,
+          content: toFixedNum(p.content, 10),
+          type: curveTypeToString(p.type),
+        })),
+      }]
+    } else {
+      throw 'unknown envelope type'
+    }
+  }
 
   function clampI32(n: number) {
     return clamp(n, -2_147_483_648, 2_147_483_647)
@@ -152,19 +239,19 @@
     return { x, y, w, h }
   }
 
-  function makePath(env: Envelope, chan: Chan) {
-    const x = env.points.map((p: EnvPoint<any>) => p.time)
-    const y = env.points.map((p: EnvPoint<any>) => -channelVal[chan](p)) // notice the minus sign to flip the y axis
+  function makePath(points: AnyEnvPoints, chan: Chan) {
+    const x = points.map((p: EnvPoint<any>) => p.time)
+    const y = points.map((p: EnvPoint<any>) => -channelVal[chan](p)) // notice the minus sign to flip the y axis
 
     return x.map((_, i) => {
-      return { x: x[i], y: y[i], curve: env.points[i].type }
+      return { x: x[i], y: y[i], curve: points[i].type }
     })
   }
 
-  function makePaths(env: Envelope) {
+  function makePaths(env: Envelope, points: AnyEnvPoints) {
     return envChannels(env)
       .filter(c => channelEnabled[c])
-      .map(c => makePath(env, c))
+      .map(c => makePath(points, c))
   }
 
   function makeColors(env: Envelope) {
@@ -230,12 +317,12 @@
 
   let sync_ = 0
   function onSync() {
-    if (selected && $rmap.map.envelopes.length === 0)
-      selected = null
-    else if (selected && $rmap.map.envelopes.indexOf(selected) === -1)
-      selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
-    else if (selected === null && $rmap.map.envelopes.length !== 0)
-      selected = $rmap.map.envelopes[0]
+    if (envelope && $rmap.map.envelopes.length === 0)
+      e = -1
+    else if (envelope && $rmap.map.envelopes.indexOf(envelope) === -1)
+      e = $rmap.map.envelopes.length - 1
+    else if (envelope === null && $rmap.map.envelopes.length !== 0)
+      e = 0
     sync_++
   }
 
@@ -243,8 +330,7 @@
     $server.on('create/envelope', onSync)
     $server.on('edit/envelope', onSync)
     $server.on('delete/envelope', onSync)
-    if (selected === null && $rmap.map.envelopes.length)
-      selected = $rmap.map.envelopes[0]
+    e = $rmap.map.envelopes.length - 1
   })
 
   onDestroy(() => {
@@ -254,10 +340,10 @@
   })
 
   async function onRename(e: InputEvent) {
-    if (!selected)
+    if (!envelope)
       return
-    const change: Send['edit/envelope'] = [$rmap.map.envelopes.indexOf(selected), {
-      type: envTypeToString(selected.type),
+    const change: Send['edit/envelope'] = [$rmap.map.envelopes.indexOf(envelope), {
+      type: envTypeToString(envelope.type),
       name: e.currentTarget.value,
     }]
     try {
@@ -267,28 +353,28 @@
     }
   }
 
-  async function onNewEnv(e: FormEvent<HTMLSelectElement>) {
-    const type: MapDir.EnvelopeType = e.currentTarget.value as any
-    e.currentTarget.selectedIndex = 0 // reset the select to the default value
+  async function onNewEnv(ev: FormEvent<HTMLSelectElement>) {
+    const type: MapDir.EnvelopeType = ev.currentTarget.value as any
+    ev.currentTarget.selectedIndex = 0 // reset the select to the default value
     const change: Send['create/envelope'] = {
       type,
       name: '',
     }
     try {
       await $server.query('create/envelope', change)
-      selected = $rmap.map.envelopes[$rmap.map.envelopes.length - 1]
+      e = $rmap.map.envelopes.length - 1
     } catch (e) {
       showError('Failed to create envelope: ' + e)
     }
   }
 
   async function onDelete() {
-    if (!selected)
+    if (!envelope)
       return
-    const index = $rmap.map.envelopes.indexOf(selected)
+    const index = $rmap.map.envelopes.indexOf(envelope)
     try {
       await $server.query('delete/envelope', index)
-      selected = $rmap.map.envelopes[index - 1] ?? null
+      e = index - 1
     } catch (e) {
       showError('Failed to delete envelope: ' + e)
     }
@@ -309,8 +395,7 @@
 
   function onMouseUp() {
     if (activePath !== -1 && activePoint !== -1) {
-      const change = makeEnvEdit()
-      $server.send('edit/envelope', change)
+      syncPoints.sync($syncPoints)
 
       activePath = -1
       activePoint = -1
@@ -318,13 +403,13 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    if (!selected)
+    if (!envelope)
       return
     if (activePath !== -1 && activePoint !== -1) {
-      const chan = envChannels(selected)[activePath]
-      const point = selected.points[activePoint]
-      const prev = selected.points[Math.max(0, activePoint - 1)]
-      const next = selected.points[Math.min(selected.points.length - 1, activePoint + 1)]
+      const chan = envChannels(envelope)[activePath]
+      const point = $syncPoints[activePoint]
+      const prev = $syncPoints[Math.max(0, activePoint - 1)]
+      const next = $syncPoints[Math.min($syncPoints.length - 1, activePoint + 1)]
       let [px, py] = pixelToSvg(e.clientX, e.clientY)
 
       px = Math.max(0, px) // env times must be >= 0
@@ -367,67 +452,26 @@
     cm_k = -1
   }
 
-  function makeEnvEdit(): Send['edit/envelope'] {
-    const index = $rmap.map.envelopes.indexOf(selected!)
-
-    if (selected instanceof ColorEnvelope) {
-      return [index, {
-        type: MapDir.EnvelopeType.Color,
-        points: selected.points.map(p => ({
-          time: p.time,
-          content: colorToJson(p.content, 10),
-          type: curveTypeToString(p.type),
-        })),
-      }]
-    } else if (selected instanceof PositionEnvelope) {
-      return [index, {
-        type: MapDir.EnvelopeType.Position,
-        points: selected.points.map(p => ({
-          time: p.time,
-          content: {
-            x: toFixedNum(p.content.x, 15),
-            y: toFixedNum(p.content.y, 15),
-            rotation: toFixedNum(p.content.rotation, 10),
-          },
-          type: curveTypeToString(p.type),
-        })),
-      }]
-    } else if (selected instanceof SoundEnvelope) {
-      return [index, {
-        type: MapDir.EnvelopeType.Sound,
-        points:  selected.points.map(p => ({
-          time: p.time,
-          content: toFixedNum(p.content, 10),
-          type: curveTypeToString(p.type),
-        })),
-      }]
-    } else {
-      throw 'unknown envelope type'
-    }
-  }
-
   function onEditValue(e: InputEvent) {
-    if (!selected)
+    if (!envelope)
       return
-    const point = selected.points[cm_j]
-    const chan = envChannels(selected)[cm_i]
+    const point = $syncPoints[cm_j]
+    const chan = envChannels(envelope)[cm_i]
     const val = clampI32(Math.floor(parseFloat(e.currentTarget.value) * 1024))
 
     if (isNaN(val)) return
 
     setChannelVal[chan](point, val)
-    onSync()
 
-    const change = makeEnvEdit()
-    $server.send('edit/envelope', change)
+    syncPoints.sync($syncPoints)
   }
 
   function onEditTime(e: InputEvent) {
-    if (!selected)
+    if (!envelope)
       return
-    const point = selected.points[cm_j]
-    const prev = selected.points[Math.max(0, cm_j - 1)]
-    const next = selected.points[Math.min(selected.points.length - 1, cm_j + 1)]
+    const point = $syncPoints[cm_j]
+    const prev = $syncPoints[Math.max(0, cm_j - 1)]
+    const next = $syncPoints[Math.min($syncPoints.length - 1, cm_j + 1)]
     let val = clampI32(Math.floor(parseFloat(e.currentTarget.value) * 1000))
 
     if (isNaN(val)) return
@@ -438,34 +482,27 @@
     if (point !== prev) val = Math.max(val, prev.time)
 
     point.time = val
-    onSync()
 
-    const change = makeEnvEdit()
-    $server.send('edit/envelope', change)
+    syncPoints.sync($syncPoints)
   }
 
   function onDeletePoint() {
-    if (!selected)
+    if (!envelope)
       return
-    selected.points.splice(cm_j, 1)
+    $syncPoints.splice(cm_j, 1)
     cm_j = -1
 
-    onSync()
-
-    const change = makeEnvEdit()
-    $server.send('edit/envelope', change)
+    syncPoints.sync($syncPoints)
   }
 
   function onEditCurve(e: FormEvent<HTMLSelectElement>) {
-    if (!selected)
+    if (!envelope)
       return
-    const point = selected.points[cm_k]
+    const point = $syncPoints[cm_k]
     const val: Info.CurveType = clampI32(parseInt(e.currentTarget.value))
     point.type = val
-    onSync()
 
-    const change = makeEnvEdit()
-    $server.send('edit/envelope', change)
+    syncPoints.sync($syncPoints)
   }
 
   function onMouseWheel(e: WheelEvent) {
@@ -474,11 +511,11 @@
   }
 
   function onRescale() {
-    viewBox = makeViewBox(selected)
+    viewBox = makeViewBox(envelope)
   }
 
   function addPoint(e: MouseEvent) {
-    if (!selected)
+    if (!envelope)
       return
     if (!(e.target instanceof SVGSVGElement) || e.button !== 0) return
 
@@ -489,27 +526,25 @@
       // point time must be >= 0
       return
 
-    let nextIndex = selected.points.findIndex((p: EnvPoint<any>) => p.time >= px)
-    if (nextIndex === -1) nextIndex = selected.points.length
-    else if (selected.points[nextIndex].time === px)
+    let nextIndex = $syncPoints.findIndex((p: EnvPoint<any>) => p.time >= px)
+    if (nextIndex === -1) nextIndex = $syncPoints.length
+    else if ($syncPoints[nextIndex].time === px)
       // don't add another point on top
       return
 
     const newPoint: EnvPoint<any> = {
       type: Info.CurveType.LINEAR,
       time: px,
-      content: selected.computePoint(px),
+      content: envelope.computePoint(px),
     }
 
     // floor channel values
-    for (const chan of envChannels(selected))
+    for (const chan of envChannels(envelope))
       setChannelVal[chan](newPoint, Math.floor(channelVal[chan](newPoint)))
 
-    selected.points.splice(nextIndex, 0, newPoint)
-    onSync()
+    $syncPoints.splice(nextIndex, 0, newPoint)
 
-    const change = makeEnvEdit()
-    $server.send('edit/envelope', change)
+    syncPoints.sync($syncPoints)
   }
 </script>
 
@@ -518,20 +553,19 @@
 {#key sync_}
 <div id="envelope-editor">
   <div class="header">
-    {#if selected}
-      <select on:change={e => (selected = $rmap.map.envelopes[e.currentTarget.value])}>
-        {#each $rmap.map.envelopes as env}
-          {@const i = $rmap.map.envelopes.indexOf(env)}
-          <option selected={env === selected} value={i}>
+    {#if envelope}
+      <select bind:value={e}>
+        {#each $rmap.map.envelopes as env, i}
+          <option value={i}>
             {`#${i} ${env.name || ''} (${envTypeToString(env.type)})`}
           </option>
         {/each}
       </select>
       <label>
-        <input type="text" value={selected.name} placeholder="(unnamed)" on:change={onRename} />
+        <input type="text" value={envelope.name} placeholder="(unnamed)" on:change={onRename} />
       </label>
       <div class="channels">
-        {#if selected instanceof ColorEnvelope}
+        {#if envelope instanceof ColorEnvelope}
           <label class="red">
             <input type="checkbox" bind:checked={channelEnabled.color_r} />
             <span>R</span>
@@ -548,7 +582,7 @@
             <input type="checkbox" bind:checked={channelEnabled.color_a} />
             <span>A</span>
           </label>
-        {:else if selected instanceof PositionEnvelope}
+        {:else if envelope instanceof PositionEnvelope}
           <label class="red">
             <input type="checkbox" bind:checked={channelEnabled.pos_x} />
             <span>X</span>
@@ -561,7 +595,7 @@
             <input type="checkbox" bind:checked={channelEnabled.pos_r} />
             <span>R</span>
           </label>
-        {:else if selected instanceof SoundEnvelope}
+        {:else if envelope instanceof SoundEnvelope}
           <label class="red">
             <input type="checkbox" bind:checked={channelEnabled.sound_v} />
             <span>V</span>
@@ -577,8 +611,8 @@
         <option value="position">Position</option>
         <option value="sound">Sound</option>
       </select>
-      {#if selected}
-        <button class="danger" on:click={onDelete} disabled={selected === null}>Delete</button>
+      {#if envelope}
+        <button class="danger" on:click={onDelete} disabled={envelope === null}>Delete</button>
       {/if}
     </div>
   </div>

@@ -118,6 +118,10 @@ type SyncOpt<Q extends SendKey & RecvKey, T> = {
   send?: (val: T) => Send[Q] | Skip,
 }
 
+export type Syncable<T> = Writable<T> & {
+  sync: (val: T) => void
+}
+
 /** a svelte store factory that provides a Writable synced with the server.
  * @param val - initial value
  * @param opts.query - which server query to sync with
@@ -128,7 +132,7 @@ type SyncOpt<Q extends SendKey & RecvKey, T> = {
 export function sync<Q extends SendKey & RecvKey, T>(
   server: Server,
   val: T,
-  opt: SyncOpt<Q, T>): Writable<T>
+  opt: SyncOpt<Q, T>): Syncable<T>
 {
   if (!opt.match)
     opt.match = pick
@@ -169,8 +173,26 @@ export function sync<Q extends SendKey & RecvKey, T>(
   }
 
   async function set(newVal: T) {
-    if (newVal === val)
+    if (newVal === val) {
+      // console.warn(opt.query, newVal)
       return
+    }
+    const oldVal = val
+    val = newVal
+    subs.forEach(sub => sub(val))
+    const query = opt.send(val)
+    if (query !== skip) {
+      try {
+        await server.query(opt.query, query)
+      }
+      catch {
+        val = oldVal
+        subs.forEach(sub => sub(val))
+      }
+    }
+  }
+
+  async function sync(newVal: T) {
     const oldVal = val
     val = newVal
     subs.forEach(sub => sub(val))
@@ -190,5 +212,5 @@ export function sync<Q extends SendKey & RecvKey, T>(
     set(cb(val))
   }
 
-  return { subscribe, set, update }
+  return { subscribe, set, update, sync }
 }
