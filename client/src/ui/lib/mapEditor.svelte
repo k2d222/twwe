@@ -198,7 +198,9 @@
     $server.on('delete/image', onDeleteImage, true)
     $server.on('edit/info', onEditInfo, true)
 
-    cursorInterval = setInterval(updateCursors, cursorDuration) as any
+    // do not send cursors events in development, as this spams the websocket logs a lot.
+    if (import.meta.env.MODE !== 'development')
+      cursorInterval = setInterval(updateCursors, cursorDuration) as any
 
     renderLoop(0)
   })
