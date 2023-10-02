@@ -1,10 +1,12 @@
 use std::{collections::HashMap, fmt::Display};
 
-use fixed::types::{I22F10, I27F5};
+use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
-use serde_with::{rust::double_option, serde_as, skip_serializing_none};
+use serde_with::{
+    rust::double_option, serde_as, skip_serializing_none, DeserializeAs, SerializeAs,
+};
 use twmap::{AutomapperConfig, EnvPoint, Position, Volume};
-use vek::{Extent2, Rect, Rgba, Vec2};
+use vek::{Extent2, Rect, Rgba, Uv, Vec2};
 
 use crate::{base64::Base64, error::Error, map_cfg::MapAccess, util::serialize_display};
 
@@ -131,29 +133,23 @@ pub struct MapCreation {
     pub method: CreationMethod,
 }
 
+#[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialInfo {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub credits: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<Vec<String>>,
 }
 
+#[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialEnv<T: Copy> {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub synchronized: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub points: Option<Vec<EnvPoint<T>>>,
 }
 
@@ -165,30 +161,24 @@ pub enum PartialEnvelope {
     Sound(PartialEnv<Volume>),
 }
 
+#[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialGroup {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub offset: Option<Vec2<I27F5>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub parallax: Option<Vec2<i32>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub clipping: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub clip: Option<Rect<I27F5, I27F5>>,
 }
 
+#[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct PartialPhysicsLayer {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub width: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<usize>,
 }
 
-#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -206,7 +196,6 @@ pub struct PartialTilesLayer {
     pub automapper_config: Option<AutomapperConfig>,
 }
 
-#[serde_as]
 #[skip_serializing_none]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -215,6 +204,40 @@ pub struct PartialQuadsLayer {
     pub detail: Option<bool>,
     #[serde(with = "double_option")]
     pub image: Option<Option<u16>>,
+}
+
+// the sole purpose of this remote struct is to serialize color_env and
+// position_env as numbers instead of strings (like twmap does), because twmap
+// deserialization panics.
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[serde(remote = "twmap::Quad")]
+pub struct SerdeQuad {
+    pub corners: [Vec2<I17F15>; 4],
+    pub position: Vec2<I17F15>,
+    pub colors: [Rgba<u8>; 4],
+    pub texture_coords: [Uv<I22F10>; 4],
+    pub position_env: Option<u16>,
+    pub position_env_offset: i32,
+    pub color_env: Option<u16>,
+    pub color_env_offset: i32,
+}
+
+impl SerializeAs<twmap::Quad> for SerdeQuad {
+    fn serialize_as<S>(value: &twmap::Quad, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        SerdeQuad::serialize(value, serializer)
+    }
+}
+
+impl<'de> DeserializeAs<'de, twmap::Quad> for SerdeQuad {
+    fn deserialize_as<D>(deserializer: D) -> Result<twmap::Quad, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        SerdeQuad::deserialize(deserializer)
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -284,6 +307,7 @@ pub enum GetReq {
     Automapper(String),
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum CreateReq {
@@ -296,11 +320,16 @@ pub enum CreateReq {
     #[serde(rename = "create/layer")]
     Layer(u16, Box<PartialLayer>),
     #[serde(rename = "create/quad")]
-    Quad(u16, u16, Box<twmap::Quad>),
+    Quad(
+        u16,
+        u16,
+        #[serde_as(as = "Box<SerdeQuad>")] Box<twmap::Quad>,
+    ),
     #[serde(rename = "create/automapper")]
     Automapper(String, String),
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum EditReq {
@@ -317,7 +346,12 @@ pub enum EditReq {
     #[serde(rename = "edit/tiles")]
     Tiles(u16, u16, Box<Tiles>),
     #[serde(rename = "edit/quad")]
-    Quad(u16, u16, u16, Box<twmap::Quad>),
+    Quad(
+        u16,
+        u16,
+        u16,
+        #[serde_as(as = "Box<SerdeQuad>")] Box<twmap::Quad>,
+    ),
     #[serde(rename = "edit/automap")]
     Automap(u16, u16),
 }
@@ -381,6 +415,7 @@ pub enum Request {
     Move(MoveReq),
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum Response {
@@ -395,7 +430,7 @@ pub enum Response {
     Layers(Vec<String>),
     Layer(Box<twmap::Layer>),
     Tiles(Base64),
-    Quad(Box<twmap::Quad>),
+    Quad(#[serde_as(as = "Box<SerdeQuad>")] Box<twmap::Quad>),
     Automappers(Vec<AutomapperDetail>),
     Automapper(String),
     Users(usize),

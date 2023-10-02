@@ -16,7 +16,7 @@
   // import { automap, parse, type Config as AutomapperConfig } from '../../twmap/automap'
   import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
   import { rmap } from '../global'
-  import { bytesToBase64, dataToTiles, resIndexToString, stringToResIndex, tilesLayerFlagsToLayerKind } from '../../server/convert'
+  import { bytesToBase64, resIndexToString, stringToResIndex } from '../../server/convert'
   import { pick, read, sync, _ } from '../../server/util'
   import type { Readable, Writable } from 'svelte/store'
   import type * as Info from '../../twmap/types'
@@ -211,7 +211,7 @@
       query: 'edit/layer',
       match: [g, l, { color_env: pick }],
       apply: s => s === null ? -1 : stringToResIndex(s)[0],
-      send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s) }],
+      send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name) }],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {

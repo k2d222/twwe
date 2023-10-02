@@ -96,11 +96,11 @@ function rev_edit_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['ed
     if ('height' in part)
       rev_part.height = layer.height
     if ('color_env' in part)
-      rev_part.color_env = layer.colorEnv === null ? null : resIndexToString(map.envelopes.indexOf(layer.colorEnv), '')
+      rev_part.color_env = layer.colorEnv === null ? null : resIndexToString(map.envelopes.indexOf(layer.colorEnv), layer.colorEnv.name)
     if ('color_env_offset' in part)
       rev_part.color_env_offset = layer.colorEnvOffset
     if ('image' in part)
-      rev_part.image = layer.image === null ? null : resIndexToString(map.images.indexOf(layer.image), '')
+      rev_part.image = layer.image === null ? null : resIndexToString(map.images.indexOf(layer.image), layer.image.name)
     if ('automapper_config' in part) {
       rev_part.automapper_config = {
         config: layer.automapper.config === -1 ? null : layer.automapper.config,
@@ -111,7 +111,7 @@ function rev_edit_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['ed
   }
   else if (layer instanceof QuadsLayer && rev_part.type === MapDir.LayerKind.Quads) {
     if ('image' in part)
-      rev_part.image = layer.image === null ? null : resIndexToString(map.images.indexOf(layer.image), '')
+      rev_part.image = layer.image === null ? null : resIndexToString(map.images.indexOf(layer.image), layer.image.name)
   }
 
   return [g, l, rev_part]
@@ -124,9 +124,9 @@ function rev_edit_quad(map: Map, ...[g, l, q, part]: Recv['edit/quad']): Send['e
       position: coordToJson(quad.points[4], 15),
       colors: quad.colors,
       texture_coords: quad.texCoords.map(p => uvToJson(p, 10)),
-      position_env: quad.posEnv === null ? null : resIndexToString(map.envelopes.indexOf(quad.posEnv), ''),
+      position_env: quad.posEnv === null ? null : resIndexToString(map.envelopes.indexOf(quad.posEnv), quad.posEnv.name),
       position_env_offset: quad.posEnvOffset,
-      color_env: quad.colorEnv === null ? null : resIndexToString(map.envelopes.indexOf(quad.colorEnv), ''),
+      color_env: quad.colorEnv === null ? null : resIndexToString(map.envelopes.indexOf(quad.colorEnv), quad.colorEnv.name),
       color_env_offset: quad.colorEnvOffset
   }
 

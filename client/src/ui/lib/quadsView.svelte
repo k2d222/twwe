@@ -64,6 +64,7 @@
   })
 
   let activeQuad = -1
+  let lastEdit: Send['edit/quad'] | null = null
   let startPos = { x: 0, y: 0 }
   let lastPos = { x: 0, y: 0 }
   let selectedPoints: number[] = []
@@ -71,6 +72,7 @@
   function onMouseDown(e: MouseEvent, q: number, lp: number[]) {
     if (e.buttons === 1 && !e.ctrlKey) {
       activeQuad = q
+      lastEdit = editQuad(q)
       selectedPoints = lp
       const [x, y] = viewport.pixelToWorld(e.clientX, e.clientY)
       startPos.x = x
@@ -147,6 +149,7 @@
     cm_y = e.clientY
     cm_q = q
     cm_p = p
+    lastEdit = editQuad(q)
   }
 
   function hideCM() {
@@ -155,10 +158,10 @@
   }
 
   function onChange(q: number) {
-    const change = editQuad(q)
-    $rmap.editQuad(...change)
-    $server.send('edit/quad', change)
-    onSync()
+    const edit = editQuad(q)
+    $rmap.editQuad(...lastEdit)
+    lastEdit = edit
+    $server.send('edit/quad', edit)
   }
 
   function onDelete(q: number) {
@@ -174,7 +177,7 @@
     const h = (layer.image ? layer.image.height : 64) * 1024
 
     // TODO: use defaults
-    const change: Send['create/quad'] = [
+    const create: Send['create/quad'] = [
       g, l,
       {
         position: coordToJson({ x: mx, y: my }, 15),
@@ -204,7 +207,7 @@
     ]
 
     hideCM()
-    $server.query('create/quad', change)
+    $server.query('create/quad', create)
   }
 
   function cloneQuad(quad: Quad) {

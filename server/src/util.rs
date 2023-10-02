@@ -17,6 +17,41 @@ where
     serializer.collect_str(value)
 }
 
+pub(crate) mod serialize_partial_index {
+    use serde::{de, Deserialize, Deserializer, Serializer};
+
+    pub(crate) fn serialize<S: Serializer>(
+        opt_index: &Option<Option<u16>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match opt_index {
+            None => serializer.serialize_unit(),
+            Some(None) => serializer.serialize_none(),
+            Some(Some(v)) => serializer.serialize_some(&v.to_string()),
+        }
+    }
+
+    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<Option<u16>>, D::Error> {
+        let opt_name: Option<String> = Deserialize::deserialize(deserializer)?;
+        let opt_index = match opt_name {
+            Some(opt_name) => opt_name
+                .split('_')
+                .next()
+                .ok_or(de::Error::invalid_value(
+                    de::Unexpected::Str(&opt_name),
+                    &"a mapdir-compatible resource index",
+                ))?
+                .parse::<u16>()
+                .map(|v| Some(Some(v)))
+                .map_err(de::Error::custom)?,
+            None => Some(None),
+        };
+        Ok(opt_index)
+    }
+}
+
 pub(crate) mod macros {
     macro_rules! apply_partial {
         ($src:expr => $tgt:expr, $($field:ident),*) => {{
