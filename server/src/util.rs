@@ -79,20 +79,6 @@ pub(crate) trait ViewAsBytes: structview::View {
 }
 impl<T: structview::View> ViewAsBytes for T {}
 
-pub(crate) fn check_map_path(fname: &str) -> bool {
-    // COMBAK: this is too restrictive, but proper sanitization is hard.
-    // TODO: add tests
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let re = RE.get_or_init(|| {
-        let c1 = r"[:alnum:]\(\)\[\]_,\-"; // safe 1st char in word
-        let cn = r"[:alnum:]\(\)\[\]_,\-\s\."; // safe non-first char in word
-        let max_len = 40; // max file name or dir name
-        let word = format!(r"[{}][{}]{{0,{}}}", c1, cn, max_len - 1);
-        Regex::new(&format!(r"^({}/)*({})$", word, word)).unwrap()
-    });
-    re.is_match(fname)
-}
-
 pub(crate) fn check_file_name(name: &str) -> bool {
     // this is a very primitive sanitization to prevent path traversal attacks.
     !(name.chars().any(std::path::is_separator) || name.starts_with('.') || name.is_empty())
