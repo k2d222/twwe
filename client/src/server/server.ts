@@ -18,7 +18,7 @@ export interface Server {
   query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]>
 }
 
-type Listener<E> = (evt: E) => unknown
+type Listener<E> = (evt: E, promise: Promise<void>) => unknown
 
 export class EventDispatcher<E extends Record<string, any>> {
   private listeners: { [K in keyof E]?: Listener<E[K]>[] }
@@ -48,10 +48,10 @@ export class EventDispatcher<E extends Record<string, any>> {
       console.error('server.off(): could not find listener')
   }
 
-  dispatch<K extends keyof E>(type: K, evt: E[K]) {
+  dispatch<K extends keyof E>(type: K, evt: E[K], promise: Promise<void> = Promise.resolve()) {
     if (this.listeners[type] !== undefined) {
       for (const fn of this.listeners[type]) {
-        fn(evt)
+        fn.call(undefined, evt, promise)
       }
     }
   }
@@ -112,10 +112,19 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
   }
 
   query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]> {
-    return new Promise((resolve, reject) => {
-      let timeoutID = -1
-      let id = this.generateID()
+    let timeoutID = -1
+    let id = this.generateID()
 
+    const packet: SendPacket<K> = {
+      timestamp: Date.now(),
+      id,
+      type,
+      content,
+    }
+
+    this.history.send(packet)
+
+    const promise: Promise<Resp[K]> = new Promise((resolve, reject) => {
       const listener: QueryFn<K> = (x: Result<Resp[K]>) => {
         window.clearTimeout(timeoutID)
         delete this.queryListeners[id]
@@ -125,14 +134,6 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
         else console.error('query packet with no result', x)
       }
 
-      const packet: SendPacket<K> = {
-        timestamp: Date.now(),
-        id,
-        type,
-        content,
-      }
-
-      this.history.send(packet)
       this.queryListeners[id] = listener
 
       if (timeout) {
@@ -141,13 +142,15 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
           reject('timeout reached')
         }, timeout)
       }
-
-      // we predict an ok response from the server and dispatch right away.
-      this.dispatch(type as any, content)
-
-      const message = JSON.stringify(packet)
-      this.socketSend.call(undefined, message)
     })
+
+    // we predict an ok response from the server and dispatch right away.
+    this.dispatch(type as any, content, promise.then())
+
+    const message = JSON.stringify(packet)
+    this.socketSend.call(undefined, message)
+
+    return promise
   }
 
   private handleResp(resp: RespPacket<SendKey>) {

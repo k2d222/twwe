@@ -153,6 +153,26 @@ function rev_edit_tiles(map: Map, ...[g, l, tiles]: Recv['edit/tiles']): Send['e
   return [g, l, rev_tiles]
 }
 
+function rev_automap(map: Map, ...[g, l]: Recv['edit/automap']): Send['edit/tiles'] {
+  const layer = map.groups[g].layers[l] as AnyTilesLayer<any>
+  const cur_tiles: Info.AnyTile[] = []
+
+  for (let j = 0; j < layer.height; j++) {
+    for (let i = 0; i < layer.width; i++) {
+      cur_tiles.push({ ...layer.getTile(i, j) })
+    }
+  }
+
+  const rev_tiles: Tiles = {
+    x: 0,
+    y: 0,
+    w: layer.width,
+    h: layer.height,
+    tiles: tilesToData(cur_tiles),
+  }
+  return [g, l, rev_tiles]
+}
+
 export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]] | null {
   if (pkt.type === 'create/image') {
     const i = map.images.length
@@ -176,9 +196,8 @@ export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]
     const q = (map.groups[g].layers[l] as QuadsLayer).quads.length
     return ['delete/quad', [g, l, q]]
   }
-  // TODO
   else if (pkt.type === 'create/automapper') {
-    return null
+    return null // this is handled by codemirror
   }
   // TODO
   else if (pkt.type === 'edit/config') {
@@ -203,7 +222,6 @@ export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]
     const [g, l, part] = pkt.content as Send['edit/layer']
     return ['edit/layer', rev_edit_layer(map, g, l, part)]
   }
-  // TODO
   else if (pkt.type === 'edit/tiles') {
     const [g, l, tiles] = pkt.content as Send['edit/tiles']
     return ['edit/tiles', rev_edit_tiles(map, g, l, tiles)]
@@ -212,9 +230,9 @@ export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]
     const [g, l, q, part] = pkt.content as Send['edit/quad']
     return ['edit/quad', rev_edit_quad(map, g, l, q, part)]
   }
-  // non-revertible
   else if (pkt.type === 'edit/automap') {
-    return null
+    const [g, l] = pkt.content as Send['edit/automap']
+    return ['edit/tiles', rev_automap(map, g, l)]
   }
   else if (pkt.type === 'move/envelope') {
     const [src, tgt] = pkt.content as Send['move/envelope']

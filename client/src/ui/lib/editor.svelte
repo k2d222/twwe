@@ -23,7 +23,7 @@
   import * as Actions from '../actions'
   import { viewport } from '../../gl/global'
   import Fence from './fence.svelte'
-  import type { AutomapperKind, Recv, Tiles } from '../../server/protocol'
+  import type { AutomapperKind, Recv, Resp, Tiles } from '../../server/protocol'
 
   // split panes
   let layerPaneSize = px2vw(rem2px(15))
@@ -73,7 +73,8 @@
       $rmap.editTile({ g, l, x: x + e.x, y: y + e.y, ...tile })
     }
   }
-  async function serverOnApplyAutomapper([g, l]: Recv['edit/automap']) {
+  async function serverOnApplyAutomapper([g, l]: Recv['edit/automap'], promise: Promise<unknown>) {
+    await promise
     const data = await $server.query('get/tiles', [g, l])
     const layer = $rmap.groups[g].layers[l].layer as AnyTilesLayer<any>
     const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(layer.flags))
@@ -83,7 +84,8 @@
       const x = i % layer.width
       const y = Math.floor(i / layer.width)
 
-      $rmap.editTile({ g, l, x, y, ...tile }) }
+      $rmap.editTile({ g, l, x, y, ...tile })
+    }
   }
   function serverOnDeleteAutomapper(e: Recv['delete/automapper']) {
     delete $automappers[e]

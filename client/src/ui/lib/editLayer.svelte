@@ -269,19 +269,7 @@
     $server.query('delete/layer', [g, l])
   }
   async function onAutomap() {
-    // TODO: move this, merge with event received from server
     await $server.query('edit/automap', [g, l])
-    const tlayer = layer as TilesLayer
-    const data = await $server.query('get/tiles', [g, l])
-    const tiles = dataToTiles(data, tilesLayerFlagsToLayerKind(tlayer.flags))
-
-    for (let i = 0; i < tiles.length; ++i) {
-      const tile = tiles[i]
-      const x = i % tlayer.width
-      const y = Math.floor(i / tlayer.width)
-
-      $rmap.editTile({ g, l, x, y, ...tile }) }
-
     // client-side automapping
     // setTimeout(async () => {
     //   const txt = await $server.query('sendautomapper', tlayer.image.name)
