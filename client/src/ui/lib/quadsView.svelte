@@ -7,8 +7,6 @@
   import QuadEditor from './editQuad.svelte'
   import { server } from '../global'
   import { layerIndex } from './util'
-  import { Button } from 'carbon-components-svelte'
-  import { Add as AddIcon } from 'carbon-icons-svelte'
   import { coordToJson, resIndexToString, uvToJson } from '../../server/convert'
   import { rmap } from '../global'
   import type { Send } from '../../server/protocol'
@@ -168,7 +166,7 @@
     $server.query('delete/quad', [g, l, q])
   }
 
-  function onCreateQuad() {
+  export function createQuad() {
     const { x1, y1, x2, y2 } = viewport.screen()
     const mx = Math.floor(((x1 + x2) / 2) * 32 * 1024)
     const my = Math.floor(((y1 + y2) / 2) * 32 * 1024)
@@ -367,15 +365,5 @@
       />
     </ContextMenu>
   {/if}
-  <div class="controls">
-    <Button
-      expressive
-      on:click={onCreateQuad}
-      icon={AddIcon}
-      iconDescription="New quad"
-      tooltipPosition="top"
-      kind="secondary"
-    />
-  </div>
 </div>
 {/key}

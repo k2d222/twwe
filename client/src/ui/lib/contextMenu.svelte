@@ -30,7 +30,7 @@
 
 <svelte:window on:keydown={onKeyDown} />
 
-<div class="context" role="presentation" on:click|self={onClose}>
+<div class="context" role="presentation" on:click|self={onClose} on:contextmenu|self={onClose}>
   <div class="content" role="menu" bind:this={self} {style}>
     <slot />
   </div>

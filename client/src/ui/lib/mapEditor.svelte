@@ -23,6 +23,8 @@
   import type * as Info from '../../twmap/types'
   import type { Recv, Resp } from '../../server/protocol'
   import { base64ToBytes } from '../../server/convert'
+  import { Button } from 'carbon-components-svelte'
+  import { Add as AddIcon } from 'carbon-icons-svelte'
 
   let g: number, l: number
   $: {
@@ -37,6 +39,7 @@
   }
 
   let mapView: MapView
+  let quadsView: QuadsView
 
   // computed (read-only)
   let rgroup: RenderGroup | null = null
@@ -548,7 +551,7 @@
     <div id="layer-outline" style={layerOutlineStyle} />
 
     {#if rlayer && rlayer.layer instanceof QuadsLayer}
-      <QuadsView layer={rlayer.layer} />
+      <QuadsView bind:this={quadsView} layer={rlayer.layer} />
     {/if}
 
     <div id="cursors">
@@ -574,6 +577,17 @@
       rlayer={rlayer}
       on:select={onTilePick}
     />
+  {:else if rlayer && rlayer.layer instanceof QuadsLayer}
+    <div class="controls">
+      <Button
+        expressive
+        on:click={() => quadsView.createQuad()}
+        icon={AddIcon}
+        iconDescription="New quad"
+        tooltipPosition="top"
+        kind="secondary"
+      />
+    </div>
   {/if}
 
 </div>
