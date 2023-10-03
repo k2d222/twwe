@@ -28,17 +28,24 @@ export async function download(file: string, name: string) {
 }
 
 export async function uploadMap(httpRoot: string, name: string, file: Blob) {
-  await fetch(`${httpRoot}/maps/${name}`, {
+  const resp = await fetch(`${httpRoot}/maps/${name}`, {
     method: 'PUT',
     body: file
   })
+
+  if (!resp.ok)
+    throw await resp.text()
 }
 
 export async function createMap(httpRoot: string, name: string, create: MapCreation) {
-  await fetch(`${httpRoot}/maps/${name}`, {
+  const resp = await fetch(`${httpRoot}/maps/${name}`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(create)
   })
+
+  if (!resp.ok)
+    throw await resp.text()
 }
 
 // export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {

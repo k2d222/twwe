@@ -43,6 +43,12 @@
     })
 
     rmap = mapView.getRenderMap()
+    rmap.gameLayer.visible = false
+    if (rmap.teleLayer) rmap.teleLayer.visible = false
+    if (rmap.speedupLayer) rmap.speedupLayer.visible = false
+    if (rmap.frontLayer) rmap.frontLayer.visible = false
+    if (rmap.switchLayer) rmap.switchLayer.visible = false
+    if (rmap.tuneLayer) rmap.tuneLayer.visible = false
 
     $server.on('create/automapper', onUploadAutomapper)
     $server.on('delete/automapper', onDeleteAutomapper)

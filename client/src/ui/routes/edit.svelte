@@ -5,7 +5,8 @@
   import EditAutomapper from '../lib/editAutomapper.svelte'
   import Headerbar from '../lib/headerbar.svelte'
   import Fence from '../lib/fence.svelte'
-  import { onDestroy } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
+  import { showError } from '../lib/dialog'
 
   export let name: string
 
@@ -17,7 +18,16 @@
     $map = map_
   })()
 
+  function serverOnError(e: string) {
+    showError('Server Error: ' + e)
+  }
+
+  onMount(() => {
+    $server.onError(serverOnError)
+  })
+
   onDestroy(() => {
+    $server.onError(() => {})
     $server.query('leave', name)
   })
 

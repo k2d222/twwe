@@ -14,6 +14,7 @@ use crate::{
     checks::PartialCheck,
     cli::Cli,
     error::Error,
+    map_cfg::MapAccess,
     protocol::*,
     room::{Peer, Room},
     twmap_map_checks::InternalMapChecking,
@@ -296,6 +297,7 @@ impl Server {
     pub fn get_maps(&self) -> Vec<MapDetail> {
         self.rooms()
             .iter()
+            .filter(|(k, v)| v.config.access == MapAccess::Public)
             .map(|(k, v)| MapDetail {
                 name: k.to_owned(),
                 users: v.peer_count(),
@@ -340,7 +342,7 @@ impl Server {
             }
             CreationMethod::Blank { w, h } => {
                 if let Some(version) = creation.version {
-                    if version != twmap::Version::DDNet06 {
+                    if version != Version::DDNet06 {
                         return Err(Error::UnsupportedMapType);
                     }
                 }
@@ -378,7 +380,7 @@ impl Server {
             std::fs::create_dir(new_room.automapper_path())
                 .map_err(|e| Error::ServerError(e.to_string().into()))?;
 
-            new_room.config.access = creation.access.unwrap_or(crate::map_cfg::MapAccess::Public);
+            new_room.config.access = creation.access.unwrap_or(MapAccess::Public);
             new_room
                 .save_config()
                 .map_err(|e| Error::ServerError(e.into()))?;

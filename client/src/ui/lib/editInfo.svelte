@@ -1,9 +1,14 @@
 <script lang="ts">
+  import type { MapInfo } from '../../twmap/map'
   import { sync } from '../../server/util'
   import { server, map } from '../global'
 
 
-  $: syncInfo = sync($server, $map.info, { query: 'edit/info' }) 
+  $: syncInfo = sync($server, cloneInfo($map.info), { query: 'edit/info' }) 
+
+  function cloneInfo(info: MapInfo): MapInfo {
+    return { ...info }
+  }
 
   function onChangeSettings(e: Event & { currentTarget: HTMLTextAreaElement }) {
     $syncInfo.settings = e.currentTarget.value.split('\n').filter(s => s !== '')
@@ -11,7 +16,7 @@
   }
 
   function onChange() {
-    $syncInfo = { ...$syncInfo }
+    syncInfo.sync($syncInfo)
   }
 </script>
 

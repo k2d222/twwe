@@ -197,31 +197,31 @@
     const { name, method } = modalCreateMap
     const access = modalCreateMap.public ? 'public' : 'unlisted'
 
-    showInfo('Querying the server…', 'none')
-
-    if (method === 'upload' && modalCreateMap.uploadFile !== null) {
-      await uploadMap(serverConfs[serverId].httpUrl, name, modalCreateMap.uploadFile)
-    }
-    else if (method === 'blank') {
-      await createMap(serverConfs[serverId].httpUrl, name, {
-        version: 'ddnet06', // TODO
-        access,
-        blank: {
-          w: modalCreateMap.blankWidth,
-          h: modalCreateMap.blankHeight,
-        }
-      })
-    }
-    else if (method === 'clone' && modalCreateMap.clone !== undefined) {
-      await createMap(serverConfs[serverId].httpUrl, name, {
-        version: 'ddnet06',
-        access,
-        clone: maps[modalCreateMap.clone].name
-      })
-    }
+    const id = showInfo('Querying the server…', 'none')
 
     try {
-      clearDialog()
+      if (method === 'upload' && modalCreateMap.uploadFile !== null) {
+        await uploadMap(serverConfs[serverId].httpUrl, name, modalCreateMap.uploadFile)
+      }
+      else if (method === 'blank') {
+        await createMap(serverConfs[serverId].httpUrl, name, {
+          version: 'ddnet06', // TODO
+          access,
+          blank: {
+            w: modalCreateMap.blankWidth,
+            h: modalCreateMap.blankHeight,
+          }
+        })
+      }
+      else if (method === 'clone' && modalCreateMap.clone !== undefined) {
+        await createMap(serverConfs[serverId].httpUrl, name, {
+          version: 'ddnet06',
+          access,
+          clone: maps[modalCreateMap.clone].name
+        })
+      }
+
+      clearDialog(id)
       if (access === 'unlisted') {
         const url = window.location.origin + '/edit/' + encodeURIComponent(name)
         showWarning(
@@ -230,7 +230,9 @@
         )
       }
       navigate('/edit/' + name)
-    } catch (e) {
+    }
+    catch (e) {
+      clearDialog(id)
       showError('Map creation failed: ' + e)
     }
   }

@@ -102,10 +102,6 @@
     }
     $automappers = $automappers
   }
-  function serverOnError(e: string) {
-    showError('Server Error: ' + e)
-  }
-
   async function onServerClosed() {
     await showError('You have been disconnected from the server.')
     navigate('/')
@@ -124,7 +120,6 @@
     $server.on('edit/automap', serverOnApplyAutomapper)
     $server.on('delete/automapper', serverOnDeleteAutomapper)
     $server.on('create/automapper', serverOnUploadAutomapper)
-    $server.onError(serverOnError)
     $server.query('get/users', undefined)
       .then(u => $peers = u)
 

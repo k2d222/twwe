@@ -123,10 +123,16 @@ pub enum CreationMethod {
     Blank { w: u32, h: u32 },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Version {
+    DDNet06,
+    Teeworlds07,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapCreation {
-    #[serde(default)]
-    pub version: Option<twmap::Version>,
+    pub version: Option<Version>,
     #[serde(default)]
     pub access: Option<MapAccess>,
     #[serde(flatten)]
