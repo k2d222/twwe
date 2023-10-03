@@ -174,15 +174,8 @@ $header-h: 3rem;
 }
 
 #map-editor {
-  position: absolute;
-  clip-path: content-box;
   width: 100%;
   height: 100%;
-
-  .map-view {
-    position: fixed;
-    inset: 0;
-  }
 }
 
 .map-view canvas,
@@ -303,6 +296,7 @@ $header-h: 3rem;
     width: 100%;
     height: 2rem;
     padding-left: 1rem;
+    cursor: default;
 
     color: themes.$text-secondary;
     background-color: themes.$layer-01;
@@ -408,14 +402,34 @@ $header-h: 3rem;
 }
 
 #tile-picker {
-  width: 100%;
-  height: 100%;
-  padding-top: 6rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-bottom: 6rem;
-  display: flex;
-  justify-content: center;
+  >.picker {
+
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding-top: 6rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 6rem;
+    display: flex;
+    justify-content: center;
+
+    >.content {
+      position: relative;
+      z-index: 1;
+      background: white;
+      outline: 3px solid black;
+
+      aspect-ratio: 1 / 1;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    &.hidden {
+      display: none;
+    }
+  }
 
   canvas {
     width: 100%;
@@ -434,41 +448,26 @@ $header-h: 3rem;
     pointer-events: none;
   }
 
-  .picker {
-    position: relative;
-    z-index: 1;
-    background: white;
+  .header {
+    position: absolute;
+    top: -2rem;
+    padding: .5rem;
+    height: 2rem;
+    width: 100%;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
     outline: 3px solid black;
+    background: white;
 
-    aspect-ratio: 1 / 1;
-    max-width: 100%;
-    max-height: 100%;
-
-    &.hidden {
-      display: none;
+    label {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
     }
 
-    .header {
-      position: absolute;
-      top: -2rem;
-      padding: .5rem;
-      height: 2rem;
-      width: 100%;
-      display: flex;
-      gap: 1rem;
-      justify-content: space-between;
-      outline: 3px solid black;
-      background: white;
-
-      label {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-      }
-
-      input[type='number'] {
-        width: 4rem;
-      }
+    input[type='number'] {
+      width: 4rem;
     }
   }
 
@@ -584,7 +583,7 @@ nav.hidden .context {
 }
 
 #brush-outline {
-  position: fixed;
+  position: absolute;
   border: 4px solid black;
   pointer-events: none;
   // transition: top .1s, left .1s;
@@ -592,7 +591,7 @@ nav.hidden .context {
 }
 
 #layer-outline {
-  position: fixed;
+  position: absolute;
   border: 2px solid white;
   outline: 2px solid black;
   box-shadow: 0 0 10px 1px;
@@ -600,7 +599,7 @@ nav.hidden .context {
 }
 
 #clip-outline {
-  position: fixed;
+  position: absolute;
   border: 1px solid white;
   outline: 1px solid red;
   box-shadow: 0 0 5px 1px;
@@ -700,7 +699,7 @@ nav.hidden .context {
 }
 
 #quads-view {
-  position: fixed;
+  position: absolute;
   inset: 0;
 
   >svg {
@@ -871,7 +870,7 @@ nav.hidden .context {
 }
 
 .cursor {
-  position: fixed;
+  position: absolute;
   pointer-events: none;
   width: 32px;
   height: 32px;
@@ -915,6 +914,7 @@ nav.hidden .context {
       height: 2rem;
       width: 100%;
       padding-left: 1rem;
+      cursor: default;
 
       color: themes.$text-secondary;
       background-color: themes.$layer-01;

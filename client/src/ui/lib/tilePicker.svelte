@@ -250,6 +250,60 @@
 </script>
 
 <div id="tile-picker">
+
+  <div class="picker" class:hidden={!tilesVisible && !boxSelect}>
+    <div class="content">
+
+      <div class="header">
+        {#if rlayer.layer instanceof TeleLayer}
+          <label>
+            Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number} />
+          </label>
+        {:else if rlayer.layer instanceof SwitchLayer}
+          <label>
+            Switch number <input type="number" min={0} max={255} bind:value={currentSwitch.number} />
+          </label>
+          <label>
+            Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay} />
+          </label>
+        {:else if rlayer.layer instanceof SpeedupLayer}
+          <label>
+            Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force} />
+          </label>
+          <label>
+            Speedup max speed <input
+              type="number"
+              min={0}
+              max={255}
+              bind:value={currentSpeedup.maxSpeed}
+            />
+          </label>
+          <label>
+            Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle} />
+          </label>
+        {:else if rlayer.layer instanceof TuneLayer}
+          <label>
+            Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} />
+          </label>
+        {:else}
+          Select tiles to place on the map.
+        {/if}
+      </div>
+
+      <div class="tiles">
+        <canvas
+          bind:this={canvas}
+          on:mousedown={onMouseDown}
+          on:mousemove={onMouseMove}
+          on:mouseup={onMouseUp}
+        />
+
+        <div class="box-select" style={boxStyle} />
+      </div>
+
+    </div>
+  </div>
+
   <div class="controls">
     <Button
       expressive
@@ -260,50 +314,5 @@
       kind="secondary"
     />
   </div>
-  <div class="picker" class:hidden={!tilesVisible && !boxSelect}>
-    <div class="header">
-      {#if rlayer.layer instanceof TeleLayer}
-        <label>
-          Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number} />
-        </label>
-      {:else if rlayer.layer instanceof SwitchLayer}
-        <label>
-          Switch number <input type="number" min={0} max={255} bind:value={currentSwitch.number} />
-        </label>
-        <label>
-          Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay} />
-        </label>
-      {:else if rlayer.layer instanceof SpeedupLayer}
-        <label>
-          Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force} />
-        </label>
-        <label>
-          Speedup max speed <input
-            type="number"
-            min={0}
-            max={255}
-            bind:value={currentSpeedup.maxSpeed}
-          />
-        </label>
-        <label>
-          Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle} />
-        </label>
-      {:else if rlayer.layer instanceof TuneLayer}
-        <label>
-          Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} />
-        </label>
-      {:else}
-        Select tiles to place on the map.
-      {/if}
-    </div>
-    <div class="tiles">
-      <canvas
-        bind:this={canvas}
-        on:mousedown={onMouseDown}
-        on:mousemove={onMouseMove}
-        on:mouseup={onMouseUp}
-      />
-      <div class="box-select" style={boxStyle} />
-    </div>
-  </div>
+
 </div>
