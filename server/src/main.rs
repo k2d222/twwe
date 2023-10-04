@@ -22,39 +22,37 @@ mod util;
 
 use room::Room;
 
-fn create_server(cli: &Cli) -> Server {
+fn create_server(cli: &Cli) -> std::io::Result<Server> {
     let server = Server::new(cli);
     {
         let mut server_rooms = server.rooms();
-        let rooms = glob("maps/*/map.map")
-            .expect("no map found in maps directory")
-            .filter_map(|e| e.ok())
-            .map(|e| {
-                let dir = e.parent().unwrap().to_owned(); // map must be in a sub-directory
-                let room = Room::new(dir).expect("failed to load one of the map dirs");
+        for path in cli.maps_path.iter() {
+            let rooms = std::fs::read_dir(path)?
+                .filter_map(|e| e.ok())
+                .filter_map(|e| {
+                    let path = e.path();
 
-                // ensure the room has all the required resources
-                if !room.cfg_path().exists() {
-                    room.save_config().expect("failed to create config file");
-                }
-                if !room.automapper_path().exists() {
-                    std::fs::create_dir(room.automapper_path())
-                        .expect("failed to create automapper dir");
-                }
+                    let room = if path.is_dir() {
+                        Room::new_from_dir(path)
+                    } else {
+                        Room::new_from_files(path, None, None)
+                    }?;
 
-                Arc::new(room)
-            });
-        for r in rooms {
-            server_rooms.insert(r.name().to_owned(), r);
+                    Some(Arc::new(room))
+                });
+
+            for r in rooms {
+                server_rooms.insert(r.name().to_owned(), r);
+            }
         }
     }
     log::info!("found {} maps.", server.rooms().len());
-    server
+    Ok(server)
 }
 
 #[tokio::main]
 async fn run_server(args: Cli) {
-    let server = Arc::new(create_server(&args));
+    let server = Arc::new(create_server(&args).expect("failed to create server"));
 
     let router = Router::new(server, &args);
     router.run(&args).await;

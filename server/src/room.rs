@@ -103,7 +103,10 @@ pub struct RoomPeer {
 }
 
 pub struct Room {
-    path: PathBuf,
+    dir_path: Option<PathBuf>,
+    map_path: PathBuf,
+    cfg_path: Option<PathBuf>,
+    am_path: Option<PathBuf>,
     pub config: MapConfig,
     peers: Mutex<HashMap<SocketAddr, RoomPeer>>,
     map: LazyMap,
@@ -112,34 +115,90 @@ pub struct Room {
 
 const MAP_FILE_NAME: &str = "map.map";
 const CFG_FILE_NAME: &str = "config.json";
-const AUTOMAPPER_DIR: &str = "automappers";
+const AUTOMAPPER_DIR_NAME: &str = "automappers";
 
 impl Room {
-    pub fn new(path: PathBuf) -> Option<Self> {
-        let mut map_path = path.clone();
+    pub fn new_from_dir(dir_path: PathBuf) -> Option<Self> {
+        let mut map_path = dir_path.clone();
         map_path.push(MAP_FILE_NAME);
 
         if !map_path.exists() {
             return None;
         }
 
-        let mut config_path = path.clone();
-        config_path.push(CFG_FILE_NAME);
+        let mut cfg_path = dir_path.clone();
+        cfg_path.push(CFG_FILE_NAME);
 
-        let mut config: MapConfig = File::open(config_path)
-            .ok()
-            .and_then(|file| serde_json::from_reader(file).ok())
-            .unwrap_or_default();
+        let mut am_path = dir_path.clone();
+        am_path.push(AUTOMAPPER_DIR_NAME);
 
-        config.name = path.file_name()?.to_string_lossy().to_string();
+        let name = dir_path.file_name()?.to_string_lossy().to_string();
+
+        let config = Self::read_cfg(&cfg_path).unwrap_or_else(|| {
+            let mut config = MapConfig::default();
+            config.name = name;
+            config
+        });
+
+        let map = LazyMap::new(map_path.clone());
 
         Some(Room {
-            path,
+            dir_path: Some(dir_path),
+            map_path,
+            cfg_path: Some(cfg_path),
+            am_path: Some(am_path),
             config,
             peers: Mutex::new(HashMap::new()),
-            map: LazyMap::new(map_path),
+            map,
             saving: Mutex::new(()),
         })
+    }
+
+    fn read_cfg(path: &Path) -> Option<MapConfig> {
+        File::open(path)
+            .ok()
+            .and_then(|file| serde_json::from_reader(file).ok())
+    }
+
+    pub fn new_from_files(
+        map_path: PathBuf,
+        cfg_path: Option<PathBuf>,
+        am_path: Option<PathBuf>,
+    ) -> Option<Self> {
+        let name = map_path.file_name()?.to_string_lossy().to_string();
+
+        let config = cfg_path
+            .as_ref()
+            .and_then(|path| Self::read_cfg(&path))
+            .unwrap_or_else(|| {
+                let mut config = MapConfig::default();
+                config.name = name;
+                config
+            });
+
+        let map = LazyMap::new(map_path.clone());
+
+        Some(Room {
+            dir_path: None,
+            map_path,
+            cfg_path,
+            am_path,
+            config,
+            peers: Mutex::new(HashMap::new()),
+            map,
+            saving: Mutex::new(()),
+        })
+    }
+
+    pub fn delete(&self) {
+        if let Some(path) = &self.dir_path {
+            std::fs::remove_dir_all(path).ok();
+        } else {
+            std::fs::remove_file(&self.map_path).ok();
+            if let Some(path) = &self.cfg_path {
+                std::fs::remove_file(path).ok();
+            }
+        }
     }
 
     pub fn map(&self) -> MappedMutexGuard<twmap::TwMap> {
@@ -150,24 +209,20 @@ impl Room {
         self.config.name.as_ref()
     }
 
-    pub fn path(&self) -> &Path {
-        self.path.as_ref()
+    pub fn dir_path(&self) -> Option<&Path> {
+        self.dir_path.as_deref()
     }
 
     pub fn map_path(&self) -> &Path {
-        &self.map.path
+        self.map_path.as_ref()
     }
 
-    pub fn cfg_path(&self) -> PathBuf {
-        let mut cfg_path = self.path.clone();
-        cfg_path.push(CFG_FILE_NAME);
-        cfg_path
+    pub fn cfg_path(&self) -> Option<&Path> {
+        self.cfg_path.as_deref()
     }
 
-    pub fn automapper_path(&self) -> PathBuf {
-        let mut am_path = self.path.clone();
-        am_path.push(AUTOMAPPER_DIR);
-        am_path
+    pub fn automapper_path(&self) -> Option<&Path> {
+        self.am_path.as_deref()
     }
 
     pub fn add_peer(&self, peer: &Peer) {
@@ -205,10 +260,10 @@ impl Room {
     }
 
     pub fn save_config(&self) -> Result<(), &'static str> {
-        let mut cfg_path = self.path.clone();
-        cfg_path.push(CFG_FILE_NAME);
-        let file = File::create(cfg_path).map_err(server_error)?;
-        serde_json::to_writer(file, &self.config).map_err(server_error)?;
+        if let Some(cfg_path) = &self.cfg_path {
+            let file = File::create(&cfg_path).map_err(server_error)?;
+            serde_json::to_writer(file, &self.config).map_err(server_error)?;
+        }
         Ok(())
     }
 

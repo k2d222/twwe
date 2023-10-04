@@ -20,6 +20,10 @@ pub struct Cli {
     #[clap(value_parser, short, long, requires = "cert")]
     pub key: Option<PathBuf>,
 
+    /// path to rules++ executable
+    #[clap(name = "maps", value_parser, long, default_value = "maps")]
+    pub maps_dirs: Vec<PathBuf>,
+
     /// Directory of static files to serve
     #[clap(name = "static", value_parser, short, long)]
     pub static_dir: Option<PathBuf>,

@@ -297,7 +297,7 @@ impl Server {
     pub fn get_maps(&self) -> Vec<MapDetail> {
         self.rooms()
             .iter()
-            .filter(|(k, v)| v.config.access == MapAccess::Public)
+            .filter(|(_, v)| v.config.access == MapAccess::Public)
             .map(|(k, v)| MapDetail {
                 name: k.to_owned(),
                 users: v.peer_count(),
@@ -375,10 +375,7 @@ impl Server {
             log::debug!("created map '{}'", path.display());
 
             let mut new_room =
-                Room::new(path).ok_or(Error::ServerError("map creation failed".into()))?;
-
-            std::fs::create_dir(new_room.automapper_path())
-                .map_err(|e| Error::ServerError(e.to_string().into()))?;
+                Room::new_from_dir(path).ok_or(Error::ServerError("map creation failed".into()))?;
 
             new_room.config.access = creation.access.unwrap_or(MapAccess::Public);
             new_room
@@ -399,16 +396,9 @@ impl Server {
 
         self.rooms().remove(map_name);
 
-        std::fs::remove_dir_all(room.path()).ok();
+        room.delete();
 
-        if room.path().exists() {
-            log::warn!(
-                "directory still exists after map deletion: '{}'",
-                room.path().display()
-            );
-        }
-
-        log::debug!("deleted map '{}'", room.path().display());
+        log::debug!("deleted map '{}'", room.name());
 
         Ok(())
     }
@@ -1194,40 +1184,45 @@ impl Server {
     }
 
     pub fn get_automappers(&self, map_name: &str) -> Result<Vec<AutomapperDetail>, Error> {
-        let path = self.room(map_name)?.automapper_path();
+        let room = self.room(map_name)?;
+        let path = room.automapper_path();
 
-        Ok(std::fs::read_dir(path)
-            .map_err(|e| Error::ServerError(e.to_string().into()))?
-            .filter_map(|e| e.ok())
-            .filter_map(|e| {
-                let path = e.path();
-                if let Some(kind) = is_automapper(&path) {
-                    let name = e.file_name().to_string_lossy().into_owned();
-                    let image = path
-                        .file_stem()
-                        .unwrap_or_default()
-                        .to_string_lossy()
-                        .into_owned();
-                    let configs = (kind == AutomapperKind::DDNet)
-                        .then(|| {
-                            let file = std::fs::read_to_string(&path).ok()?;
-                            let am =
-                                twmap::automapper::Automapper::parse(image.clone(), &file).ok()?;
-                            Some(am.configs.iter().map(|c| c.name.to_owned()).collect())
+        if let Some(path) = path {
+            Ok(std::fs::read_dir(&path)
+                .map_err(|e| Error::ServerError(e.to_string().into()))?
+                .filter_map(|e| e.ok())
+                .filter_map(|e| {
+                    let path = e.path();
+                    if let Some(kind) = is_automapper(&path) {
+                        let name = e.file_name().to_string_lossy().into_owned();
+                        let image = path
+                            .file_stem()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .into_owned();
+                        let configs = (kind == AutomapperKind::DDNet)
+                            .then(|| {
+                                let file = std::fs::read_to_string(&path).ok()?;
+                                let am = twmap::automapper::Automapper::parse(image.clone(), &file)
+                                    .ok()?;
+                                Some(am.configs.iter().map(|c| c.name.to_owned()).collect())
+                            })
+                            .flatten();
+
+                        Some(AutomapperDetail {
+                            name,
+                            image,
+                            kind,
+                            configs,
                         })
-                        .flatten();
-
-                    Some(AutomapperDetail {
-                        name,
-                        image,
-                        kind,
-                        configs,
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect())
+                    } else {
+                        None
+                    }
+                })
+                .collect())
+        } else {
+            Ok(vec![])
+        }
     }
 
     pub fn get_automapper(&self, map_name: &str, am: &str) -> Result<String, Error> {
@@ -1235,7 +1230,11 @@ impl Server {
             return Err(Error::InvalidFileName);
         }
 
-        let mut path = self.room(map_name)?.automapper_path();
+        let mut path = self
+            .room(map_name)?
+            .automapper_path()
+            .ok_or(Error::AutomapperNotFound)?
+            .to_owned();
         path.push(am);
 
         if is_automapper(&path).is_none() {
@@ -1319,7 +1318,10 @@ impl Server {
 
         let room = self.room(map_name)?;
 
-        let mut path = room.automapper_path();
+        let mut path = room
+            .automapper_path()
+            .ok_or(Error::AutomapperNotFound)?
+            .to_owned();
         path.push(am);
 
         let kind = is_automapper(&path).ok_or(Error::InvalidFileName)?;
@@ -1353,7 +1355,11 @@ impl Server {
             return Err(Error::InvalidFileName);
         }
 
-        let mut path = self.room(map_name)?.automapper_path();
+        let mut path = self
+            .room(map_name)?
+            .automapper_path()
+            .ok_or(Error::AutomapperNotFound)?
+            .to_owned();
         path.push(am);
 
         if is_automapper(&path).is_none() {
@@ -1404,10 +1410,12 @@ impl Server {
             .ok_or(Error::LayerNotFound)?;
 
         if let twmap::Layer::Tiles(layer) = layer {
-            let mut am_path = room.automapper_path();
+            let mut am_path = room
+                .automapper_path()
+                .ok_or(Error::AutomapperNotFound)?
+                .to_owned();
             am_path.push(format!("{image_name}.rules"));
-            let file = std::fs::read_to_string(am_path)
-                .map_err(|e| Error::ServerError(e.to_string().into()))?;
+            let file = std::fs::read_to_string(am_path).map_err(|_| Error::AutomapperNotFound)?;
             let automapper = twmap::automapper::Automapper::parse(image_name, &file)
                 .map_err(|e| Error::AutomapperError(e.to_string()))?;
             layer
