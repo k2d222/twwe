@@ -23,12 +23,12 @@
   import * as Actions from '../actions'
   import { viewport } from '../../gl/global'
   import Fence from './fence.svelte'
-  import type { AutomapperKind, Recv, Resp, Tiles } from '../../server/protocol'
+  import type { AutomapperKind, Recv, Tiles } from '../../server/protocol'
 
   // split panes
-  let layerPaneSize = px2vw(rem2px(15))
-  let propsPaneSize = px2vw(rem2px(20))
-  let envPaneSize = px2vw(rem2px(20))
+  let layerPaneSize = px2vw(rem2px(10))
+  let propsPaneSize = px2vw(rem2px(10))
+  let envPaneSize = px2vw(rem2px(10))
   let lastLayerPaneSize = layerPaneSize
   let lastPropsPaneSize = propsPaneSize
   let lastEnvPaneSize = 20

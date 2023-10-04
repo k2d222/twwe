@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use clap::Parser;
 use cli::Cli;
 
 use glob::glob;
@@ -9,12 +8,12 @@ use server::Server;
 
 mod base64;
 mod checks;
-mod cli;
+pub mod cli;
 mod error;
 mod map_cfg;
 mod protocol;
 mod room;
-mod router;
+pub mod router;
 mod server;
 mod twmap_map_checks;
 mod twmap_map_edit;
@@ -22,7 +21,7 @@ mod util;
 
 use room::Room;
 
-fn create_server(cli: &Cli) -> Server {
+pub fn create_server(cli: &Cli) -> Server {
     let server = Server::new(cli);
     {
         let mut server_rooms = server.rooms();
@@ -52,18 +51,6 @@ fn create_server(cli: &Cli) -> Server {
     server
 }
 
-#[tokio::main]
-async fn run_server(args: Cli) {
-    let server = Arc::new(create_server(&args));
-
-    let router = Router::new(server, &args);
-    router.run(&args).await;
-}
-
-fn main() {
+pub fn init_logger() {
     pretty_env_logger::init_timed();
-
-    let args = Cli::parse();
-
-    run_server(args);
 }

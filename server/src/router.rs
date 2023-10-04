@@ -97,6 +97,8 @@ impl Router {
     }
 
     pub async fn run(self, args: &Cli) {
+        log::info!("Listening on {}", args.addr);
+
         match (&args.cert, &args.key) {
             (Some(cert), Some(key)) => {
                 let tls_config = RustlsConfig::from_pem_file(cert, key).await.unwrap();
