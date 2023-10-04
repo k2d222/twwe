@@ -1,9 +1,10 @@
-const { VITE_WEBSOCKET_URL, VITE_HTTP_URL } = import.meta.env
+const { VITE_SERVER_URLS } = import.meta.env
 
 export interface ServerConfig {
   name: string
-  wsUrl: string
-  httpUrl: string
+  host: string
+  port: number
+  encrypted: boolean
 }
 
 interface StorageSpec {
@@ -18,17 +19,15 @@ interface StorageEntry<T> {
 
 type StorageEntries = { [K in keyof StorageSpec]: StorageEntry<StorageSpec[K]> }
 
-function cloneServerConf(conf: ServerConfig) {
-  const { wsUrl, httpUrl, name } = conf
-  return { wsUrl, httpUrl, name }
-}
-
 const entries: StorageEntries = {
   servers: {
     clone: function (confs: ServerConfig[]) {
-      return confs.map(cloneServerConf)
+      return confs.map(c => ({ ...c }))
     },
-    default: [{ name: 'Default Server', wsUrl: VITE_WEBSOCKET_URL, httpUrl: VITE_HTTP_URL }],
+    default: VITE_SERVER_URLS
+      .split(',')
+      .map(url => url.split(':'))
+      .map(([name, host, port, ssl]) => ({ name, host, port: parseInt(port), encrypted: ssl === '1' })),
   },
   currentServer: {
     clone: x => x,
@@ -37,7 +36,7 @@ const entries: StorageEntries = {
 }
 
 const storage = {
-  version: 2,
+  version: 3,
   init: function () {
     const storedVersion = parseInt(localStorage.getItem('version') ?? '0')
     if (storedVersion !== storage.version) {

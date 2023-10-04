@@ -14,7 +14,8 @@
     const serverId = storage.load('currentServer')
 
     $serverConfig = serverConfs[serverId]
-    $server = new WebSocketServer($serverConfig.wsUrl)
+    const wsUrl = `ws${$serverConfig.encrypted ? 's' : ''}://${$serverConfig.host}:${$serverConfig.port}/ws`
+    $server = new WebSocketServer(wsUrl)
 
     return new Promise((resolve, reject) => {
       $server.socket.addEventListener('open', resolve, { once: true })

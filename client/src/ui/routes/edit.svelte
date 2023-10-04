@@ -12,7 +12,8 @@
 
   let loadingSignal = (async () => {
     await $server.query('join', name)
-    const map_ = await queryMap($serverConfig.httpUrl, name)
+    const httpUrl = `http${$serverConfig.encrypted ? 's' : ''}://${$serverConfig.host}:${$serverConfig.port}`
+    const map_ = await queryMap(httpUrl, name)
     const ams = await $server.query('get/automappers', undefined)
     $automappers = Object.fromEntries(ams.map(am => [am.name, am]))
     $map = map_

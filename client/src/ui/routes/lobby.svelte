@@ -38,6 +38,7 @@
   import { createMap, download, queryMaps, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
   import type { MapDetail } from '../../server/protocol'
+  import { onMount } from 'svelte'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'
@@ -102,29 +103,12 @@
   }
 
   $: serverStatuses = serverConfs.map<ServerStatus>(_ =>  'unknown')
+  $: serverConf = serverConfs[serverId]
+  $: httpUrl = `http${serverConf.encrypted ? 's' : ''}://${serverConf.host}:${serverConf.port}`
 
-  $: {
-    maps = []
-
-    if (serverId >= serverConfs.length)
-      serverId = 0
-
-    const id = serverId
-    setServerStatus(id, 'connecting')
-
-    queryMaps(serverConfs[id].httpUrl)
-      .then(m => {
-        if (serverId === id) {
-          maps = m
-          storage.save('currentServer', id)
-          resetMapModal()
-        }
-        setServerStatus(id, 'online')
-      })
-      .catch(_ => {
-        setServerStatus(id, 'error')
-      })
-  }
+  onMount(() => {
+    selectServer(serverId)
+  })
 
   function resetMapModal() {
     modalCreateMap.uploadFile = null
@@ -139,8 +123,30 @@
     serverStatuses[id] = state
   }
 
-  function onSelectServer(e: Event & { detail: string }) {
-    serverId = parseInt(e.detail)
+  function selectServer(id: number) {
+    serverId = id
+    maps = []
+
+    if (serverId >= serverConfs.length)
+      serverId = 0
+
+    setServerStatus(id, 'connecting')
+
+    const serverConf = serverConfs[id]
+    const httpUrl = `http${serverConf.encrypted ? 's' : ''}://${serverConf.host}:${serverConf.port}`
+
+    queryMaps(httpUrl)
+      .then(m => {
+        if (serverId === id) {
+          maps = m
+          storage.save('currentServer', id)
+          resetMapModal()
+        }
+        setServerStatus(id, 'online')
+      })
+      .catch(_ => {
+        setServerStatus(id, 'error')
+      })
   }
 
   function onJoinMap(name: string) {
@@ -148,12 +154,11 @@
   }
 
   function onDeleteMap(mapName: string) {
-    const httpRoot = serverConfs[serverId].httpUrl
     modalConfirmDelete.name = mapName
     modalConfirmDelete.open = true
     modalConfirmDelete.onConfirm = async () => {
       try {
-        await fetch(`${httpRoot}/maps/${mapName}`, {
+        await fetch(`${httpUrl}/maps/${mapName}`, {
           method: 'DELETE'
         })
       } catch (e) {
@@ -169,17 +174,16 @@
   }
 
   function onDownloadMap(name: string) {
-    download(`${serverConfs[serverId].httpUrl}/maps/${name}`, `${name}.map`)
+    download(`${httpUrl}/maps/${name}`, `${name}.map`)
   }
 
   function onAddServer() {
     const { name, hostname, encrypted, port } = modalAddServer
-    const wsUrl = (encrypted ? 'wss://' : 'ws://') + hostname + ':' + port + '/ws'
-    const httpUrl = (encrypted ? 'https://' : 'http://') + hostname + ':' + port
     const conf: ServerConfig = {
       name,
-      wsUrl,
-      httpUrl,
+      host: hostname,
+      encrypted,
+      port,
     }
     serverConfs.push(conf)
     storage.save('servers', serverConfs)
@@ -201,10 +205,10 @@
 
     try {
       if (method === 'upload' && modalCreateMap.uploadFile !== null) {
-        await uploadMap(serverConfs[serverId].httpUrl, name, modalCreateMap.uploadFile)
+        await uploadMap(httpUrl, name, modalCreateMap.uploadFile)
       }
       else if (method === 'blank') {
-        await createMap(serverConfs[serverId].httpUrl, name, {
+        await createMap(httpUrl, name, {
           version: 'ddnet06', // TODO
           access,
           blank: {
@@ -214,7 +218,7 @@
         })
       }
       else if (method === 'clone' && modalCreateMap.clone !== undefined) {
-        await createMap(serverConfs[serverId].httpUrl, name, {
+        await createMap(httpUrl, name, {
           version: 'ddnet06',
           access,
           clone: maps[modalCreateMap.clone].name
@@ -289,13 +293,12 @@
           Add server
         </Button>
       </div>
-      <TileGroup on:select={onSelectServer}>
+      <TileGroup>
         {#each serverConfs as server, i}
-          {@const url = new URL(server.wsUrl)}
           {@const status = serverStatuses[i]}
-          <RadioTile value={'' + i}>
+          <RadioTile value={'' + i} checked={serverId === i} on:click={() => selectServer(i)}>
             <div style="font-weight: bold">{server.name}</div>
-            <div>({url.host}{url.protocol === 'ws:' ? ', unencrypted' : ''})</div>
+            <div>({server.host}{server.encrypted ? '' : ', unencrypted'})</div>
             <div>
               <InlineLoading
                 status={statusString[status][0]}

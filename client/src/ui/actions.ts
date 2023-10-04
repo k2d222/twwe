@@ -20,7 +20,9 @@ export async function downloadMap() {
   const serverConf_ = get(serverConfig)
   const rmap_ = get(rmap)
 
-  download(`${serverConf_.httpUrl}/maps/${rmap_.map.name}`, `${rmap_.map.name}.map`)
+  const httpUrl = `http${serverConf_.encrypted ? 's' : ''}://${serverConf_.host}:${serverConf_.port}`
+
+  download(`${httpUrl}/maps/${rmap_.map.name}`, `${rmap_.map.name}.map`)
 }
 
 export async function deleteMap() {

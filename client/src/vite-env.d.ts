@@ -2,7 +2,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly WEBSOCKET_URL: string
+  readonly VITE_SERVER_URLS: string
 }
 
 interface ImportMeta {
