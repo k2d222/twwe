@@ -165,7 +165,7 @@ impl Room {
         cfg_path: Option<PathBuf>,
         am_path: Option<PathBuf>,
     ) -> Option<Self> {
-        let name = map_path.file_name()?.to_string_lossy().to_string();
+        let name = map_path.file_stem()?.to_string_lossy().to_string();
 
         let config = cfg_path
             .as_ref()

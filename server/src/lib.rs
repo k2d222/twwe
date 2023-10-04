@@ -39,7 +39,10 @@ pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
                 });
 
             for r in rooms {
-                server_rooms.insert(r.name().to_owned(), r);
+                let key = r.name().to_owned();
+                if !server_rooms.contains_key(&key) {
+                    server_rooms.insert(key, r);
+                }
             }
         }
     }

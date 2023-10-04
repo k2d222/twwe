@@ -6,14 +6,9 @@ use std::{collections::BTreeSet, path::PathBuf, sync::Arc};
 use platform_dirs::AppDirs;
 
 fn get_maps_dirs() -> Vec<PathBuf> {
-    // for maps_dirs contrary to ddnet the last path has the highest priority.
+    // like ddnet's storage.cfg, the last path has the highest priority.
     let mut maps_dirs = BTreeSet::new();
 
-    // ddnet's $CURRENTDIR
-    if let Ok(mut dir) = std::env::current_dir() {
-        dir.push("maps");
-        maps_dirs.insert(dir);
-    }
     // ddnet's $USERDIR
     if let Some(mut dirs) = AppDirs::new(Some("ddnet"), false) {
         dirs.config_dir.push("maps");
@@ -37,6 +32,11 @@ fn get_maps_dirs() -> Vec<PathBuf> {
     });
     if let Ok(mut dir) = std::env::current_dir() {
         dir.push("data/maps");
+        maps_dirs.insert(dir);
+    }
+    // ddnet's $CURRENTDIR
+    if let Ok(mut dir) = std::env::current_dir() {
+        dir.push("maps");
         maps_dirs.insert(dir);
     }
 

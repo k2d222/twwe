@@ -24,6 +24,7 @@ use crate::{
 pub struct Server {
     rooms: Mutex<HashMap<String, Arc<Room>>>,
     rpp_path: Option<PathBuf>,
+    maps_path: PathBuf,
 }
 
 impl Server {
@@ -31,6 +32,7 @@ impl Server {
         Server {
             rooms: Mutex::new(HashMap::new()),
             rpp_path: cli.rpp_path.clone(),
+            maps_path: cli.maps_dirs[0].to_owned(),
         }
     }
 
@@ -285,10 +287,6 @@ impl Server {
 
         self.broadcast_users(&peer);
 
-        // if the peer uploaded a map but did not use it, we want to delete it now.
-        let upload_path: PathBuf = format!("uploads/{}", peer.addr).into();
-        std::fs::remove_file(upload_path).ok();
-
         log::info!("disconnected {}", &addr);
     }
 }
@@ -325,8 +323,11 @@ impl Server {
             return Err(Error::MapNameTaken);
         }
 
-        let path = PathBuf::from(format!("maps/{}", map_name));
-        let map_path = PathBuf::from(format!("maps/{}/map.map", map_name));
+        let mut path = self.maps_path.clone();
+        path.push(map_name);
+
+        let mut map_path = path.clone();
+        map_path.push("map.map");
 
         let mut map = match creation.method {
             CreationMethod::Upload(file) => {
@@ -1188,38 +1189,43 @@ impl Server {
         let path = room.automapper_path();
 
         if let Some(path) = path {
-            Ok(std::fs::read_dir(&path)
-                .map_err(|e| Error::ServerError(e.to_string().into()))?
-                .filter_map(|e| e.ok())
-                .filter_map(|e| {
-                    let path = e.path();
-                    if let Some(kind) = is_automapper(&path) {
-                        let name = e.file_name().to_string_lossy().into_owned();
-                        let image = path
-                            .file_stem()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .into_owned();
-                        let configs = (kind == AutomapperKind::DDNet)
-                            .then(|| {
-                                let file = std::fs::read_to_string(&path).ok()?;
-                                let am = twmap::automapper::Automapper::parse(image.clone(), &file)
-                                    .ok()?;
-                                Some(am.configs.iter().map(|c| c.name.to_owned()).collect())
-                            })
-                            .flatten();
+            if let Ok(read_dir) = std::fs::read_dir(&path) {
+                let automappers = read_dir
+                    .filter_map(|e| e.ok())
+                    .filter_map(|e| {
+                        let path = e.path();
+                        if let Some(kind) = is_automapper(&path) {
+                            let name = e.file_name().to_string_lossy().into_owned();
+                            let image = path
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .into_owned();
+                            let configs = (kind == AutomapperKind::DDNet)
+                                .then(|| {
+                                    let file = std::fs::read_to_string(&path).ok()?;
+                                    let am =
+                                        twmap::automapper::Automapper::parse(image.clone(), &file)
+                                            .ok()?;
+                                    Some(am.configs.iter().map(|c| c.name.to_owned()).collect())
+                                })
+                                .flatten();
 
-                        Some(AutomapperDetail {
-                            name,
-                            image,
-                            kind,
-                            configs,
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .collect())
+                            Some(AutomapperDetail {
+                                name,
+                                image,
+                                kind,
+                                configs,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                Ok(automappers)
+            } else {
+                Ok(vec![])
+            }
         } else {
             Ok(vec![])
         }
@@ -1326,6 +1332,7 @@ impl Server {
 
         let kind = is_automapper(&path).ok_or(Error::InvalidFileName)?;
 
+        std::fs::create_dir(room.automapper_path().unwrap()).ok();
         std::fs::write(&path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
 
         if kind == AutomapperKind::RulesPP {
