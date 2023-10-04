@@ -1,5 +1,7 @@
 [package]
-name = "server"
+name = "twwe-server"
+description = "Teeworlds Web Editor Server"
+authors = ["Mathis Brossier <mathis.brossier@gmail.com>"]
 version = "0.1.0"
 edition = "2021"
 

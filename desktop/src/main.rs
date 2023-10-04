@@ -46,7 +46,7 @@ fn get_maps_dirs() -> Vec<PathBuf> {
 
 #[tokio::main]
 async fn server_main() {
-    let cli = server::cli::Cli {
+    let cli = twwe_server::cli::Cli {
         addr: "127.0.0.1:16800".to_string(),
         cert: None,
         key: None,
@@ -54,15 +54,15 @@ async fn server_main() {
         static_dir: None,
         rpp_path: None,
     };
-    let server = Arc::new(server::create_server(&cli).expect("failed to create server"));
+    let server = Arc::new(twwe_server::create_server(&cli).expect("failed to create server"));
 
-    let router = server::router::Router::new(server, &cli);
+    let router = twwe_server::router::Router::new(server, &cli);
 
     router.run(&cli).await;
 }
 
 fn main() {
-    server::init_logger();
+    twwe_server::init_logger();
     std::thread::spawn(server_main);
 
     let app = tauri::Builder::default()

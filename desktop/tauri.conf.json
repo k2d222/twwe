@@ -15,8 +15,8 @@
     },
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
+      "category": "Game",
+      "copyright": "Mathis Brossier <mathis.brossier@gmail.com>",
       "deb": {
         "depends": []
       },
@@ -28,7 +28,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "fr.thissma.tw",
       "longDescription": "",
       "macOS": {
         "entitlements": null,

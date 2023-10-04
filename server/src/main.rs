@@ -3,7 +3,6 @@ use std::sync::Arc;
 use clap::Parser;
 use cli::Cli;
 
-use glob::glob;
 use router::Router;
 use server::Server;
 
@@ -26,7 +25,7 @@ fn create_server(cli: &Cli) -> std::io::Result<Server> {
     let server = Server::new(cli);
     {
         let mut server_rooms = server.rooms();
-        for path in cli.maps_path.iter() {
+        for path in cli.maps_dirs.iter() {
             let rooms = std::fs::read_dir(path)?
                 .filter_map(|e| e.ok())
                 .filter_map(|e| {

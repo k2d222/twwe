@@ -1,7 +1,7 @@
 {
   "name": "twwe-client",
   "version": "1.0.0",
-  "description": "Teeworlds collaborative map editor online",
+  "description": "Teeworlds Web Editor Client",
   "type": "module",
   "scripts": {
     "dev": "vite",

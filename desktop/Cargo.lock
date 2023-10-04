@@ -63,19 +63,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "platform-dirs",
- "serde",
- "serde_json",
- "server",
- "tauri",
- "tauri-build",
- "tokio",
-]
-
-[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3127,44 +3114,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-server",
- "base64 0.21.4",
- "bytemuck",
- "clap",
- "fixed",
- "futures",
- "futures-util",
- "glob",
- "image",
- "log",
- "ndarray",
- "parking_lot",
- "partial_derive",
- "pretty_env_logger",
- "regex",
- "rustls-pemfile",
- "sanitize-filename 0.5.0",
- "serde",
- "serde_json",
- "serde_with",
- "structview",
- "thiserror",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite 0.17.2",
- "tokio-util",
- "tower-http",
- "twmap",
- "uuid",
- "vek",
- "webpki-roots",
-]
-
-[[package]]
 name = "servo_arc"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4143,6 +4092,57 @@ dependencies = [
  "structview",
  "thiserror",
  "vek",
+]
+
+[[package]]
+name = "twwe-desktop"
+version = "0.1.0"
+dependencies = [
+ "platform-dirs",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tokio",
+ "twwe-server",
+]
+
+[[package]]
+name = "twwe-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-server",
+ "base64 0.21.4",
+ "bytemuck",
+ "clap",
+ "fixed",
+ "futures",
+ "futures-util",
+ "glob",
+ "image",
+ "log",
+ "ndarray",
+ "parking_lot",
+ "partial_derive",
+ "pretty_env_logger",
+ "regex",
+ "rustls-pemfile",
+ "sanitize-filename 0.5.0",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "structview",
+ "thiserror",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite 0.17.2",
+ "tokio-util",
+ "tower-http",
+ "twmap",
+ "uuid",
+ "vek",
+ "webpki-roots",
 ]
 
 [[package]]
