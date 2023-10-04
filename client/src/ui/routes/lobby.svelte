@@ -286,7 +286,7 @@
   </Row>
 
   <Row>
-    <Column>
+    <Column lg={6}>
       <div class="head-row">
         <h3>Servers</h3>
         <Button kind="tertiary" on:click={() => (modalAddServer.open = true)} icon={AddIcon}>
@@ -320,7 +320,7 @@
       </TileGroup>
     </Column>
 
-    <Column lg={8} max={8}>
+    <Column lg={10}>
       <div class="head-row">
         <h3>Maps</h3>
         <Button kind="tertiary" on:click={() => (modalCreateMap.open = true)} icon={AddIcon}>
@@ -331,11 +331,11 @@
         <DataTable
           sortable
           headers={[
+            { key: 'join', empty: true, width: '4rem' },
             { key: 'name', value: 'Name' },
-            { key: 'users', value: 'Users online' },
-            { key: 'date', value: 'Last modified' },
-            { key: 'overflow', empty: true },
-            { key: 'join', empty: true },
+            { key: 'date', value: 'Last modified', width: '10rem' },
+            { key: 'users', value: 'Users online', width: '10rem' },
+            { key: 'overflow', empty: true, width: '4rem' },
           ]}
           rows={maps.map((row, i) => ({
             id: i,
