@@ -7,6 +7,7 @@ import type { WebSocketServer } from '../../server/server'
 import type { MapCreation, MapDetail } from '../../server/protocol'
 import * as MapDir from '../../twmap/mapdir'
 import { QuadsLayer } from '../../twmap/quadsLayer'
+import { clearDialog, showInfo } from './dialog'
 
 export type Ctor<T> = new (...args: any[]) => T
 
@@ -14,17 +15,24 @@ export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
 export async function download(file: string, name: string) {
-  const resp = await fetch(file)
-  const data = await resp.blob()
-  const url = URL.createObjectURL(data)
+  const id = showInfo(`Downloading '${name}'…`, 'none')
+  try {
+    const resp = await fetch(file)
+    const data = await resp.blob()
+    const url = URL.createObjectURL(data)
 
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
+    const link = document.createElement('a')
+    link.href = url
+    link.download = name
 
-  document.body.append(link)
-  link.click()
-  link.remove()
+    document.body.append(link)
+    link.click()
+    link.remove()
+    showInfo(`Downloaded '${name}'.`)
+  }
+  finally {
+    clearDialog(id)
+  }
 }
 
 export async function uploadMap(httpRoot: string, name: string, file: Blob) {

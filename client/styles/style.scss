@@ -75,6 +75,7 @@
     text-overflow: ellipsis;
     overflow: hidden;
     background-color: #f2f2f2;
+    height: 2rem;
 
     outline: 1px solid #aaaaaa;
     outline-offset: -1px;
@@ -760,8 +761,13 @@ nav.hidden .context {
     flex-direction: row;
     gap: 1rem;
 
-    > :nth-child(3) {
+    >.channels {
       flex-grow: 1;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 1rem;
     }
   }
 
@@ -807,14 +813,13 @@ nav.hidden .context {
 
   .channels {
     display: flex;
-    // gap: .5rem;
     align-items: center;
 
     label {
       position: relative;
       display: block;
-      width: 1.5rem;
-      height: 1.5rem;
+      width: 2rem;
+      height: 2rem;
       user-select: none;
 
       &.red span {
@@ -863,7 +868,7 @@ nav.hidden .context {
         position: absolute;
         inset: 0;
         text-align: center;
-        padding: 0.25rem;
+        padding: 0.6rem;
       }
     }
   }

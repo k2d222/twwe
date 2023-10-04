@@ -270,15 +270,15 @@
       <Tile>
         <p>
           Teeworlds Web Editor is a multiplayer map editor for
-          <a href="https://ddnet.org/">DDRaceNetwork</a>
+          <a target="_blank" rel="noreferrer" href="https://ddnet.org/">DDRaceNetwork</a>
           , a flavour of
-          <a href="https://www.teeworlds.com/">Teeworlds</a>
+          <a target="_blank" rel="noreferrer" href="https://www.teeworlds.com/">Teeworlds</a>
           .
         </p>
         <p>
           The project is currently in beta, expect some bugs and missing features! Please report
           your bugs and make suggestions on the
-          <a href="https://github.com/k2d222/twwe/issues">GitHub issues page</a>
+          <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/issues">GitHub issues page</a>
           . Have fun!
         </p>
       </Tile>
