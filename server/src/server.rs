@@ -1302,7 +1302,10 @@ impl Server {
                     String::from_utf8_lossy(&exec.stderr).into_owned(),
                 ))
             }
-            None => Err(Error::ServerError("rpp: no exit status".into())),
+            None => {
+                log::error!("rpp: {}", String::from_utf8_lossy(&exec.stderr));
+                Err(Error::ServerError("rpp: no exit status".into()))
+            }
         }
     }
 
@@ -1406,8 +1409,7 @@ impl Server {
         if let twmap::Layer::Tiles(layer) = layer {
             let mut am_path = room.automapper_path();
             am_path.push(format!("{image_name}.rules"));
-            let file = std::fs::read_to_string(am_path)
-                .map_err(|e| Error::ServerError(e.to_string().into()))?;
+            let file = std::fs::read_to_string(am_path).map_err(|_| Error::AutomapperNotFound)?;
             let automapper = twmap::automapper::Automapper::parse(image_name, &file)
                 .map_err(|e| Error::AutomapperError(e.to_string()))?;
             layer

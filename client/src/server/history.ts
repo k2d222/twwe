@@ -344,9 +344,13 @@ export class History {
 
   send(pkt: SendPacket<SendKey>) {
     if (isRequest(pkt)) {
+      const rev = reverse(get(map), pkt)
+      if (rev === null)
+        return
+
       const pending: Operation = {
         forward: [pkt.type, pkt.content],
-        reverse: reverse(get(map), pkt)
+        reverse: rev,
       }
       this.pending.push(pending)
 

@@ -563,6 +563,12 @@ $header-h: 3rem;
     align-items: center;
     width: 100%;
     gap: 1rem;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
   }
 
   input[type='number'] {
