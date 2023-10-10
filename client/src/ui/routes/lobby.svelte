@@ -367,7 +367,7 @@
                 on:click={() => onJoinMap(cell.value)}
               />
             {:else}
-              {cell.value}
+              <div class="text-overflow">{cell.value}</div>
             {/if}
           </svelte:fragment>
         </DataTable>

@@ -113,7 +113,7 @@
     </OverflowMenu>
   </div>
   <div class="middle">
-    <span id="map-name">{$map.name}</span>
+    <div class="text-overflow"><span id="map-name">{$map.name}</span></div>
   </div>
   <div class="right">
     <div id="users">
