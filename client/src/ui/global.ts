@@ -17,8 +17,16 @@ export const view: Writable<View> = writable(View.Layers)
 export const rmap: Writable<RenderMap> = writable(null)
 export const map: Writable<Map> = writable(null)
 export const selected: Writable<[number, number][]> = writable([])
-export const visible: Writable<boolean[][]> = writable([])
 export const automappers: Writable<Record<string, AutomapperDetail>> = writable({})
 export const anim: Writable<boolean> = writable(false)
 
 export const peers: Writable<number> = writable(0)
+
+export function reset() {
+  rmap.set(null)
+  map.set(null)
+  selected.set([])
+  automappers.set({})
+  anim.set(false)
+  peers.set(0)
+}

@@ -14,7 +14,8 @@
   import ImagePicker from './imagePicker.svelte'
   import AutomapperPicker from './automapper.svelte'
   // import { automap, parse, type Config as AutomapperConfig } from '../../twmap/automap'
-  import { ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
+  import { ComposedModal, ModalBody, ModalHeader, TooltipIcon } from 'carbon-components-svelte'
+  import { WarningAlt } from 'carbon-icons-svelte'
   import { rmap } from '../global'
   import { bytesToBase64, resIndexToString, stringToResIndex } from '../../server/convert'
   import { pick, read, sync, _ } from '../../server/util'
@@ -73,8 +74,12 @@
     }
   }
 
-  function amCfgName(img: string, cfg: number): string {
-    return $automappers[img + '.rules']?.configs?.at(cfg) ?? 'None'
+  function amCfgName(img: string, cfg: number | null): string {
+    if (cfg === null) {
+      return 'None'
+    } else {
+      return $automappers[img + '.rules']?.configs?.at(cfg) ?? `#${cfg} (missing)`
+    }
   }
 
   let imagePickerOpen = false
@@ -238,7 +243,7 @@
     apply: () => $rmap.map.images,
   }])
   $: if (layer && layer instanceof TilesLayer) {
-    syncAmCfg = read($server, layer.automapper.config, {
+    syncAmCfg = read($server, layer.automapper.config === -1 ? null : layer.automapper.config, {
       query: 'edit/layer',
       match: [g, l, { automapper_config: { config: pick } }],
     })
@@ -336,7 +341,13 @@
       </label>
       <Number label="Color Env. Offset" integer bind:value={$syncColorEnvOff} />
       <label>
-        Automapper <input type="button" value={amCfgName($syncImg?.name, $syncAmCfg)} disabled={layer.image === null} on:click={() => automapperOpen = true} />
+        <span>
+          {#if $syncAmCfg !== null && $automappers[$syncImg?.name + '.rules'] === undefined}
+            <TooltipIcon tooltipText="The rules file is missing. Upload or create one." icon={WarningAlt} direction="bottom" align="start" />
+          {/if}
+          Automapper
+        </span>
+        <input type="button" value={amCfgName($syncImg?.name, $syncAmCfg)} disabled={$syncImg === null} on:click={() => automapperOpen = true} />
       </label>
       <ComposedModal bind:open={automapperOpen} size="sm" selectorPrimaryFocus=".bx--modal-close">
         <ModalHeader title="Automapper" />
@@ -347,7 +358,7 @@
           />
         </ModalBody>
       </ComposedModal>
-      <button class="default" disabled={$syncAmCfg === null} on:click={onAutomap}>Apply Automapper</button>
+      <button class="default" disabled={$syncAmCfg === null || $syncImg === null} on:click={onAutomap}>Apply Automapper</button>
     {/if}
     {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
       <label>

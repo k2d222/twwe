@@ -12,7 +12,7 @@
   import { Unknown as UnknownIcon } from 'carbon-icons-svelte'
   import type { RenderMap } from "../../gl/renderMap"
   import { TilesLayer } from "../../twmap/tilesLayer"
-  import { automap, parse } from "../../twmap/automap"
+  import { automap, lint, LintLevel, lintToString, parse } from "../../twmap/automap"
 
   import { basicSetup } from "codemirror"
   import { EditorState } from "@codemirror/state"
@@ -34,6 +34,8 @@
   let rmap: RenderMap
   let tilesCache: [number, number, Tile[]][] = []
 
+  let diagnosticsOpen = false
+  let diagnostics = ''
   let createAmOpen = false
 
   onMount(() => {
@@ -200,6 +202,33 @@
     }
   }
 
+  async function onDiagnostics() {
+    if (selected === null)
+      return
+
+    diagnosticsOpen = true
+
+    let am = $automappers[selected]
+
+    if (am.kind !== AutomapperKind.DDNet) {
+      showError('no diagnostics available for non-ddnet automappers yet.')
+      return
+    }
+
+    let lints = lint(view.state.doc.toString())
+    let errs = lints.filter(l => l.level === LintLevel.Error).length
+    let warns = lints.length - errs
+
+    const lines = [`${errs} errors, ${warns} warnings.\n`]
+
+    for (const lint of lints) {
+      lines.push(lintToString(lint))
+    }
+
+    diagnostics = lines.join('\n')
+
+  }
+
   async function onSelect(file: string) {
     if (file === selected) return
 
@@ -269,6 +298,7 @@
       <div class="controls">
         <span class:modified={changed}>{changed ? '*' : ''}{selected ?? ''}</span>
         <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
+        <Button size="small" on:click={onDiagnostics} disabled={selected === null} kind="secondary">Diagnostics</Button>
         <Button size="small" on:click={onPreview} disabled={selected === null} kind="secondary">Preview</Button>
       </div>
       <div class="editor" bind:this={editor}></div>
@@ -302,5 +332,12 @@
       </label>
       <button class="primary large" disabled={!isValidName(newAmName)} on:click={onCreate}>Create</button>
     </div>
+  </ModalBody>
+</ComposedModal>
+
+<ComposedModal bind:open={diagnosticsOpen} size="lg" selectorPrimaryFocus=".bx--modal-close">
+  <ModalHeader title="Diagnostics" />
+  <ModalBody hasForm>
+    <textarea class="diagnostics">{diagnostics}</textarea>
   </ModalBody>
 </ComposedModal>

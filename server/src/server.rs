@@ -1307,7 +1307,10 @@ impl Server {
                     String::from_utf8_lossy(&exec.stderr).into_owned(),
                 ))
             }
-            None => Err(Error::ServerError("rpp: no exit status".into())),
+            None => {
+                log::error!("rpp: {}", String::from_utf8_lossy(&exec.stderr));
+                Err(Error::ServerError("rpp: no exit status".into()))
+            }
         }
     }
 

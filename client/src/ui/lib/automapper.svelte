@@ -28,10 +28,6 @@
     const lints = lintAutomapper(str)
     const errs = lints.filter(l => l.level === LintLevel.Error)
 
-    for (const lint of lints) {
-      await showError(lintToString(lint))
-    }
-
     if (errs.length > 0) {
       const resp = await showWarning(`The automapper contains ${errs.length} error(s). Proceed?`, 'yesno')
       if (!resp) return

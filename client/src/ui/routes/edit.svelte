@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { server, serverConfig, map, automappers, view, View } from '../global'
+  import { server, serverConfig, map, automappers, view, View, reset } from '../global'
   import { queryMap } from '../lib/util'
   import Editor from '../lib/editor.svelte'
   import EditAutomapper from '../lib/editAutomapper.svelte'
@@ -11,6 +11,8 @@
   export let name: string
 
   let loadingSignal = (async () => {
+    reset()
+
     await $server.query('join', name)
     const httpUrl = `http${$serverConfig.encrypted ? 's' : ''}://${$serverConfig.host}:${$serverConfig.port}`
     const map_ = await queryMap(httpUrl, name)
