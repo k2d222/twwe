@@ -35,7 +35,9 @@
   }
 
   function makeViewBox() {
-    const { x1, y1, x2, y2 } = viewport.screen()
+    const rect = viewport.cont.getBoundingClientRect()
+    const [x1, y1] = viewport.pixelToWorld(rect.left, rect.top)
+    const [x2, y2] = viewport.pixelToWorld(rect.right, rect.bottom)
     const rgroup = $rmap.groups[g]
     const [offX, offY] = rgroup.offset()
     return [x1 - offX, y1 - offY, x2 - x1, y2 - y1].map(x => x * 32).join(' ')

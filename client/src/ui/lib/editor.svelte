@@ -273,7 +273,7 @@
       </Splitpanes>
     </Pane>
 
-    <Pane bind:size={envPaneSize}>
+    <Pane class="envelopes" bind:size={envPaneSize}>
       <EnvelopeEditor />
     </Pane>
   </Splitpanes>

@@ -297,14 +297,14 @@
   }
 
   function onMouseDown(e: MouseEvent) {
-    if (e.target !== viewport.canvas)
+    if (e.target !== viewport.cont)
       return
 
     if (rlayer && rlayer.layer instanceof AnyTilesLayer || $selected.length > 1) {
       updateMouseRange()
 
       if (e.buttons === 1 && !e.ctrlKey) {
-        // left click
+        // left clickft
         if (brushState === BrushState.Empty) {
           // start a selection
           mouseRange.start = mouseRange.end

@@ -265,7 +265,7 @@
 <div id="edit-automapper">
   <Splitpanes id="panes" dblClickSplitter={false}>
 
-    <Pane size={px2vw(rem2px(15))}>
+    <Pane class="automappers" size={px2vw(rem2px(15))}>
       <div class="left list">
         {#each Object.entries($automappers).sort(([f1], [f2]) => f1.localeCompare(f2)) as [file, am]}
           <div
@@ -293,7 +293,7 @@
       </div>
     </Pane>
 
-  <Pane>
+  <Pane class="code">
     <div class="middle">
       <div class="controls">
         <span class:modified={changed}>{changed ? '*' : ''}{selected ?? ''}</span>
@@ -305,7 +305,7 @@
     </div>
   </Pane>
 
-  <Pane>
+  <Pane class="viewport">
     <div class="right">
       <MapView bind:this={mapView} map={$map}/>
     </div>

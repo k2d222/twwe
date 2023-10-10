@@ -135,7 +135,7 @@ $header-h: 3rem;
     border: 0;
     margin: 0;
     z-index: unset;
-    background-color: transparent;
+    background-color: white;
     transition: background-color .2s ease;
 
     &:before,
@@ -158,9 +158,20 @@ $header-h: 3rem;
     height: 4px;
   }
 
+  .splitpanes__pane {
+    background-color: transparent;
+  }
+
+  .splitpanes__pane.layers,
+  .splitpanes__pane.properties,
+  .splitpanes__pane.automappers,
+  .splitpanes__pane.code,
+  .splitpanes__pane.envelopes {
+    background-color: #f2f2f2;
+  }
+
   .splitpanes__pane.viewport {
     position: relative;
-
   }
 
   .splitpanes__pane.layers,
@@ -172,14 +183,14 @@ $header-h: 3rem;
 .map-view {
   width: 100%;
   height: 100%;
+
+  >canvas {
+    height: 100%;
+    width: 100%;
+  }
 }
 
-#map-editor {
-  width: 100%;
-  height: 100%;
-}
-
-.map-view canvas,
+.map-view>canvas,
 .tiles>canvas {
   background-image: url('/editor/checker.png');
   background-repeat: repeat;
@@ -470,6 +481,10 @@ $header-h: 3rem;
     input[type='number'] {
       width: 4rem;
     }
+
+    .tiles {
+      position: relative;
+    }
   }
 
   .settings {
@@ -589,28 +604,43 @@ nav.hidden .context {
   inset: 0;
 }
 
-#brush-outline {
-  position: absolute;
-  border: 4px solid black;
-  pointer-events: none;
-  // transition: top .1s, left .1s;
-  opacity: 0.3;
-}
+#map-editor {
+  width: 100%;
+  height: 100%;
 
-#layer-outline {
-  position: absolute;
-  border: 2px solid white;
-  outline: 2px solid black;
-  box-shadow: 0 0 10px 1px;
-  pointer-events: none;
-}
+  >.map-view>canvas {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+  }
 
-#clip-outline {
-  position: absolute;
-  border: 1px solid white;
-  outline: 1px solid red;
-  box-shadow: 0 0 5px 1px;
-  pointer-events: none;
+  #brush-outline,
+  #layer-outline,
+  #clip-outline {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  #brush-outline {
+    border: 4px solid black;
+    opacity: 0.3;
+  }
+
+  #layer-outline {
+    border: 2px solid white;
+    outline: 2px solid black;
+    box-shadow: 0 0 10px 1px;
+  }
+
+  #clip-outline {
+    border: 1px solid white;
+    outline: 1px solid red;
+    box-shadow: 0 0 5px 1px;
+  }
 }
 
 #image-picker {

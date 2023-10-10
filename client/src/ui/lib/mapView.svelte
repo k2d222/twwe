@@ -24,12 +24,14 @@
   let destroyed = false
 
   let resized = false
-  let resizeObserver = new ResizeObserver(() => resized = true)
+  let resizeObserver = new ResizeObserver(() => {
+    resized = true
+  })
 
   onMount(() => {
-    canvas.width = cont.clientWidth
-    canvas.height = cont.clientHeight
-    resizeObserver.observe(cont)
+    canvas.width = canvas.clientWidth
+    canvas.height = canvas.clientHeight
+    resizeObserver.observe(canvas)
 
     renderer = new Renderer(canvas)
     viewport = new Viewport(cont, canvas)
@@ -50,8 +52,8 @@
       return
 
     if (resized) {
-      canvas.width = cont.clientWidth
-      canvas.height = cont.clientHeight
+      canvas.width = canvas.clientWidth
+      canvas.height = canvas.clientHeight
       resized = false
     }
 

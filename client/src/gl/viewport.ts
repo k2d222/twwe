@@ -6,11 +6,11 @@ export class Viewport {
 
   // note on the coordinates systems:
   //  - all origins are top-left corner, x grows to the left and y down.
-  //  - the pixel space correspond to on-screen pixels and may be equal
-  //    to canvas space, depending on the canvas resolution.
+  //  - the pixel space correspond to on-screen pixels, origin is the
+  //    window viewport (top-left)
   //  - the canvas space is the coordinate system of the canvas context.
   //  - the world space is indexed by tiles i.e. 1 unit = 1 tile.
-  //  - the tile space world space but with integers.
+  //  - the tile space is world space but with integers (tile indices).
 
   // following variables are in world space.
   pos: Vec2 // pos of the view top-left corner
@@ -49,7 +49,7 @@ export class Viewport {
     this.createListeners()
   }
 
-  // return the screen dimensions in the world space.
+  // return the canvas window in world space.
   screen() {
     const [x1, y1] = this.canvasToWorld(0, 0)
     const [x2, y2] = this.canvasToWorld(this.canvas.width, this.canvas.height)
@@ -67,18 +67,19 @@ export class Viewport {
     this.cont.addEventListener('keydown', this.onkeydown.bind(this))
   }
 
-  // this is probably a noop, because canvas is sized to window size
   pixelToCanvas(x: number, y: number) {
+    const rect = this.canvas.getBoundingClientRect()
     return [
-      (x / this.canvas.clientWidth) * this.canvas.width,
-      (y / this.canvas.clientHeight) * this.canvas.height,
+      ((x - rect.left) / this.canvas.clientWidth) * this.canvas.width,
+      ((y - rect.top) / this.canvas.clientHeight) * this.canvas.height,
     ]
   }
 
   canvasToPixel(x: number, y: number) {
+    const rect = this.canvas.getBoundingClientRect()
     return [
-      (x / this.canvas.width) * this.canvas.clientWidth,
-      (y / this.canvas.height) * this.canvas.clientHeight,
+      ((x - rect.left) / this.canvas.width) * this.canvas.clientWidth,
+      ((y - rect.top) / this.canvas.height) * this.canvas.clientHeight,
     ]
   }
 
@@ -102,13 +103,13 @@ export class Viewport {
 
   // ------------ desktop events --------------------------------
   private onmousedown(e: MouseEvent) {
-    const [canvasX, canvasY] = this.pixelToCanvas(e.offsetX, e.offsetY)
+    const [canvasX, canvasY] = this.pixelToCanvas(e.clientX, e.clientY)
 
     this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
-    const [canvasX, canvasY] = this.pixelToCanvas(e.offsetX, e.offsetY)
+    const [canvasX, canvasY] = this.pixelToCanvas(e.clientX, e.clientY)
     const [worldX, worldY] = this.canvasToWorld(canvasX, canvasY)
     this.mousePos.x = worldX
     this.mousePos.y = worldY
@@ -122,7 +123,7 @@ export class Viewport {
 
   private onwheel(e: WheelEvent) {
     const direction = e.deltaY < 0 ? 1 : -1
-    this.onZoom(0.1 * direction, e.offsetX, e.offsetY)
+    this.onZoom(0.1 * direction, e.clientX, e.clientY)
   }
 
   private onkeydown(e: KeyboardEvent) {
@@ -163,13 +164,13 @@ export class Viewport {
   }
 
   // ------------------------------------------------------------
-  private onZoom(factor: number, offsetX: number, offsetY: number) {
+  private onZoom(factor: number, clientX: number, clientY: number) {
     let delta = factor * this.scale
 
     if (this.scale + delta > this.maxScale) delta = this.maxScale - this.scale
     if (this.scale + delta < this.minScale) delta = this.minScale - this.scale
 
-    const [canvasX, canvasY] = this.pixelToCanvas(offsetX, offsetY)
+    const [canvasX, canvasY] = this.pixelToCanvas(clientX, clientY)
 
     const zoom = (this.scale + delta) / this.scale
 
