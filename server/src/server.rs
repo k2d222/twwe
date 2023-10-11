@@ -24,7 +24,8 @@ use crate::{
 pub struct Server {
     rooms: Mutex<HashMap<String, Arc<Room>>>,
     rpp_path: Option<PathBuf>,
-    maps_path: PathBuf,
+    maps_dir: Option<PathBuf>,
+    data_dir: Option<PathBuf>,
 }
 
 impl Server {
@@ -32,7 +33,8 @@ impl Server {
         Server {
             rooms: Mutex::new(HashMap::new()),
             rpp_path: cli.rpp_path.clone(),
-            maps_path: cli.maps_dirs[0].to_owned(),
+            maps_dir: cli.maps_dirs.get(0).cloned(),
+            data_dir: cli.data_dirs.get(0).cloned(),
         }
     }
 
@@ -323,12 +325,6 @@ impl Server {
             return Err(Error::MapNameTaken);
         }
 
-        let mut path = self.maps_path.clone();
-        path.push(map_name);
-
-        let mut map_path = path.clone();
-        map_path.push("map.map");
-
         let mut map = match creation.method {
             CreationMethod::Upload(file) => {
                 let map =
@@ -361,30 +357,54 @@ impl Server {
             }
         };
 
-        // lock the rooms: this is blocking the whole server but prevents TOCTOU bugs.
-        {
-            let mut rooms = self.rooms();
-
-            if rooms.contains_key(map_name) || path.exists() {
-                return Err(Error::MapNameTaken);
-            }
+        let room = if let Some(maps_dir) = self.maps_dir.as_ref() {
+            let path = maps_dir.join(map_name);
+            let map_path = path.join("map.map");
 
             std::fs::create_dir(&path).map_err(|e| Error::ServerError(e.to_string().into()))?;
             map.save_file(&map_path)
                 .map_err(|e| Error::MapError(e.to_string()))?;
 
-            log::debug!("created map '{}'", path.display());
-
-            let mut new_room =
+            let mut room =
                 Room::new_from_dir(path).ok_or(Error::ServerError("map creation failed".into()))?;
 
-            new_room.config.access = creation.access.unwrap_or(MapAccess::Public);
-            new_room
-                .save_config()
+            room.config.access = creation.access.unwrap_or(MapAccess::Public);
+            room.save_config()
                 .map_err(|e| Error::ServerError(e.into()))?;
-            rooms.insert(map_name.to_owned(), Arc::new(new_room));
+            room
+        } else if let Some(data_dir) = self.data_dir.as_ref() {
+            let mut map_path = data_dir.join("maps").join(map_name);
+            map_path.set_extension("map");
+            let am_path = data_dir.join("editor/automap");
+
+            if map_path.exists() {
+                return Err(Error::MapNameTaken);
+            }
+
+            map.save_file(&map_path)
+                .map_err(|e| Error::MapError(e.to_string()))?;
+
+            let mut room = Room::new_from_files(map_path, None, Some(am_path))
+                .ok_or(Error::ServerError("map creation failed".into()))?;
+
+            room.config.access = creation.access.unwrap_or(MapAccess::Public);
+            room
+        } else {
+            return Err(Error::BadRequest("missing map path".into()));
+        };
+
+        // lock the rooms: this is blocking the whole server but prevents TOCTOU bugs.
+        {
+            let mut rooms = self.rooms();
+
+            if rooms.contains_key(map_name) {
+                return Err(Error::MapNameTaken);
+            } else {
+                rooms.insert(map_name.to_owned(), Arc::new(room));
+            }
         }
 
+        log::debug!("created map '{}'", map_name);
         Ok(())
     }
 
@@ -1236,12 +1256,11 @@ impl Server {
             return Err(Error::InvalidFileName);
         }
 
-        let mut path = self
+        let path = self
             .room(map_name)?
             .automapper_path()
             .ok_or(Error::AutomapperNotFound)?
-            .to_owned();
-        path.push(am);
+            .join(am);
 
         if is_automapper(&path).is_none() {
             return Err(Error::AutomapperNotFound);
@@ -1273,14 +1292,9 @@ impl Server {
                 .to_string_lossy()
         );
 
-        let mut rpp_exe = rpp_path.clone();
-        rpp_exe.push("rpp");
-
-        let mut rpp_base_r = rpp_path.clone();
-        rpp_base_r.push("base.r");
-
-        let mut rpp_base_p = rpp_path.clone();
-        rpp_base_p.push("base.p");
+        let rpp_exe = rpp_path.join("rpp");
+        let rpp_base_r = rpp_path.join("base.r");
+        let rpp_base_p = rpp_path.join("base.p");
 
         let exec = std::process::Command::new(&rpp_exe)
             .current_dir(root)
@@ -1327,15 +1341,16 @@ impl Server {
 
         let room = self.room(map_name)?;
 
-        let mut path = room
+        let path = room
             .automapper_path()
-            .ok_or(Error::AutomapperNotFound)?
-            .to_owned();
-        path.push(am);
+            .ok_or(Error::ServerError(
+                "No automapper directory available for this map".into(),
+            ))?
+            .join(am);
 
         let kind = is_automapper(&path).ok_or(Error::InvalidFileName)?;
 
-        std::fs::create_dir(room.automapper_path().unwrap()).ok();
+        std::fs::create_dir_all(room.automapper_path().unwrap()).ok();
         std::fs::write(&path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
 
         if kind == AutomapperKind::RulesPP {
@@ -1365,12 +1380,11 @@ impl Server {
             return Err(Error::InvalidFileName);
         }
 
-        let mut path = self
+        let path = self
             .room(map_name)?
             .automapper_path()
             .ok_or(Error::AutomapperNotFound)?
-            .to_owned();
-        path.push(am);
+            .join(am);
 
         if is_automapper(&path).is_none() {
             return Err(Error::InvalidFileName);
@@ -1420,11 +1434,10 @@ impl Server {
             .ok_or(Error::LayerNotFound)?;
 
         if let twmap::Layer::Tiles(layer) = layer {
-            let mut am_path = room
+            let am_path = room
                 .automapper_path()
                 .ok_or(Error::AutomapperNotFound)?
-                .to_owned();
-            am_path.push(format!("{image_name}.rules"));
+                .join(format!("{image_name}.rules"));
             let file = std::fs::read_to_string(am_path).map_err(|_| Error::AutomapperNotFound)?;
             let automapper = twmap::automapper::Automapper::parse(image_name, &file)
                 .map_err(|e| Error::AutomapperError(e.to_string()))?;

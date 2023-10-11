@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
@@ -132,6 +132,7 @@ pub enum Version {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapCreation {
+    #[serde(default)]
     pub version: Option<Version>,
     #[serde(default)]
     pub access: Option<MapAccess>,

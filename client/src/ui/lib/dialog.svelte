@@ -24,6 +24,10 @@
   function onNo(id: number) {
     dispatch('close', [id, false])
   }
+
+  function title(type: string) {
+    return type[0].toUpperCase() + type.slice(1)
+  }
 </script>
 
 <svelte:options accessors/>
@@ -48,7 +52,8 @@
       {:else}
           <ToastNotification
             kind={type}
-            title={message}
+            title={title(type)}
+            subtitle={message}
             on:close={() => onClose(id)}
             hideCloseButton={controls !== 'closable'}
           >

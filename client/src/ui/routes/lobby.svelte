@@ -276,7 +276,7 @@
           .
         </p>
         <p>
-          The project is currently in beta, expect some bugs and missing features! Please report
+          The project is currently in beta, expect some bugs and missing features. Please report
           your bugs and make suggestions on the
           <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/issues">GitHub issues page</a>
           . Have fun!
@@ -298,7 +298,7 @@
           {@const status = serverStatuses[i]}
           <RadioTile value={'' + i} checked={serverId === i} on:click={() => selectServer(i)}>
             <div style="font-weight: bold">{server.name}</div>
-            <div>({server.host}{server.encrypted ? '' : ', unencrypted'})</div>
+            <div>({server.host}:{server.port}{server.encrypted ? '' : ', unencrypted'})</div>
             <div>
               <InlineLoading
                 status={statusString[status][0]}
@@ -378,6 +378,7 @@
 
 <Modal
   hasForm
+  preventCloseOnClickOutside={true}
   modalHeading="Add a server"
   primaryButtonText="Save"
   secondaryButtonText="Cancel"
@@ -410,6 +411,7 @@
 
 <Modal
   hasForm
+  preventCloseOnClickOutside={true}
   modalHeading="Create a map"
   primaryButtonText="Create"
   secondaryButtonText="Cancel"

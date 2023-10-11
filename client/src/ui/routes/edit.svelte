@@ -22,7 +22,7 @@
   })()
 
   function serverOnError(e: string) {
-    showError('Server Error: ' + e)
+    showError(e[0].toUpperCase() + e.slice(1))
   }
 
   onMount(() => {

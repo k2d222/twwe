@@ -20,9 +20,17 @@ pub struct Cli {
     #[clap(value_parser, short, long, requires = "cert")]
     pub key: Option<PathBuf>,
 
-    /// path to rules++ executable
+    /// path to the maps directories (containing sub-directories containing map.map, config.json etc.)
+    /// must contain at least one.
     #[clap(name = "maps", value_parser, long, default_value = "maps")]
     pub maps_dirs: Vec<PathBuf>,
+
+    /// path to ddnet data directories, if you want to read maps from there.
+    /// Map will be read in the maps sub-directory, automappers in editor/automap, map
+    /// config is volatile for now. Automappers will be shared between all maps in the
+    /// same data directory.
+    #[clap(name = "data", value_parser, long)]
+    pub data_dirs: Vec<PathBuf>,
 
     /// Directory of static files to serve
     #[clap(name = "static", value_parser, short, long)]
