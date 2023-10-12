@@ -8,7 +8,7 @@ use std::{
     sync::Arc,
 };
 
-use axum::extract::ws::Message;
+use axum_tungstenite::Message as WebSocketMessage;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use crate::{map_cfg::MapConfig, protocol::*};
 
-type Tx = UnboundedSender<Message>;
+type Tx = UnboundedSender<WebSocketMessage>;
 
 // taken as-is from twmap
 trait ViewAsBytes: View {

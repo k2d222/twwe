@@ -1,13 +1,20 @@
 use std::{
     collections::HashMap,
+    future::Future,
     net::SocketAddr,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex, MutexGuard, RwLock},
 };
 
-use axum::extract::ws::{self, WebSocket};
-use futures::{channel::mpsc::unbounded, StreamExt, TryStreamExt};
+use axum_tungstenite::Message as WebSocketMessage;
+use axum_tungstenite::WebSocket;
+use futures::{
+    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+    StreamExt, TryStreamExt,
+};
+use futures_util::stream;
 use image::ImageFormat;
+use tokio_tungstenite::{connect_async, tungstenite};
 
 use crate::{
     base64::Base64,
@@ -21,11 +28,21 @@ use crate::{
     util::{macros::apply_partial, *},
 };
 
+type Tx = UnboundedSender<WebSocketMessage>;
+type Rx = UnboundedReceiver<WebSocketMessage>;
+
+pub struct Bridge {
+    server_tx: Tx,
+    peers_tx: HashMap<SocketAddr, Tx>,
+}
+
 pub struct Server {
     rooms: Mutex<HashMap<String, Arc<Room>>>,
     rpp_path: Option<PathBuf>,
     maps_dir: Option<PathBuf>,
     data_dir: Option<PathBuf>,
+    bridge_out: Mutex<Option<Tx>>,
+    bridge_in: RwLock<HashMap<SocketAddr, Bridge>>,
 }
 
 impl Server {
@@ -35,6 +52,8 @@ impl Server {
             rpp_path: cli.rpp_path.clone(),
             maps_dir: cli.maps_dirs.get(0).cloned(),
             data_dir: cli.data_dirs.get(0).cloned(),
+            bridge_out: Default::default(),
+            bridge_in: Default::default(),
         }
     }
 
@@ -51,7 +70,7 @@ impl Server {
 }
 
 impl Server {
-    fn send(&self, peer: &Peer, id: Option<u32>, msg: Message) {
+    fn send(peer: &Peer, id: Option<u32>, msg: Message) {
         let packet = SendPacket {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::SystemTime::UNIX_EPOCH)
@@ -61,7 +80,7 @@ impl Server {
             content: msg,
         };
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
-        peer.tx.unbounded_send(ws::Message::Text(str)).ok(); // this is ok to fail (peer logout)
+        peer.tx.unbounded_send(WebSocketMessage::Text(str)).ok(); // this is ok to fail (peer logout)
     }
 
     fn broadcast_to_lobby(&self, msg: Message) {
@@ -75,7 +94,7 @@ impl Server {
         };
 
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
-        let msg = ws::Message::Text(str);
+        let msg = WebSocketMessage::Text(str);
 
         log::warn!("TODO: broadcast_to_lobby");
     }
@@ -91,7 +110,7 @@ impl Server {
         };
 
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
-        let msg = ws::Message::Text(str);
+        let msg = WebSocketMessage::Text(str);
 
         for p in room.peers().values() {
             p.tx.unbounded_send(msg.to_owned()).ok();
@@ -109,7 +128,7 @@ impl Server {
         };
 
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
-        let msg = ws::Message::Text(str);
+        let msg = WebSocketMessage::Text(str);
 
         if let Some(room) = peer.room.clone() {
             for (addr, p) in room.peers().iter() {
@@ -142,6 +161,13 @@ impl Server {
             }
             Request::DeleteMap(map_name) => self.delete_map(&map_name).map(|()| Response::Ok),
             Request::Save => self.save_map(map_name?).map(|()| Response::Ok),
+            Request::Bridge(url) => {
+                tokio::spawn(async {
+                    // let res = self.open_bridge(&url).await;
+                    // println!("{res:?}");
+                });
+                Ok(Response::Ok)
+            }
             Request::Cursor(req) => self.set_cursor(peer, *req).map(|()| Response::Ok),
             Request::Get(req) => match req {
                 GetReq::Users => self.get_users(map_name?).map(Response::Users),
@@ -217,7 +243,7 @@ impl Server {
     }
 
     fn do_respond(&self, peer: &Peer, packet: &RecvPacket, resp: Result<Response, Error>) {
-        self.send(peer, packet.id, Message::Response(resp.clone()));
+        Server::send(peer, packet.id, Message::Response(resp.clone()));
         if resp.is_ok() {
             match &packet.content {
                 Request::LeaveMap(map_name) | Request::JoinMap(map_name) => self
@@ -238,6 +264,9 @@ impl Server {
                 Request::Save => {
                     self.broadcast_to_others(peer, Message::Broadcast(Broadcast::Saved))
                 }
+                Request::Bridge(_) => {
+                    println!("todo");
+                }
                 Request::Create(_) | Request::Edit(_) | Request::Delete(_) | Request::Move(_) => {
                     self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
                 }
@@ -251,8 +280,24 @@ impl Server {
         self.do_respond(peer, &packet, resp);
     }
 
+    pub fn handle_ws_message(&self, peer: &mut Peer, msg: &str) {
+        // log::debug!("text message received from {}: {}", addr, text);
+        match serde_json::from_str(msg) {
+            Ok(req) => {
+                self.handle_request(peer, req);
+            }
+            Err(e) => {
+                log::error!("failed to parse message: {} in {}", e, msg);
+                Server::send(
+                    &peer,
+                    None,
+                    Message::Response(Err(Error::BadRequest(e.to_string()))),
+                )
+            }
+        };
+    }
+
     pub async fn handle_websocket(&self, socket: WebSocket, addr: SocketAddr) {
-        // insert peer in peers
         let (tx, ws_recv) = socket.split();
         let (ws_send, rx) = unbounded();
         let fut_send = rx.map(Ok).forward(tx);
@@ -260,27 +305,14 @@ impl Server {
         let mut peer = Peer::new(addr, ws_send);
 
         let fut_recv = ws_recv.try_for_each(|msg| {
-            if let ws::Message::Text(text) = msg {
-                // log::debug!("text message received from {}: {}", addr, text);
-
-                match serde_json::from_str(&text) {
-                    Ok(req) => {
-                        self.handle_request(&mut peer, req);
-                    }
-                    Err(e) => {
-                        log::error!("failed to parse message: {} in {}", e, &text);
-                        self.send(
-                            &peer,
-                            None,
-                            Message::Response(Err(Error::BadRequest(e.to_string()))),
-                        )
-                    }
-                };
+            if let WebSocketMessage::Text(text) = msg {
+                self.handle_ws_message(&mut peer, &text);
             }
 
             futures::future::ok(())
         });
 
+        // wait for either sender or receiver to complete: this means the connection is closed.
         futures::future::select(fut_send, fut_recv).await;
 
         if let Some(room) = &peer.room {
@@ -290,6 +322,51 @@ impl Server {
         self.broadcast_users(&peer);
 
         log::info!("disconnected {}", &addr);
+    }
+
+    pub async fn handle_bridge(&self, socket: WebSocket, addr: SocketAddr) {
+        let (tx, ws_recv) = socket.split();
+        let (ws_send, rx) = unbounded();
+        let fut_send = rx.map(Ok).forward(tx);
+
+        let bridge = Bridge {
+            server_tx: ws_send,
+            peers_tx: Default::default(),
+        };
+
+        self.bridge_in.write().unwrap().insert(addr, bridge);
+
+        // forward all messages to the right peer
+        let fut_recv = ws_recv.try_chunks(2).try_for_each(|v| {
+            || -> Option<()> {
+                let addr_msg = v.get(0)?;
+                let addr_str = match addr_msg {
+                    WebSocketMessage::Text(addr_str) => Some(addr_str),
+                    _ => None,
+                }?;
+                let peer_addr: SocketAddr = serde_json::from_str(&addr_str).ok()?;
+                let payload_msg = v.get(1)?;
+                self.bridge_in
+                    .read()
+                    .ok()?
+                    .get(&addr)?
+                    .peers_tx
+                    .get(&peer_addr)
+                    .map(|tx| {
+                        tx.unbounded_send(addr_msg.clone()).ok();
+                        tx.unbounded_send(payload_msg.clone()).ok();
+                    });
+                Some(())
+            }();
+            futures::future::ok(())
+        });
+
+        // wait for either sender or receiver to complete: this means the connection is closed.
+        futures::future::select(fut_send, fut_recv).await;
+
+        self.bridge_in.write().unwrap().remove(&addr);
+
+        log::info!("bridge disconnected {}", &addr);
     }
 }
 
@@ -1369,7 +1446,7 @@ impl Server {
                     self.broadcast_to_room(&room, message);
                     Ok(())
                 })
-                .unwrap_or_else(|err| self.send(peer, None, Message::Response(Err(err))));
+                .unwrap_or_else(|err| Server::send(peer, None, Message::Response(Err(err))));
         }
 
         Ok(())
@@ -1655,5 +1732,55 @@ impl Server {
             }
             None => Err(Error::NotJoined),
         }
+    }
+
+    // COMBAK: this is such a mess ☹
+    pub async fn open_bridge(server: Arc<Server>, url: &str) -> Result<(), Error> {
+        let (socket, _resp) = connect_async(url).await.map_err(|_| Error::BridgeFailure)?;
+        let (ws_send, ws_recv) = socket.split();
+        let (tx, rx) = unbounded();
+        let fut_send = rx.map(Ok).forward(ws_send);
+
+        let recv = ws_recv.try_chunks(2); // receives messages 2 by 2
+        let mut bridge_peers: HashMap<SocketAddr, Peer> = Default::default();
+
+        let fut_recv = recv.try_for_each(move |v| {
+            || -> Option<()> {
+                let addr_msg = v.get(0)?;
+                let payload_msg = v.get(1)?;
+
+                match (addr_msg, payload_msg) {
+                    (tungstenite::Message::Text(addr_str), tungstenite::Message::Text(payload)) => {
+                        let addr: SocketAddr = serde_json::from_str(&addr_str).ok()?;
+                        let peer = match bridge_peers.get_mut(&addr) {
+                            Some(peer) => peer,
+                            None => {
+                                let (peer_send, peer_recv) = unbounded();
+                                let addr_msg = addr_msg.clone();
+                                let fut = peer_recv
+                                    .flat_map(move |payload| {
+                                        stream::iter(vec![addr_msg.clone(), payload])
+                                    })
+                                    .map(Ok)
+                                    .forward(tx.clone());
+                                tokio::spawn(fut);
+                                let peer = Peer::new(addr, peer_send);
+                                bridge_peers.insert(addr, peer);
+                                bridge_peers.get_mut(&addr).unwrap()
+                            }
+                        };
+                        server.handle_ws_message(peer, payload);
+                    }
+                    _ => (),
+                };
+                Some(())
+            }();
+            futures::future::ok(())
+        });
+
+        tokio::spawn(fut_send);
+        tokio::spawn(fut_recv);
+
+        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, path::PathBuf};
+use std::{collections::HashMap, fmt::Display, net::SocketAddr, path::PathBuf};
 
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
@@ -408,6 +408,8 @@ pub enum Request {
     DeleteMap(String),
     #[serde(rename = "save")]
     Save,
+    #[serde(rename = "bridge")]
+    Bridge(String),
     #[serde(rename = "cursor")]
     Cursor(Box<Cursor>),
     #[serde(untagged)]

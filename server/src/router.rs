@@ -2,7 +2,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     body::Bytes,
-    extract::{ConnectInfo, DefaultBodyLimit, Path, State, WebSocketUpgrade},
+    extract::{ConnectInfo, DefaultBodyLimit, Path, State},
     headers::UserAgent,
     http::Method,
     response::IntoResponse,
@@ -10,6 +10,7 @@ use axum::{
     Json, TypedHeader,
 };
 use axum_server::tls_rustls::RustlsConfig;
+use axum_tungstenite::WebSocketUpgrade;
 use tower_http::{
     cors,
     services::{ServeDir, ServeFile},
@@ -36,6 +37,7 @@ impl Router {
 
         let mut router = axum::Router::new()
             .route("/ws", get(route_websocket))
+            .route("/bridge", get(route_get_bridge).post(route_post_bridge))
             .route("/maps", get(route_get_maps))
             .route(
                 "/maps/:map",
@@ -138,6 +140,29 @@ async fn route_websocket(
     log::info!("`{user_agent}` at {addr} connected.");
 
     ws.on_upgrade(move |socket| async move { server.handle_websocket(socket, addr).await })
+}
+
+async fn route_get_bridge(
+    State(server): State<Arc<Server>>,
+    ws: WebSocketUpgrade,
+    user_agent: Option<TypedHeader<UserAgent>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> impl IntoResponse {
+    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
+        user_agent.to_string()
+    } else {
+        String::from("Unknown browser")
+    };
+    log::info!("`{user_agent}` at {addr} started bridging.");
+
+    ws.on_upgrade(move |socket| async move { server.handle_bridge(socket, addr).await })
+}
+
+async fn route_post_bridge(
+    State(server): State<Arc<Server>>,
+    Json(url): Json<String>,
+) -> impl IntoResponse {
+    Server::open_bridge(server, &url).await
 }
 
 async fn route_get_maps(State(server): State<Arc<Server>>) -> impl IntoResponse {

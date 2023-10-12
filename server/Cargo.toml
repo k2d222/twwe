@@ -10,7 +10,7 @@ edition = "2021"
 [dependencies]
 
 tokio = { version = "1.18", features = ["full"] }
-tokio-tungstenite = { version = "0.17", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.20", features = ["rustls-tls-webpki-roots"] }
 tokio-rustls = "0.23"
 rustls-pemfile = "0.2"
 webpki-roots = "0.22"
@@ -27,7 +27,7 @@ glob = "0.3"
 parking_lot = "0.12"
 clap = { version = "3.0", features = ["derive"] }
 regex = "1.6"
-axum = { version = "0.6.8", features = ["ws", "headers", "tokio", "multipart"] }
+axum = { version = "0.6.8", features = ["headers", "tokio", "multipart"] }
 axum-server = { version = "0.3", features = ["tls-rustls"] }
 tower-http = {version = "0.4.0", features = ["fs", "cors"] }
 tokio-util = "0.7.7"
@@ -42,6 +42,7 @@ thiserror = "1.0.44"
 sanitize-filename = "0.5.0"
 partial_derive = "0.1.0"
 serde_with = "3.3.0"
+axum-tungstenite = "0.3.0"
 
 
 [lib]
