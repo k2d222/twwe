@@ -577,6 +577,7 @@ $header-h: 3rem;
 .edit-group,
 .edit-quad,
 .edit-info,
+.edit-sharing,
 .edit-env-point,
 .edit-automapper,
 .edit-multiple,
@@ -607,6 +608,12 @@ $header-h: 3rem;
   input {
     min-width: 4rem;
     max-width: 8rem;
+  }
+}
+
+.edit-sharing {
+  input {
+    max-width: 20rem;
   }
 }
 

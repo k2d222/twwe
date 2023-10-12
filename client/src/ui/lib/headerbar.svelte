@@ -8,6 +8,7 @@
     Image as ImagesIcon,
     Music as SoundsIcon,
     Code as AutomapperIcon,
+    Share as ShareIcon,
   } from 'carbon-icons-svelte'
   import {
     OverflowMenu,
@@ -19,9 +20,11 @@
   import { peers, map, anim, view, View } from '../global'
   import * as Actions from '../actions'
   import InfoEditor from './editInfo.svelte'
+  import SharingEditor from './editSharing.svelte'
   import TeesIcon from '../../../assets/ddnet/tees_symbolic.svg?component'
 
   let infoEditorVisible = false
+  let shareVisible = false
 
   function onToggleLayers() {
     $view = View.Layers
@@ -51,10 +54,6 @@
     infoEditorVisible = !infoEditorVisible
   }
 
-  async function onInfoClose() {
-    infoEditorVisible = false
-  }
-
   function onRenameMap() {
     alert("TODO renaming maps is not implemented yet.")
   }
@@ -69,6 +68,10 @@
 
   function onDeleteMap() {
     Actions.deleteMap()
+  }
+
+  function onShareMap() {
+    shareVisible = true
   }
 </script>
 
@@ -119,16 +122,33 @@
     <div id="users">
       <TeesIcon /> <span>{$peers}</span>
     </div>
+    {#if '__TAURI__' in window || import.meta.env.MODE === 'development'}
+      <button class="header-btn" id="share-btn" on:click={onShareMap}>
+        <ShareIcon size={20} title="Share" />
+      </button>
+    {/if}
   </div>
 
   <ComposedModal
     open={infoEditorVisible}
-    on:close={onInfoClose}
+    on:close={() => infoEditorVisible = false}
     selectorPrimaryFocus=".bx--modal-close"
   >
     <ModalHeader title="Map Properties" />
     <ModalBody hasForm>
       <InfoEditor />
+    </ModalBody>
+  </ComposedModal>
+
+  <ComposedModal
+    size="sm"
+    open={shareVisible}
+    on:close={() => shareVisible = false}
+    selectorPrimaryFocus=".bx--modal-close"
+  >
+    <ModalHeader title="Sharing options" />
+    <ModalBody hasForm>
+      <SharingEditor/>
     </ModalBody>
   </ComposedModal>
 

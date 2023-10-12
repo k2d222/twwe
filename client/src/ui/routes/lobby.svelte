@@ -34,6 +34,7 @@
     Add as AddIcon,
     Login as JoinIcon,
     TrashCan as DeleteIcon,
+    Password as KeyIcon,
   } from 'carbon-icons-svelte'
   import { createMap, download, queryMaps, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
@@ -92,6 +93,11 @@
     open: false,
     name: '',
     onConfirm: () => {},
+  }
+
+  let modalAccessKey = {
+    open: false,
+    name: '',
   }
 
   const statusString: { [k in ServerStatus]: [SpinnerStatus, string] } = {
@@ -165,7 +171,7 @@
         showError('Map deletion failed: ' + e)
       }
       modalConfirmDelete.open = false
-      serverId = serverId
+      selectServer(serverId)
     }
   }
 
@@ -227,11 +233,7 @@
 
       clearDialog(id)
       if (access === 'unlisted') {
-        const url = window.location.origin + '/edit/' + encodeURIComponent(name)
-        showWarning(
-          "You created a private map that won't be publicly listed. To access it in the future, use this URL: " +
-            url
-        )
+        showWarning("You created a map that won't be publicly listed. To access it in the future, use the access key '" + name + "'.")
       }
       navigate('/edit/' + name)
     }
@@ -349,6 +351,7 @@
           <Toolbar>
             <ToolbarContent>
               <ToolbarSearch persistent value="" shouldFilterRows />
+              <Button kind="ghost" icon={KeyIcon} on:click={() => modalAccessKey.open = true}>Access key</Button>
             </ToolbarContent>
           </Toolbar>
           <svelte:fragment slot="cell" let:cell>
@@ -498,6 +501,24 @@
     The map "{modalConfirmDelete.name}" will be permanently deleted from the server. Make sure you
     made a backup.
   </p>
+</Modal>
+
+<Modal
+  size="sm"
+  bind:open={modalAccessKey.open}
+  modalHeading="Join a map with an access key"
+  primaryButtonText="Join"
+  secondaryButtonText="Close"
+  selectorPrimaryFocus="#access-key"
+  on:click:button--secondary={() => (modalAccessKey.open = false)}
+  on:submit={() => onJoinMap(modalAccessKey.name)}
+>
+  <br />
+  <TextInput
+    bind:value={modalAccessKey.name}
+    id="access-key"
+    labelText="Access key"
+  />
 </Modal>
 
 <style>
