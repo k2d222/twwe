@@ -1,14 +1,15 @@
-use std::{collections::HashMap, fmt::Display, net::SocketAddr, path::PathBuf};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use fixed::types::{I17F15, I22F10, I27F5};
 use serde::{Deserialize, Serialize};
 use serde_with::{
-    rust::double_option, serde_as, skip_serializing_none, DeserializeAs, SerializeAs,
+    rust::double_option, serde_as, skip_serializing_none, DeserializeAs, DisplayFromStr,
+    SerializeAs,
 };
 use twmap::{AutomapperConfig, EnvPoint, Position, Volume};
 use vek::{Extent2, Rect, Rgba, Uv, Vec2};
 
-use crate::{base64::Base64, error::Error, map_cfg::MapAccess, util::serialize_display};
+use crate::{base64::Base64, error::Error, map_cfg::MapAccess};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -29,6 +30,13 @@ use crate::{base64::Base64, error::Error, map_cfg::MapAccess, util::serialize_di
 // For those requests, the client has to wait for the server which leads to poor ux.
 // This could be fixed in the future by implementing a history and versionning
 // system similar to how databases handle concurrent modifications.
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BridgeConfig {
+    pub map: String,
+    pub key: String,
+    pub url: String,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapConfig {
@@ -280,6 +288,13 @@ pub enum Image {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HttpReq {
+    pub method: String,
+    pub path: String,
+    pub body: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum GetReq {
     #[serde(rename = "get/map")]
@@ -402,14 +417,14 @@ pub enum Request {
     JoinMap(String),
     #[serde(rename = "leave")]
     LeaveMap(String),
+    #[serde(rename = "get")]
+    GetMap(String),
     #[serde(rename = "create")]
     CreateMap(String, Box<MapCreation>),
     #[serde(rename = "delete")]
     DeleteMap(String),
     #[serde(rename = "save")]
     Save,
-    #[serde(rename = "bridge")]
-    Bridge(String),
     #[serde(rename = "cursor")]
     Cursor(Box<Cursor>),
     #[serde(untagged)]
@@ -425,7 +440,7 @@ pub enum Request {
 }
 
 #[serde_as]
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Response {
     Ok,
@@ -447,7 +462,7 @@ pub enum Response {
 }
 
 // Messages that are sent unrequested from the client.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "snake_case")]
 pub enum Broadcast {
     MapCreated(String),
@@ -456,15 +471,20 @@ pub enum Broadcast {
     Saved,
 }
 
-#[derive(Serialize)]
+#[serde_as]
+#[derive(Serialize, Deserialize)]
 #[serde(remote = "Result", rename_all = "lowercase")]
-enum SerdeResult<T, E: Display> {
+enum SerdeResult<T, E>
+where
+    E: Display + FromStr,
+    E::Err: Display,
+{
     Ok(T),
-    #[serde(serialize_with = "serialize_display")]
-    Err(E),
+    Err(#[serde_as(as = "DisplayFromStr")] E),
 }
 
-#[derive(Debug, Serialize)]
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Message {
     Request(Request),

@@ -1,9 +1,9 @@
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, convert::Infallible, fmt::Display, str::FromStr};
 
 use axum::{http::StatusCode, response::IntoResponse};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Error {
     // 404 not found
     MapNotFound,
@@ -46,7 +46,9 @@ pub enum Error {
     TilesOutOfBounds,
     LayerHasNoImage,
 
+    BridgeNotFound,
     BridgeFailure,
+    BridgeClosed,
 
     AlreadyJoined,
     NotJoined,
@@ -105,7 +107,9 @@ impl Display for Error {
             Error::RoomNotEmpty => write!(f, "room is not empty"),
             Error::TilesOutOfBounds => write!(f, "tiles out of layer bounds"),
             Error::LayerHasNoImage => write!(f, "layer has no image"),
-            Error::BridgeFailure => write!(f, "failed to connect to remote server"),
+            Error::BridgeNotFound => write!(f, "failed to connect to the remote server"),
+            Error::BridgeFailure => write!(f, "error with the remote server"),
+            Error::BridgeClosed => write!(f, "connection with the remote server closed"),
             Error::AlreadyJoined => write!(f, "already joined"),
             Error::NotJoined => write!(f, "not joined"),
             Error::MapError(x) => write!(f, "twmap error: {x}"),
@@ -128,6 +132,14 @@ impl Display for Error {
             Error::ServerError(x) => write!(f, "internal server error: {x}"),
             Error::ToDo => write!(f, "this functionality is not implemented yet"),
         }
+    }
+}
+
+impl FromStr for Error {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Error::ServerError(s.to_owned().into()))
     }
 }
 
@@ -166,7 +178,9 @@ impl IntoResponse for Error {
             Error::RoomNotEmpty => StatusCode::BAD_REQUEST,
             Error::TilesOutOfBounds => StatusCode::BAD_REQUEST,
             Error::LayerHasNoImage => StatusCode::BAD_REQUEST,
-            Error::BridgeFailure => StatusCode::BAD_REQUEST,
+            Error::BridgeNotFound => StatusCode::BAD_GATEWAY,
+            Error::BridgeFailure => StatusCode::BAD_GATEWAY,
+            Error::BridgeClosed => StatusCode::BAD_GATEWAY,
             Error::AlreadyJoined => StatusCode::BAD_REQUEST,
             Error::NotJoined => StatusCode::BAD_REQUEST,
             Error::MapError(_) => StatusCode::BAD_REQUEST,

@@ -2,6 +2,8 @@
   import { InlineNotification, Toggle } from "carbon-components-svelte"
   import storage from "../../storage"
   import { generate } from 'random-words'
+  import { serverCfg, map } from "../global"
+  import { serverHttpUrl, serverWsUrl } from "../../server/util"
 
   let serverId = storage.load('currentServer')
   let serverCfgs = storage.load('servers')
@@ -10,7 +12,35 @@
   let shareId = 0
   let shareName = generate({ exactly: 4, join: '-' })
   let shareEnabled = false
+
   $: shareCfg = serverCfgs[shareId]
+
+  async function startBridge(): Promise<void> {
+    const httpUrl = serverHttpUrl($serverCfg) + '/bridge'
+    const shareUrl = serverWsUrl(shareCfg) + '/bridge'
+    const json = {
+      url: shareUrl,
+      map: $map.name,
+      key: shareName,
+    }
+    await fetch(httpUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(json)
+    })
+  }
+
+  async function stopBridge(): Promise<void> {
+    // TODO
+  }
+
+  function onToggleSharing() {
+    if (shareEnabled) {
+      startBridge()
+    } else {
+      stopBridge()
+    }
+  }
 
 </script>
 
@@ -43,7 +73,7 @@
       title="How can others connect?"
       subtitle="From the start screen, add a server with address {shareCfg.host} and port {shareCfg.port}. Then, join the map with the Access key 🔑 '{shareName}'."
     />
-    <Toggle bind:toggled={shareEnabled} labelA="Sharing disabled" labelB="Sharing enabled" />
+    <Toggle on:toggle={onToggleSharing} bind:toggled={shareEnabled} labelA="Sharing disabled" labelB="Sharing enabled" />
   {/if}
 </div>
 

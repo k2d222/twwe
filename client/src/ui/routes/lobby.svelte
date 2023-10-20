@@ -40,11 +40,12 @@
   import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
   import type { MapDetail } from '../../server/protocol'
   import { onMount } from 'svelte'
+  import { serverHttpUrl } from '../../server/util'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'
 
-  let serverConfs = storage.load('servers')
+  let serverCfgs = storage.load('servers')
   let serverId = storage.load('currentServer')
 
   let maps: MapDetail[] = []
@@ -108,9 +109,9 @@
     online: ['finished', 'Online'],
   }
 
-  $: serverStatuses = serverConfs.map<ServerStatus>(_ =>  'unknown')
-  $: serverConf = serverConfs[serverId]
-  $: httpUrl = `http${serverConf.encrypted ? 's' : ''}://${serverConf.host}:${serverConf.port}`
+  $: serverStatuses = serverCfgs.map<ServerStatus>(_ =>  'unknown')
+  $: serverCfg = serverCfgs[serverId]
+  $: httpUrl = serverHttpUrl(serverCfg)
 
   onMount(() => {
     selectServer(serverId)
@@ -133,13 +134,13 @@
     serverId = id
     maps = []
 
-    if (serverId >= serverConfs.length)
+    if (serverId >= serverCfgs.length)
       serverId = 0
 
     setServerStatus(id, 'connecting')
 
-    const serverConf = serverConfs[id]
-    const httpUrl = `http${serverConf.encrypted ? 's' : ''}://${serverConf.host}:${serverConf.port}`
+    const serverCfg = serverCfgs[id]
+    const httpUrl = serverHttpUrl(serverCfg)
 
     queryMaps(httpUrl)
       .then(m => {
@@ -157,6 +158,19 @@
 
   function onJoinMap(name: string) {
     navigate('/edit/' + name)
+  }
+
+  function onJoinBridge(key: string) {
+    const conf: ServerConfig = {
+      ...serverCfg,
+      name: 'remote: ' + key,
+      path: (serverCfg.path ?? '') + '/bridge/' + key
+    }
+    serverCfgs.push(conf)
+    storage.save('servers', serverCfgs)
+    selectServer(serverCfgs.length - 1)
+    modalAccessKey.open = false
+    // navigate('/edit/' + key)
   }
 
   function onDeleteMap(mapName: string) {
@@ -191,16 +205,21 @@
       encrypted,
       port,
     }
-    serverConfs.push(conf)
-    storage.save('servers', serverConfs)
-    serverConfs = serverConfs
+    serverCfgs.push(conf)
+    storage.save('servers', serverCfgs)
+    serverCfgs = serverCfgs
     modalAddServer.open = false
   }
 
   function onDeleteServer(id: number) {
-    serverConfs.splice(id, 1)
-    storage.save('servers', serverConfs)
-    serverConfs = serverConfs
+    serverCfgs.splice(id, 1)
+    storage.save('servers', serverCfgs)
+    if (serverId === id) {
+      selectServer(0)
+    } else if (serverId > id) {
+      selectServer(serverId - 1)
+    }
+    serverCfgs = serverCfgs
   }
 
   async function onCreateMap() {
@@ -296,7 +315,7 @@
         </Button>
       </div>
       <TileGroup>
-        {#each serverConfs as server, i}
+        {#each serverCfgs as server, i}
           {@const status = serverStatuses[i]}
           <RadioTile value={'' + i} checked={serverId === i} on:click={() => selectServer(i)}>
             <div style="font-weight: bold">{server.name}</div>
@@ -511,10 +530,12 @@
   secondaryButtonText="Close"
   selectorPrimaryFocus="#access-key"
   on:click:button--secondary={() => (modalAccessKey.open = false)}
-  on:submit={() => onJoinMap(modalAccessKey.name)}
+  on:submit={() => onJoinBridge(modalAccessKey.name)}
+  primaryButtonDisabled={modalAccessKey.name === ''}
 >
   <br />
   <TextInput
+    required
     bind:value={modalAccessKey.name}
     id="access-key"
     labelText="Access key"

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { server, serverConfig, map, automappers, view, View, reset } from '../global'
+  import { server, serverCfg, map, automappers, view, View, reset } from '../global'
   import { queryMap } from '../lib/util'
   import Editor from '../lib/editor.svelte'
   import EditAutomapper from '../lib/editAutomapper.svelte'
@@ -7,6 +7,7 @@
   import Fence from '../lib/fence.svelte'
   import { onDestroy, onMount } from 'svelte'
   import { showError } from '../lib/dialog'
+  import { serverHttpUrl } from '../../server/util'
 
   export let name: string
 
@@ -14,7 +15,7 @@
     reset()
 
     await $server.query('join', name)
-    const httpUrl = `http${$serverConfig.encrypted ? 's' : ''}://${$serverConfig.host}:${$serverConfig.port}`
+    const httpUrl = serverHttpUrl($serverCfg)
     const map_ = await queryMap(httpUrl, name)
     const ams = await $server.query('get/automappers', undefined)
     $automappers = Object.fromEntries(ams.map(am => [am.name, am]))

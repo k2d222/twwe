@@ -5,16 +5,17 @@
   import Fence from './lib/fence.svelte'
   import storage from '../storage'
   import { WebSocketServer } from '../server/server'
-  import { server, serverConfig } from './global'
+  import { server, serverCfg } from './global'
+  import { serverWsUrl } from '../server/util'
 
   export let url = ''
 
   function joinServer() {
-    const serverConfs = storage.load('servers')
+    const serverCfgs = storage.load('servers')
     const serverId = storage.load('currentServer')
 
-    $serverConfig = serverConfs[serverId]
-    const wsUrl = `ws${$serverConfig.encrypted ? 's' : ''}://${$serverConfig.host}:${$serverConfig.port}/ws`
+    $serverCfg = serverCfgs[serverId]
+    const wsUrl = serverWsUrl($serverCfg)
     $server = new WebSocketServer(wsUrl)
 
     return new Promise((resolve, reject) => {

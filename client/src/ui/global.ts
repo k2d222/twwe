@@ -10,7 +10,7 @@ export enum View {
 }
 
 export const server: Writable<WebSocketServer> = writable(null)
-export const serverConfig: Writable<ServerConfig> = writable(null)
+export const serverCfg: Writable<ServerConfig> = writable(null)
 export const view: Writable<View> = writable(View.Layers)
 
 // map

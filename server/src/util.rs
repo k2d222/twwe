@@ -1,5 +1,4 @@
-use serde::Serializer;
-use std::{fmt::Display, path::Path};
+use std::path::Path;
 
 use crate::{
     protocol::AutomapperKind,
@@ -7,13 +6,13 @@ use crate::{
 };
 
 // TODO: use serde_with's DisplayFromStr?
-pub(crate) fn serialize_display<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-where
-    T: Display,
-    S: Serializer,
-{
-    serializer.collect_str(value)
-}
+// pub(crate) fn serialize_display<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+// where
+//     T: Display,
+//     S: Serializer,
+// {
+//     serializer.collect_str(value)
+// }
 
 // pub(crate) mod serialize_partial_index {
 //     use serde::{de, Deserialize, Deserializer, Serializer};

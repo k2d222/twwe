@@ -133,7 +133,7 @@
     if (!layer)
       return
     try {
-      // await uploadImage($serverConfig.httpUrl, $rmap.map.name, name, file) // TODO return index
+      // await uploadImage($serverCfg.httpUrl, $rmap.map.name, name, file) // TODO return index
       const buf = new Uint8Array(await file.arrayBuffer())
       await $server.query('create/image', [name, bytesToBase64(buf)])
       const index = $rmap.map.images.length - 1

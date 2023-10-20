@@ -1,6 +1,15 @@
+import type { ServerConfig } from "../storage"
 import type { Readable, Writable } from "svelte/store"
 import type { Recv, RecvKey, Send, SendKey } from "./protocol"
 import type { Server } from "./server"
+
+export function serverHttpUrl(conf: ServerConfig) {
+    return `http${conf.encrypted ? 's' : ''}://${conf.host}:${conf.port}${conf.path ?? ''}`
+}
+
+export function serverWsUrl(conf: ServerConfig) {
+    return `ws${conf.encrypted ? 's' : ''}://${conf.host}:${conf.port}${conf.path ?? ''}/ws`
+}
 
 export const skip: unique symbol = Symbol()
 type Skip = typeof skip
@@ -11,7 +20,6 @@ type Pick = typeof pick
 export const cont: unique symbol = Symbol()
 type Cont = typeof cont
 export const _: Cont = cont // alias for placeholder
-
 
 function patternValue(pat: any, val: any): any {
   if (pat === pick) {

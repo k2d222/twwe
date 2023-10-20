@@ -1,8 +1,9 @@
 import { clearDialog, showDialog, showError, showInfo } from "./lib/dialog"
-import { server, serverConfig, rmap, peers } from "./global"
+import { server, serverCfg, rmap, peers } from "./global"
 import { get } from "svelte/store"
 import { navigate } from 'svelte-routing'
 import { download } from "./lib/util"
+import { serverHttpUrl } from "../server/util"
 
 export async function saveMap() {
   const server_ = get(server)
@@ -17,10 +18,10 @@ export async function saveMap() {
 }
 
 export async function downloadMap() {
-  const serverConf_ = get(serverConfig)
+  const serverConf_ = get(serverCfg)
   const rmap_ = get(rmap)
 
-  const httpUrl = `http${serverConf_.encrypted ? 's' : ''}://${serverConf_.host}:${serverConf_.port}`
+  const httpUrl = serverHttpUrl(serverConf_)
 
   download(`${httpUrl}/maps/${rmap_.map.name}`, `${rmap_.map.name}.map`)
 }

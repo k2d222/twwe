@@ -1,4 +1,7 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 use axum::{
     body::Bytes,
@@ -10,13 +13,20 @@ use axum::{
     Json, TypedHeader,
 };
 use axum_server::tls_rustls::RustlsConfig;
+use axum_tungstenite::Message as WebSocketMessage;
 use axum_tungstenite::WebSocketUpgrade;
+use futures::channel::mpsc::unbounded;
+use futures_util::StreamExt;
 use tower_http::{
     cors,
     services::{ServeDir, ServeFile},
 };
 
-use crate::{base64::Base64, protocol::*};
+use crate::{
+    base64::Base64,
+    error::Error,
+    protocol::{self, *},
+};
 use crate::{Cli, Server};
 
 pub struct Router {
@@ -35,9 +45,7 @@ impl Router {
             .allow_credentials(false)
             .allow_headers(cors::Any);
 
-        let mut router = axum::Router::new()
-            .route("/ws", get(route_websocket))
-            .route("/bridge", get(route_get_bridge).post(route_post_bridge))
+        let http_routes = axum::Router::new()
             .route("/maps", get(route_get_maps))
             .route(
                 "/maps/:map",
@@ -77,11 +85,19 @@ impl Router {
             .route(
                 "/maps/:map/map/groups/:group/layers/:layer",
                 delete(route_delete_layer),
-            )
-            // .route(
-            //     "/maps/:map/map/groups/:group/layers/:layer/tiles",
-            //     post(route_post_tiles),
-            // )
+            );
+        // .route(
+        //     "/maps/:map/map/groups/:group/layers/:layer/tiles",
+        //     post(route_post_tiles),
+        // )
+
+        let mut router = http_routes
+            .clone()
+            .route("/ws", get(route_websocket))
+            .route("/ws/bridge", get(route_server_bridge))
+            .route("/bridge", post(route_open_bridge))
+            .route("/bridge/:key/ws", get(route_client_bridge))
+            .route("/bridge/:key/maps/:map", get(route_bridge_get_map))
             .layer(DefaultBodyLimit::max(2 * 1024 * 1024)) // 2 MiB
             .layer(cors)
             .with_state(server);
@@ -99,7 +115,7 @@ impl Router {
     }
 
     pub async fn run(self, args: &Cli) {
-        log::info!("Listening on {}", args.addr);
+        log::info!("listening on {}", args.addr);
 
         match (&args.cert, &args.key) {
             (Some(cert), Some(key)) => {
@@ -126,6 +142,68 @@ impl Router {
     }
 }
 
+async fn bridge_oneshot(
+    server: &Server,
+    key: &str,
+    req: protocol::Request,
+) -> Result<Response, Error> {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), rand::random());
+
+    let pkt = RecvPacket {
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+        id: rand::random(),
+        content: req,
+    };
+
+    let (http_tx, mut http_rx) = unbounded();
+
+    {
+        let mut bridges = server.bridge_in.write().unwrap();
+        let bridge = bridges.values_mut().find(|v| v.key == key).unwrap();
+        bridge.peers_tx.insert(addr, http_tx);
+    }
+    {
+        let bridges = server.bridge_in.read().unwrap();
+        let bridge = bridges.values().find(|v| v.key == key).unwrap();
+
+        let addr_msg = WebSocketMessage::Text(serde_json::to_string(&addr).unwrap());
+        let req_msg = WebSocketMessage::Text(serde_json::to_string(&pkt).unwrap());
+
+        bridge.server_tx.unbounded_send(addr_msg).unwrap();
+        bridge.server_tx.unbounded_send(req_msg).unwrap();
+    }
+
+    let resp = http_rx.next().await.unwrap();
+
+    if let WebSocketMessage::Text(resp_msg) = resp {
+        let resp: SendPacket = serde_json::from_str(&resp_msg).unwrap();
+
+        match resp.content {
+            Message::Response(Ok(resp)) => Ok(resp),
+            _ => Err(Error::BridgeFailure),
+        }
+    } else {
+        Err(Error::BridgeFailure)
+    }
+}
+
+async fn route_bridge_get_map(
+    State(server): State<Arc<Server>>,
+    Path((key, map)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let req = protocol::Request::GetMap(map);
+    let resp = bridge_oneshot(&server, &key, req).await?;
+
+    if let protocol::Response::Map(base64) = resp {
+        Ok(base64.0)
+    } else {
+        Err(Error::BridgeFailure)
+    }
+}
+
 async fn route_websocket(
     State(server): State<Arc<Server>>,
     ws: WebSocketUpgrade,
@@ -137,12 +215,19 @@ async fn route_websocket(
     } else {
         String::from("Unknown browser")
     };
-    log::info!("`{user_agent}` at {addr} connected.");
+    log::info!("client `{user_agent}` at {addr} connected.");
 
     ws.on_upgrade(move |socket| async move { server.handle_websocket(socket, addr).await })
 }
 
-async fn route_get_bridge(
+async fn route_open_bridge(
+    State(server): State<Arc<Server>>,
+    Json(cfg): Json<BridgeConfig>,
+) -> impl IntoResponse {
+    Server::open_bridge(server, &cfg).await
+}
+
+async fn route_server_bridge(
     State(server): State<Arc<Server>>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<UserAgent>>,
@@ -153,16 +238,40 @@ async fn route_get_bridge(
     } else {
         String::from("Unknown browser")
     };
-    log::info!("`{user_agent}` at {addr} started bridging.");
 
-    ws.on_upgrade(move |socket| async move { server.handle_bridge(socket, addr).await })
+    log::info!("remote server `{user_agent}` at {addr} requested bridging.");
+
+    ws.on_upgrade(move |socket| async move {
+        let res = server.handle_server_bridge(socket, addr).await;
+        match res {
+            Ok(()) => log::info!("remote server {addr} bridge closed"),
+            Err(e) => log::error!("remote server bridge closed: {e}"),
+        }
+    })
 }
 
-async fn route_post_bridge(
+async fn route_client_bridge(
+    Path(key): Path<String>,
     State(server): State<Arc<Server>>,
-    Json(url): Json<String>,
+    ws: WebSocketUpgrade,
+    user_agent: Option<TypedHeader<UserAgent>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-    Server::open_bridge(server, &url).await
+    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
+        user_agent.to_string()
+    } else {
+        String::from("Unknown browser")
+    };
+
+    log::info!("client `{user_agent}` at {addr} requested connection to remote with key {key}.");
+
+    ws.on_upgrade(move |socket| async move {
+        let res = server.handle_client_bridge(socket, addr, key).await;
+        match res {
+            Ok(()) => log::info!("client {addr} disconnected from remote"),
+            Err(e) => log::error!("client {addr} disconnected from remote: {e}"),
+        }
+    })
 }
 
 async fn route_get_maps(State(server): State<Arc<Server>>) -> impl IntoResponse {
