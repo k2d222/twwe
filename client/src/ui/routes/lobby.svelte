@@ -170,7 +170,6 @@
     storage.save('servers', serverCfgs)
     selectServer(serverCfgs.length - 1)
     modalAccessKey.open = false
-    // navigate('/edit/' + key)
   }
 
   function onDeleteMap(mapName: string) {

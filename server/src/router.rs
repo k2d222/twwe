@@ -97,7 +97,8 @@ impl Router {
             .route("/bridge_open", post(route_open_bridge))
             .route("/bridge_close", get(route_close_bridge))
             .route("/bridge/:key/ws", get(route_client_bridge))
-            .route("/bridge/:key/maps/:map", get(route_bridge_get_map)) // TODO: add the other routes
+            .route("/bridge/:key/maps/:map", get(route_bridge_get_map)) // TODO: add the other bridge http routes
+            .route("/bridge/:key/maps", get(route_bridge_list_maps))
             .layer(DefaultBodyLimit::max(2 * 1024 * 1024)) // 2 MiB
             .layer(cors)
             .with_state(server);
@@ -204,6 +205,19 @@ async fn route_bridge_get_map(
     }
 }
 
+async fn route_bridge_list_maps(
+    State(server): State<Arc<Server>>,
+    Path(key): Path<String>,
+) -> impl IntoResponse {
+    let resp = bridge_oneshot(&server, &key, protocol::Request::ListMaps).await?;
+
+    if let protocol::Response::Maps(maps) = resp {
+        Ok(Json(maps))
+    } else {
+        Err(Error::BridgeFailure)
+    }
+}
+
 async fn route_websocket(
     State(server): State<Arc<Server>>,
     ws: WebSocketUpgrade,
@@ -225,7 +239,7 @@ async fn route_open_bridge(
     State(server): State<Arc<Server>>,
     Json(cfg): Json<BridgeConfig>,
 ) -> impl IntoResponse {
-    Server::open_bridge(server, &cfg).await
+    Server::open_bridge(server, cfg).await
 }
 
 async fn route_close_bridge(State(server): State<Arc<Server>>) -> impl IntoResponse {

@@ -155,6 +155,7 @@ impl Server {
             .ok_or(Error::MapNotFound);
 
         match req {
+            Request::ListMaps => Ok(Response::Maps(self.get_maps())),
             Request::JoinMap(map_name) => self.peer_join(peer, &map_name).map(|()| Response::Ok),
             Request::LeaveMap(map_name) => self.peer_leave(peer, &map_name).map(|()| Response::Ok),
             Request::GetMap(map_name) => self.get_map(&map_name).map(|r| Response::Map(Base64(r))),
@@ -262,7 +263,7 @@ impl Server {
                 Request::Create(_) | Request::Edit(_) | Request::Delete(_) | Request::Move(_) => {
                     self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
                 }
-                Request::GetMap(_) | Request::Cursor(_) | Request::Get(_) => (),
+                Request::ListMaps | Request::GetMap(_) | Request::Cursor(_) | Request::Get(_) => (),
             }
         }
     }
@@ -270,23 +271,6 @@ impl Server {
     pub fn handle_request(&self, peer: &mut Peer, packet: RecvPacket) {
         let resp = self.do_request(peer, packet.content.clone());
         self.do_respond(peer, &packet, resp);
-    }
-
-    pub fn handle_ws_message(&self, peer: &mut Peer, msg: &str) {
-        // log::debug!("text message received from {}: {}", addr, text);
-        match serde_json::from_str(msg) {
-            Ok(req) => {
-                self.handle_request(peer, req);
-            }
-            Err(e) => {
-                log::error!("failed to parse message: {} in {}", e, msg);
-                Server::send(
-                    &peer,
-                    None,
-                    Message::Response(Err(Error::BadRequest(e.to_string()))),
-                )
-            }
-        };
     }
 
     pub async fn handle_websocket(&self, socket: WebSocket, addr: SocketAddr) {
@@ -297,8 +281,21 @@ impl Server {
         let mut peer = Peer::new(addr, ws_send);
 
         let fut_recv = ws_recv.try_for_each(|msg| {
-            if let WebSocketMessage::Text(text) = msg {
-                self.handle_ws_message(&mut peer, &text);
+            if let WebSocketMessage::Text(msg) = msg {
+                // log::debug!("text message received from {}: {}", addr, text);
+                match serde_json::from_str(&msg) {
+                    Ok(req) => {
+                        self.handle_request(&mut peer, req);
+                    }
+                    Err(e) => {
+                        log::error!("failed to parse message: {e} in {msg}");
+                        Server::send(
+                            &peer,
+                            None,
+                            Message::Response(Err(Error::BadRequest(e.to_string()))),
+                        )
+                    }
+                };
             }
 
             futures::future::ok(())
@@ -444,7 +441,7 @@ impl Server {
     }
 
     /// Open a bridge with a remote server
-    pub async fn open_bridge(server: Arc<Server>, cfg: &BridgeConfig) -> Result<(), Error> {
+    pub async fn open_bridge(server: Arc<Server>, cfg: BridgeConfig) -> Result<(), Error> {
         server.close_bridge();
         let url = url::Url::parse(&cfg.url).map_err(|_| Error::BridgeNotFound)?;
 
@@ -454,7 +451,7 @@ impl Server {
         let (mut ws_send, ws_recv) = socket.split();
 
         ws_send
-            .send(WebSocketMessage::Text(serde_json::to_string(cfg).unwrap()))
+            .send(WebSocketMessage::Text(serde_json::to_string(&cfg).unwrap()))
             .await
             .map_err(|_| Error::BridgeClosed)?;
 
@@ -496,7 +493,38 @@ impl Server {
                             bridge_peers.get_mut(&addr).unwrap()
                         }
                     };
-                    server.handle_ws_message(peer, &payload_msg);
+
+                    let pkt: Result<RecvPacket, _> = serde_json::from_str(&payload_msg);
+                    match pkt {
+                        Ok(pkt) => match &pkt.content {
+                            Request::JoinMap(map) => {
+                                if map == &cfg.map {
+                                    server.handle_request(peer, pkt);
+                                } else {
+                                    Server::send(
+                                        &peer,
+                                        pkt.id,
+                                        Message::Response(Err(Error::MapNotFound)),
+                                    );
+                                }
+                            }
+                            Request::ListMaps => {
+                                let mut maps = server.get_maps();
+                                maps.retain(|m| m.name == cfg.map);
+                                server.do_respond(peer, &pkt, Ok(Response::Maps(maps)));
+                            }
+                            _ => server.handle_request(peer, pkt),
+                        },
+                        Err(e) => {
+                            log::error!("failed to parse message: {e} in {payload_msg}");
+                            Server::send(
+                                &peer,
+                                None,
+                                Message::Response(Err(Error::BadRequest(e.to_string()))),
+                            )
+                        }
+                    };
+
                     Some(())
                 }();
 

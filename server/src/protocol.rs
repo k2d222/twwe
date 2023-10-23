@@ -413,6 +413,8 @@ pub enum MoveReq {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum Request {
+    #[serde(rename = "list")]
+    ListMaps,
     #[serde(rename = "join")]
     JoinMap(String),
     #[serde(rename = "leave")]
@@ -444,6 +446,7 @@ pub enum Request {
 #[serde(untagged)]
 pub enum Response {
     Ok,
+    Maps(Vec<MapDetail>),
     Map(Base64),
     Images(Vec<String>),
     Image(Base64),
