@@ -4,6 +4,7 @@
   import { generate } from 'random-words'
   import { serverCfg, map } from "../global"
   import { serverHttpUrl, serverWsUrl } from "../../server/util"
+  import { showError } from "./dialog"
 
   let serverId = storage.load('currentServer')
   let serverCfgs = storage.load('servers')
@@ -16,22 +17,31 @@
   $: shareCfg = serverCfgs[shareId]
 
   async function startBridge(): Promise<void> {
-    const httpUrl = serverHttpUrl($serverCfg) + '/bridge'
+    const httpUrl = serverHttpUrl($serverCfg) + '/bridge_open'
     const shareUrl = serverWsUrl(shareCfg) + '/bridge'
+    console.log(shareUrl)
     const json = {
       url: shareUrl,
       map: $map.name,
       key: shareName,
     }
-    await fetch(httpUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(json)
-    })
+    try {
+      let resp = await fetch(httpUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(json)
+      })
+      if (!resp.ok)
+        throw await resp.text()
+    } catch (e) {
+      showError(e)
+      shareEnabled = false
+    }
   }
 
   async function stopBridge(): Promise<void> {
-    // TODO
+    const httpUrl = serverHttpUrl($serverCfg) + '/bridge_close'
+    await fetch(httpUrl)
   }
 
   function onToggleSharing() {

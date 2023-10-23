@@ -61,7 +61,7 @@ impl LazyMap {
 
     fn unload(&self) {
         *self.map.lock() = None;
-        log::debug!("unloaded map '{}'", self.path.display());
+        log::debug!("map unloaded `{}`", self.path.display());
     }
 
     pub fn get(&self) -> MappedMutexGuard<twmap::TwMap> {
@@ -69,11 +69,11 @@ impl LazyMap {
         let mut map = self.map.lock();
         if map.is_none() {
             *map = load_map(&self.path).ok();
-            log::debug!("loaded map '{}'", self.path.display());
+            log::debug!("map loaded `{}`", self.path.display());
         }
         match *map {
             Some(_) => MutexGuard::map(map, |m| m.as_mut().unwrap()),
-            None => panic!("failed to load map '{}'", self.path.display()),
+            None => panic!("failed to load map `{}`", self.path.display()),
         }
     }
 }
@@ -281,7 +281,7 @@ impl Room {
             .map_err(server_error)?;
         std::fs::rename(&tmp_path, &self.map.path).map_err(server_error)?;
 
-        log::debug!("saved {}", self.map.path.display());
+        log::debug!("map saved `{}`", self.map.path.display());
         Ok(())
     }
 }

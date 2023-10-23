@@ -14,6 +14,7 @@ use futures::{
 use futures_util::{future::Either, stream, SinkExt};
 use image::ImageFormat;
 use itertools::Itertools;
+use tokio::task::JoinHandle;
 use tokio_tungstenite::connect_async;
 
 use crate::{
@@ -41,8 +42,8 @@ pub struct Server {
     pub rpp_path: Option<PathBuf>,
     pub maps_dir: Option<PathBuf>,
     pub data_dir: Option<PathBuf>,
-    pub bridge_out: Mutex<Option<Tx>>,
-    pub bridge_in: RwLock<HashMap<SocketAddr, Bridge>>,
+    pub bridge: Mutex<Option<JoinHandle<()>>>,
+    pub remote_bridges: RwLock<HashMap<SocketAddr, Bridge>>,
 }
 
 impl Server {
@@ -52,8 +53,8 @@ impl Server {
             rpp_path: cli.rpp_path.clone(),
             maps_dir: cli.maps_dirs.get(0).cloned(),
             data_dir: cli.data_dirs.get(0).cloned(),
-            bridge_out: Default::default(),
-            bridge_in: Default::default(),
+            bridge: Default::default(),
+            remote_bridges: Default::default(),
         }
     }
 
@@ -312,7 +313,7 @@ impl Server {
 
         self.broadcast_users(&peer);
 
-        log::info!("disconnected {}", &addr);
+        log::info!("client disconnected {}", &addr);
     }
 
     /// A client is connecting to a remote server via the bridge.
@@ -328,7 +329,7 @@ impl Server {
         let fut_send = rx.map(Ok).forward(tx);
 
         let bridge_addr = {
-            let mut bridges = self.bridge_in.write().unwrap();
+            let mut bridges = self.remote_bridges.write().unwrap();
             let (bridge_addr, bridge) = bridges
                 .iter_mut()
                 .find(|(_, v)| v.key == key)
@@ -338,7 +339,7 @@ impl Server {
             bridge_addr.clone()
         };
 
-        log::info!("client {addr} connected to remote {bridge_addr}");
+        log::info!("client {addr} connected to remote server {bridge_addr}");
 
         let addr_msg = WebSocketMessage::Text(serde_json::to_string(&addr).unwrap());
 
@@ -348,7 +349,7 @@ impl Server {
                 match msg {
                     WebSocketMessage::Text(msg) => {
                         let res = || -> Option<()> {
-                            let bridges = self.bridge_in.read().unwrap();
+                            let bridges = self.remote_bridges.read().unwrap();
                             let bridge = bridges.get(&bridge_addr)?;
 
                             // forward client requests to the remote with the client addr.
@@ -401,9 +402,9 @@ impl Server {
             peers_tx: Default::default(),
         };
 
-        self.bridge_in.write().unwrap().insert(addr, bridge);
+        self.remote_bridges.write().unwrap().insert(addr, bridge);
 
-        log::info!("remote {addr} started bridging");
+        log::info!("remote server {addr} started bridging");
 
         // forward all messages to the right peer
         let fut_recv = ws_recv
@@ -416,7 +417,7 @@ impl Server {
                 };
                 let res = move || -> Option<()> {
                     let peer_addr: SocketAddr = serde_json::from_str(&addr_msg).ok()?;
-                    self.bridge_in
+                    self.remote_bridges
                         .read()
                         .unwrap()
                         .get(&addr)?
@@ -437,13 +438,14 @@ impl Server {
             Either::Right((res, _)) => res,
         };
 
-        self.bridge_in.write().unwrap().remove(&addr);
+        self.remote_bridges.write().unwrap().remove(&addr);
 
         res
     }
 
     /// Open a bridge with a remote server
     pub async fn open_bridge(server: Arc<Server>, cfg: &BridgeConfig) -> Result<(), Error> {
+        server.close_bridge();
         let url = url::Url::parse(&cfg.url).map_err(|_| Error::BridgeNotFound)?;
 
         let (socket, _resp) = connect_async(&url)
@@ -460,6 +462,8 @@ impl Server {
         let fut_send = rx.map(Ok).forward(ws_send);
 
         let mut bridge_peers: HashMap<SocketAddr, Peer> = Default::default();
+
+        let server_2 = server.clone();
 
         let fut_recv = ws_recv
             .try_chunks(2)
@@ -499,10 +503,10 @@ impl Server {
                 futures::future::ready(res.ok_or(Error::BridgeFailure))
             });
 
-        log::debug!("bridge connected to ws {}", &url);
+        log::info!("bridge connected to {}", &url);
         let url = url.clone();
 
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             match futures::future::select(fut_send, fut_recv).await {
                 Either::Left((Ok(_), _)) => log::info!("bridge with {url} closed"),
                 Either::Left((Err(e), _)) => log::error!("bridge with {url} closed: {e}"),
@@ -510,7 +514,20 @@ impl Server {
             }
         });
 
+        // store the task, so it can be cancelled.
+        *server_2.bridge.lock().unwrap() = Some(handle);
+
         Ok(())
+    }
+
+    pub fn close_bridge(&self) {
+        let mut val = self.bridge.lock().unwrap();
+
+        if let Some(handle) = val.as_ref() {
+            handle.abort();
+            log::info!("bridge aborted");
+            *val = None;
+        }
     }
 }
 
@@ -625,7 +642,7 @@ impl Server {
             }
         }
 
-        log::debug!("created map '{}'", map_name);
+        log::info!("map created `{}`", map_name);
         Ok(())
     }
 
@@ -640,7 +657,7 @@ impl Server {
 
         room.delete();
 
-        log::debug!("deleted map '{}'", room.name());
+        log::info!("map deleted `{}`", room.name());
 
         Ok(())
     }

@@ -37,7 +37,6 @@ pub struct Router {
 impl Router {
     pub fn new(server: Arc<Server>, args: &Cli) -> Self {
         let addr: SocketAddr = args.addr.parse().expect("not a valid server address");
-        // log::info!("Listening on: {}", addr);
 
         let cors = cors::CorsLayer::new()
             .allow_methods(vec![Method::GET, Method::PUT, Method::POST, Method::DELETE])
@@ -95,9 +94,10 @@ impl Router {
             .clone()
             .route("/ws", get(route_websocket))
             .route("/ws/bridge", get(route_server_bridge))
-            .route("/bridge", post(route_open_bridge))
+            .route("/bridge_open", post(route_open_bridge))
+            .route("/bridge_close", get(route_close_bridge))
             .route("/bridge/:key/ws", get(route_client_bridge))
-            .route("/bridge/:key/maps/:map", get(route_bridge_get_map))
+            .route("/bridge/:key/maps/:map", get(route_bridge_get_map)) // TODO: add the other routes
             .layer(DefaultBodyLimit::max(2 * 1024 * 1024)) // 2 MiB
             .layer(cors)
             .with_state(server);
@@ -161,12 +161,12 @@ async fn bridge_oneshot(
     let (http_tx, mut http_rx) = unbounded();
 
     {
-        let mut bridges = server.bridge_in.write().unwrap();
+        let mut bridges = server.remote_bridges.write().unwrap();
         let bridge = bridges.values_mut().find(|v| v.key == key).unwrap();
         bridge.peers_tx.insert(addr, http_tx);
     }
     {
-        let bridges = server.bridge_in.read().unwrap();
+        let bridges = server.remote_bridges.read().unwrap();
         let bridge = bridges.values().find(|v| v.key == key).unwrap();
 
         let addr_msg = WebSocketMessage::Text(serde_json::to_string(&addr).unwrap());
@@ -215,7 +215,8 @@ async fn route_websocket(
     } else {
         String::from("Unknown browser")
     };
-    log::info!("client `{user_agent}` at {addr} connected.");
+    log::info!("client {addr} connected.");
+    log::debug!("client user-agent: `{user_agent}`");
 
     ws.on_upgrade(move |socket| async move { server.handle_websocket(socket, addr).await })
 }
@@ -225,6 +226,10 @@ async fn route_open_bridge(
     Json(cfg): Json<BridgeConfig>,
 ) -> impl IntoResponse {
     Server::open_bridge(server, &cfg).await
+}
+
+async fn route_close_bridge(State(server): State<Arc<Server>>) -> impl IntoResponse {
+    server.close_bridge();
 }
 
 async fn route_server_bridge(
@@ -239,7 +244,8 @@ async fn route_server_bridge(
         String::from("Unknown browser")
     };
 
-    log::info!("remote server `{user_agent}` at {addr} requested bridging.");
+    log::info!("remote server {addr} requested bridging.");
+    log::debug!("remote server user-agent: `{user_agent}`");
 
     ws.on_upgrade(move |socket| async move {
         let res = server.handle_server_bridge(socket, addr).await;
@@ -263,7 +269,8 @@ async fn route_client_bridge(
         String::from("Unknown browser")
     };
 
-    log::info!("client `{user_agent}` at {addr} requested connection to remote with key {key}.");
+    log::info!("client {addr} requested connection to remote with key {key}.");
+    log::debug!("client user-agent: `{user_agent}`");
 
     ws.on_upgrade(move |socket| async move {
         let res = server.handle_client_bridge(socket, addr, key).await;
