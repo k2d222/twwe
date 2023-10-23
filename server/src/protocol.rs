@@ -32,13 +32,6 @@ use crate::{base64::Base64, error::Error, map_cfg::MapAccess};
 // system similar to how databases handle concurrent modifications.
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct BridgeConfig {
-    pub map: String,
-    pub key: String,
-    pub url: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapConfig {
     pub name: String,
     pub access: MapAccess,

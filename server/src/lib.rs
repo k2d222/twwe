@@ -17,6 +17,11 @@ mod twmap_map_checks;
 mod twmap_map_edit;
 mod util;
 
+#[cfg(feature = "bridge")]
+mod bridge;
+#[cfg(feature = "bridge")]
+mod bridge_router;
+
 use room::Room;
 
 pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
