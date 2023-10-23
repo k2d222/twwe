@@ -5,6 +5,13 @@ use crate::{
     twmap_map_edit::{extend_layer, shrink_layer},
 };
 
+pub(crate) fn timestamp_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
 // TODO: use serde_with's DisplayFromStr?
 // pub(crate) fn serialize_display<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
 // where

@@ -26,6 +26,7 @@ use crate::{
     base64::Base64,
     error::Error,
     protocol::{self, *},
+    util::timestamp_now,
 };
 use crate::{Cli, Server};
 
@@ -151,10 +152,7 @@ async fn bridge_oneshot(
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), rand::random());
 
     let pkt = RecvPacket {
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs(),
+        timestamp: timestamp_now(),
         id: rand::random(),
         content: req,
     };
@@ -163,24 +161,30 @@ async fn bridge_oneshot(
 
     {
         let mut bridges = server.remote_bridges.write().unwrap();
-        let bridge = bridges.values_mut().find(|v| v.key == key).unwrap();
+        let bridge = bridges
+            .values_mut()
+            .find(|v| v.key == key)
+            .ok_or(Error::BridgeNotFound)?;
         bridge.peers_tx.insert(addr, http_tx);
     }
     {
         let bridges = server.remote_bridges.read().unwrap();
-        let bridge = bridges.values().find(|v| v.key == key).unwrap();
+        let bridge = bridges
+            .values()
+            .find(|v| v.key == key)
+            .ok_or(Error::BridgeNotFound)?;
 
-        let addr_msg = WebSocketMessage::Text(serde_json::to_string(&addr).unwrap());
+        let addr_msg = WebSocketMessage::Text(serde_json::to_string(&addr).unwrap()); // this must not fail
         let req_msg = WebSocketMessage::Text(serde_json::to_string(&pkt).unwrap());
 
-        bridge.server_tx.unbounded_send(addr_msg).unwrap();
-        bridge.server_tx.unbounded_send(req_msg).unwrap();
+        bridge.server_tx.unbounded_send(addr_msg).ok();
+        bridge.server_tx.unbounded_send(req_msg).ok();
     }
 
-    let resp = http_rx.next().await.unwrap();
+    let resp = http_rx.next().await.ok_or(Error::BridgeFailure)?;
 
     if let WebSocketMessage::Text(resp_msg) = resp {
-        let resp: SendPacket = serde_json::from_str(&resp_msg).unwrap();
+        let resp: SendPacket = serde_json::from_str(&resp_msg).map_err(|_| Error::BridgeFailure)?;
 
         match resp.content {
             Message::Response(Ok(resp)) => Ok(resp),

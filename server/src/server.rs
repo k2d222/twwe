@@ -33,6 +33,7 @@ type Tx = UnboundedSender<WebSocketMessage>;
 
 pub struct Bridge {
     pub key: String,
+    pub map: String,
     pub server_tx: Tx,
     pub peers_tx: HashMap<SocketAddr, Tx>,
 }
@@ -73,10 +74,7 @@ impl Server {
 impl Server {
     fn send(peer: &Peer, id: Option<u32>, msg: Message) {
         let packet = SendPacket {
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            timestamp: timestamp_now(),
             id,
             content: msg,
         };
@@ -86,10 +84,7 @@ impl Server {
 
     fn broadcast_to_lobby(&self, msg: Message) {
         let packet = SendPacket {
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            timestamp: timestamp_now(),
             id: None,
             content: msg,
         };
@@ -102,10 +97,7 @@ impl Server {
 
     fn broadcast_to_room(&self, room: &Room, content: Message) {
         let packet = SendPacket {
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            timestamp: timestamp_now(),
             id: None,
             content,
         };
@@ -120,10 +112,7 @@ impl Server {
 
     fn broadcast_to_others(&self, peer: &Peer, content: Message) {
         let packet = SendPacket {
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            timestamp: timestamp_now(),
             id: None,
             content,
         };
@@ -369,11 +358,34 @@ impl Server {
             });
 
         // wait for either sender or receiver to complete: this means the connection is closed.
-        match futures::future::select(fut_send, fut_recv).await {
+        let res = match futures::future::select(fut_send, fut_recv).await {
             Either::Left((Ok(_), _)) => Ok(()),
             Either::Left((Err(_), _)) => Err(Error::BridgeClosed),
             Either::Right((res, _)) => res,
-        }
+        };
+
+        // remove the peer, send logout
+        || -> Option<()> {
+            let mut bridges = self.remote_bridges.write().unwrap();
+            let bridge = bridges.get_mut(&bridge_addr)?;
+
+            let packet = SendPacket {
+                timestamp: timestamp_now(),
+                id: None,
+                content: Message::Request(Request::LeaveMap(bridge.map.clone())),
+            };
+            let logout_msg = serde_json::to_string(&packet).unwrap();
+            bridge.server_tx.unbounded_send(addr_msg.clone()).ok();
+            bridge
+                .server_tx
+                .unbounded_send(WebSocketMessage::Text(logout_msg))
+                .ok();
+
+            bridge.peers_tx.remove(&addr);
+            Some(())
+        }();
+
+        res
     }
 
     /// a remote server is opening a bridge with this server
@@ -395,6 +407,7 @@ impl Server {
 
         let bridge = Bridge {
             key: cfg.key,
+            map: cfg.map,
             server_tx: ws_send,
             peers_tx: Default::default(),
         };
