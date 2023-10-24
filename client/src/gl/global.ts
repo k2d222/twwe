@@ -7,7 +7,7 @@ export interface Context {
   viewport: Viewport
 }
 
-export let gl: WebGL2RenderingContext
+export let gl: WebGL2RenderingContext | WebGLRenderingContext
 export let shader: Shader
 export let renderer: Renderer
 export let viewport: Viewport

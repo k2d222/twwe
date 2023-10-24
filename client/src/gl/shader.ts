@@ -14,13 +14,15 @@ type ProgLocations = {
   unifs: { [k in typeof UniformLocations[number]]: WebGLUniformLocation | null }
 }
 
+type WebGLCtx = WebGL2RenderingContext | WebGLRenderingContext
+
 export class Shader {
   prog: WebGLProgram
   vert: WebGLShader
   frag: WebGLShader
   locs: ProgLocations
 
-  constructor(gl: WebGL2RenderingContext, vertSrc: string, fragSrc: string) {
+  constructor(gl: WebGLCtx, vertSrc: string, fragSrc: string) {
     this.prog = gl.createProgram()!
     this.vert = Shader.makeShader(gl, vertSrc, gl.VERTEX_SHADER)
     this.frag = Shader.makeShader(gl, fragSrc, gl.FRAGMENT_SHADER)
@@ -34,7 +36,7 @@ export class Shader {
     this.initUniforms(gl)
   }
 
-  private initLocations(gl: WebGL2RenderingContext) {
+  private initLocations(gl: WebGLCtx) {
     const locs: ProgLocations = {
       attrs: {
         aPosition: gl.getAttribLocation(this.prog, 'aPosition'),
@@ -53,17 +55,17 @@ export class Shader {
     return locs
   }
 
-  private initAttributes(gl: WebGL2RenderingContext) {
+  private initAttributes(gl: WebGLCtx) {
     gl.enableVertexAttribArray(this.locs.attrs.aPosition)
   }
 
-  private initUniforms(gl: WebGL2RenderingContext) {
+  private initUniforms(gl: WebGLCtx) {
     gl.uniform4fv(this.locs.unifs.uColorMask, [1.0, 1.0, 1.0, 1.0])
     gl.uniform1i(this.locs.unifs.uTexCoord, 0)
     gl.uniform1i(this.locs.unifs.uVertexColor, 0)
   }
 
-  private static makeShader(gl: WebGL2RenderingContext, src: string, typ: number) {
+  private static makeShader(gl: WebGLCtx, src: string, typ: number) {
     const shader = gl.createShader(typ)!
     gl.shaderSource(shader, src)
     gl.compileShader(shader)
