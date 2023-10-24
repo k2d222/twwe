@@ -13,6 +13,7 @@ export type Brush = {
   group: number,
   layers: {
     layer: number,
+    kind: MapDir.LayerKind,
     tiles: Info.AnyTile[][],
   }[]
 }
@@ -106,7 +107,11 @@ export function makeBoxSelection(map: Map, g: number, ll: number[], sel: Range):
       tiles.push(row)
     }
 
-    res.layers.push({ layer: l, tiles })
+    res.layers.push({
+      layer: l,
+      kind: layerKind(layer),
+      tiles
+    })
   }
 
   return res
@@ -132,7 +137,11 @@ export function makeEmptySelection(map: Map, g: number, ll: number[], sel: Range
       tiles.push(row)
     }
 
-    res.layers.push({ layer: l, tiles })
+    res.layers.push({
+      layer: l,
+      kind: layerKind(layer),
+      tiles
+    })
   }
 
   return res
@@ -196,10 +205,7 @@ function adaptTile(tile: Info.AnyTile, kind: MapDir.LayerKind): Info.AnyTile {
   }
 }
 
-export function adaptTilesToLayer(map: Map, g: number, l: number, tiles: Info.AnyTile[][]): Info.AnyTile[][] {
-  const layer = map.groups[g].layers[l]
-  const kind = layerKind(layer)
-
+export function adaptTiles(tiles: Info.AnyTile[][], kind: MapDir.LayerKind): Info.AnyTile[][] {
   return tiles.map(row =>
     row.map(tile => adaptTile(tile, kind))
   )
@@ -214,9 +220,11 @@ export function adaptBrushToLayers(map: Map, brush: Brush, g: number, ll: number
         return layer
       }
       else {
+        const kind = layerKind(map.groups[g].layers[l])
         return {
           layer: l,
-          tiles: adaptTilesToLayer(map, g, l, brush.layers[0].tiles)
+          kind,
+          tiles: adaptTiles(brush.layers[0].tiles, kind)
         }
       }
     })
@@ -307,6 +315,7 @@ export function fill(
     group: brush.group,
     layers: brush.layers.map(l => ({
       layer: l.layer,
+      kind: l.kind,
       tiles: repeat(l.tiles, size),
     }))
   }

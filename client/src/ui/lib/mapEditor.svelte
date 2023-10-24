@@ -15,7 +15,7 @@
   import Stats from './stats.svelte'
   import { RenderAnyTilesLayer } from "../../gl/renderTilesLayer"
   import { viewport, renderer } from '../../gl/global'
-  import { externalImageUrl } from './util'
+  import { externalImageUrl, layerKind } from './util'
   import MapView from './mapView.svelte'
   import type { RenderGroup } from '../../gl/renderGroup'
   import type { RenderLayer } from '../../gl/renderLayer'
@@ -499,6 +499,7 @@
       group: g,
       layers: [{
         layer: l,
+        kind: layerKind($map.groups[g].layers[l]),
         tiles: e.detail,
       }]
     }

@@ -17,6 +17,7 @@
   import FlipH from '../../../assets/flip-h.svg?component'
   import RotateCW from '../../../assets/rotate-cw.svg?component'
   import RotateCCW from '../../../assets/rotate-ccw.svg?component'
+  import { LayerKind } from '../../twmap/mapdir'
 
   export let brush: Editor.Brush
 
@@ -31,6 +32,13 @@
   onDestroy(() => {
     Editor.off('keypress', onKeyPress)
   })
+
+  function clamp(cur: number, min: number, max: number) {
+    if (isNaN(cur))
+      return min
+    else
+      return Math.min(Math.max(min, cur), max)
+  }
 
   function brushRotateCW(sel: Info.AnyTile[][]) {
     return Array.from({ length: sel[0].length }, (_, j) =>
@@ -252,6 +260,34 @@
     else if (e.key === 'h' || e.key === 'n') onFlipH()
   }
 
+  function tilesProperty(tiles: Info.AnyTile[][], prop: string): number | undefined {
+    let res: number
+
+    for (const row of tiles) {
+      for (const tile of row) {
+        if (prop in tile) {
+          if (res === undefined) {
+            res = tile[prop]
+          }
+          else if (tile[prop] !== res) {
+            return undefined
+          }
+        }
+      }
+    }
+
+    return res
+  }
+
+  function onSetProperty(prop: string, val: number) {
+    brush.layers.forEach(l => l.tiles.forEach(r => r.forEach(t => {
+      if (prop in t) {
+        t[prop] = val
+      }
+    })))
+    dispatch('change', brush)
+  }
+
 </script>
 
 <div id="edit-brush">
@@ -268,6 +304,48 @@
     <button class="default" on:click={onRotateCCW}>
       <RotateCCW />
     </button>
+    {#if brush.layers.length === 1}
+      {@const layer = brush.layers[0]}
+      {#if layer.kind === LayerKind.Tele}
+        <label>
+          <span>Teleport target</span>
+          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'number')} on:change={(e) => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+        </label>
+      {:else if layer.kind === LayerKind.Speedup}
+        <label>
+          <span>Speedup force</span>
+          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'force')} on:change={(e) => onSetProperty('force', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+        </label>
+        <label>
+          <span>Speedup max speed</span>
+          <input
+            type="number"
+            min={0}
+            max={255}
+            value={tilesProperty(layer.tiles, 'maxSpeed')}
+            on:change={(e) => onSetProperty('maxSpeed', clamp(parseInt(e.currentTarget.value), 0, 255))}
+          />
+        </label>
+        <label>
+          <span>Speedup angle</span>
+          <input type="number" min={0} max={359} value={tilesProperty(layer.tiles, 'angle')} on:change={(e) => onSetProperty('angle', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+        </label>
+      {:else if layer.kind === LayerKind.Switch}
+        <label>
+          <span>Switch number</span>
+          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'number')} on:change={(e) => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+        </label>
+        <label>
+          <span>Switch delay</span>
+          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'delay')} on:change={(e) => onSetProperty('delay', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+        </label>
+      {:else if layer.kind === LayerKind.Tune}
+        <label>
+          <span>Tune zone</span>
+          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'number')} on:change={(e) => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+        </label>
+      {/if}
+    {/if}
   </div>
 </div>
 
