@@ -55,7 +55,7 @@ itertools = "0.11.0"
 [lib]
 
 [features]
-default = ["bridge_out"]
+default = []
 bridge = []
 bridge_out = ["bridge"]
 bridge_in = ["bridge"]
