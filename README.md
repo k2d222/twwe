@@ -40,13 +40,13 @@ The table below shows the feature parity with ddnet's in-game map editor.
 
 ### Roadmap to 1.0
 
- [*] Desktop client
- [*] Server bridging
- [] sync with ddnet server / reload-on-save (#21)
- [] Map passwords and permissions
- [*] Undo / Redo history (#31)
- [] More tools: Proof, Quad tools
- [] Bug squashing
+ - [x] Desktop client
+ - [x] Server bridging
+ - [ ] sync with ddnet server / reload-on-save (#21)
+ - [ ] Map passwords and permissions
+ - [x] Undo / Redo history (#31)
+ - [ ] More tools: Proof, Quad tools
+ - [ ] Bug squashing
 
 ## Usage
 
@@ -105,7 +105,7 @@ Use `npm run check` to run Typescript checks on the project.
 
 ### Desktop
 
-The desktop client is a [Tauri](https://tauri.app/) web-app that you can install and enables editing your local map files like the default editor. You can also enable sharing your maps over the internet (read [Server bridging](#server-bridging)). Binaries are can be found in the [releases page](./releases).
+The desktop client is a [Tauri](https://tauri.app/) web-app that you can install and enables editing your local map files like the default editor. You can also enable sharing your maps over the internet (read [Server bridging](#server-bridging)). Binaries are can be found in the [releases page](https://github.com/k2d222/twwe/releases).
 
 ## License
 
