@@ -44,6 +44,7 @@ const entries: StorageEntries = {
 const storage = {
   version: 3,
   reset: function () {
+    sessionStorage.clear()
     localStorage.clear()
     localStorage.setItem('version', '' + storage.version)
     for (const [key, entry] of Object.entries(entries)) {
@@ -57,8 +58,9 @@ const storage = {
     }
   },
   load: function <K extends keyof StorageSpec>(key: K): StorageSpec[K] {
+    let item = sessionStorage.getItem(key) ?? localStorage.getItem(key)
     try {
-      const res = JSON.parse(localStorage.getItem(key))
+      const res = JSON.parse(item)
       if (entries[key].sanitize(res)) {
         return res
       }
@@ -73,8 +75,14 @@ const storage = {
     }
   },
 
-  save: function <K extends keyof StorageSpec>(key: K, val: StorageSpec[K]) {
-    localStorage.setItem(key, JSON.stringify(val))
+  save: function <K extends keyof StorageSpec>(key: K, val: StorageSpec[K], { persistent } = { persistent: true }) {
+    if (persistent) {
+      localStorage.setItem(key, JSON.stringify(val))
+      sessionStorage.removeItem(key)
+    }
+    else {
+      sessionStorage.setItem(key, JSON.stringify(val))
+    }
   },
 }
 

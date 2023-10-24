@@ -160,16 +160,24 @@
     navigate('/edit/' + name)
   }
 
-  function onJoinBridge(key: string) {
-    const conf: ServerConfig = {
+  async function onJoinBridge(key: string) {
+    modalAccessKey.open = false
+
+    const cfg: ServerConfig = {
       ...serverCfg,
       name: 'remote: ' + key,
       path: (serverCfg.path ?? '') + '/bridge/' + key
     }
-    serverCfgs.push(conf)
-    storage.save('servers', serverCfgs)
-    selectServer(serverCfgs.length - 1)
-    modalAccessKey.open = false
+    serverCfgs.push(cfg)
+
+    const httpUrl = serverHttpUrl(cfg)
+    let maps = await queryMaps(httpUrl)
+    let name = maps[0].name
+
+    storage.save('servers', serverCfgs, { persistent: false })
+    storage.save('currentServer', serverCfgs.length - 1, { persistent: false })
+
+    navigate('/edit/' + name)
   }
 
   function onDeleteMap(mapName: string) {
