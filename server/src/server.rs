@@ -29,7 +29,7 @@ use tokio::task::JoinHandle;
 use std::sync::RwLock;
 
 #[cfg(feature = "bridge")]
-use crate::bridge::*;
+use crate::bridge::Bridge;
 
 pub struct Server {
     pub rooms: Mutex<HashMap<String, Arc<Room>>>,

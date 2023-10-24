@@ -88,13 +88,18 @@ impl Router {
         #[cfg(feature = "bridge")]
         {
             use crate::bridge_router::*;
-            router = router
-                .route("/ws/bridge", get(route_server_bridge))
-                .route("/bridge_open", post(route_open_bridge))
-                .route("/bridge_close", get(route_close_bridge))
-                .route("/bridge/:key/ws", get(route_client_bridge))
-                .route("/bridge/:key/maps/:map", get(route_bridge_get_map)) // TODO: add the other bridge http routes
-                .route("/bridge/:key/maps", get(route_bridge_list_maps));
+            if cfg!(feature = "bridge_in") {
+                router = router
+                    .route("/ws/bridge", get(route_server_bridge))
+                    .route("/bridge/:key/ws", get(route_client_bridge))
+                    .route("/bridge/:key/maps/:map", get(route_bridge_get_map)) // TODO: add the other bridge http routes
+                    .route("/bridge/:key/maps", get(route_bridge_list_maps));
+            }
+            if cfg!(feature = "bridge_out") {
+                router = router
+                    .route("/bridge_open", post(route_open_bridge))
+                    .route("/bridge_close", get(route_close_bridge))
+            }
         }
 
         let mut router = router
