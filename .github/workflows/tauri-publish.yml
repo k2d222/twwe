@@ -4,6 +4,10 @@ on:
     branches:
       - release
 
+env:
+  VITE_SERVER_URLS: Local files:localhost:16800:0,Default server:pi.thissma.fr:16900:1
+
+
 jobs:
   publish-tauri:
     permissions:
