@@ -2,8 +2,8 @@
 <script lang="ts">
   import * as Editor from './editor'
   import { server, selected, anim, peers, rmap, map } from '../global'
-  import { AnyTilesLayer, GameLayer } from "../../twmap/tilesLayer"
-  import { tweened } from "svelte/motion"
+  import { AnyTilesLayer, GameLayer, TilesLayer } from "../../twmap/tilesLayer"
+  import { tweened, type Readable } from "svelte/motion"
   import { type Coord, LayerType } from "../../twmap/types"
   import { QuadsLayer } from "../../twmap/quadsLayer"
   import { Image } from '../../twmap/image'
@@ -23,6 +23,7 @@
   import type * as Info from '../../twmap/types'
   import type { Recv, Resp } from '../../server/protocol'
   import { base64ToBytes } from '../../server/convert'
+  import { pick, read } from '../../server/util'
   import { Button } from 'carbon-components-svelte'
   import { Add as AddIcon } from 'carbon-icons-svelte'
 
@@ -53,6 +54,15 @@
       .filter(l => l !== -1 && $rmap.map.groups[g].layers[l].type === LayerType.TILES)
 
     $rmap.setActiveLayer(rlayer)
+  }
+
+  let syncImg: Readable<Image | null>
+  $: if (rlayer && rlayer instanceof RenderAnyTilesLayer) {
+    syncImg = read($server, rlayer.texture.image, {
+      query: 'edit/layer',
+      match: [g, l, { image: pick }],
+      apply: () => rlayer.texture.image,
+    })
   }
 
   let time = 0
@@ -322,6 +332,9 @@
   }
 
   function onMouseMove(e: MouseEvent) {
+    if (e.target !== viewport.cont)
+      return
+
     shiftKey = e.shiftKey
     if (rlayer && rlayer.layer instanceof AnyTilesLayer || $selected.length > 1) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
@@ -489,7 +502,7 @@
         tiles: e.detail,
       }]
     }
-    brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, $selected.map(s => s[1]))
+    brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, g, selectedTileLayers)
 
     if (brushBuffer === null) {
       brushState = BrushState.Empty
@@ -516,23 +529,19 @@
     mouseRange.end.y = mouseRange.start.y + brushRange.end.y
   }
 
-  function onLayerSelectionChanged(sel: [number, number][]) {
+  function onLayerSelectionChanged(_sel: [number, number][]) {
     if (!brushBuffer) {
       return
     }
 
-    if (sel.length === 0) {
+    if (selectedTileLayers.length === 0 || rlayer && rlayer.layer instanceof QuadsLayer) {
+      brushState = BrushState.Empty
       brushBuffer = null
-      return
+    }
+    else {
+      brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, g, selectedTileLayers)
     }
 
-    const g = sel[0][0]
-    if (g !== brushBuffer.group) {
-      brushBuffer = null
-      return
-    }
-
-    brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, sel.map(s => s[1]))
   }
 </script>
 
@@ -574,6 +583,7 @@
 
   {#if rlayer instanceof RenderAnyTilesLayer}
     <TilePicker
+      image={$syncImg}
       rlayer={rlayer}
       on:select={onTilePick}
     />

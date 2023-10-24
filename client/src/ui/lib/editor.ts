@@ -205,18 +205,18 @@ export function adaptTilesToLayer(map: Map, g: number, l: number, tiles: Info.An
   )
 }
 
-export function adaptBrushToLayers(map: Map, brush: Brush, ll: number[]): Brush {
+export function adaptBrushToLayers(map: Map, brush: Brush, g: number, ll: number[]): Brush {
   return {
-    group: brush.group,
+    group: g,
     layers: ll.map(l => {
-      const layer = brush.layers.find(x => x.layer === l)
+      const layer = brush.layers.find(x => brush.group === g && x.layer === l)
       if (layer) {
         return layer
       }
       else {
         return {
           layer: l,
-          tiles: adaptTilesToLayer(map, brush.group, l, brush.layers[0].tiles)
+          tiles: adaptTilesToLayer(map, g, l, brush.layers[0].tiles)
         }
       }
     })

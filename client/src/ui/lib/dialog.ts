@@ -27,7 +27,8 @@ export function clearDialog(id: number | 'all' = 'all') {
 export function showDialog(
   type: DialogType,
   message: string,
-  controls: DialogControls = 'none'
+  controls: DialogControls = 'none',
+  timeout: number = 5000
 ): Promise<boolean> | number {
   const id = Math.random()
   dialog.$set({
@@ -43,10 +44,19 @@ export function showDialog(
     return id
   else
     return new Promise(resolve => {
+      let timeout_id = 0
       dialog.$on('close', e => {
-        if (e.detail[0] === id)
+        if (e.detail[0] === id) {
+          window.clearTimeout(timeout_id)
           resolve(e.detail[1])
+        }
       })
+      if (timeout && controls === 'closable') {
+        timeout_id = window.setTimeout(() => {
+          clearDialog(id)
+          resolve(false)
+        }, timeout)
+      }
     })
 }
 

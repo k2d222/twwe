@@ -2,9 +2,9 @@
   import { createEventDispatcher } from 'svelte'
   import type * as Info from '../../twmap/types'
   import * as MapDir from '../../twmap/mapdir'
-  import type { Image } from '../../twmap/image'
   import type { AnyTilesLayer } from '../../twmap/tilesLayer'
   import type { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
+  import type { Image } from '../../twmap/image'
   import type { Tile, Tele, Switch, Speedup, Tune, Coord } from '../../twmap/types'
   import { TileFlags } from '../../twmap/types'
   import {
@@ -29,6 +29,7 @@
   const tileCount = 16
 
   export let rlayer: RenderAnyTilesLayer<AnyTilesLayer<{ id: number }>>
+  export let image: Image
   export let selected: Info.AnyTile[][] = []
 
   const dispatch = createEventDispatcher<{
@@ -59,14 +60,15 @@
   let currentSpeedup: { kind: MapDir.LayerKind.Speedup } & Speedup = { kind: MapDir.LayerKind.Speedup, ...SpeedupLayer.defaultTile() }
   let currentTune: { kind: MapDir.LayerKind.Tune } & Tune = { kind: MapDir.LayerKind.Tune, ...TuneLayer.defaultTile() }
 
-  $: currentTele.number = clamp(currentTele.number, 0, 255)
-  $: currentSwitch.delay = clamp(currentSwitch.delay, 0, 255)
-  $: currentSwitch.number = clamp(currentSwitch.number, 0, 255)
-  $: currentSpeedup.angle = clamp(currentSpeedup.angle, 0, 359)
-  $: currentSpeedup.maxSpeed = clamp(currentSpeedup.maxSpeed, 0, 255)
-  $: currentSpeedup.force = clamp(currentSpeedup.force, 0, 255)
-  $: currentTune.number = clamp(currentTune.number, 0, 255)
-
+  function sanitizeInputs() {
+    currentTele.number = clamp(currentTele.number, 0, 255)
+    currentSwitch.delay = clamp(currentSwitch.delay, 0, 255)
+    currentSwitch.number = clamp(currentSwitch.number, 0, 255)
+    currentSpeedup.angle = clamp(currentSpeedup.angle, 0, 359)
+    currentSpeedup.maxSpeed = clamp(currentSpeedup.maxSpeed, 0, 255)
+    currentSpeedup.force = clamp(currentSpeedup.force, 0, 255)
+    currentTune.number = clamp(currentTune.number, 0, 255)
+  }
   let current: Info.AnyTile | null
   let boxSelect = false
 
@@ -90,7 +92,6 @@
   let mounted = false
   onMount(() => {
     ctx = canvas.getContext('2d')!
-    drawLayer()
     Editor.on('keydown', onKeyDown)
     Editor.on('keyup', onKeyUp)
     mounted = true
@@ -102,12 +103,12 @@
     mounted = false
   })
 
-  $: if (mounted && rlayer) {
-    drawLayer()
+  $: if (mounted) {
+    drawLayer(image)
   }
 
-  async function drawLayer() {
-    const img = await getCanvasImage(rlayer.texture.image)
+  async function drawLayer(image: Image) {
+    const img = await getCanvasImage(image)
     if (!mounted)
       return
     canvas.width = img.width as number
@@ -257,18 +258,18 @@
       <div class="header">
         {#if rlayer.layer instanceof TeleLayer}
           <label>
-            Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number} />
+            Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number} on:change={sanitizeInputs} />
           </label>
         {:else if rlayer.layer instanceof SwitchLayer}
           <label>
-            Switch number <input type="number" min={0} max={255} bind:value={currentSwitch.number} />
+            Switch number <input type="number" min={0} max={255} bind:value={currentSwitch.number} on:change={sanitizeInputs} />
           </label>
           <label>
-            Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay} />
+            Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay} on:change={sanitizeInputs} />
           </label>
         {:else if rlayer.layer instanceof SpeedupLayer}
           <label>
-            Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force} />
+            Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force} on:change={sanitizeInputs} />
           </label>
           <label>
             Speedup max speed <input
@@ -276,14 +277,15 @@
               min={0}
               max={255}
               bind:value={currentSpeedup.maxSpeed}
+              on:change={sanitizeInputs}
             />
           </label>
           <label>
-            Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle} />
+            Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle} on:change={sanitizeInputs} />
           </label>
         {:else if rlayer.layer instanceof TuneLayer}
           <label>
-            Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} />
+            Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} on:change={sanitizeInputs} />
           </label>
         {:else}
           Select tiles to place on the map.

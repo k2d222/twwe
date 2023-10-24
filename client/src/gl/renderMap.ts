@@ -386,13 +386,15 @@ export class RenderMap {
     if (part.name !== undefined)
       rlayer.layer.name = part.name
 
+    if (rlayer instanceof RenderAnyTilesLayer) {
+      if ('width' in part)
+        this.setLayerWidth(rgroup, rlayer, part.width)
+      if ('height' in part)
+        this.setLayerHeight(rgroup, rlayer, part.height)
+    }
     if (rlayer instanceof RenderTilesLayer && part.type === MapDir.LayerKind.Tiles) {
       if (part.color !== undefined)
         rlayer.layer.color = part.color
-      if (part.width !== undefined)
-        this.setLayerWidth(rgroup, rlayer, part.width)
-      if (part.height !== undefined)
-        this.setLayerHeight(rgroup, rlayer, part.height)
       if (part.color_env !== undefined)
         rlayer.layer.colorEnv = part.color_env === null ? null : this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope
       if (part.color_env_offset !== undefined)
