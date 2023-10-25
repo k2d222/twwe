@@ -52,26 +52,43 @@ The table below shows the feature parity with ddnet's in-game map editor.
 
 Explore the UI, it resembles the ddnet editor for the most part.
 
-Key/Mouse bindings:
- * Zoom in/out -> mouse wheel
- * Pan around -> `ctrl+left_click+drag` or `wheel_button+drag`
- * Place tiles -> `left_click+drag`
- * select a range of tiles -> `shift+left_click+drag`
- * Open tile picker -> hold `space_bar` and `left_click+drag` to select tiles
- * Flip brush horizontally / vertically -> `h` / `v`
- * Rotate brush clockwise / counterclockwise -> `r` / `shift+r`
- * Toggle layers view / envelope view -> `tab`
- * Save map -> `ctrl+s`
- * Save automapper -> `ctrl+s`
- * Preview automapper -> `ctrl+p`
- * `right_click` opens context-menus on quad points, envelope points and envelope lines.
- * Select multiple layers with `shift`.
+### Using the website
 
-The Save button saves the map on the disk on the server side. If a teeworlds server using this map is running, enter `reload` in the server console to update it.
+You can use this editor by simply going to [tw.thissma.fr](https://tw.thissma.fr). You should see the default server with a bunch of maps that others created. For the default server, a ddnet server is also running with name `twwe -- tw.thissma.fr` on which you can test your map immediately. The server is reloaded each time the map is saved.
+
+### Using the standalone app
+
+Alternatively, you can [install the app](https://github.com/k2d222/twwe/releases) to use the editor offline. On startup, the editor will look for maps in the various ddnet folders.
+
+With the external editor, you can also enable sharing your map (top-right button), which gives access to you map to other users via one of the servers.
+
+### Key/Mouse bindings
+
+| Key                                                      | Action                                                           |
+|----------------------------------------------------------|------------------------------------------------------------------|
+| <kbd>Wheel</kbd><kbd>Up / Down</kbd>                     | Zoom in / out                                                    |
+| <kbd>W / A / S / D / ↑ / ↓ / ← / → </kbd>                | Move around                                                      |
+| <kbd>Ctrl</kbd><kbd>🖱️ Left</kbd><br/><kbd>🖱️ Middle</kbd> | Pan around                                                       |
+| <kbd>🖱️ Left</kbd>                                        | Copy tiles (empty selection)<br/>Paste tiles                     |
+| <kbd>Shift</kbd><kbd>🖱️ Left</kbd>                        | Delete tiles (empty selection)<br/>Fill tiles (repeat selection) |
+| <kbd>🖱️ Right</kbd>                                       | Clear selection                                                  |
+| <kbd>Space</kbd> (hold)                                  | Open the tile picker                                             |
+| <kbd>H / N</kbd>                                         | Mirror selection horizontally                                    |
+| <kbd>V / M</kbd>                                         | Mirror selection vertically                                      |
+| <kbd>R</kbd>                                             | Rotate selection clockwise                                       |
+| <kbd>Shift</kbd><kbd>R</kbd><br/><kbd>T</kbd>            | Rotate selection counter-clockwise                               |
+| <kbd>Tab</kbd>                                           | Show / Hide sidebars                                             |
+| <kbd>Ctrl</kbd><kbd>S</kbd>                              | Save map<br/>Save automapper                                     |
+| <kbd>Ctrl</kbd><kbd>P</kbd>                              | Save map<br/>Preview automapper                                  |
+
+Additionally: 
+ * <kbd>🖱️ Right</kbd> opens context-menus on quad points, envelope points and envelope lines.
+ * You can select multiple layers with `shift`.
+ * The Save button saves the map on the disk on the server side. If a teeworlds server using this map is running, enter `reload` in the server console to update it.
 
 ## Building and Running
 
-The code is split into a client and a server part. The client generates a static site (html, js, …) that you can host wherever you want or even run locally. The server is a WebSocket server that the client connects to. The maps are stored on the server machine.
+The code is split into a client, a desktop and a server part. The client generates a static site (html, js, …) that you can host wherever you want or even run locally. The server is a HTTP and WebSocket server that the client connects to. The maps are stored on the server machine.
 
 ### Server
 
@@ -90,7 +107,7 @@ Use the `--rpp <path>` flat to enable Rules++ support (experimental). `<path>` m
 With the desktop client, it is possible to connect a "bridge" to a remote server (e.g. pi.thissma.fr:16900), such that other users can access and edit a map on your hard drive from the internet. This feature has security implications for both the server and the client, so make sure you understand them before enabling bridging.
 
  * For the client, enabling bridge essentially gives the internet a direct access to the map file on your computer. Anyone who has access to the passphrase can do damage to your map file. Make sure you make a backup and trust the people with whom you share the passphrase.
- * For the server, bridging initiates a connection to a websocket url chosen by the client. Make sure your server may not leak the local network or connect to unwanted networks. Do to not use this feature aside from the desktop client's server.
+ * For the server, bridging initiates a connection to an arbitrary websocket url chosen by the client. Make sure your server may not leak the local network or connect to unwanted networks.
 
 The `bridge_out` and `bridge_in` feature flags guard this feature and are disabled by default. You can enable them with `cargo run --feature bridge_in -- ...`.
 
@@ -100,13 +117,16 @@ Copy the `env.example` file to `.env` or `.env.production` and configure the web
 
 Have [npm](https://www.npmjs.com/) installed and run `npm install` in the client directory to install dependencies, `npm run dev` to run a dev server and `npm run build` to produce a release in the `dist` directory.
 
-Note: the client is written in non-strict Typescript. Typescript is only used for IDE hints and documentation, but ignored by the [Vite](https://vitejs.dev/guide/features.html#typescript) bundler.
-Use `npm run check` to run Typescript checks on the project.
+Note: the client is written in non-strict Typescript. Typescript is only used for IDE hints and documentation, but ignored by the [Vite](https://vitejs.dev/guide/features.html#typescript) bundler. Use `npm run check` to run Typescript checks on the project.
 
 ### Desktop
 
-The desktop client is a [Tauri](https://tauri.app/) web-app that you can install and enables editing your local map files like the default editor. You can also enable sharing your maps over the internet (read [Server bridging](#server-bridging)). Binaries are can be found in the [releases page](https://github.com/k2d222/twwe/releases).
+The desktop client is a [Tauri](https://tauri.app/) web-app that you can install and enables editing your local map files like the default editor. You can also enable sharing your maps over the internet (read [Server bridging](#server-bridging)).
+
+The app spins up a localhost server on port 16800. It looks for maps in the "standard" ddnet folders (see storage.cfg: $USERDIR, $DATADIR and $CURRENTDIR).
+
+Binaries are can be found in the [releases page](https://github.com/k2d222/twwe/releases).
 
 ## License
 
-This work is licensed under the GNU Affero General Public License v3.0 (agpl). You are free to use and modify the code and executables under some conditions. Please contact me if the license doesn't fit your needs.
+This work is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). You are free to use and modify the code and executables under some conditions. Please contact me if the license doesn't fit your needs.
