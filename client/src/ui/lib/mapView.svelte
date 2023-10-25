@@ -85,7 +85,7 @@
   }
 </script>
 
-<div class="map-view" bind:this={cont}>
+<div class="map-view" tabindex="-1" bind:this={cont}>
   <canvas bind:this={canvas}></canvas>
   <slot></slot>
 </div>

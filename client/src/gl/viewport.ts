@@ -127,10 +127,10 @@ export class Viewport {
   }
 
   private onkeydown(e: KeyboardEvent) {
-    if (e.key === 'ArrowLeft') this.pos.x -= 1
-    else if (e.key === 'ArrowRight') this.pos.x += 1
-    else if (e.key === 'ArrowUp') this.pos.y -= 1
-    else if (e.key === 'ArrowDown') this.pos.y += 1
+    if (e.key === 'ArrowLeft' || e.key === 'a') this.pos.x -= 1
+    else if (e.key === 'ArrowRight' || e.key === 'd') this.pos.x += 1
+    else if (e.key === 'ArrowUp' || e.key === 'w') this.pos.y -= 1
+    else if (e.key === 'ArrowDown' || e.key === 's') this.pos.y += 1
   }
 
   // ------------ mobile events --------------------------------

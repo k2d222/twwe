@@ -252,10 +252,10 @@
   function onKeyPress(e: KeyboardEvent) {
     if (e.ctrlKey || e.altKey) return
 
-    if (['r', 'v', 'h', 'n', 'm'].includes(e.key.toLowerCase())) e.preventDefault()
+    if (['r', 't', 'v', 'h', 'n', 'm'].includes(e.key.toLowerCase())) e.preventDefault()
 
     if (e.key === 'r') onRotateCW()
-    else if (e.key === 'R') onRotateCCW()
+    else if (e.key === 'R' || e.key === 't') onRotateCCW()
     else if (e.key === 'v' || e.key === 'm') onFlipV()
     else if (e.key === 'h' || e.key === 'n') onFlipH()
   }

@@ -10,6 +10,7 @@
   import { coordToJson, resIndexToString, uvToJson } from '../../server/convert'
   import { rmap } from '../global'
   import type { Send } from '../../server/protocol'
+  import * as Editor from './editor'
 
   export let layer: QuadsLayer
 
@@ -24,6 +25,22 @@
     })
   }
   $: [g, l] = layerIndex($rmap.map, layer)
+
+  onMount(() => {
+    Editor.on('keypress', onKeyPress)
+  })
+
+  onDestroy(() => {
+    Editor.off('keypress', onKeyPress)
+  })
+
+  function onKeyPress(e: KeyboardEvent) {
+    if (e.ctrlKey && ['q'].includes(e.key)) {
+      e.preventDefault()
+
+      if (e.key === 'q') createQuad()
+    }
+  }
 
   function quadPointsStr(points: Info.Coord[]) {
     const toStr = (p: Info.Coord) => p.x / 1024 + ',' + p.y / 1024

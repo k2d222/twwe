@@ -191,6 +191,14 @@ $header-h: 3rem;
   width: 100%;
   height: 100%;
 
+  // make the canvas darker when unfocused to show that other inputs have focus.
+  transition: background-color .2s, box-shadow .2s;
+
+  &:not(:focus) {
+    background-color: rgba(0, 0, 0, 0.10);
+    box-shadow: inset 0 0 20px -10px black;
+  }
+
   >canvas {
     height: 100%;
     width: 100%;

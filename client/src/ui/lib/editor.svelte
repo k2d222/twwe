@@ -160,10 +160,6 @@
     }
   }
 
-  function onToggleAnim() {
-    $anim = !$anim
-  }
-
   function onUndo() {
     if (!$server.undo()) {
       console.warn('cannot undo')
@@ -182,13 +178,13 @@
 
     Editor.fire('keydown', e)
 
-    if (e.ctrlKey && ['s', ' ', 'z', 'y'].includes(e.key)) {
+    if (e.ctrlKey && ['s', ' ', 'z', 'y', 'm'].includes(e.key)) {
       e.preventDefault()
 
       if (e.key === 's') {
         Actions.saveMap()
-      } else if (e.key === ' ') {
-        onToggleAnim()
+      } else if (e.key === ' ' || e.key === 'm') {
+        $anim = !$anim
       } else if (e.key === 'z') {
         onUndo()
       } else if (e.key === 'y') {
