@@ -17,9 +17,9 @@ mod twmap_map_checks;
 mod twmap_map_edit;
 mod util;
 
-#[cfg(any(feature = "bridge_in", feature = "bridge_out"))]
+#[cfg(feature = "bridge")]
 mod bridge;
-#[cfg(any(feature = "bridge_in", feature = "bridge_out"))]
+#[cfg(feature = "bridge")]
 mod bridge_router;
 
 use room::Room;

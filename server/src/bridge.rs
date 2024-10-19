@@ -1,17 +1,18 @@
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
-use axum_tungstenite::Message as WebSocketMessage;
-use axum_tungstenite::WebSocket;
+use axum::extract::ws::{Message as WebSocketMessage, WebSocket};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
-    StreamExt, TryStreamExt,
+    SinkExt, StreamExt, TryStreamExt,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tokio_tungstenite::tungstenite::protocol::{frame::coding::CloseCode, CloseFrame};
+use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
 use crate::{error::Error, protocol::*, room::Peer, server::Server, util::*};
 
-use futures_util::{future::Either, stream, SinkExt};
+use futures_util::{future::Either, stream};
 use tokio_tungstenite::connect_async;
 
 type Tx = UnboundedSender<WebSocketMessage>;
@@ -81,8 +82,7 @@ impl Server {
                     WebSocketMessage::Close(_) => futures::future::err(Error::BridgeClosed),
                     WebSocketMessage::Binary(_)
                     | WebSocketMessage::Ping(_)
-                    | WebSocketMessage::Pong(_)
-                    | WebSocketMessage::Frame(_) => futures::future::ok(()),
+                    | WebSocketMessage::Pong(_) => futures::future::ok(()),
                 }
             });
 
@@ -185,15 +185,15 @@ impl Server {
     /// Open a bridge with a remote server
     pub async fn open_bridge(server: Arc<Server>, cfg: BridgeConfig) -> Result<(), Error> {
         server.close_bridge();
-        let url = url::Url::parse(&cfg.url).map_err(|_| Error::BridgeNotFound)?;
-
-        let (socket, _resp) = connect_async(&url)
+        let (socket, _resp) = connect_async(&cfg.url)
             .await
             .map_err(|_| Error::BridgeNotFound)?;
         let (mut ws_send, ws_recv) = socket.split();
 
         ws_send
-            .send(WebSocketMessage::Text(serde_json::to_string(&cfg).unwrap()))
+            .send(TungsteniteMessage::Text(
+                serde_json::to_string(&cfg).unwrap(),
+            ))
             .await
             .map_err(|_| Error::BridgeClosed)?;
 
@@ -209,7 +209,7 @@ impl Server {
             .map_err(|_| Error::BridgeClosed)
             .try_for_each(move |v| {
                 let (addr_msg, payload_msg) = match v.into_iter().collect_tuple() {
-                    Some((WebSocketMessage::Text(m1), WebSocketMessage::Text(m2))) => (m1, m2),
+                    Some((TungsteniteMessage::Text(m1), TungsteniteMessage::Text(m2))) => (m1, m2),
                     _ => return futures::future::err(Error::BridgeClosed),
                 };
 
@@ -226,6 +226,23 @@ impl Server {
                                         WebSocketMessage::Text(addr_msg.clone()),
                                         payload,
                                     ])
+                                })
+                                // we need to do a bit of juggling here because we combine axum's tungstenite
+                                // with tokio's tungstenite
+                                .map(|msg| match msg {
+                                    WebSocketMessage::Text(x) => TungsteniteMessage::Text(x),
+                                    WebSocketMessage::Binary(x) => TungsteniteMessage::Binary(x),
+                                    WebSocketMessage::Ping(x) => TungsteniteMessage::Ping(x),
+                                    WebSocketMessage::Pong(x) => TungsteniteMessage::Pong(x),
+                                    WebSocketMessage::Close(Some(close)) => {
+                                        TungsteniteMessage::Close(Some(CloseFrame {
+                                            code: CloseCode::from(close.code),
+                                            reason: close.reason,
+                                        }))
+                                    }
+                                    WebSocketMessage::Close(None) => {
+                                        TungsteniteMessage::Close(None)
+                                    }
                                 })
                                 .map(Ok)
                                 .forward(tx.clone());
@@ -273,8 +290,8 @@ impl Server {
                 futures::future::ready(res.ok_or(Error::BridgeFailure))
             });
 
-        log::info!("bridge connected to {}", &url);
-        let url = url.clone();
+        let url = cfg.url.clone();
+        log::info!("bridge connected to {}", url);
 
         let handle = tokio::spawn(async move {
             match futures::future::select(fut_send, fut_recv).await {

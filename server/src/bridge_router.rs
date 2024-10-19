@@ -3,14 +3,13 @@ use std::{
     sync::Arc,
 };
 
+use axum::extract::ws::{Message as WebSocketMessage, WebSocketUpgrade};
 use axum::{
     extract::{ConnectInfo, Path, State},
-    headers::UserAgent,
     response::IntoResponse,
-    Json, TypedHeader,
+    Json,
 };
-use axum_tungstenite::Message as WebSocketMessage;
-use axum_tungstenite::WebSocketUpgrade;
+use axum_extra::{headers::UserAgent, TypedHeader};
 use futures::channel::mpsc::unbounded;
 use futures_util::StreamExt;
 
