@@ -11,6 +11,7 @@ use axum::{
 use axum_extra::{headers::UserAgent, TypedHeader};
 use axum_server::tls_rustls::RustlsConfig;
 
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{
     cors,
     services::{ServeDir, ServeFile},
@@ -101,6 +102,10 @@ impl Router {
         }
 
         let mut router = router
+            // rate-limits
+            .layer(GovernorLayer {
+                config: Arc::new(GovernorConfigBuilder::default().finish().unwrap()),
+            })
             .layer(DefaultBodyLimit::max(2 * 1024 * 1024)) // 2 MiB
             .layer(cors)
             .with_state(server);
