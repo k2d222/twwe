@@ -5,8 +5,7 @@ use std::{
     sync::{Arc, Mutex, MutexGuard},
 };
 
-use axum_tungstenite::Message as WebSocketMessage;
-use axum_tungstenite::WebSocket;
+use axum::extract::ws::{Message as WebSocketMessage, WebSocket};
 use futures::{channel::mpsc::unbounded, StreamExt, TryStreamExt};
 use image::ImageFormat;
 use regex::Regex;

@@ -113,7 +113,7 @@ The `bridge_out` and `bridge_in` feature flags guard this feature and are disabl
 
 ### Client
 
-Copy the `env.example` file to `.env` or `.env.production` and configure the websocket server url. For a TLS-encrypted websocket, the url schemes are `wss://` and `https://`. Otherwise, use `ws://` and `http://`.
+Copy the `env.example` file to `.env` or `.env.production` and configure the websocket server url.
 
 Have [npm](https://www.npmjs.com/) installed and run `npm install` in the client directory to install dependencies, `npm run dev` to run a dev server and `npm run build` to produce a release in the `dist` directory.
 

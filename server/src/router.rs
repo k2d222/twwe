@@ -2,16 +2,14 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     body::Bytes,
-    extract::{ConnectInfo, DefaultBodyLimit, Path, State},
-    headers::UserAgent,
+    extract::{ConnectInfo, DefaultBodyLimit, Path, State, WebSocketUpgrade},
     http::Method,
     response::IntoResponse,
     routing::{delete, get, post},
-    Json, TypedHeader,
+    Json,
 };
+use axum_extra::{headers::UserAgent, TypedHeader};
 use axum_server::tls_rustls::RustlsConfig;
-
-use axum_tungstenite::WebSocketUpgrade;
 
 use tower_http::{
     cors,

@@ -8,30 +8,16 @@ use std::{
     sync::Arc,
 };
 
-use axum_tungstenite::Message as WebSocketMessage;
+use axum::extract::ws::Message as WebSocketMessage;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use futures::channel::mpsc::UnboundedSender;
 
-use structview::View;
 use uuid::Uuid;
 
 use crate::{map_cfg::MapConfig, protocol::*};
 
 type Tx = UnboundedSender<WebSocketMessage>;
-
-// taken as-is from twmap
-trait ViewAsBytes: View {
-    fn into_boxed_bytes(boxed_slice: Box<[Self]>) -> Box<[u8]> {
-        let len = boxed_slice.len() * std::mem::size_of::<Self>();
-        let ptr = Box::into_raw(boxed_slice);
-        unsafe {
-            let byte_slice = std::slice::from_raw_parts_mut(ptr as *mut u8, len);
-            Box::from_raw(byte_slice)
-        }
-    }
-}
-impl<T: View> ViewAsBytes for T {}
 
 fn server_error<E: std::fmt::Display>(err: E) -> &'static str {
     log::error!("{}", err);
@@ -39,7 +25,7 @@ fn server_error<E: std::fmt::Display>(err: E) -> &'static str {
 }
 
 fn load_map(path: &Path) -> Result<twmap::TwMap, twmap::Error> {
-    let mut map = twmap::TwMap::parse_file(path)?;
+    let mut map = twmap::TwMap::parse(&std::fs::read(path)?)?;
     map.load()?;
     Ok(map)
 }
@@ -274,10 +260,11 @@ impl Room {
         // clone the map to release the lock as soon as possible
         let mut tmp_path = self.map.path.clone();
         tmp_path.set_extension("map.tmp");
+        let mut tmp_file = File::create(&tmp_path).map_err(server_error)?;
         self.map
             .get()
             .clone()
-            .save_file(&tmp_path)
+            .save(&mut tmp_file)
             .map_err(server_error)?;
         std::fs::rename(&tmp_path, &self.map.path).map_err(server_error)?;
 
