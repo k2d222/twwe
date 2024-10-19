@@ -4,6 +4,9 @@ description = "Teeworlds Web Editor Server"
 authors = ["Mathis Brossier <mathis.brossier@gmail.com>"]
 version = "0.1.0"
 edition = "2021"
+license = "AGPL-3.0-only"
+repository = "https://github.com/k2d222/twwe"
+keywords = ["teeworlds", "ddnet", "twwe"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
