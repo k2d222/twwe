@@ -47,8 +47,8 @@ impl Server {
         Server {
             rooms: Mutex::new(HashMap::new()),
             rpp_path: cli.rpp_path.clone(),
-            maps_dir: cli.maps_dirs.get(0).cloned(),
-            data_dir: cli.data_dirs.get(0).cloned(),
+            maps_dir: cli.maps_dirs.first().cloned(),
+            data_dir: cli.data_dirs.first().cloned(),
             #[cfg(feature = "bridge")]
             bridge: Default::default(),
             #[cfg(feature = "bridge")]
@@ -330,7 +330,7 @@ impl Server {
         let mut buf = Vec::new();
         let mut map = room.map().clone(); // cloned to avoid blocking
         map.save(&mut buf)
-            .map_err(|e| Error::ServerError(e.to_string().into()))?;
+            .map_err(|e| Error::Internal(e.to_string().into()))?;
 
         Ok(buf)
     }
@@ -346,10 +346,7 @@ impl Server {
 
         let mut map = match creation.method {
             CreationMethod::Upload(file) => {
-                let map =
-                    twmap::TwMap::parse(&file.0).map_err(|e| Error::MapError(e.to_string()))?;
-                // self.put_map(map_name, &file.0)?;
-                map
+                twmap::TwMap::parse(&file.0).map_err(|e| Error::Map(e.to_string()))?
             }
             CreationMethod::Clone(clone_name) => {
                 let room = self.room(&clone_name)?;
@@ -371,7 +368,7 @@ impl Server {
                 };
                 group.layers.push(twmap::Layer::Game(layer));
                 map.groups.push(group);
-                map.check().map_err(|e| Error::MapError(e.to_string()))?;
+                map.check().map_err(|e| Error::Map(e.to_string()))?;
                 map
             }
         };
@@ -380,16 +377,17 @@ impl Server {
             let path = maps_dir.join(map_name);
             let map_path = path.join("map.map");
 
-            std::fs::create_dir(&path).map_err(|e| Error::ServerError(e.to_string().into()))?;
-            map.save_file(&map_path)
-                .map_err(|e| Error::MapError(e.to_string()))?;
+            std::fs::create_dir(&path).map_err(|e| Error::Internal(e.to_string().into()))?;
+            let mut map_file = std::fs::File::create(&map_path)
+                .map_err(|e| Error::Internal(e.to_string().into()))?;
+            map.save(&mut map_file)
+                .map_err(|e| Error::Map(e.to_string()))?;
 
             let mut room =
-                Room::new_from_dir(path).ok_or(Error::ServerError("map creation failed".into()))?;
+                Room::new_from_dir(path).ok_or(Error::Internal("map creation failed".into()))?;
 
             room.config.access = creation.access.unwrap_or(MapAccess::Public);
-            room.save_config()
-                .map_err(|e| Error::ServerError(e.into()))?;
+            room.save_config().map_err(|e| Error::Internal(e.into()))?;
             room
         } else if let Some(data_dir) = self.data_dir.as_ref() {
             let mut map_path = data_dir.join("maps").join(map_name);
@@ -400,11 +398,13 @@ impl Server {
                 return Err(Error::MapNameTaken);
             }
 
-            map.save_file(&map_path)
-                .map_err(|e| Error::MapError(e.to_string()))?;
+            let mut map_file = std::fs::File::create(&map_path)
+                .map_err(|e| Error::Internal(e.to_string().into()))?;
+            map.save(&mut map_file)
+                .map_err(|e| Error::Map(e.to_string()))?;
 
             let mut room = Room::new_from_files(map_path, None, Some(am_path))
-                .ok_or(Error::ServerError("map creation failed".into()))?;
+                .ok_or(Error::Internal("map creation failed".into()))?;
 
             room.config.access = creation.access.unwrap_or(MapAccess::Public);
             room
@@ -489,13 +489,13 @@ impl Server {
 
         match image {
             twmap::Image::External(_) => {
-                Err(Error::ServerError("cannot send external images".into()))?
+                Err(Error::Internal("cannot send external images".into()))?
             }
             twmap::Image::Embedded(image) => image
                 .image
                 .unwrap_ref()
                 .write_to(&mut std::io::Cursor::new(&mut buf), ImageFormat::Png)
-                .map_err(|e| Error::ServerError(e.to_string().into()))?,
+                .map_err(|e| Error::Internal(e.to_string().into()))?,
         };
 
         Ok(buf)
@@ -535,7 +535,7 @@ impl Server {
 
         image
             .check(&room.map(), &mut ())
-            .map_err(|e| Error::MapError(e.to_string()))?;
+            .map_err(|e| Error::Map(e.to_string()))?;
 
         room.map().images.push(image);
         Ok(())
@@ -607,7 +607,7 @@ impl Server {
 
         // check
         env.check(&room.map(), &mut ())
-            .map_err(|e| Error::MapError(e.to_string()))?;
+            .map_err(|e| Error::Map(e.to_string()))?;
 
         room.map().envelopes.push(env);
         Ok(())
@@ -1228,7 +1228,7 @@ impl Server {
         let path = room.automapper_path();
 
         if let Some(path) = path {
-            if let Ok(read_dir) = std::fs::read_dir(&path) {
+            if let Ok(read_dir) = std::fs::read_dir(path) {
                 let automappers = read_dir
                     .filter_map(|e| e.ok())
                     .filter_map(|e| {
@@ -1294,20 +1294,18 @@ impl Server {
         let rpp_path = self
             .rpp_path
             .as_ref()
-            .ok_or(Error::ServerError("rpp path not provided".into()))?;
+            .ok_or(Error::Internal("rpp path not provided".into()))?;
 
-        let root = path
-            .parent()
-            .ok_or(Error::ServerError("no parent".into()))?;
+        let root = path.parent().ok_or(Error::Internal("no parent".into()))?;
 
         let in_fname = path
             .file_name()
-            .ok_or(Error::ServerError("no file name".into()))?
+            .ok_or(Error::Internal("no file name".into()))?
             .to_string_lossy();
         let out_fname = format!(
             "{}.rules",
             path.file_stem()
-                .ok_or(Error::ServerError("no file name".into()))?
+                .ok_or(Error::Internal("no file name".into()))?
                 .to_string_lossy()
         );
 
@@ -1333,19 +1331,19 @@ impl Server {
 
         let exec = cmd
             .output()
-            .map_err(|e| Error::ServerError(e.to_string().into()))?;
+            .map_err(|e| Error::Internal(e.to_string().into()))?;
 
         match exec.status.code() {
             Some(0) => Ok(()),
             Some(_) => {
                 log::info!("rpp: {}", String::from_utf8_lossy(&exec.stderr));
-                Err(Error::AutomapperError(
+                Err(Error::Automapper(
                     String::from_utf8_lossy(&exec.stderr).into_owned(),
                 ))
             }
             None => {
                 log::error!("rpp: {}", String::from_utf8_lossy(&exec.stderr));
-                Err(Error::ServerError("rpp: no exit status".into()))
+                Err(Error::Internal("rpp: no exit status".into()))
             }
         }
     }
@@ -1364,7 +1362,7 @@ impl Server {
 
         let path = room
             .automapper_path()
-            .ok_or(Error::ServerError(
+            .ok_or(Error::Internal(
                 "No automapper directory available for this map".into(),
             ))?
             .join(am);
@@ -1372,14 +1370,14 @@ impl Server {
         let kind = is_automapper(&path).ok_or(Error::InvalidFileName)?;
 
         std::fs::create_dir_all(room.automapper_path().unwrap()).ok();
-        std::fs::write(&path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
+        std::fs::write(&path, file).map_err(|e| Error::Internal(e.to_string().into()))?;
 
         if kind == AutomapperKind::RulesPP {
             match self.compile_rpp(&path) {
                 Ok(()) => {
                     let target = path.with_extension("rules");
                     let file = std::fs::read_to_string(&target)
-                        .map_err(|e| Error::AutomapperError(e.to_string()))?;
+                        .map_err(|e| Error::Automapper(e.to_string()))?;
                     let name = target
                         .file_name()
                         .unwrap_or_default()
@@ -1389,7 +1387,7 @@ impl Server {
                         Message::Request(Request::Create(CreateReq::Automapper(name, file)));
                     self.broadcast_to_room(&room, message);
                 }
-                Err(Error::AutomapperError(s)) => {
+                Err(Error::Automapper(s)) => {
                     let reg = Regex::new(r"\[(\d+):(\d+)-(\d+):(\d+)\]\s*(.+)").unwrap();
                     let diagnostics = s
                         .split('\n')
@@ -1430,7 +1428,7 @@ impl Server {
             return Err(Error::InvalidFileName);
         }
 
-        std::fs::remove_file(path).map_err(|e| Error::ServerError(e.to_string().into()))?;
+        std::fs::remove_file(path).map_err(|e| Error::Internal(e.to_string().into()))?;
 
         Ok(())
     }
@@ -1480,10 +1478,10 @@ impl Server {
                 .join(format!("{image_name}.rules"));
             let file = std::fs::read_to_string(am_path).map_err(|_| Error::AutomapperNotFound)?;
             let automapper = twmap::automapper::Automapper::parse(image_name, &file)
-                .map_err(|e| Error::AutomapperError(e.to_string()))?;
+                .map_err(|e| Error::Automapper(e.to_string()))?;
             layer
                 .run_automapper(&automapper)
-                .map_err(|_| Error::AutomapperError("config out of bounds".to_owned()))?;
+                .map_err(|_| Error::Automapper("config out of bounds".to_owned()))?;
             Ok(())
         } else {
             Err(Error::WrongLayerType)
@@ -1660,7 +1658,7 @@ impl Server {
         let mut peers = room.peers();
         let room_peer = peers
             .get_mut(&peer.addr)
-            .ok_or(Error::ServerError("server error".into()))?;
+            .ok_or(Error::Internal("server error".into()))?;
         room_peer.cursor = Some(cursor);
 
         Ok(())
@@ -1668,7 +1666,7 @@ impl Server {
 
     pub fn save_map(&self, map_name: &str) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        room.save_map().map_err(|e| Error::ServerError(e.into()))
+        room.save_map().map_err(|e| Error::Internal(e.into()))
     }
 
     pub fn peer_join(&self, peer: &mut Peer, map_name: &str) -> Result<(), Error> {

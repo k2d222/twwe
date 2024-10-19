@@ -52,7 +52,7 @@ impl PartialCheck for PartialEnvelope {
                         return Err(Error::MaxEnvPoints);
                     }
                     twmap::EnvPoint::check_all(points, &map)
-                        .map_err(|e| Error::MapError(e.to_string()))?;
+                        .map_err(|e| Error::Map(e.to_string()))?;
                 }
             }};
         }
@@ -85,7 +85,7 @@ impl<T: Copy> PartialCheck for PartialEnv<T> {
 
     fn check_map(&self, map: &twmap::TwMap) -> Result<(), Error> {
         if let Some(points) = &self.points {
-            twmap::EnvPoint::check_all(points, map).map_err(|e| Error::MapError(e.to_string()))?;
+            twmap::EnvPoint::check_all(points, map).map_err(|e| Error::Map(e.to_string()))?;
         }
         Ok(())
     }

@@ -1,9 +1,8 @@
 use std::{borrow::Cow, convert::Infallible, fmt::Display, str::FromStr};
 
 use axum::{http::StatusCode, response::IntoResponse};
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub enum Error {
     // 404 not found
     MapNotFound,
@@ -53,8 +52,8 @@ pub enum Error {
     AlreadyJoined,
     NotJoined,
 
-    MapError(String),
-    AutomapperError(String),
+    Map(String),
+    Automapper(String),
     BadRequest(String),
 
     // 403 forbidden
@@ -67,7 +66,7 @@ pub enum Error {
     EditPhysicsGroup,
 
     // 500 internal server error
-    ServerError(Cow<'static, str>),
+    Internal(Cow<'static, str>),
     #[allow(unused)]
     ToDo,
 }
@@ -112,8 +111,8 @@ impl Display for Error {
             Error::BridgeClosed => write!(f, "connection with the remote server closed"),
             Error::AlreadyJoined => write!(f, "already joined"),
             Error::NotJoined => write!(f, "not joined"),
-            Error::MapError(x) => write!(f, "twmap error: {x}"),
-            Error::AutomapperError(x) => write!(f, "automapper error: {x}"),
+            Error::Map(x) => write!(f, "twmap error: {x}"),
+            Error::Automapper(x) => write!(f, "automapper error: {x}"),
             Error::BadRequest(x) => write!(f, "bad request: {x}"),
             Error::DeletePhysicsGroup => write!(f, "cannot delete the physics group"),
             Error::DeleteGameLayer => write!(f, "cannot delete the game layer"),
@@ -129,7 +128,7 @@ impl Display for Error {
                 write!(f, "cannot move a physics layer out of the physics group")
             }
             Error::EditPhysicsGroup => write!(f, "cannot edit properties of the physics group"),
-            Error::ServerError(x) => write!(f, "internal server error: {x}"),
+            Error::Internal(x) => write!(f, "internal server error: {x}"),
             Error::ToDo => write!(f, "this functionality is not implemented yet"),
         }
     }
@@ -139,7 +138,7 @@ impl FromStr for Error {
     type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Error::ServerError(s.to_owned().into()))
+        Ok(Error::Internal(s.to_owned().into()))
     }
 }
 
@@ -183,8 +182,8 @@ impl IntoResponse for Error {
             Error::BridgeClosed => StatusCode::BAD_GATEWAY,
             Error::AlreadyJoined => StatusCode::BAD_REQUEST,
             Error::NotJoined => StatusCode::BAD_REQUEST,
-            Error::MapError(_) => StatusCode::BAD_REQUEST,
-            Error::AutomapperError(_) => StatusCode::BAD_REQUEST,
+            Error::Map(_) => StatusCode::BAD_REQUEST,
+            Error::Automapper(_) => StatusCode::BAD_REQUEST,
             Error::BadRequest(_) => StatusCode::BAD_REQUEST,
             Error::DeletePhysicsGroup => StatusCode::FORBIDDEN,
             Error::DeleteGameLayer => StatusCode::FORBIDDEN,
@@ -193,7 +192,7 @@ impl IntoResponse for Error {
             Error::CreateDuplicatePhysicsLayer => StatusCode::FORBIDDEN,
             Error::PhysicsLayerChangeGroup => StatusCode::FORBIDDEN,
             Error::EditPhysicsGroup => StatusCode::FORBIDDEN,
-            Error::ServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::ToDo => StatusCode::INTERNAL_SERVER_ERROR,
         };
 

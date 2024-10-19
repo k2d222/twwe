@@ -51,7 +51,7 @@ pub(crate) fn set_layer_width<T: twmap::TilemapLayer>(
     let old_width = layer.tiles().shape().w as isize;
     let diff = width as isize - old_width;
 
-    if width < 2 || width > 10000 {
+    if (2..=10000).contains(&width) {
         return Err("invalid layer dimensions");
     }
 
@@ -71,7 +71,7 @@ pub(crate) fn set_layer_height<T: twmap::TilemapLayer>(
     let old_height = layer.tiles().shape().h as isize;
     let diff = height as isize - old_height;
 
-    if height < 2 || height > 10000 {
+    if !(2..=10000).contains(&height) {
         return Err("invalid layer dimensions");
     }
 

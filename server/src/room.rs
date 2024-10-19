@@ -120,10 +120,9 @@ impl Room {
 
         let name = dir_path.file_name()?.to_string_lossy().to_string();
 
-        let config = Self::read_cfg(&cfg_path).unwrap_or_else(|| {
-            let mut config = MapConfig::default();
-            config.name = name;
-            config
+        let config = Self::read_cfg(&cfg_path).unwrap_or_else(|| MapConfig {
+            name,
+            ..Default::default()
         });
 
         let map = LazyMap::new(map_path.clone());
@@ -155,11 +154,10 @@ impl Room {
 
         let config = cfg_path
             .as_ref()
-            .and_then(|path| Self::read_cfg(&path))
-            .unwrap_or_else(|| {
-                let mut config = MapConfig::default();
-                config.name = name;
-                config
+            .and_then(|path| Self::read_cfg(path))
+            .unwrap_or_else(|| MapConfig {
+                name,
+                ..Default::default()
             });
 
         let map = LazyMap::new(map_path.clone());
@@ -247,7 +245,7 @@ impl Room {
 
     pub fn save_config(&self) -> Result<(), &'static str> {
         if let Some(cfg_path) = &self.cfg_path {
-            let file = File::create(&cfg_path).map_err(server_error)?;
+            let file = File::create(cfg_path).map_err(server_error)?;
             serde_json::to_writer(file, &self.config).map_err(server_error)?;
         }
         Ok(())
