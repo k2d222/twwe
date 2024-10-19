@@ -1,5 +1,3 @@
-extern crate pretty_env_logger;
-
 use std::{
     cmp::min,
     collections::HashMap,

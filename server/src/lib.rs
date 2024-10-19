@@ -81,7 +81,3 @@ pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
     }
     Ok(server)
 }
-
-pub fn init_logger() {
-    pretty_env_logger::init_timed();
-}

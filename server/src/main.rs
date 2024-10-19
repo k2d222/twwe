@@ -17,7 +17,7 @@ async fn run_server(args: Cli) {
 }
 
 fn main() {
-    pretty_env_logger::init_timed();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let args = Cli::parse();
 
