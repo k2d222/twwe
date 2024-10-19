@@ -212,7 +212,7 @@
     $server.on('edit/info', onEditInfo, true)
 
     // do not send cursors events in development, as this spams the websocket logs a lot.
-    if (import.meta.env.MODE !== 'development')
+    if (import.meta.env.MODE !== 'development' || import.meta.env.VITE_SHOW_CURSORS)
       cursorInterval = setInterval(updateCursors, cursorDuration) as any
 
     renderLoop(0)
