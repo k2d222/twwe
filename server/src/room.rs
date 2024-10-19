@@ -1,8 +1,10 @@
 extern crate pretty_env_logger;
 
 use std::{
+    cmp::min,
     collections::HashMap,
     fs::File,
+    io::Write,
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::Arc,
@@ -15,13 +17,13 @@ use futures::channel::mpsc::UnboundedSender;
 
 use uuid::Uuid;
 
-use crate::{map_cfg::MapConfig, protocol::*};
+use crate::{error::Error, map_cfg::MapConfig, protocol::*};
 
 type Tx = UnboundedSender<WebSocketMessage>;
 
-fn server_error<E: std::fmt::Display>(err: E) -> &'static str {
+fn server_error<E: std::fmt::Display>(err: E) -> Error {
     log::error!("{}", err);
-    "internal server error"
+    Error::Internal("".into())
 }
 
 fn load_map(path: &Path) -> Result<twmap::TwMap, twmap::Error> {
@@ -243,7 +245,7 @@ impl Room {
         }
     }
 
-    pub fn save_config(&self) -> Result<(), &'static str> {
+    pub fn save_config(&self) -> Result<(), Error> {
         if let Some(cfg_path) = &self.cfg_path {
             let file = File::create(cfg_path).map_err(server_error)?;
             serde_json::to_writer(file, &self.config).map_err(server_error)?;
@@ -251,20 +253,30 @@ impl Room {
         Ok(())
     }
 
-    pub fn save_map(&self) -> Result<(), &'static str> {
-        // Avoid concurrent saves
-        let _lck = self.saving.lock();
-
+    pub fn save_map(&self, max_size: usize) -> Result<(), Error> {
         // clone the map to release the lock as soon as possible
         let mut tmp_path = self.map.path.clone();
         tmp_path.set_extension("map.tmp");
-        let mut tmp_file = File::create(&tmp_path).map_err(server_error)?;
-        self.map
-            .get()
-            .clone()
-            .save(&mut tmp_file)
-            .map_err(server_error)?;
-        std::fs::rename(&tmp_path, &self.map.path).map_err(server_error)?;
+
+        (|| -> Result<(), Error> {
+            // Avoid concurrent saves
+            let _lck = self.saving.lock();
+
+            let mut buf = Vec::with_capacity(min(max_size, 1024 * 1024));
+            self.map
+                .get()
+                .clone()
+                .save(&mut buf)
+                .map_err(server_error)?;
+
+            if buf.len() > max_size {
+                return Err(Error::MapTooBig);
+            }
+
+            let mut file = File::create(&self.map.path).map_err(server_error)?;
+            file.write_all(&buf).map_err(server_error)?;
+            Ok(())
+        })()?;
 
         log::debug!("map saved `{}`", self.map.path.display());
         Ok(())

@@ -74,7 +74,11 @@ pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
             }
         }
     }
-    log::info!("found {} maps.", server.rooms().len());
+    let rooms = server.rooms().len();
+    log::info!("found {rooms} maps");
+    if rooms > server.max_maps {
+        log::warn!("there are more maps than is allowed by --max-maps");
+    }
     Ok(server)
 }
 

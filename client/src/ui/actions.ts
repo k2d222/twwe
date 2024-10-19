@@ -10,11 +10,11 @@ export async function saveMap() {
   const id = showInfo('Saving map...', 'none')
   try {
     await server_.query('save', undefined)
-    clearDialog(id)
     showInfo('Map saved on the server.', 'closable')
   } catch (e) {
     showError('Failed to save map: ' + e)
   }
+  clearDialog(id)
 }
 
 export async function downloadMap() {

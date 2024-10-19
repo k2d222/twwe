@@ -94,17 +94,23 @@ The code is split into a client, a desktop and a server part. The client generat
 
 Have [rust](https://www.rust-lang.org/) and cargo installed. And create a server/maps/ directory with your .map files in it.
 
-Run the server with `RUST_LOG=debug cargo run --release` to run in release mode with debugging info printed to stdout.
+Run the server with `RUST_LOG=debug cargo run --release -- --maps <path_to_maps_dir>` to run in release mode with debugging info printed to stdout.
 
 Use the first command-line argument to change address and port e.g. `cargo run localhost:3333` to run locally on port 3333.
 
-Use the `--cert` and `--key` flags to enable TLS support for websocket. They must point to your PEM certificate and private key.
+Use the `--cert` and `--key` arguments to enable TLS support for websocket. They must point to your PEM certificate and private key.
 
-Use the `--rpp <path>` flat to enable Rules++ support (experimental). `<path>` must be the **absolute** path to a directory containing: `rpp` (the rpp executable), `base.r` and `base.p`.
+Use the `--rpp <path>` argument to enable Rules++ support (experimental). `<path>` must be the **absolute** path to a directory containing: `rpp` (the rpp executable), `base.r` and `base.p`.
+
+#### Limits
+
+The HTTP server is rate-limited per IP. It allows bursts of 8 requests and then 500ms between requests. This is currently not configurable.
+
+The `--max-maps <MiB>` argument limits the number of maps created by users. The `--max-map-size <MiB>` argument limits the size of each map file.
 
 #### Server bridging
 
-With the desktop client, it is possible to connect a "bridge" to a remote server (e.g. pi.thissma.fr:16900), such that other users can access and edit a map on your hard drive from the internet. This feature has security implications for both the server and the client, so make sure you understand them before enabling bridging.
+With the desktop client, it is possible to connect a "bridge" to a remote server (e.g. pi.thissma.fr:16900), to allow other users to access and edit a map on your hard drive from the internet. This feature has security implications for both the server and the client, so make sure you understand them before enabling bridging.
 
  * For the client, enabling bridge essentially gives the internet a direct access to the map file on your computer. Anyone who has access to the passphrase can do damage to your map file. Make sure you make a backup and trust the people with whom you share the passphrase.
  * For the server, bridging initiates a connection to an arbitrary websocket url chosen by the client. Make sure your server may not leak the local network or connect to unwanted networks.

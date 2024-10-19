@@ -2,11 +2,14 @@ use std::{
     collections::HashMap,
     net::SocketAddr,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{
+        atomic::{self, AtomicIsize},
+        Arc, Mutex, MutexGuard,
+    },
 };
 
 use axum::extract::ws::{Message as WebSocketMessage, WebSocket};
-use futures::{channel::mpsc::unbounded, StreamExt, TryStreamExt};
+use futures::{channel::mpsc::unbounded, SinkExt, StreamExt, TryStreamExt};
 use image::ImageFormat;
 use regex::Regex;
 
@@ -36,6 +39,10 @@ pub struct Server {
     pub rpp_path: Option<PathBuf>,
     pub maps_dir: Option<PathBuf>,
     pub data_dir: Option<PathBuf>,
+    pub max_maps: usize,
+    pub max_map_size: usize, // in bytes
+    pub max_peers: usize,
+    pub peer_count: AtomicIsize,
     #[cfg(feature = "bridge")]
     pub bridge: Mutex<Option<JoinHandle<()>>>,
     #[cfg(feature = "bridge")]
@@ -49,6 +56,10 @@ impl Server {
             rpp_path: cli.rpp_path.clone(),
             maps_dir: cli.maps_dirs.first().cloned(),
             data_dir: cli.data_dirs.first().cloned(),
+            max_maps: cli.max_maps,
+            max_map_size: cli.max_map_size * 1024,
+            max_peers: cli.max_connections,
+            peer_count: 0.into(),
             #[cfg(feature = "bridge")]
             bridge: Default::default(),
             #[cfg(feature = "bridge")]
@@ -272,11 +283,23 @@ impl Server {
     }
 
     pub(crate) async fn handle_websocket(&self, socket: WebSocket, addr: SocketAddr) {
-        let (tx, ws_recv) = socket.split();
-        let (ws_send, rx) = unbounded();
-        let fut_send = rx.map(Ok).forward(tx);
+        let (mut tx, ws_recv) = socket.split();
+        let (ws_send, mut rx) = unbounded();
 
         let mut peer = Peer::new(addr, ws_send);
+
+        let peers = self.peer_count.fetch_add(1, atomic::Ordering::Relaxed) + 1;
+        log::debug!("simultaneous connections: {peers}/{}", self.max_peers);
+        if peers as usize > self.max_peers {
+            self.peer_count.fetch_sub(1, atomic::Ordering::Relaxed);
+            Server::send(&peer, None, Message::Response(Err(Error::MaxPeers)));
+            let msg = rx.next().await.unwrap();
+            tx.send(msg).await.ok();
+            log::info!("kicked {}, too many connections", peer.addr);
+            return;
+        }
+
+        let fut_send = rx.map(Ok).forward(tx);
 
         let fut_recv = ws_recv.try_for_each(|msg| {
             if let WebSocketMessage::Text(msg) = msg {
@@ -309,6 +332,9 @@ impl Server {
         self.broadcast_users(&peer);
 
         log::info!("client disconnected {}", &addr);
+
+        let peers = self.peer_count.fetch_sub(1, atomic::Ordering::Relaxed) - 1;
+        log::debug!("simultaneous connections: {peers}/{}", self.max_peers);
     }
 }
 
@@ -344,8 +370,15 @@ impl Server {
             return Err(Error::MapNameTaken);
         }
 
+        if self.rooms().len() >= self.max_maps {
+            return Err(Error::MaxMaps);
+        }
+
         let mut map = match creation.method {
             CreationMethod::Upload(file) => {
+                if file.0.len() > self.max_map_size {
+                    return Err(Error::MapTooBig);
+                }
                 twmap::TwMap::parse(&file.0).map_err(|e| Error::Map(e.to_string()))?
             }
             CreationMethod::Clone(clone_name) => {
@@ -387,7 +420,7 @@ impl Server {
                 Room::new_from_dir(path).ok_or(Error::Internal("map creation failed".into()))?;
 
             room.config.access = creation.access.unwrap_or(MapAccess::Public);
-            room.save_config().map_err(|e| Error::Internal(e.into()))?;
+            room.save_config()?;
             room
         } else if let Some(data_dir) = self.data_dir.as_ref() {
             let mut map_path = data_dir.join("maps").join(map_name);
@@ -1666,7 +1699,7 @@ impl Server {
 
     pub fn save_map(&self, map_name: &str) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        room.save_map().map_err(|e| Error::Internal(e.into()))
+        room.save_map(self.max_map_size)
     }
 
     pub fn peer_join(&self, peer: &mut Peer, map_name: &str) -> Result<(), Error> {

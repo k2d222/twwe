@@ -161,7 +161,7 @@ async fn route_websocket(
     } else {
         String::from("Unknown browser")
     };
-    log::info!("client {addr} connected.");
+    log::info!("client {addr} connected");
     log::debug!("client user-agent: `{user_agent}`");
 
     ws.on_upgrade(move |socket| async move { server.handle_websocket(socket, addr).await })

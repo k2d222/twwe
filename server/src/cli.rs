@@ -20,11 +20,11 @@ pub struct Cli {
     #[arg(short, long, requires = "cert")]
     pub key: Option<PathBuf>,
 
-    /// path to the maps directories (containing sub-directories containing map.map, config.json etc.)
+    /// Path to the maps directories (containing sub-directories containing map.map, config.json etc.)
     #[arg(name = "maps", long)]
     pub maps_dirs: Vec<PathBuf>,
 
-    /// path to ddnet data directories, if you want to read maps from there.
+    /// Path to ddnet data directories, if you want to read maps from there.
     /// Map will be read in the maps sub-directory, automappers in editor/automap, map
     /// config is volatile for now. Automappers will be shared between all maps in the
     /// same data directory.
@@ -35,7 +35,20 @@ pub struct Cli {
     #[arg(name = "static", short, long)]
     pub static_dir: Option<PathBuf>,
 
-    /// path to rules++ executable
+    /// Path to rules++ executable
     #[arg(name = "rpp", long)]
     pub rpp_path: Option<PathBuf>,
+
+    /// Maximum number of maps in both --maps and --data folders. Default: 1000.
+    #[arg(long, default_value_t = 1000)]
+    pub max_maps: usize,
+
+    /// Maximum size of a map file, in KiB. Default: 10MiB.
+    /// FYI: DDNet maps are typically less than 1MiB, the largest is Cerberus, 5MiB.
+    #[arg(long, default_value_t = 10 * 1024)]
+    pub max_map_size: usize,
+
+    /// Maximum number of simultaneous websocket connections. Default: 100.
+    #[arg(long, default_value_t = 100)]
+    pub max_connections: usize,
 }
