@@ -90,13 +90,15 @@ Additionally:
 
 The code is split into a client, a desktop and a server part. The client generates a static site (html, js, …) that you can host wherever you want or even run locally. The server is a HTTP and WebSocket server that the client connects to. The maps are stored on the server machine.
 
+the server can be installed from cargo: `cargo install twwe-server`
+
 ### Server
 
 Have [rust](https://www.rust-lang.org/) and cargo installed. And create a server/maps/ directory with your .map files in it.
 
-Run the server with `RUST_LOG=debug cargo run --release -- --maps <path_to_maps_dir>` to run in release mode with debugging info printed to stdout.
+Run the server with `twwe-server --maps <path_to_maps_dir>` to run in release mode with debugging info printed to stdout.
 
-Use the first command-line argument to change address and port e.g. `cargo run localhost:3333` to run locally on port 3333.
+Use the first command-line argument to change address and port e.g. `twwe-server localhost:3333 --maps ...` to run locally on port 3333.
 
 Use the `--cert` and `--key` arguments to enable TLS support for websocket. They must point to your PEM certificate and private key.
 
