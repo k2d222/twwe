@@ -44,6 +44,8 @@ pub struct MapDetail {
     pub users: usize,
 }
 
+// AUTOMAPPERS
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum AutomapperKind {
     #[serde(rename = "rules")]
@@ -60,6 +62,20 @@ pub struct AutomapperDetail {
     pub image: String,
     pub kind: AutomapperKind,
     pub configs: Option<Vec<String>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Span {
+    pub line_start: u32,
+    pub col_start: u32,
+    pub line_end: u32,
+    pub col_end: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AutomapperDiagnostic {
+    pub span: Span,
+    pub msg: String,
 }
 
 // TILES
@@ -452,6 +468,7 @@ pub enum Response {
     Tiles(Base64),
     Quad(#[serde_as(as = "Box<SerdeQuad>")] Box<twmap::Quad>),
     Automappers(Vec<AutomapperDetail>),
+    AutomapperDiagnostics(Vec<AutomapperDiagnostic>),
     Automapper(String),
     Users(usize),
     Cursors(HashMap<String, Cursor>),

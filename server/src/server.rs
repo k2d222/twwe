@@ -9,6 +9,7 @@ use axum_tungstenite::Message as WebSocketMessage;
 use axum_tungstenite::WebSocket;
 use futures::{channel::mpsc::unbounded, StreamExt, TryStreamExt};
 use image::ImageFormat;
+use regex::Regex;
 
 use crate::{
     base64::Base64,
@@ -184,15 +185,22 @@ impl Server {
             },
             Request::Create(req) => match req {
                 CreateReq::Image(image_name, create) => {
-                    self.put_image(map_name?, &image_name, create)
+                    { self.put_image(map_name?, &image_name, create) }.map(|()| Response::Ok)
                 }
-                CreateReq::Envelope(req) => self.put_envelope(map_name?, *req),
-                CreateReq::Group(req) => self.put_group(map_name?, *req),
-                CreateReq::Layer(g, req) => self.put_layer(map_name?, g, *req),
-                CreateReq::Quad(g, l, req) => self.put_quad(map_name?, g, l, *req),
-                CreateReq::Automapper(am, file) => self.put_automapper(peer, map_name?, &am, &file),
-            }
-            .map(|()| Response::Ok),
+                CreateReq::Envelope(req) => {
+                    self.put_envelope(map_name?, *req).map(|()| Response::Ok)
+                }
+                CreateReq::Group(req) => self.put_group(map_name?, *req).map(|()| Response::Ok),
+                CreateReq::Layer(g, req) => {
+                    self.put_layer(map_name?, g, *req).map(|()| Response::Ok)
+                }
+                CreateReq::Quad(g, l, req) => {
+                    self.put_quad(map_name?, g, l, *req).map(|()| Response::Ok)
+                }
+                CreateReq::Automapper(am, file) => self
+                    .put_automapper(map_name?, &am, &file)
+                    .map(Response::AutomapperDiagnostics),
+            },
             Request::Edit(req) => match req {
                 EditReq::Config(req) => self.edit_config(map_name?, *req),
                 EditReq::Info(req) => self.edit_info(map_name?, *req),
@@ -1308,20 +1316,23 @@ impl Server {
         let rpp_base_r = rpp_path.join("base.r");
         let rpp_base_p = rpp_path.join("base.p");
 
-        let exec = std::process::Command::new(&rpp_exe)
-            .current_dir(root)
-            .args([
-                "--output",
-                &out_fname,
-                "--memory",
-                "100",
-                "--include",
-                &rpp_base_r.to_string_lossy(),
-                "--include",
-                &rpp_base_p.to_string_lossy(),
-                "--no-pause",
-                &in_fname,
-            ])
+        let mut cmd = std::process::Command::new(&rpp_exe);
+        cmd.current_dir(root).args([
+            "--output",
+            &out_fname,
+            "--memory",
+            "100",
+            "--include",
+            &rpp_base_r.to_string_lossy(),
+            "--include",
+            &rpp_base_p.to_string_lossy(),
+            "--no-pause",
+            &in_fname,
+        ]);
+
+        log::debug!("rpp: {cmd:?}");
+
+        let exec = cmd
             .output()
             .map_err(|e| Error::ServerError(e.to_string().into()))?;
 
@@ -1342,11 +1353,10 @@ impl Server {
 
     pub fn put_automapper(
         &self,
-        peer: &Peer,
         map_name: &str,
         am: &str,
         file: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<AutomapperDiagnostic>, Error> {
         if !check_file_name(am) {
             return Err(Error::InvalidFileName);
         }
@@ -1366,8 +1376,8 @@ impl Server {
         std::fs::write(&path, file).map_err(|e| Error::ServerError(e.to_string().into()))?;
 
         if kind == AutomapperKind::RulesPP {
-            self.compile_rpp(&path)
-                .and_then(|()| {
+            match self.compile_rpp(&path) {
+                Ok(()) => {
                     let target = path.with_extension("rules");
                     let file = std::fs::read_to_string(&target)
                         .map_err(|e| Error::AutomapperError(e.to_string()))?;
@@ -1379,12 +1389,31 @@ impl Server {
                     let message =
                         Message::Request(Request::Create(CreateReq::Automapper(name, file)));
                     self.broadcast_to_room(&room, message);
-                    Ok(())
-                })
-                .unwrap_or_else(|err| Server::send(peer, None, Message::Response(Err(err))));
+                }
+                Err(Error::AutomapperError(s)) => {
+                    let reg = Regex::new(r"\[(\d+):(\d+)-(\d+):(\d+)\]\s*(.+)").unwrap();
+                    let diagnostics = s
+                        .split('\n')
+                        .filter_map(|s| {
+                            let caps = reg.captures(s)?;
+                            Some(AutomapperDiagnostic {
+                                span: Span {
+                                    line_start: caps[1].parse().ok()?,
+                                    col_start: caps[2].parse().ok()?,
+                                    line_end: caps[3].parse().ok()?,
+                                    col_end: caps[4].parse().ok()?,
+                                },
+                                msg: caps[5].to_string(),
+                            })
+                        })
+                        .collect();
+                    return Ok(diagnostics);
+                }
+                Err(_) => {}
+            }
         }
 
-        Ok(())
+        Ok(vec![])
     }
 
     pub fn delete_automapper(&self, map_name: &str, am: &str) -> Result<(), Error> {

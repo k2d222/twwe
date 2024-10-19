@@ -60,6 +60,18 @@ export interface AutomapperDetail {
   configs?: string[]
 }
 
+export interface Span {
+  line_start: number
+  col_start: number
+  line_end: number
+  col_end: number
+}
+
+export interface AutomapperDiagnostic {
+  span: Span
+  msg: string
+}
+
 export type MapCreation = {
   version: 'ddnet06' | 'teeworlds07'
   access: 'public' | 'unlisted'
@@ -264,7 +276,7 @@ export interface Resp {
   "create/group": undefined
   "create/layer": undefined
   "create/quad": undefined
-  "create/automapper": undefined
+  "create/automapper": AutomapperDiagnostic[]
   "edit/config": undefined
   "edit/info": undefined
   "edit/envelope": undefined

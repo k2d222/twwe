@@ -1,4 +1,4 @@
-import { linter} from "@codemirror/lint"
+import { linter } from "@codemirror/lint"
 
 import {
   lint as lintAutomapper,

@@ -52,7 +52,7 @@ async fn server_main() {
         static_dir: None,
         rpp_path: None,
     };
-    let server = Arc::new(twwe_server::create_server(&cli).expect("failed to create server"));
+    let server = Arc::new(twwe_server::create_server(&cli).expect("failed to create the server"));
 
     let router = twwe_server::router::Router::new(server, &cli);
 

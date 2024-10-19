@@ -21,8 +21,7 @@ pub struct Cli {
     pub key: Option<PathBuf>,
 
     /// path to the maps directories (containing sub-directories containing map.map, config.json etc.)
-    /// must contain at least one.
-    #[clap(name = "maps", value_parser, long, default_value = "maps")]
+    #[clap(name = "maps", value_parser, long)]
     pub maps_dirs: Vec<PathBuf>,
 
     /// path to ddnet data directories, if you want to read maps from there.

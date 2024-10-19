@@ -17,6 +17,7 @@
   import { basicSetup } from "codemirror"
   import { EditorState } from "@codemirror/state"
   import { EditorView, tooltips, keymap } from "@codemirror/view"
+  import { linter, setDiagnostics } from "@codemirror/lint"
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
   import { Rpp } from './lang-rpp/index'
@@ -124,11 +125,20 @@
     createAmOpen = true
   }
 
+  function defaultFile(kind: AutomapperKind) {
+    if (kind === AutomapperKind.DDNet)
+      return '# Automapper tutorial: https://forum.ddnet.org/viewtopic.php?t=2428\n[Sweeper]\nIndex 0'
+    else if (kind === AutomapperKind.RulesPP)
+      return '// Rules++ tutorial: https://github.com/Aerll/rpp/wiki/\nAutoMapper("Sweeper");\nNewRun();\nInsert(0);'
+    else
+      return ''
+  }
+
   async function onCreate() {
     if (!isValidName(newAmName)) return
 
     const name = `${newAmName}.${newAmKind}`
-    const file = ''
+    const file = defaultFile(newAmKind)
 
     newAmName = ''
 
@@ -144,7 +154,19 @@
     const id = showInfo('Uploading...', 'none')
     try {
       const name = $automappers[selected].name
-      await $server.query('create/automapper', [name, file])
+      const res = await $server.query('create/automapper', [name, file])
+
+      const diagnostics = res.map(d => {
+        const line1 = view.state.doc.line(d.span.line_start)
+        const line2 = view.state.doc.line(d.span.line_end)
+        return {
+          from: line1.from + d.span.col_start - 1,
+          to: line2.from + d.span.col_end - 1,
+          severity: 'error' as 'error',
+          message: d.msg
+        }
+      })
+      view.dispatch(setDiagnostics(view.state, diagnostics))
     }
     finally {
       clearDialog(id)
