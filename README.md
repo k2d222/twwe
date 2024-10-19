@@ -108,7 +108,7 @@ Use the `--rpp <path>` argument to enable Rules++ support (experimental). `<path
 
 The HTTP server is rate-limited per IP. It allows bursts of 8 requests and then 500ms between requests. This is currently not configurable.
 
-The `--max-maps <MiB>` argument limits the number of maps created by users. The `--max-map-size <MiB>` argument limits the size of each map file.
+The `--max-maps <Amount>` argument limits the number of maps created by users. The `--max-map-size <MiB>` argument limits the size of each map file.
 
 #### Server bridging
 
