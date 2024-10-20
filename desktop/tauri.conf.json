@@ -2,62 +2,49 @@
   "build": {
     "beforeBuildCommand": "npm --prefix client run build",
     "beforeDevCommand": "npm --prefix client run dev",
-    "devPath": "http://localhost:5173",
-    "distDir": "../client/dist"
+    "frontendDist": "../client/dist",
+    "devUrl": "http://localhost:5173"
   },
-  "package": {
-    "productName": "Twwe",
-    "version": "0.1.1"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "fs": {
-        "all": true
-      },
-      "shell": {
-        "open": true
-      }
+  "bundle": {
+    "active": true,
+    "category": "Game",
+    "copyright": "Mathis Brossier <mathis.brossier@gmail.com>",
+    "targets": "all",
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
     },
-    "bundle": {
-      "active": true,
-      "category": "Game",
-      "copyright": "Mathis Brossier <mathis.brossier@gmail.com>",
+    "longDescription": "",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [],
+    "shortDescription": "",
+    "linux": {
       "deb": {
         "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "fr.thissma.tw",
-      "longDescription": "",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
       }
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false
-    },
+    }
+  },
+  "productName": "Twwe",
+  "mainBinaryName": "Twwe",
+  "version": "0.1.1",
+  "identifier": "fr.thissma.tw",
+  "plugins": {},
+  "app": {
     "windows": [
       {
         "fullscreen": false,
@@ -66,6 +53,9 @@
         "title": "Teeworlds Web Editor",
         "width": 800
       }
-    ]
+    ],
+    "security": {
+      "csp": null
+    }
   }
 }

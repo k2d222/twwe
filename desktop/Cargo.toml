@@ -12,15 +12,18 @@ rust-version = "1.60"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.4.0", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
+twwe-server = { path = "../server", features = ["bridge_out"] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.4.0", features = ["shell-open", "fs-all"] }
-twwe-server = { path = "../server", features = ["bridge_out"] }
 tokio = "1.32.0"
 platform-dirs = "0.3.0"
+env_logger = "0.10.2"
+tauri = { version = "2", features = [] }
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
