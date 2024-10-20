@@ -39,7 +39,7 @@ pub struct Cli {
     #[arg(name = "rpp", long)]
     pub rpp_path: Option<PathBuf>,
 
-    /// Maximum number of maps in both --maps and --data folders. Default: 1000.
+    /// Maximum number of maps in both --maps and --data folders.
     #[arg(long, default_value_t = 1000)]
     pub max_maps: usize,
 
@@ -48,7 +48,15 @@ pub struct Cli {
     #[arg(long, default_value_t = 10 * 1024)]
     pub max_map_size: usize,
 
-    /// Maximum number of simultaneous websocket connections. Default: 100.
+    /// Maximum number of simultaneous websocket connections.
     #[arg(long, default_value_t = 100)]
     pub max_connections: usize,
+
+    /// Maximum number of HTTP requests an IP can do at once before being rate-limited.
+    #[arg(long, default_value_t = 100)]
+    pub max_http_bursts: u32,
+
+    /// Once an IP is rate-limited, delay after which 1 request quota is replenished. In milliseconds.
+    #[arg(long, default_value_t = 500)]
+    pub http_ratelimit_delay: u64,
 }

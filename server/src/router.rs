@@ -16,6 +16,7 @@ use tower_http::{
     cors,
     services::{ServeDir, ServeFile},
 };
+use vek::num_traits::clamp;
 
 use crate::{base64::Base64, protocol::*};
 use crate::{Cli, Server};
@@ -104,9 +105,17 @@ impl Router {
         let mut router = router
             // rate-limits
             .layer(GovernorLayer {
-                config: Arc::new(GovernorConfigBuilder::default().finish().unwrap()),
+                config: Arc::new(
+                    GovernorConfigBuilder::default()
+                        .const_burst_size(args.max_http_bursts)
+                        .const_per_millisecond(args.http_ratelimit_delay)
+                        .finish()
+                        .unwrap(),
+                ),
             })
-            .layer(DefaultBodyLimit::max(2 * 1024 * 1024)) // 2 MiB
+            .layer(DefaultBodyLimit::max(
+                clamp(args.max_map_size, 1 * 1024, 50 * 1024) * 1024,
+            )) // allows uploading maps between 1MiB-50MiB
             .layer(cors)
             .with_state(server);
 
