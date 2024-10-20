@@ -2,7 +2,7 @@
 name = "twwe-server"
 description = "Teeworlds Web Editor Server"
 authors = ["Mathis Brossier <mathis.brossier@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "AGPL-3.0-only"
 repository = "https://github.com/k2d222/twwe"
