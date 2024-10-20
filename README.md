@@ -58,9 +58,17 @@ You can use this editor by simply going to [tw.thissma.fr](https://tw.thissma.fr
 
 ### Using the standalone app
 
-Alternatively, you can [install the app](https://github.com/k2d222/twwe/releases) to use the editor offline. On startup, the editor will look for maps in the various ddnet folders.
+Alternatively, you can [install the app](https://github.com/k2d222/twwe/releases) to use the editor offline. On startup, the editor will look for maps in your ddnet data folder.
 
-With the external editor, you can also enable sharing your map (top-right button), which gives access to you map to other users via one of the servers.
+With this app you can enable sharing your map (top-right button), which gives access to you map to other users via one of the servers.
+
+### Using the server
+
+Download the precompiled binaries and the static files from the [release page](https://github.com/k2d222/twwe/releases).
+
+Run the server with `twwe-server --static <path_to_static_folder>`. By default, it will serve the maps present in your ddnet data folder (the same maps as the in-game editor).
+
+Open http://localhost:16800 to access the editor.
 
 ### Key/Mouse bindings
 
@@ -90,13 +98,12 @@ Additionally:
 
 The code is split into a client, a desktop and a server part. The client generates a static site (html, js, …) that you can host wherever you want or even run locally. The server is a HTTP and WebSocket server that the client connects to. The maps are stored on the server machine.
 
-the server can be installed from cargo: `cargo install twwe-server`
 
 ### Server
 
-Have [rust](https://www.rust-lang.org/) and cargo installed. And create a server/maps/ directory with your .map files in it.
+The server is available on `crates.io`: `cargo install twwe-server`. Or can be compiled manually.
 
-Run the server with `twwe-server --maps <path_to_maps_dir>` to run in release mode with debugging info printed to stdout.
+Run the server with `twwe-server --maps <path_to_maps_dir>`.
 
 Use the first command-line argument to change address and port e.g. `twwe-server localhost:3333 --maps ...` to run locally on port 3333.
 
@@ -106,9 +113,9 @@ Use the `--rpp <path>` argument to enable Rules++ support (experimental). `<path
 
 #### Limits
 
-The HTTP server is rate-limited per IP. It allows bursts of 8 requests and then 500ms between requests. This is currently not configurable.
+The HTTP server is rate-limited per IP. It allows bursts of 100 requests and then 500ms between requests. It can be configured with `--max-http-bursts <amount>` and `http-ratelimit-delay <ms>`.
 
-The `--max-maps <Amount>` argument limits the number of maps created by users. The `--max-map-size <MiB>` argument limits the size of each map file.
+The `--max-maps <amount>` argument limits the number of maps created by users. The `--max-map-size <MiB>` argument limits the size of each map file.
 
 #### Server bridging
 
@@ -131,9 +138,9 @@ Note: the client is written in non-strict Typescript. Typescript is only used fo
 
 The desktop client is a [Tauri](https://tauri.app/) web-app that you can install and enables editing your local map files like the default editor. You can also enable sharing your maps over the internet (read [Server bridging](#server-bridging)).
 
-The app spins up a localhost server on port 16800. It looks for maps in the "standard" ddnet folders (see storage.cfg: $USERDIR, $DATADIR and $CURRENTDIR).
+The app opens a localhost server on port 16800. It looks for maps in the "standard" ddnet folders (see storage.cfg: $USERDIR, $DATADIR and $CURRENTDIR).
 
-Binaries are can be found in the [releases page](https://github.com/k2d222/twwe/releases).
+Binaries can be found in the [releases page](https://github.com/k2d222/twwe/releases).
 
 ## License
 
