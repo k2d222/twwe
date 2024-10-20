@@ -16,16 +16,16 @@ jobs:
       matrix:
         include:
           - platform: "macos-latest" # for Arm based macs (M1 and above).
-            args: "--target aarch64-apple-darwin"
+            target: "aarch64-apple-darwin"
             name: "macos-aarch64"
           - platform: "macos-latest" # for Intel based macs.
-            args: "--target x86_64-apple-darwin"
+            target: "x86_64-apple-darwin"
             name: "macos-x64"
           - platform: "ubuntu-latest" # for Tauri v1 you could replace this with ubuntu-20.04.
-            args: ""
-            name: "linux-ubuntu"
-          - platform: "twwe-server-windows-latest"
-            args: ""
+            target: "x86_64-unknown-linux-gnu"
+            name: "linux-x64"
+          - platform: "windows-latest"
+            target: "x86_64-pc-windows-msvc"
             name: "windows-x64"
     runs-on: ${{ matrix.platform }}
 
@@ -38,13 +38,17 @@ jobs:
           node-version: lts/*
           
       - name: get version
-        run: echo "PACKAGE_VERSION=$(node -p "require('client/package.json').version")" >> $GITHUB_ENV
+        if: runner.os != 'Windows'
+        run: echo "PACKAGE_VERSION=$(node -p "require('./client/package.json').version")" >> $GITHUB_ENV
+        
+      - name: get version (windows)
+        if: runner.os == 'Windows'
+        run: echo "PACKAGE_VERSION=$(node -p "require('./client/package.json').version")" >> $env:GITHUB_ENV
         
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-latest'
@@ -67,6 +71,7 @@ jobs:
           releaseBody: See the assets to download this version and install.
           releaseDraft: true
           prerelease: false
+          args: --target ${{ matrix.target }}
           projectPath: desktop
 
       - name: build server
@@ -74,7 +79,7 @@ jobs:
         with:
           use-cross: true
           command: build
-          args: server --verbose --release ${{ matrix.args }}
+          args: --manifest-path server/Cargo.toml --verbose --release --target ${{ matrix.target }}
 
       - name: build static site
         run: cd client && npm run build
@@ -82,17 +87,17 @@ jobs:
       - name: build archive
         shell: bash
         env:
-          dirname: twwe-server_v${{ env.PACKAGE_VERSION }}_${{ matrix.name }}
+          dirname: twwe-server_${{ env.PACKAGE_VERSION }}_${{ matrix.name }}
         run: |
           mkdir "$dirname"
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
             mv "server/target/${{ matrix.target }}/release/twwe-server.exe" "$dirname"
           else
             mv "server/target/${{ matrix.target }}/release/twwe-server" "$dirname"
           fi
           mv "client/dist" "$dirname/static"
 
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
             7z a "$dirname.zip" "$dirname"
             echo "ASSET=$dirname.zip" >> $GITHUB_ENV
           else
@@ -101,10 +106,6 @@ jobs:
           fi
 
       - name: upload server to release
-        uses: actions/github-script@v6
         env:
-          tag: app-v${{ env.PACKAGE_VERSION }}
-          file: ${{ env.ASSET }}
-        with:
-          script: |
-            gh release upload $tag $file
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload app-v${{ env.PACKAGE_VERSION }} ${{ env.ASSET }}
