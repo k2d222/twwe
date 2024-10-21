@@ -54,6 +54,7 @@ pub enum Error {
 
     AlreadyJoined,
     NotJoined,
+    Password,
 
     Map(String),
     Automapper(String),
@@ -117,6 +118,7 @@ impl Display for Error {
             Error::BridgeClosed => write!(f, "connection with the remote server closed"),
             Error::AlreadyJoined => write!(f, "already joined"),
             Error::NotJoined => write!(f, "not joined"),
+            Error::Password => write!(f, "incorrect password"),
             Error::Map(x) => write!(f, "twmap error: {x}"),
             Error::Automapper(x) => write!(f, "automapper error: {x}"),
             Error::BadRequest(x) => write!(f, "bad request: {x}"),
@@ -191,6 +193,7 @@ impl IntoResponse for Error {
             Error::BridgeClosed => StatusCode::BAD_GATEWAY,
             Error::AlreadyJoined => StatusCode::BAD_REQUEST,
             Error::NotJoined => StatusCode::BAD_REQUEST,
+            Error::Password => StatusCode::BAD_REQUEST,
             Error::Map(_) => StatusCode::BAD_REQUEST,
             Error::Automapper(_) => StatusCode::BAD_REQUEST,
             Error::BadRequest(_) => StatusCode::BAD_REQUEST,

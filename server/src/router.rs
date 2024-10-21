@@ -45,36 +45,37 @@ impl Router {
                     .post(route_post_map)
                     .delete(route_delete_map),
             )
-            .route("/maps/:map/map/images", get(route_get_images))
-            .route("/maps/:map/map/images/:image", get(route_get_image))
             .route(
-                "/maps/:map/map/info",
-                get(route_get_info).post(route_post_info),
+                "/maps/:map/config",
+                get(route_get_config).post(route_post_config),
             )
+            .route("/maps/:map/info", get(route_get_info).post(route_post_info))
+            .route("/maps/:map/images", get(route_get_images))
+            .route("/maps/:map/images/:image", get(route_get_image))
             .route(
-                "/maps/:map/map/envelopes",
+                "/maps/:map/envelopes",
                 get(route_get_envelopes).put(route_put_envelope),
             )
             .route(
-                "/maps/:map/map/envelopes/:envelope",
+                "/maps/:map/envelopes/:envelope",
                 get(route_get_envelope)
                     .post(route_post_envelope)
                     .delete(route_delete_envelope),
             )
             .route(
-                "/maps/:map/map/groups",
+                "/maps/:map/groups",
                 get(route_get_groups).put(route_put_group),
             )
             .route(
-                "/maps/:map/map/groups/:group",
+                "/maps/:map/groups/:group",
                 post(route_post_group).delete(route_delete_group),
             )
             .route(
-                "/maps/:map/map/groups/:group/layers",
+                "/maps/:map/groups/:group/layers",
                 get(route_get_layers).put(route_put_layer),
             )
             .route(
-                "/maps/:map/map/groups/:group/layers/:layer",
+                "/maps/:map/groups/:group/layers/:layer",
                 delete(route_delete_layer),
             );
         // .route(
@@ -194,7 +195,8 @@ async fn route_put_map(
 ) -> impl IntoResponse {
     let content = MapCreation {
         version: Default::default(),
-        access: Default::default(),
+        public: Default::default(),
+        password: Default::default(),
         method: CreationMethod::Upload(Base64(file.to_vec())),
     };
     server.create_map(&map, content)
@@ -227,6 +229,21 @@ async fn route_get_image(
     Path((map, image)): Path<(String, u16)>,
 ) -> impl IntoResponse {
     server.get_image(&map, image)
+}
+
+async fn route_get_config(
+    State(server): State<Arc<Server>>,
+    Path(map): Path<String>,
+) -> impl IntoResponse {
+    server.get_config(&map).map(Json)
+}
+
+async fn route_post_config(
+    State(server): State<Arc<Server>>,
+    Path(map): Path<String>,
+    Json(part_config): Json<PartialConfig>,
+) -> impl IntoResponse {
+    server.edit_config(&map, part_config)
 }
 
 async fn route_get_info(

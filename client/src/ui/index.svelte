@@ -6,29 +6,41 @@
   import storage from '../storage'
   import { WebSocketServer } from '../server/server'
   import { server, serverCfg } from './global'
-  import { serverWsUrl } from '../server/util'
+  import { serverHttpUrl, serverWsUrl } from '../server/util'
+  import { queryConfig } from './lib/util'
 
   export let url = ''
 
-  function joinServer() {
+  async function joinServer(params: { [name: string]: string }) {
     const serverCfgs = storage.load('servers')
     const serverId = storage.load('currentServer')
 
+
     $serverCfg = serverCfgs[serverId]
+    console.log('joining server', $serverCfg)
     const wsUrl = serverWsUrl($serverCfg)
     $server = new WebSocketServer(wsUrl)
 
-    return new Promise((resolve, reject) => {
+    const connected = new Promise((resolve, reject) => {
       $server.socket.addEventListener('open', resolve, { once: true })
       $server.socket.addEventListener('error', () => reject("Failed to connect to the server"), { once: true })
     })
+    await connected
+    let config = await queryConfig(serverHttpUrl($serverCfg), params.mapName)
+
+    if (config.password) {
+      return prompt("enter password")
+    } else {
+      return ''
+    }
   }
 </script>
 
 <Router {url}>
   <Route path="edit/*mapName" let:params>
-    <Fence fullscreen signal={joinServer()} loadText="Connecting to server…">
-      <Edit name={params.mapName} />
+    {@const signal = joinServer(params)}
+    <Fence fullscreen {signal} let:result={password} loadText="Connecting to server…">
+      <Edit name={params.mapName} {password} />
     </Fence>
   </Route>
   <Route path="/">

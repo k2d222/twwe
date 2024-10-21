@@ -15,7 +15,11 @@ use futures::channel::mpsc::UnboundedSender;
 
 use uuid::Uuid;
 
-use crate::{error::Error, map_cfg::MapConfig, protocol::*};
+use crate::{
+    error::Error,
+    map_cfg::{read_map_config, MapConfig},
+    protocol::*,
+};
 
 type Tx = UnboundedSender<WebSocketMessage>;
 
@@ -47,7 +51,7 @@ impl LazyMap {
 
     fn unload(&self) {
         *self.map.lock() = None;
-        log::debug!("map unloaded `{}`", self.path.display());
+        log::debug!("map `{}` unloaded", self.path.display());
     }
 
     pub fn get(&self) -> MappedMutexGuard<twmap::TwMap> {
@@ -55,7 +59,7 @@ impl LazyMap {
         let mut map = self.map.lock();
         if map.is_none() {
             *map = load_map(&self.path).ok();
-            log::debug!("map loaded `{}`", self.path.display());
+            log::debug!("map `{}` loaded", self.path.display());
         }
         match *map {
             Some(_) => MutexGuard::map(map, |m| m.as_mut().unwrap()),
@@ -120,7 +124,7 @@ impl Room {
 
         let name = dir_path.file_name()?.to_string_lossy().to_string();
 
-        let config = Self::read_cfg(&cfg_path).unwrap_or_else(|| MapConfig {
+        let config = read_map_config(&cfg_path).unwrap_or_else(|| MapConfig {
             name,
             ..Default::default()
         });
@@ -139,12 +143,6 @@ impl Room {
         })
     }
 
-    fn read_cfg(path: &Path) -> Option<MapConfig> {
-        File::open(path)
-            .ok()
-            .and_then(|file| serde_json::from_reader(file).ok())
-    }
-
     pub fn new_from_files(
         map_path: PathBuf,
         cfg_path: Option<PathBuf>,
@@ -154,7 +152,7 @@ impl Room {
 
         let config = cfg_path
             .as_ref()
-            .and_then(|path| Self::read_cfg(path))
+            .and_then(|path| read_map_config(path))
             .unwrap_or_else(|| MapConfig {
                 name,
                 ..Default::default()
@@ -276,7 +274,7 @@ impl Room {
             Ok(())
         })()?;
 
-        log::debug!("map saved `{}`", self.map.path.display());
+        log::debug!("map `{}` saved", self.map.path.display());
         Ok(())
     }
 }

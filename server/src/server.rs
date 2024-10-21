@@ -18,7 +18,6 @@ use crate::{
     checks::PartialCheck,
     cli::Cli,
     error::Error,
-    map_cfg::MapAccess,
     protocol::*,
     room::{Peer, Room},
     twmap_map_checks::InternalMapChecking,
@@ -166,6 +165,12 @@ impl Server {
                 GetReq::Users => self.get_users(map_name?).map(Response::Users),
                 GetReq::Cursors => self.get_cursors(map_name?, peer).map(Response::Cursors),
                 GetReq::Map => self.get_map(map_name?).map(|r| Response::Map(Base64(r))),
+                GetReq::Config => self
+                    .get_config(map_name?)
+                    .map(|r| Response::Config(Box::new(r))),
+                GetReq::Info => self
+                    .get_info(map_name?)
+                    .map(|r| Response::Info(Box::new(r))),
                 GetReq::Images => self.get_images(map_name?).map(Response::Images),
                 GetReq::Image(i) => self
                     .get_image(map_name?, i)
@@ -251,10 +256,10 @@ impl Server {
         Server::send(peer, packet.id, Message::Response(resp.clone()));
         if resp.is_ok() {
             match &packet.content {
-                Request::LeaveMap(map_name) | Request::JoinMap(map_name) => self
+                Request::LeaveMap(name) | Request::JoinMap(JoinReq { name, .. }) => self
                     .broadcast_to_others(
                         peer,
-                        Message::Broadcast(Broadcast::Users(self.get_users(map_name).unwrap_or(0))),
+                        Message::Broadcast(Broadcast::Users(self.get_users(name).unwrap_or(0))),
                     ),
                 Request::CreateMap(map_name, _) => {
                     self.broadcast_to_lobby(Message::Broadcast(Broadcast::MapCreated(
@@ -331,7 +336,7 @@ impl Server {
 
         self.broadcast_users(&peer);
 
-        log::info!("client disconnected {}", &addr);
+        log::info!("client {} disconnected", &addr);
 
         let peers = self.peer_count.fetch_sub(1, atomic::Ordering::Relaxed) - 1;
         log::debug!("simultaneous connections: {peers}/{}", self.max_peers);
@@ -342,7 +347,7 @@ impl Server {
     pub fn get_maps(&self) -> Vec<MapDetail> {
         self.rooms()
             .iter()
-            .filter(|(_, v)| v.config.access == MapAccess::Public)
+            .filter(|(_, v)| v.config.public)
             .map(|(k, v)| MapDetail {
                 name: k.to_owned(),
                 users: v.peer_count(),
@@ -406,7 +411,7 @@ impl Server {
             }
         };
 
-        let room = if let Some(maps_dir) = self.maps_dir.as_ref() {
+        let mut room = if let Some(maps_dir) = self.maps_dir.as_ref() {
             let path = maps_dir.join(map_name);
             let map_path = path.join("map.map");
 
@@ -416,12 +421,7 @@ impl Server {
             map.save(&mut map_file)
                 .map_err(|e| Error::Map(e.to_string()))?;
 
-            let mut room =
-                Room::new_from_dir(path).ok_or(Error::Internal("map creation failed".into()))?;
-
-            room.config.access = creation.access.unwrap_or(MapAccess::Public);
-            room.save_config()?;
-            room
+            Room::new_from_dir(path).ok_or(Error::Internal("map creation failed".into()))?
         } else if let Some(data_dir) = self.data_dir.as_ref() {
             let mut map_path = data_dir.join("maps").join(map_name);
             map_path.set_extension("map");
@@ -436,14 +436,20 @@ impl Server {
             map.save(&mut map_file)
                 .map_err(|e| Error::Map(e.to_string()))?;
 
-            let mut room = Room::new_from_files(map_path, None, Some(am_path))
-                .ok_or(Error::Internal("map creation failed".into()))?;
-
-            room.config.access = creation.access.unwrap_or(MapAccess::Public);
-            room
+            Room::new_from_files(map_path, None, Some(am_path))
+                .ok_or(Error::Internal("map creation failed".into()))?
         } else {
             return Err(Error::BadRequest("missing map path".into()));
         };
+
+        room.config.public = creation.public.unwrap_or(true);
+        if let Some(pwd) = &creation.password {
+            if !pwd.is_empty() {
+                room.config.password =
+                    Some(bcrypt::hash(pwd, bcrypt::DEFAULT_COST).map_err(|_| Error::Password)?);
+            }
+        }
+        room.save_config()?;
 
         // lock the rooms: this is blocking the whole server but prevents TOCTOU bugs.
         {
@@ -455,7 +461,6 @@ impl Server {
                 rooms.insert(map_name.to_owned(), Arc::new(room));
             }
         }
-
         log::info!("map created `{}`", map_name);
         Ok(())
     }
@@ -489,6 +494,16 @@ impl Server {
         apply_partial!(part_info => map.info, author, version, credits, license, settings);
 
         Ok(())
+    }
+
+    pub fn get_config(&self, map_name: &str) -> Result<Config, Error> {
+        let map_cfg = self.room(map_name)?.config.clone();
+        Ok(Config {
+            name: map_cfg.name,
+            public: map_cfg.public,
+            password: map_cfg.password.is_some(),
+            version: map_cfg.version,
+        })
     }
 
     pub fn edit_config(&self, _map_name: &str, _part_conf: PartialConfig) -> Result<(), Error> {
@@ -1702,14 +1717,33 @@ impl Server {
         room.save_map(self.max_map_size)
     }
 
-    pub fn peer_join(&self, peer: &mut Peer, map_name: &str) -> Result<(), Error> {
+    pub fn peer_join(&self, peer: &mut Peer, join: &JoinReq) -> Result<(), Error> {
         if peer.room.is_some() {
             return Err(Error::AlreadyJoined);
         }
 
-        let room = self.room(map_name)?;
-        room.add_peer(peer);
-        peer.room = Some(room);
+        // we clone the pwd hash because bcrypt::verify() is costly and we don't want to
+        // lock the room mutex.
+        let pwd_hash = self.room(&join.name)?.config.password.clone();
+        match (&join.password, &pwd_hash) {
+            (Some(pwd), Some(hash)) => {
+                if !bcrypt::verify(pwd, &hash).map_err(|_| Error::Password)? {
+                    return Err(Error::Password);
+                }
+            }
+            (Some(pwd), None) if pwd == "" => (),
+            (Some(_), None) | (None, Some(_)) => {
+                return Err(Error::Password);
+            }
+            (None, None) => (),
+        };
+
+        {
+            let room = self.room(&join.name)?;
+
+            room.add_peer(peer);
+            peer.room = Some(room);
+        }
         Ok(())
     }
 

@@ -10,11 +10,12 @@
   import { serverHttpUrl } from '../../server/util'
 
   export let name: string
+  export let password: string
 
   let loadingSignal = (async () => {
     reset()
 
-    await $server.query('join', name)
+    await $server.query('join', { name, password })
     const httpUrl = serverHttpUrl($serverCfg)
     const map_ = await queryMap(httpUrl, name)
     const ams = await $server.query('get/automappers', undefined)

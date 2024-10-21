@@ -1,7 +1,8 @@
-<script lang="ts">
+<script lang="ts" generics="T">
   import { InlineNotification, Loading } from 'carbon-components-svelte'
+  import { showError } from './dialog'
 
-  export let signal: Promise<unknown>
+  export let signal: Promise<T>
   export let loadText = 'Loading'
   export let errorText = 'Error'
   export let fullscreen = false
@@ -14,9 +15,10 @@
       <div class="text">{loadText}</div>
     </div>
   </div>
-{:then}
-  <slot />
+{:then result}
+  <slot {result} />
 {:catch error}
+  {showError(error) && ''}
   <InlineNotification
     kind="error"
     hideCloseButton

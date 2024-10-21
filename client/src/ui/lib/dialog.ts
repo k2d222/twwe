@@ -40,6 +40,16 @@ export function showDialog(
     }, ...dialog.messages]
   })
 
+  if (controls !== 'yesno') {
+    if (type === 'info') {
+      console.info(`[%c%s%c] ${message}`, 'color: green', 'INFO', 'color: unset')
+    } else if (type === 'warning') {
+      console.warn(`[%c%s%c] ${message}`, 'color: orange', 'WARN', 'color: unset')
+    } else if (type === 'error') {
+      console.error(`[%c%s%c] ${message}`, 'color: red', 'ERROR', 'color: unset')
+    }
+  }
+
   if (controls === 'none')
     return id
   else

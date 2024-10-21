@@ -4,7 +4,7 @@ import { Image } from '../../twmap/image'
 import { AnyTilesLayer, FrontLayer, GameLayer, SpeedupLayer, SwitchLayer, TeleLayer, TilesLayer, TuneLayer } from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 import type { WebSocketServer } from '../../server/server'
-import type { MapCreation, MapDetail } from '../../server/protocol'
+import type { Config, MapCreation, MapDetail } from '../../server/protocol'
 import * as MapDir from '../../twmap/mapdir'
 import { QuadsLayer } from '../../twmap/quadsLayer'
 import { clearDialog, showInfo } from './dialog'
@@ -57,7 +57,7 @@ export async function createMap(httpRoot: string, name: string, create: MapCreat
 }
 
 // export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {
-//   await fetch(`${httpRoot}/maps/${mapName}/map/images/${imageName}`, {
+//   await fetch(`${httpRoot}/maps/${mapName}/images/${imageName}`, {
 //     method: 'POST',
 //     body: file
 //   })
@@ -100,6 +100,12 @@ export async function queryMaps(httpRoot: string): Promise<MapDetail[]> {
   const maps: MapDetail[] = await resp.json()
   sortMaps(maps)
   return maps
+}
+
+export async function queryConfig(httpRoot: string, mapName: string): Promise<Config> {
+  const resp = await fetch(`${httpRoot}/maps/${mapName}/config`)
+  const config: Config = await resp.json()
+  return config
 }
 
 export async function queryMap(httpRoot: string, mapName: string): Promise<Map> {

@@ -13,7 +13,9 @@ type Base64 = string
 
 export interface Config {
   name: string
-  access: 'public' | 'unlisted'
+  public: boolean
+  password: string
+  version: 'ddnet06' | 'teeworlds07'
 }
 
 export interface MapDetail {
@@ -74,7 +76,8 @@ export interface AutomapperDiagnostic {
 
 export type MapCreation = {
   version: 'ddnet06' | 'teeworlds07'
-  access: 'public' | 'unlisted'
+  public: boolean
+  password: string
 } & ({
   clone: string
 } | {
@@ -85,6 +88,11 @@ export type MapCreation = {
 } | {
   upload: Base64
 })
+
+export interface JoinReq {
+  name: string,
+  password: string,
+}
 
 export interface MapGetReq {
   users: undefined
@@ -249,7 +257,7 @@ export interface Send {
   "delete/automapper": MapDelReq['automapper']
   "cursor": Cursor
   "save": undefined
-  "join": string
+  "join": JoinReq
   "leave": string
   "create": EditReq['map']
   "delete": DeleteReq['map']

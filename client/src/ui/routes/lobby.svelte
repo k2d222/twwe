@@ -70,6 +70,7 @@
     open: boolean
     name: string
     public: boolean
+    password: string,
     method: 'upload' | 'blank' | 'clone'
     clone: number | undefined
     cloneItems: { id: number; text: string }[]
@@ -82,6 +83,7 @@
     open: false,
     name: 'My Map',
     public: true,
+    password: '',
     method: 'upload',
     clone: undefined,
     cloneItems: [],
@@ -231,7 +233,6 @@
 
   async function onCreateMap() {
     const { name, method } = modalCreateMap
-    const access = modalCreateMap.public ? 'public' : 'unlisted'
 
     const id = showInfo('Querying the server…', 'none')
 
@@ -242,7 +243,8 @@
       else if (method === 'blank') {
         await createMap(httpUrl, name, {
           version: 'ddnet06', // TODO
-          access,
+          public: modalCreateMap.public,
+          password: modalCreateMap.password,
           blank: {
             w: modalCreateMap.blankWidth,
             h: modalCreateMap.blankHeight,
@@ -252,13 +254,14 @@
       else if (method === 'clone' && modalCreateMap.clone !== undefined) {
         await createMap(httpUrl, name, {
           version: 'ddnet06',
-          access,
+          public: modalCreateMap.public,
+          password: modalCreateMap.password,
           clone: maps[modalCreateMap.clone].name
         })
       }
 
       clearDialog(id)
-      if (access === 'unlisted') {
+      if (!modalCreateMap.public) {
         showWarning("You created a map that won't be publicly listed. To access it in the future, use the access key '" + name + "'.")
       }
       navigate('/edit/' + name)
@@ -274,6 +277,10 @@
     return item.text.toLowerCase().includes(value.toLowerCase())
   }
 </script>
+
+<svelte:head>
+  <title>DDNet Map Editor</title>
+</svelte:head>
 
 <div id="header">
   <div class="left" />
@@ -509,6 +516,10 @@
       labelA="unlisted"
       labelB="public"
       bind:toggled={modalCreateMap.public}
+    />
+    <TextInput
+      labelText="Password (leave blank for public maps)"
+      bind:value={modalCreateMap.password}
     />
   </div>
 </Modal>
