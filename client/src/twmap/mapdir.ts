@@ -154,14 +154,14 @@ export interface TuneLayer extends TilesLayerCommon {
 }
 
 export type Layer =
-  QuadsLayer | 
-  TilesLayer | 
-  GameLayer | 
-  TeleLayer | 
-  SpeedupLayer | 
-  FrontLayer | 
-  SwitchLayer | 
-  TuneLayer
+  | QuadsLayer
+  | TilesLayer
+  | GameLayer
+  | TeleLayer
+  | SpeedupLayer
+  | FrontLayer
+  | SwitchLayer
+  | TuneLayer
 
 export enum EnvelopeType {
   Color = 'color',

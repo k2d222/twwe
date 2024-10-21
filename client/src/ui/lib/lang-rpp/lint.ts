@@ -1,9 +1,6 @@
-import { linter } from "@codemirror/lint"
+import { linter } from '@codemirror/lint'
 
-import {
-  lint as lintAutomapper,
-  LintLevel,
-} from '../../../twmap/automap'
+import { lint as lintAutomapper, LintLevel } from '../../../twmap/automap'
 
 export const DDNetRulesLinter = linter(view => {
   const str = view.state.doc.toString()

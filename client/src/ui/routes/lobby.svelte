@@ -70,7 +70,7 @@
     open: boolean
     name: string
     public: boolean
-    password: string,
+    password: string
     method: 'upload' | 'blank' | 'clone'
     clone: number | undefined
     cloneItems: { id: number; text: string }[]
@@ -111,7 +111,7 @@
     online: ['finished', 'Online'],
   }
 
-  $: serverStatuses = serverCfgs.map<ServerStatus>(_ =>  'unknown')
+  $: serverStatuses = serverCfgs.map<ServerStatus>(_ => 'unknown')
   $: serverCfg = serverCfgs[serverId]
   $: httpUrl = serverHttpUrl(serverCfg)
 
@@ -136,8 +136,7 @@
     serverId = id
     maps = []
 
-    if (serverId >= serverCfgs.length)
-      serverId = 0
+    if (serverId >= serverCfgs.length) serverId = 0
 
     setServerStatus(id, 'connecting')
 
@@ -168,7 +167,7 @@
     const cfg: ServerConfig = {
       ...serverCfg,
       name: 'remote: ' + key,
-      path: (serverCfg.path ?? '') + '/bridge/' + key
+      path: (serverCfg.path ?? '') + '/bridge/' + key,
     }
     serverCfgs.push(cfg)
 
@@ -188,7 +187,7 @@
     modalConfirmDelete.onConfirm = async () => {
       try {
         await fetch(`${httpUrl}/maps/${mapName}`, {
-          method: 'DELETE'
+          method: 'DELETE',
         })
       } catch (e) {
         showError('Map deletion failed: ' + e)
@@ -239,8 +238,7 @@
     try {
       if (method === 'upload' && modalCreateMap.uploadFile !== null) {
         await uploadMap(httpUrl, name, modalCreateMap.uploadFile)
-      }
-      else if (method === 'blank') {
+      } else if (method === 'blank') {
         await createMap(httpUrl, name, {
           version: 'ddnet06', // TODO
           public: modalCreateMap.public,
@@ -248,25 +246,27 @@
           blank: {
             w: modalCreateMap.blankWidth,
             h: modalCreateMap.blankHeight,
-          }
+          },
         })
-      }
-      else if (method === 'clone' && modalCreateMap.clone !== undefined) {
+      } else if (method === 'clone' && modalCreateMap.clone !== undefined) {
         await createMap(httpUrl, name, {
           version: 'ddnet06',
           public: modalCreateMap.public,
           password: modalCreateMap.password,
-          clone: maps[modalCreateMap.clone].name
+          clone: maps[modalCreateMap.clone].name,
         })
       }
 
       clearDialog(id)
       if (!modalCreateMap.public) {
-        showWarning("You created a map that won't be publicly listed. To access it in the future, use the access key '" + name + "'.")
+        showWarning(
+          "You created a map that won't be publicly listed. To access it in the future, use the access key '" +
+            name +
+            "'."
+        )
       }
       navigate('/edit/' + name)
-    }
-    catch (e) {
+    } catch (e) {
       clearDialog(id)
       showError('Map creation failed: ' + e)
     }
@@ -313,7 +313,9 @@
         <p>
           The project is currently in beta, expect some bugs and missing features. Please report
           your bugs and make suggestions on the
-          <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/issues">GitHub issues page</a>
+          <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/issues">
+            GitHub issues page
+          </a>
           . Have fun!
         </p>
       </Tile>
@@ -384,7 +386,9 @@
           <Toolbar>
             <ToolbarContent>
               <ToolbarSearch persistent value="" shouldFilterRows />
-              <Button kind="ghost" icon={KeyIcon} on:click={() => modalAccessKey.open = true}>Access key</Button>
+              <Button kind="ghost" icon={KeyIcon} on:click={() => (modalAccessKey.open = true)}>
+                Access key
+              </Button>
             </ToolbarContent>
           </Toolbar>
           <svelte:fragment slot="cell" let:cell>
@@ -483,7 +487,8 @@
           <FileUploaderDropContainer
             accept={['.map']}
             labelText="Click to upload"
-            on:change={(e) => modalCreateMap.uploadFile = e.detail.length === 1 ? e.detail[0] : null}
+            on:change={e =>
+              (modalCreateMap.uploadFile = e.detail.length === 1 ? e.detail[0] : null)}
           />
         {:else}
           <FileUploaderItem
@@ -491,7 +496,7 @@
             errorBody="Please select another file."
             size="field"
             status="edit"
-            on:delete={() => modalCreateMap.uploadFile = null}
+            on:delete={() => (modalCreateMap.uploadFile = null)}
             name={modalCreateMap.uploadFile.name}
           />
         {/if}
@@ -552,12 +557,7 @@
   primaryButtonDisabled={modalAccessKey.name === ''}
 >
   <br />
-  <TextInput
-    required
-    bind:value={modalAccessKey.name}
-    id="access-key"
-    labelText="Access key"
-  />
+  <TextInput required bind:value={modalAccessKey.name} id="access-key" labelText="Access key" />
 </Modal>
 
 <style>

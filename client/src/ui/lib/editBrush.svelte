@@ -34,10 +34,8 @@
   })
 
   function clamp(cur: number, min: number, max: number) {
-    if (isNaN(cur))
-      return min
-    else
-      return Math.min(Math.max(min, cur), max)
+    if (isNaN(cur)) return min
+    else return Math.min(Math.max(min, cur), max)
   }
 
   function brushRotateCW(sel: Info.AnyTile[][]) {
@@ -68,25 +66,31 @@
 
   function tilesFlipV(layer: AnyTilesLayer<any>, tiles: Info.AnyTile[][]) {
     const flipFn: ((tile: Info.AnyTile) => void) | false =
-      layer instanceof TilesLayer ? (tile: Info.Tile) => {
-        if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
-        else tile.flags ^= TileFlags.HFLIP
-      } :
-      layer instanceof GameLayer ? (tile: Info.Tile) => {
-        if (isDirectionalGameTile(tile.id)) {
-          if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
-        if (isDirectionalSwitchTile(tile.id)) {
-          if (!(tile.flags & TileFlags.ROTATE)) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
-        tile.angle = (360 - tile.angle) % 360
-      } :
-      false
-    
+      layer instanceof TilesLayer
+        ? (tile: Info.Tile) => {
+            if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.VFLIP
+            else tile.flags ^= TileFlags.HFLIP
+          }
+        : layer instanceof GameLayer
+          ? (tile: Info.Tile) => {
+              if (isDirectionalGameTile(tile.id)) {
+                if (!(tile.flags & TileFlags.ROTATE))
+                  tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+              }
+            }
+          : layer instanceof SwitchLayer
+            ? (tile: Info.Switch) => {
+                if (isDirectionalSwitchTile(tile.id)) {
+                  if (!(tile.flags & TileFlags.ROTATE))
+                    tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+                }
+              }
+            : layer instanceof SpeedupLayer
+              ? (tile: Info.Speedup) => {
+                  tile.angle = (360 - tile.angle) % 360
+                }
+              : false
+
     if (flipFn) {
       for (let row of tiles) {
         for (let tile of row) {
@@ -98,24 +102,28 @@
 
   function tilesFlipH(layer: AnyTilesLayer<any>, tiles: Info.AnyTile[][]) {
     const flipFn: ((tile: Info.AnyTile) => void) | false =
-      layer instanceof TilesLayer ? (tile: Info.Tile) => {
-        if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
-        else tile.flags ^= TileFlags.VFLIP
-      } :
-      layer instanceof GameLayer ? (tile: Info.Tile) => {
-        if (isDirectionalGameTile(tile.id)) {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
-        if (isDirectionalSwitchTile(tile.id)) {
-          if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
-        }
-      } :
-      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
-        tile.angle = (540 - tile.angle) % 360
-      } :
-      false
+      layer instanceof TilesLayer
+        ? (tile: Info.Tile) => {
+            if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP
+            else tile.flags ^= TileFlags.VFLIP
+          }
+        : layer instanceof GameLayer
+          ? (tile: Info.Tile) => {
+              if (isDirectionalGameTile(tile.id)) {
+                if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+              }
+            }
+          : layer instanceof SwitchLayer
+            ? (tile: Info.Switch) => {
+                if (isDirectionalSwitchTile(tile.id)) {
+                  if (tile.flags & TileFlags.ROTATE) tile.flags ^= TileFlags.HFLIP | TileFlags.VFLIP
+                }
+              }
+            : layer instanceof SpeedupLayer
+              ? (tile: Info.Speedup) => {
+                  tile.angle = (540 - tile.angle) % 360
+                }
+              : false
 
     if (flipFn) {
       for (let row of tiles) {
@@ -138,19 +146,23 @@
     }
 
     const rotateFn: ((tile: Info.AnyTile) => void) | false =
-      layer instanceof TilesLayer ? (tile: Info.Tile) => {
-        doRotate(tile)
-      } :
-      layer instanceof GameLayer ? (tile: Info.Tile) => {
-        if (isDirectionalGameTile(tile.id)) doRotate(tile)
-      } :
-      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
-        if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
-      } :
-      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
-        tile.angle = (tile.angle + 90) % 360
-      } :
-      false
+      layer instanceof TilesLayer
+        ? (tile: Info.Tile) => {
+            doRotate(tile)
+          }
+        : layer instanceof GameLayer
+          ? (tile: Info.Tile) => {
+              if (isDirectionalGameTile(tile.id)) doRotate(tile)
+            }
+          : layer instanceof SwitchLayer
+            ? (tile: Info.Switch) => {
+                if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
+              }
+            : layer instanceof SpeedupLayer
+              ? (tile: Info.Speedup) => {
+                  tile.angle = (tile.angle + 90) % 360
+                }
+              : false
 
     if (rotateFn) {
       for (let row of tiles) {
@@ -173,19 +185,23 @@
     }
 
     const rotateFn: ((tile: Info.AnyTile) => void) | false =
-      layer instanceof TilesLayer ? (tile: Info.Tile) => {
-        doRotate(tile)
-      } :
-      layer instanceof GameLayer ? (tile: Info.Tile) => {
-        if (isDirectionalGameTile(tile.id)) doRotate(tile)
-      } :
-      layer instanceof SwitchLayer ? (tile: Info.Switch) => {
-        if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
-      } :
-      layer instanceof SpeedupLayer ? (tile: Info.Speedup) => {
-        tile.angle = (tile.angle + 270) % 360
-      } :
-      false
+      layer instanceof TilesLayer
+        ? (tile: Info.Tile) => {
+            doRotate(tile)
+          }
+        : layer instanceof GameLayer
+          ? (tile: Info.Tile) => {
+              if (isDirectionalGameTile(tile.id)) doRotate(tile)
+            }
+          : layer instanceof SwitchLayer
+            ? (tile: Info.Switch) => {
+                if (isDirectionalSwitchTile(tile.id)) doRotate(tile)
+              }
+            : layer instanceof SpeedupLayer
+              ? (tile: Info.Speedup) => {
+                  tile.angle = (tile.angle + 270) % 360
+                }
+              : false
 
     if (rotateFn) {
       for (let row of tiles) {
@@ -195,7 +211,6 @@
       }
     }
   }
-
 
   function onFlipV() {
     for (const layer of brush.layers) {
@@ -268,8 +283,7 @@
         if (prop in tile) {
           if (res === undefined) {
             res = tile[prop]
-          }
-          else if (tile[prop] !== res) {
+          } else if (tile[prop] !== res) {
             return undefined
           }
         }
@@ -280,14 +294,17 @@
   }
 
   function onSetProperty(prop: string, val: number) {
-    brush.layers.forEach(l => l.tiles.forEach(r => r.forEach(t => {
-      if (prop in t) {
-        t[prop] = val
-      }
-    })))
+    brush.layers.forEach(l =>
+      l.tiles.forEach(r =>
+        r.forEach(t => {
+          if (prop in t) {
+            t[prop] = val
+          }
+        })
+      )
+    )
     dispatch('change', brush)
   }
-
 </script>
 
 <div id="edit-brush">
@@ -309,12 +326,24 @@
       {#if layer.kind === LayerKind.Tele}
         <label>
           <span>Teleport target</span>
-          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'number')} on:change={(e) => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+          <input
+            type="number"
+            min={0}
+            max={255}
+            value={tilesProperty(layer.tiles, 'number')}
+            on:change={e => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))}
+          />
         </label>
       {:else if layer.kind === LayerKind.Speedup}
         <label>
           <span>Speedup force</span>
-          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'force')} on:change={(e) => onSetProperty('force', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+          <input
+            type="number"
+            min={0}
+            max={255}
+            value={tilesProperty(layer.tiles, 'force')}
+            on:change={e => onSetProperty('force', clamp(parseInt(e.currentTarget.value), 0, 255))}
+          />
         </label>
         <label>
           <span>Speedup max speed</span>
@@ -323,29 +352,53 @@
             min={0}
             max={255}
             value={tilesProperty(layer.tiles, 'maxSpeed')}
-            on:change={(e) => onSetProperty('maxSpeed', clamp(parseInt(e.currentTarget.value), 0, 255))}
+            on:change={e =>
+              onSetProperty('maxSpeed', clamp(parseInt(e.currentTarget.value), 0, 255))}
           />
         </label>
         <label>
           <span>Speedup angle</span>
-          <input type="number" min={0} max={359} value={tilesProperty(layer.tiles, 'angle')} on:change={(e) => onSetProperty('angle', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+          <input
+            type="number"
+            min={0}
+            max={359}
+            value={tilesProperty(layer.tiles, 'angle')}
+            on:change={e => onSetProperty('angle', clamp(parseInt(e.currentTarget.value), 0, 255))}
+          />
         </label>
       {:else if layer.kind === LayerKind.Switch}
         <label>
           <span>Switch number</span>
-          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'number')} on:change={(e) => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+          <input
+            type="number"
+            min={0}
+            max={255}
+            value={tilesProperty(layer.tiles, 'number')}
+            on:change={e => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))}
+          />
         </label>
         <label>
           <span>Switch delay</span>
-          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'delay')} on:change={(e) => onSetProperty('delay', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+          <input
+            type="number"
+            min={0}
+            max={255}
+            value={tilesProperty(layer.tiles, 'delay')}
+            on:change={e => onSetProperty('delay', clamp(parseInt(e.currentTarget.value), 0, 255))}
+          />
         </label>
       {:else if layer.kind === LayerKind.Tune}
         <label>
           <span>Tune zone</span>
-          <input type="number" min={0} max={255} value={tilesProperty(layer.tiles, 'number')} on:change={(e) => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))} />
+          <input
+            type="number"
+            min={0}
+            max={255}
+            value={tilesProperty(layer.tiles, 'number')}
+            on:change={e => onSetProperty('number', clamp(parseInt(e.currentTarget.value), 0, 255))}
+          />
         </label>
       {/if}
     {/if}
   </div>
 </div>
-

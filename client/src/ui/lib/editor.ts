@@ -10,11 +10,11 @@ import { layerKind } from './util'
 
 // list of layers -> 2d array of tiles
 export type Brush = {
-  group: number,
+  group: number
   layers: {
-    layer: number,
-    kind: MapDir.LayerKind,
-    tiles: Info.AnyTile[][],
+    layer: number
+    kind: MapDir.LayerKind
+    tiles: Info.AnyTile[][]
   }[]
 }
 
@@ -110,7 +110,7 @@ export function makeBoxSelection(map: Map, g: number, ll: number[], sel: Range):
     res.layers.push({
       layer: l,
       kind: layerKind(layer),
-      tiles
+      tiles,
     })
   }
 
@@ -140,7 +140,7 @@ export function makeEmptySelection(map: Map, g: number, ll: number[], sel: Range
     res.layers.push({
       layer: l,
       kind: layerKind(layer),
-      tiles
+      tiles,
     })
   }
 
@@ -148,33 +148,31 @@ export function makeEmptySelection(map: Map, g: number, ll: number[], sel: Range
 }
 
 function tileKind(tile: Info.AnyTile): MapDir.LayerKind {
-  if ('force' in tile)
-    return MapDir.LayerKind.Speedup
-  else if ('delay' in tile)
-    return MapDir.LayerKind.Switch
+  if ('force' in tile) return MapDir.LayerKind.Speedup
+  else if ('delay' in tile) return MapDir.LayerKind.Switch
   else if ('flags' in tile)
     return MapDir.LayerKind.Tiles // or Game or Front
-  else
-    return MapDir.LayerKind.Tele // or Tune
+  else return MapDir.LayerKind.Tele // or Tune
 }
 
 function adaptTile(tile: Info.AnyTile, kind: MapDir.LayerKind): Info.AnyTile {
-  if (tileKind(tile) === kind) { // COMBAK
+  if (tileKind(tile) === kind) {
+    // COMBAK
     return tile
   } else if (kind === MapDir.LayerKind.Tiles) {
     return {
       id: tile.id,
-      flags: 0
+      flags: 0,
     }
   } else if (kind === MapDir.LayerKind.Front) {
     return {
       id: tile.id,
-      flags: 0
+      flags: 0,
     }
   } else if (kind === MapDir.LayerKind.Game) {
     return {
       id: tile.id,
-      flags: 0
+      flags: 0,
     }
   } else if (kind === MapDir.LayerKind.Speedup) {
     return {
@@ -206,9 +204,7 @@ function adaptTile(tile: Info.AnyTile, kind: MapDir.LayerKind): Info.AnyTile {
 }
 
 export function adaptTiles(tiles: Info.AnyTile[][], kind: MapDir.LayerKind): Info.AnyTile[][] {
-  return tiles.map(row =>
-    row.map(tile => adaptTile(tile, kind))
-  )
+  return tiles.map(row => row.map(tile => adaptTile(tile, kind)))
 }
 
 export function adaptBrushToLayers(map: Map, brush: Brush, g: number, ll: number[]): Brush {
@@ -218,45 +214,41 @@ export function adaptBrushToLayers(map: Map, brush: Brush, g: number, ll: number
       const layer = brush.layers.find(x => brush.group === g && x.layer === l)
       if (layer) {
         return layer
-      }
-      else {
+      } else {
         const kind = layerKind(map.groups[g].layers[l])
         return {
           layer: l,
           kind,
-          tiles: adaptTiles(brush.layers[0].tiles, kind)
+          tiles: adaptTiles(brush.layers[0].tiles, kind),
         }
       }
-    })
+    }),
   }
 }
 
 // truncate 2D array left-right-top-bottom
 export function truncate<T>(arr: T[][], range: Range) {
-  return arr.slice(range.start.y, range.end.y)
-    .map(arr => arr.slice(range.start.x, range.end.x))
+  return arr.slice(range.start.y, range.end.y).map(arr => arr.slice(range.start.x, range.end.x))
 }
 
 // periodic repetition of 2D array
 export function repeat<T>(arr: T[][], size: Coord) {
   const w = arr[0].length
   const h = arr.length
-  return Array.from({ length: size.y }, (_, y) => Array.from({ length: size.x }, (_, x) => arr[y % h][x % w]))
+  return Array.from({ length: size.y }, (_, y) =>
+    Array.from({ length: size.x }, (_, x) => arr[y % h][x % w])
+  )
 }
 
 function clamp(cur: number, min: number, max: number) {
   return Math.min(Math.max(min, cur), max)
 }
 
-export function placeTiles(
-  server: WebSocketServer,
-  rmap: RenderMap,
-  pos: Coord,
-  brush: Brush
-) {
+export function placeTiles(server: WebSocketServer, rmap: RenderMap, pos: Coord, brush: Brush) {
   for (let i = 0; i < brush.layers.length; ++i) {
     const brushLayer = brush.layers[i]
-    const targetLayer = rmap.groups[brush.group].layers[brushLayer.layer].layer as AnyTilesLayer<any>
+    const targetLayer = rmap.groups[brush.group].layers[brushLayer.layer]
+      .layer as AnyTilesLayer<any>
 
     // make sure the brush is truncated on the edges of the layer
     const width = brushLayer.tiles[0].length
@@ -264,12 +256,12 @@ export function placeTiles(
     const range = {
       start: {
         x: clamp(pos.x, 0, targetLayer.width) - pos.x,
-        y: clamp(pos.y, 0, targetLayer.height) - pos.y
+        y: clamp(pos.y, 0, targetLayer.height) - pos.y,
       },
       end: {
         x: clamp(pos.x + width, 0, targetLayer.width) - pos.x,
         y: clamp(pos.y + height, 0, targetLayer.height) - pos.y,
-      }
+      },
     }
 
     const tiles = truncate(brushLayer.tiles, range)
@@ -296,17 +288,12 @@ export function placeTiles(
 
     if (isChanged()) {
       const data = tilesToData(tiles.flat())
-      server.send('edit/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data, }])
+      server.send('edit/tiles', [brush.group, brushLayer.layer, { x, y, w, h, tiles: data }])
     }
   }
 }
 
-export function fill(
-  server: WebSocketServer,
-  rmap: RenderMap,
-  range: Range,
-  brush: Brush
-) {
+export function fill(server: WebSocketServer, rmap: RenderMap, range: Range, brush: Brush) {
   const size = {
     x: range.end.x - range.start.x + 1,
     y: range.end.y - range.start.y + 1,
@@ -317,7 +304,7 @@ export function fill(
       layer: l.layer,
       kind: l.kind,
       tiles: repeat(l.tiles, size),
-    }))
+    })),
   }
   placeTiles(server, rmap, range.start, expanded)
 }

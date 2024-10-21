@@ -6,9 +6,11 @@ function main() {
   new Svelte({
     target: document.body,
   })
-  setDialog(new Dialog({
-    target: document.body
-  }))
+  setDialog(
+    new Dialog({
+      target: document.body,
+    })
+  )
 }
 
 main()

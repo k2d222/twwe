@@ -33,7 +33,14 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 import { isPhysicsLayer, type Ctor } from '../ui/lib/util'
 import { type Config as AutomapperConfig, automap } from '../twmap/automap'
-import { colorFromJson, coordFromJson, curveTypeFromString, fromFixedNum, stringToResIndex, uvFromJson } from '../server/convert'
+import {
+  colorFromJson,
+  coordFromJson,
+  curveTypeFromString,
+  fromFixedNum,
+  stringToResIndex,
+  uvFromJson,
+} from '../server/convert'
 import type { Brush } from '../ui/lib/editor'
 import type { EditTile, Recv } from '../server/protocol'
 
@@ -81,8 +88,7 @@ export class RenderMap {
   brushEnv: ColorEnvelope
 
   constructor(map: Map) {
-    if (!gl)
-      throw "no GL context was initialized"
+    if (!gl) throw 'no GL context was initialized'
 
     this.map = map
     this.textures = map.images.map(img => new Texture(img))
@@ -157,7 +163,7 @@ export class RenderMap {
       const layer = rlayer.layer as AnyTilesLayer<any>
       const w = blayer.tiles[0].length
       const h = blayer.tiles.length
-      
+
       const fill = (i: number) => {
         const x = i % w
         const y = Math.floor(i / w)
@@ -212,19 +218,15 @@ export class RenderMap {
 
   createEnvelope(part: Recv['create/envelope']) {
     let env: Envelope
-      if (part.type === 'color')
-        env = new ColorEnvelope()
-      else if (part.type === 'position')
-        env = new PositionEnvelope()
-      else if (part.type === 'sound')
-        env = new SoundEnvelope()
-      else {
-        const _unreachable: never = part
-        return _unreachable
-      }
+    if (part.type === 'color') env = new ColorEnvelope()
+    else if (part.type === 'position') env = new PositionEnvelope()
+    else if (part.type === 'sound') env = new SoundEnvelope()
+    else {
+      const _unreachable: never = part
+      return _unreachable
+    }
 
-    if (part.name !== undefined)
-      env.name = part.name
+    if (part.name !== undefined) env.name = part.name
     this.addEnvelope(env)
   }
 
@@ -267,8 +269,7 @@ export class RenderMap {
     const rlayer = rgroup.layers[e.l] as RenderAnyTilesLayer<PhysicsLayer | TilesLayer>
     const layer = rlayer.layer
 
-    if (e.x < 0 || e.y < 0 || e.x >= layer.width || e.y >= layer.height)
-      return false
+    if (e.x < 0 || e.y < 0 || e.x >= layer.width || e.y >= layer.height) return false
 
     const tile = layer.getTile(e.x, e.y)
 
@@ -298,10 +299,14 @@ export class RenderMap {
       colors: part.colors,
       texCoords: part.texture_coords.map(p => uvFromJson(p, 10)),
       posEnv:
-        part.position_env === null ? null : (this.map.envelopes[stringToResIndex(part.position_env)[0]] as PositionEnvelope),
+        part.position_env === null
+          ? null
+          : (this.map.envelopes[stringToResIndex(part.position_env)[0]] as PositionEnvelope),
       posEnvOffset: part.position_env_offset,
       colorEnv:
-        part.color_env === null ? null : (this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope),
+        part.color_env === null
+          ? null
+          : (this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope),
       colorEnvOffset: part.color_env_offset,
     }
 
@@ -314,22 +319,23 @@ export class RenderMap {
     const rlayer = rgroup.layers[l] as RenderQuadsLayer
     const quad = rlayer.layer.quads[q]
 
-    if ('position' in part)
-      quad.points[4] =  coordFromJson(part.position, 15)
+    if ('position' in part) quad.points[4] = coordFromJson(part.position, 15)
     if ('corners' in part)
       quad.points = [...part.corners.map(c => coordFromJson(c, 15)), quad.points[4]]
-    if ('colors' in part)
-      quad.colors = part.colors
-    if ('texture_coords' in part)
-      quad.texCoords = part.texture_coords.map(p => uvFromJson(p, 10))
+    if ('colors' in part) quad.colors = part.colors
+    if ('texture_coords' in part) quad.texCoords = part.texture_coords.map(p => uvFromJson(p, 10))
     if ('posEnv' in part)
-      quad.posEnv = part.position_env === null ? null : (this.map.envelopes[stringToResIndex(part.position_env)[0]] as PositionEnvelope)
-    if ('position_env_offset' in part)
-      quad.posEnvOffset = part.position_env_offset
+      quad.posEnv =
+        part.position_env === null
+          ? null
+          : (this.map.envelopes[stringToResIndex(part.position_env)[0]] as PositionEnvelope)
+    if ('position_env_offset' in part) quad.posEnvOffset = part.position_env_offset
     if ('colorEnv' in part)
-      quad.colorEnv = part.color_env === null ? null : (this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope)
-    if ('color_env_offset' in part)
-      quad.colorEnvOffset = part.color_env_offset
+      quad.colorEnv =
+        part.color_env === null
+          ? null
+          : (this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope)
+    if ('color_env_offset' in part) quad.colorEnvOffset = part.color_env_offset
 
     rlayer.recompute()
   }
@@ -347,21 +353,19 @@ export class RenderMap {
     if (part.offset !== undefined) {
       rgroup.group.offX = fromFixedNum(part.offset.x, 5)
       rgroup.group.offY = fromFixedNum(part.offset.y, 5)
-    } 
+    }
     if (part.parallax !== undefined) {
       rgroup.group.paraX = part.parallax.x
       rgroup.group.paraY = part.parallax.y
-    } 
-    if (part.clipping !== undefined)
-      rgroup.group.clipping = part.clipping
+    }
+    if (part.clipping !== undefined) rgroup.group.clipping = part.clipping
     if (part.clip !== undefined) {
       rgroup.group.clipX = fromFixedNum(part.clip.x, 5)
       rgroup.group.clipY = fromFixedNum(part.clip.y, 5)
       rgroup.group.clipW = fromFixedNum(part.clip.w, 5)
       rgroup.group.clipH = fromFixedNum(part.clip.h, 5)
     }
-    if (part.name !== undefined)
-      rgroup.group.name = part.name
+    if (part.name !== undefined) rgroup.group.name = part.name
   }
 
   reorderGroup(...[src, tgt]: Recv['move/group']) {
@@ -381,30 +385,26 @@ export class RenderMap {
     const rgroup = this.groups[g]
     const rlayer = rgroup.layers[l]
 
-    if (part.detail !== undefined)
-      rlayer.layer.detail = part.detail
-    if (part.name !== undefined)
-      rlayer.layer.name = part.name
+    if (part.detail !== undefined) rlayer.layer.detail = part.detail
+    if (part.name !== undefined) rlayer.layer.name = part.name
 
     if (rlayer instanceof RenderAnyTilesLayer) {
-      if ('width' in part)
-        this.setLayerWidth(rgroup, rlayer, part.width)
-      if ('height' in part)
-        this.setLayerHeight(rgroup, rlayer, part.height)
+      if ('width' in part) this.setLayerWidth(rgroup, rlayer, part.width)
+      if ('height' in part) this.setLayerHeight(rgroup, rlayer, part.height)
     }
     if (rlayer instanceof RenderTilesLayer && part.type === MapDir.LayerKind.Tiles) {
-      if (part.color !== undefined)
-        rlayer.layer.color = part.color
+      if (part.color !== undefined) rlayer.layer.color = part.color
       if (part.color_env !== undefined)
-        rlayer.layer.colorEnv = part.color_env === null ? null : this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope
-      if (part.color_env_offset !== undefined)
-        rlayer.layer.colorEnvOffset = part.color_env_offset
+        rlayer.layer.colorEnv =
+          part.color_env === null
+            ? null
+            : (this.map.envelopes[stringToResIndex(part.color_env)[0]] as ColorEnvelope)
+      if (part.color_env_offset !== undefined) rlayer.layer.colorEnvOffset = part.color_env_offset
       if (part.image !== undefined) {
         if (part.image === null) {
           rlayer.layer.image = null
           rlayer.texture = this.blankTexture
-        }
-        else {
+        } else {
           const index = stringToResIndex(part.image)[0]
           rlayer.layer.image = this.map.images[index]
           rlayer.texture = this.textures[index]
@@ -412,18 +412,17 @@ export class RenderMap {
         rlayer.recompute()
       }
       if (part.automapper_config !== undefined) {
-        rlayer.layer.automapper.config = part.automapper_config.config === null ? -1 : part.automapper_config.config
+        rlayer.layer.automapper.config =
+          part.automapper_config.config === null ? -1 : part.automapper_config.config
         rlayer.layer.automapper.seed = part.automapper_config.seed
         rlayer.layer.automapper.automatic = part.automapper_config.automatic
       }
-    }
-    else if (rlayer instanceof RenderQuadsLayer && part.type === MapDir.LayerKind.Quads) {
+    } else if (rlayer instanceof RenderQuadsLayer && part.type === MapDir.LayerKind.Quads) {
       if (part.image !== undefined) {
         if (part.image === null) {
           rlayer.layer.image = null
           rlayer.texture = this.blankTexture
-        }
-        else {
+        } else {
           rlayer.layer.image = this.map.images[stringToResIndex(part.image)[0]]
           rlayer.texture = this.textures[stringToResIndex(part.image)[0]]
         }
@@ -454,7 +453,9 @@ export class RenderMap {
     return rgroup
   }
 
-  private instLayer(kind: MapDir.LayerKind): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
+  private instLayer(
+    kind: MapDir.LayerKind
+  ): RenderTilesLayer | RenderPhysicsLayer | RenderQuadsLayer {
     if (kind === 'tiles') return new RenderTilesLayer(this, new TilesLayer())
     else if (kind === 'quads') return new RenderQuadsLayer(this, new QuadsLayer())
     else if (kind === 'front') return new RenderFrontLayer(this, new FrontLayer())

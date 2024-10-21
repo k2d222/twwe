@@ -18,8 +18,7 @@ export function setDialog(d: Dialog) {
 export function clearDialog(id: number | 'all' = 'all') {
   if (id === 'all') {
     dialog.$set({ messages: [] })
-  }
-  else {
+  } else {
     dialog.$set({ messages: dialog.messages.filter(m => m.id !== id) })
   }
 }
@@ -32,12 +31,15 @@ export function showDialog(
 ): Promise<boolean> | number {
   const id = Math.random()
   dialog.$set({
-    messages: [{
-      type,
-      message,
-      controls,
-      id
-    }, ...dialog.messages]
+    messages: [
+      {
+        type,
+        message,
+        controls,
+        id,
+      },
+      ...dialog.messages,
+    ],
   })
 
   if (controls !== 'yesno') {
@@ -50,8 +52,7 @@ export function showDialog(
     }
   }
 
-  if (controls === 'none')
-    return id
+  if (controls === 'none') return id
   else
     return new Promise(resolve => {
       let timeout_id = 0
@@ -70,23 +71,23 @@ export function showDialog(
     })
 }
 
-export function showInfo(msg: string): Promise<boolean>; 
-export function showInfo(msg: string, controls: 'none'): number; 
-export function showInfo(msg: string, controls: DialogControls): Promise<boolean>; 
+export function showInfo(msg: string): Promise<boolean>
+export function showInfo(msg: string, controls: 'none'): number
+export function showInfo(msg: string, controls: DialogControls): Promise<boolean>
 export function showInfo(msg: string, controls: DialogControls = 'closable') {
   return showDialog('info', msg, controls)
 }
 
-export function showWarning(msg: string): Promise<boolean>; 
-export function showWarning(msg: string, controls: 'none'): number; 
-export function showWarning(msg: string, controls: DialogControls): Promise<boolean>; 
+export function showWarning(msg: string): Promise<boolean>
+export function showWarning(msg: string, controls: 'none'): number
+export function showWarning(msg: string, controls: DialogControls): Promise<boolean>
 export function showWarning(msg: string, controls: DialogControls = 'closable') {
   return showDialog('warning', msg, controls)
 }
 
-export function showError(msg: string): Promise<boolean>; 
-export function showError(msg: string, controls: 'none'): number; 
-export function showError(msg: string, controls: DialogControls): Promise<boolean>; 
+export function showError(msg: string): Promise<boolean>
+export function showError(msg: string, controls: 'none'): number
+export function showError(msg: string, controls: DialogControls): Promise<boolean>
 export function showError(msg: string, controls: DialogControls = 'closable') {
   return showDialog('error', msg, controls)
 }

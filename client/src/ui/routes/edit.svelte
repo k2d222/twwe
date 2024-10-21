@@ -35,16 +35,13 @@
     $server.onError(() => {})
     $server.query('leave', name)
   })
-
 </script>
 
 <svelte:head>
   <title>{name} - DDNet Map Editor</title>
 </svelte:head>
 
-
 <div id="edit">
-
   <Fence fullscreen signal={loadingSignal} loadText="Downloading map…">
     <Headerbar />
 
@@ -54,5 +51,4 @@
       <Editor />
     {/if}
   </Fence>
-
 </div>

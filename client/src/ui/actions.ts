@@ -1,9 +1,9 @@
-import { clearDialog, showDialog, showError, showInfo } from "./lib/dialog"
-import { server, serverCfg, rmap, peers } from "./global"
-import { get } from "svelte/store"
+import { clearDialog, showDialog, showError, showInfo } from './lib/dialog'
+import { server, serverCfg, rmap, peers } from './global'
+import { get } from 'svelte/store'
 import { navigate } from 'svelte-routing'
-import { download } from "./lib/util"
-import { serverHttpUrl } from "../server/util"
+import { download } from './lib/util'
+import { serverHttpUrl } from '../server/util'
 
 export async function saveMap() {
   const server_ = get(server)

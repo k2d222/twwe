@@ -1,9 +1,9 @@
 <script lang="ts">
   import { setContext, type Context } from '../../gl/global'
-  import { onDestroy, onMount } from "svelte"
-  import { RenderQuadsLayer } from "../../gl/renderQuadsLayer"
-  import { RenderMap } from "../../gl/renderMap"
-  import type { Map } from "../../twmap/map"
+  import { onDestroy, onMount } from 'svelte'
+  import { RenderQuadsLayer } from '../../gl/renderQuadsLayer'
+  import { RenderMap } from '../../gl/renderMap'
+  import type { Map } from '../../twmap/map'
   import { Renderer } from '../../gl/renderer'
   import { Viewport } from '../../gl/viewport'
 
@@ -48,8 +48,7 @@
   })
 
   function renderLoop(t: DOMHighResTimeStamp) {
-    if (destroyed)
-      return
+    if (destroyed) return
 
     if (resized) {
       canvas.width = canvas.clientWidth

@@ -64,17 +64,17 @@
   let external = -1
 
   let file: File | null = null
-  
+
   $: external = image && image.img ? externalImages.indexOf(image.name) : external
 
   $: selectedName =
     external !== -1
       ? externalImages[external] + ' (external)'
       : image
-      ? image.name + ' (embedded)'
-      : file
-      ? file.name + ' (upload)'
-      : 'none'
+        ? image.name + ' (embedded)'
+        : file
+          ? file.name + ' (upload)'
+          : 'none'
 
   function onConfirm() {
     if (image) {
@@ -122,21 +122,18 @@
   function getImgURL(image: Image) {
     if (image.img !== null) {
       return image.img.src
-    }
-    else if (image.data instanceof ImageData) {
+    } else if (image.data instanceof ImageData) {
       const canvas = document.createElement('canvas')
       canvas.width = image.data.width
       canvas.height = image.data.height
       const ctx = canvas.getContext('2d')!
       ctx.putImageData(image.data, 0, 0)
       return canvas.toDataURL()
-    }
-    else {
+    } else {
       console.warn('unsupported image data type:', image)
       return ''
     }
   }
-
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
@@ -154,7 +151,7 @@
           labelDescription="Only png files are accepted."
           accept={['.png']}
           status="complete"
-          on:change={(e) => selectFile(e.detail.length === 1 ? e.detail[0] : null)}
+          on:change={e => selectFile(e.detail.length === 1 ? e.detail[0] : null)}
           files={file === null ? [] : [file]}
         />
       </TabContent>

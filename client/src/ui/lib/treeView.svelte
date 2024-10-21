@@ -26,8 +26,7 @@
     if ($selected.length === 0) {
       active_g = -1
       active_l = -1
-    }
-    else {
+    } else {
       active_g = $selected[$selected.length - 1][0]
       active_l = $selected[$selected.length - 1][1]
     }
@@ -104,17 +103,16 @@
     return layer instanceof TilesLayer
       ? TilesLayerIcon
       : layer instanceof AnyTilesLayer
-      ? GameLayerIcon
-      : layer instanceof QuadsLayer
-      ? QuadsLayerIcon
-      : UnknownLayerIcon
+        ? GameLayerIcon
+        : layer instanceof QuadsLayer
+          ? QuadsLayerIcon
+          : UnknownLayerIcon
   }
 
   function select(g: number, l: number, e: MouseEvent | KeyboardEvent) {
     if (e.shiftKey && g === active_g) {
       $selected = [...$selected.filter(([_, l2]) => l2 !== -1 && l2 !== l), [g, l]]
-    }
-    else {
+    } else {
       $selected = [[g, l]]
     }
   }
@@ -158,58 +156,58 @@
 </script>
 
 {#key sync_}
-<ul id="tree" role="tree" bind:this={self}>
-  {#each $rmap.groups as rgroup, g (rgroup)}
-    {@const group = rgroup.group}
-    <li class="group" class:visible={rgroup.visible} class:folded={folded[g]}>
-      <div
-        class="node"
-        role="treeitem"
-        tabindex="0"
-        aria-selected={isSelected($selected, g, -1)}
-        class:selected={isSelected($selected, g, -1)}
-        class:active={isActive(active, g, -1)}
-        on:click={(e) => select(g, -1, e)}
-        on:keydown={e => onKeyDown(g, -1, e)}
-      >
-        <span class="toggle" aria-hidden="true" on:click={() => (folded[g] = !folded[g])}>
-          <CaretDown />
-        </span>
-        <span class="icon"><GroupIcon /></span>
-        <span class="label">{groupName(group)}</span>
-        <span class="eye" aria-hidden="true" on:click={() => (rgroup.visible = !rgroup.visible)}>
-          <svelte:component this={rgroup.visible ? View : ViewOff} />
-        </span>
-      </div>
+  <ul id="tree" role="tree" bind:this={self}>
+    {#each $rmap.groups as rgroup, g (rgroup)}
+      {@const group = rgroup.group}
+      <li class="group" class:visible={rgroup.visible} class:folded={folded[g]}>
+        <div
+          class="node"
+          role="treeitem"
+          tabindex="0"
+          aria-selected={isSelected($selected, g, -1)}
+          class:selected={isSelected($selected, g, -1)}
+          class:active={isActive(active, g, -1)}
+          on:click={e => select(g, -1, e)}
+          on:keydown={e => onKeyDown(g, -1, e)}
+        >
+          <span class="toggle" aria-hidden="true" on:click={() => (folded[g] = !folded[g])}>
+            <CaretDown />
+          </span>
+          <span class="icon"><GroupIcon /></span>
+          <span class="label">{groupName(group)}</span>
+          <span class="eye" aria-hidden="true" on:click={() => (rgroup.visible = !rgroup.visible)}>
+            <svelte:component this={rgroup.visible ? View : ViewOff} />
+          </span>
+        </div>
 
-      <ul>
-        {#each rgroup.layers as rlayer, l (rlayer)}
-          {@const layer = rlayer.layer}
-          <li class="layer" class:visible={rlayer.visible}>
-            <div
-              class="node"
-              role="treeitem"
-              tabindex="0"
-              aria-selected={isSelected($selected, g, l)}
-              class:selected={isSelected($selected, g, l)}
-              class:active={isActive(active, g, l)}
-              on:click={(e) => select(g, l, e)}
-              on:keydown={e => onKeyDown(g, l, e)}
-            >
-              <span class="icon"><svelte:component this={layerIcon(layer)} /></span>
-              <span class="label">{@html layerName(layer)}</span>
-              <span
-                class="eye"
-                aria-hidden="true"
-                on:click={() => (rlayer.visible = !rlayer.visible)}
+        <ul>
+          {#each rgroup.layers as rlayer, l (rlayer)}
+            {@const layer = rlayer.layer}
+            <li class="layer" class:visible={rlayer.visible}>
+              <div
+                class="node"
+                role="treeitem"
+                tabindex="0"
+                aria-selected={isSelected($selected, g, l)}
+                class:selected={isSelected($selected, g, l)}
+                class:active={isActive(active, g, l)}
+                on:click={e => select(g, l, e)}
+                on:keydown={e => onKeyDown(g, l, e)}
               >
-                <svelte:component this={rlayer.visible ? View : ViewOff} />
-              </span>
-            </div>
-          </li>
-        {/each}
-      </ul>
-    </li>
-  {/each}
-</ul>
+                <span class="icon"><svelte:component this={layerIcon(layer)} /></span>
+                <span class="label">{@html layerName(layer)}</span>
+                <span
+                  class="eye"
+                  aria-hidden="true"
+                  on:click={() => (rlayer.visible = !rlayer.visible)}
+                >
+                  <svelte:component this={rlayer.visible ? View : ViewOff} />
+                </span>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      </li>
+    {/each}
+  </ul>
 {/key}

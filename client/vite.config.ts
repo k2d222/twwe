@@ -7,7 +7,6 @@ import { importAssets } from 'svelte-preprocess-import-assets'
 import { optimizeImports } from 'carbon-preprocess-svelte'
 import svg from '@poppanator/sveltekit-svg'
 
-
 // https://vitejs.dev/config/
 export default defineConfig({
   css: {
@@ -17,8 +16,8 @@ export default defineConfig({
       },
       scss: {
         api: 'modern-compiler',
-      }
-    }
+      },
+    },
   },
   plugins: [
     imagetools(),
@@ -27,11 +26,13 @@ export default defineConfig({
     }),
     svg({
       svgoOptions: {
-        plugins: [{
-          name: 'preset-default',
-          params: { overrides: { removeViewBox: false } }
-        }]
-      }
-    })
+        plugins: [
+          {
+            name: 'preset-default',
+            params: { overrides: { removeViewBox: false } },
+          },
+        ],
+      },
+    }),
   ],
 })

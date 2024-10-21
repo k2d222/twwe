@@ -8,7 +8,7 @@
     "build": "sass --load-path=node_modules  styles/carbon-style.scss styles/carbon-style-compiled.css && vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "format": "prettier --plugin-search-dir . --write .",
+    "format": "prettier --write .",
     "preprocess": "sass --load-path=node_modules styles/carbon-style.scss styles/carbon-style-compiled.css"
   },
   "repository": {

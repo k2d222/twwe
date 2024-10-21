@@ -2,7 +2,7 @@ import type { DataFile } from './datafile'
 import type * as Info from './types'
 import { parseString } from './parser'
 
-export type ImageSource = TexImageSource & { width: number, height: number }
+export type ImageSource = TexImageSource & { width: number; height: number }
 
 export class Image {
   name: string

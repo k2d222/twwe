@@ -1,28 +1,28 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte"
-  import { automappers, server, map } from "../global"
-  import { TrashCan as TrashIcon, Add as AddIcon } from "carbon-icons-svelte"
-  import { clearDialog, showError, showInfo, showWarning } from "./dialog"
+  import { onDestroy, onMount } from 'svelte'
+  import { automappers, server, map } from '../global'
+  import { TrashCan as TrashIcon, Add as AddIcon } from 'carbon-icons-svelte'
+  import { clearDialog, showError, showInfo, showWarning } from './dialog'
   import { Button, ComposedModal, ModalBody, ModalHeader } from 'carbon-components-svelte'
-  import { Pane, Splitpanes } from "svelte-splitpanes"
-  import MapView from "./mapView.svelte"
-  import { px2vw, rem2px } from "./util"
-  import DDNetIcon from "../../../assets/ddnet/ddnet_symbolic.svg?component"
-  import RppIcon from "../../../assets/rpp/rpp_symbolic.svg?component"
+  import { Pane, Splitpanes } from 'svelte-splitpanes'
+  import MapView from './mapView.svelte'
+  import { px2vw, rem2px } from './util'
+  import DDNetIcon from '../../../assets/ddnet/ddnet_symbolic.svg?component'
+  import RppIcon from '../../../assets/rpp/rpp_symbolic.svg?component'
   import { Unknown as UnknownIcon } from 'carbon-icons-svelte'
-  import type { RenderMap } from "../../gl/renderMap"
-  import { TilesLayer } from "../../twmap/tilesLayer"
-  import { automap, lint, LintLevel, lintToString, parse } from "../../twmap/automap"
+  import type { RenderMap } from '../../gl/renderMap'
+  import { TilesLayer } from '../../twmap/tilesLayer'
+  import { automap, lint, LintLevel, lintToString, parse } from '../../twmap/automap'
 
-  import { basicSetup } from "codemirror"
-  import { EditorState } from "@codemirror/state"
-  import { EditorView, tooltips, keymap } from "@codemirror/view"
-  import { linter, setDiagnostics } from "@codemirror/lint"
+  import { basicSetup } from 'codemirror'
+  import { EditorState } from '@codemirror/state'
+  import { EditorView, tooltips, keymap } from '@codemirror/view'
+  import { linter, setDiagnostics } from '@codemirror/lint'
   import { DDNetRules } from './lang-ddnet_rules/index'
-  import { DDNetRulesLinter } from "./lang-ddnet_rules/lint"
+  import { DDNetRulesLinter } from './lang-ddnet_rules/lint'
   import { Rpp } from './lang-rpp/index'
-  import type { Tile } from "../../twmap/types"
-  import { AutomapperKind, type Send } from "../../server/protocol"
+  import type { Tile } from '../../twmap/types'
+  import { AutomapperKind, type Send } from '../../server/protocol'
 
   let editor: HTMLElement
   let selected: string | null = null
@@ -84,18 +84,31 @@
     let extensions = [
       basicSetup,
       keymap.of([
-        { key: 'Ctrl-s', run: () => { onSave(); return true; } },
-        { key: 'Ctrl-p', run: () => { onPreview(); return true; } },
+        {
+          key: 'Ctrl-s',
+          run: () => {
+            onSave()
+            return true
+          },
+        },
+        {
+          key: 'Ctrl-p',
+          run: () => {
+            onPreview()
+            return true
+          },
+        },
       ]),
       // EditorView.lineWrapping, // This is a bit too laggy
       tooltips({ position: 'absolute' }), // This is a bit too laggy
-      EditorView.updateListener.of(e => { if (e.docChanged) changed = true })
+      EditorView.updateListener.of(e => {
+        if (e.docChanged) changed = true
+      }),
     ]
 
     if (kind === AutomapperKind.DDNet) {
       extensions.push(DDNetRules(), DDNetRulesLinter)
-    }
-    else if (kind === AutomapperKind.RulesPP) {
+    } else if (kind === AutomapperKind.RulesPP) {
       extensions.push(Rpp())
     }
 
@@ -130,8 +143,7 @@
       return '# Automapper tutorial: https://forum.ddnet.org/viewtopic.php?t=2428\n[Sweeper]\nIndex 0'
     else if (kind === AutomapperKind.RulesPP)
       return '// Rules++ tutorial: https://github.com/Aerll/rpp/wiki/\nAutoMapper("Sweeper");\nNewRun();\nInsert(0);'
-    else
-      return ''
+    else return ''
   }
 
   async function onCreate() {
@@ -163,12 +175,11 @@
           from: line1.from + d.span.col_start - 1,
           to: line2.from + d.span.col_end - 1,
           severity: 'error' as 'error',
-          message: d.msg
+          message: d.msg,
         }
       })
       view.dispatch(setDiagnostics(view.state, diagnostics))
-    }
-    finally {
+    } finally {
       clearDialog(id)
     }
 
@@ -176,8 +187,7 @@
   }
 
   async function onPreview() {
-    if (selected === null)
-      return
+    if (selected === null) return
 
     let am = $automappers[selected]
 
@@ -220,13 +230,14 @@
 
     if (tilesCache.length === 0) {
       let confs = configs.map(c => `'${c.name}'`).join(', ')
-      showError(`Cannot preview: no layer uses image '${am.image}' with one of the automapper configs: ${confs}.`)
+      showError(
+        `Cannot preview: no layer uses image '${am.image}' with one of the automapper configs: ${confs}.`
+      )
     }
   }
 
   async function onDiagnostics() {
-    if (selected === null)
-      return
+    if (selected === null) return
 
     diagnosticsOpen = true
 
@@ -248,7 +259,6 @@
     }
 
     diagnostics = lines.join('\n')
-
   }
 
   async function onSelect(file: string) {
@@ -268,28 +278,24 @@
     changed = false
   }
 
-  function onKeydown(_e: KeyboardEvent) {
-    
-  }
+  function onKeydown(_e: KeyboardEvent) {}
 
   function isValidName(name: string) {
     return name !== '' && !Object.keys($automappers).includes(name)
   }
 
   function automapperIcon(kind: AutomapperKind) {
-      if (kind === AutomapperKind.DDNet) return DDNetIcon
-      else if (kind === AutomapperKind.RulesPP) return RppIcon
-      else return UnknownIcon
+    if (kind === AutomapperKind.DDNet) return DDNetIcon
+    else if (kind === AutomapperKind.RulesPP) return RppIcon
+    else return UnknownIcon
   }
-
 </script>
 
 <div id="edit-automapper">
   <Splitpanes id="panes" dblClickSplitter={false}>
-
     <Pane class="automappers" size={px2vw(rem2px(15))}>
       <div class="left list">
-        {#each Object.entries($automappers).sort(([f1], [f2]) => f1.localeCompare(f2)) as [file, am]}
+        {#each Object.entries($automappers).sort( ([f1], [f2]) => f1.localeCompare(f2) ) as [file, am]}
           <div
             class="row"
             aria-selected={selected === file}
@@ -311,28 +317,38 @@
           kind="ghost"
           icon={AddIcon}
           on:click={onNew}
-        >New automapper</Button>
+        >
+          New automapper
+        </Button>
       </div>
     </Pane>
 
-  <Pane class="code">
-    <div class="middle">
-      <div class="controls">
-        <span class:modified={changed}>{changed ? '*' : ''}{selected ?? ''}</span>
-        <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
-        <Button size="small" on:click={onDiagnostics} disabled={selected === null} kind="secondary">Diagnostics</Button>
-        <Button size="small" on:click={onPreview} disabled={selected === null} kind="secondary">Preview</Button>
+    <Pane class="code">
+      <div class="middle">
+        <div class="controls">
+          <span class:modified={changed}>{changed ? '*' : ''}{selected ?? ''}</span>
+          <Button size="small" on:click={onSave} disabled={selected === null}>Save</Button>
+          <Button
+            size="small"
+            on:click={onDiagnostics}
+            disabled={selected === null}
+            kind="secondary"
+          >
+            Diagnostics
+          </Button>
+          <Button size="small" on:click={onPreview} disabled={selected === null} kind="secondary">
+            Preview
+          </Button>
+        </div>
+        <div class="editor" bind:this={editor}></div>
       </div>
-      <div class="editor" bind:this={editor}></div>
-    </div>
-  </Pane>
+    </Pane>
 
-  <Pane class="viewport">
-    <div class="right">
-      <MapView bind:this={mapView} map={$map}/>
-    </div>
-  </Pane>
-
+    <Pane class="viewport">
+      <div class="right">
+        <MapView bind:this={mapView} map={$map} />
+      </div>
+    </Pane>
   </Splitpanes>
 </div>
 
@@ -342,7 +358,13 @@
     <div class="new-automapper">
       <label>
         Name
-        <input type="text" bind:value={newAmName} class="default" maxlength={127} placeholder="New automapper name" />
+        <input
+          type="text"
+          bind:value={newAmName}
+          class="default"
+          maxlength={127}
+          placeholder="New automapper name"
+        />
       </label>
       <label>
         Kind
@@ -352,7 +374,9 @@
           <option value={AutomapperKind.Teeworlds} disabled>Teeworlds (TODO)</option>
         </select>
       </label>
-      <button class="primary large" disabled={!isValidName(newAmName)} on:click={onCreate}>Create</button>
+      <button class="primary large" disabled={!isValidName(newAmName)} on:click={onCreate}>
+        Create
+      </button>
     </div>
   </ModalBody>
 </ComposedModal>

@@ -1,4 +1,14 @@
-import type { SendPacket, Result, SendKey, RecvKey, Recv, Send, Resp, RecvPacket, RespPacket } from './protocol'
+import type {
+  SendPacket,
+  Result,
+  SendKey,
+  RecvKey,
+  Recv,
+  Send,
+  Resp,
+  RecvPacket,
+  RespPacket,
+} from './protocol'
 import { History } from './history'
 
 type QueryFn<K extends SendKey> = (resp: Result<Resp[K]>) => unknown
@@ -28,24 +38,18 @@ export class EventDispatcher<E extends Record<string, any>> {
   }
 
   on<K extends keyof E>(type: K, fn: Listener<E[K]>, priority: boolean = false) {
-    if (this.listeners[type] === undefined)
-      this.listeners[type] = []
+    if (this.listeners[type] === undefined) this.listeners[type] = []
 
-    if (priority)
-      this.listeners[type].unshift(fn)
-    else
-      this.listeners[type].push(fn)
+    if (priority) this.listeners[type].unshift(fn)
+    else this.listeners[type].push(fn)
   }
 
   off<K extends keyof E>(type: K, fn: Listener<E[K]>) {
-    if (this.listeners[type] === undefined)
-      console.error('server.off(): could not find listener')
+    if (this.listeners[type] === undefined) console.error('server.off(): could not find listener')
 
     const index = this.listeners[type].indexOf(fn)
-    if (index !== -1)
-      this.listeners[type].splice(index, 1)
-    else
-      console.error('server.off(): could not find listener')
+    if (index !== -1) this.listeners[type].splice(index, 1)
+    else console.error('server.off(): could not find listener')
   }
 
   dispatch<K extends keyof E>(type: K, evt: E[K], promise: Promise<void> = Promise.resolve()) {
@@ -161,8 +165,7 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
       if ('err' in resp) {
         this.errorListener.call(undefined, resp.err)
       }
-    }
-    else {
+    } else {
       console.error('query response with no listener', resp)
     }
   }
@@ -174,25 +177,18 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
     }
 
     const data = JSON.parse(e.data) as RespPacket<SendKey> | RecvPacket<RecvKey>
-    
+
     if ('id' in data) {
       const ops = this.history.resp(data)
-      if (ops)
-        for (const [type, content] of ops)
-          this.dispatch(type, content)
+      if (ops) for (const [type, content] of ops) this.dispatch(type, content)
 
       this.handleResp(data)
-    }
-    else if ('err' in data) {
+    } else if ('err' in data) {
       this.errorListener.call(undefined, data.err)
-    }
-    else {
+    } else {
       const ops = this.history.recv(data)
-      if (ops)
-        for (const [type, content] of ops)
-          this.dispatch(type, content)
-      else
-        this.dispatch(data.type, data.content)
+      if (ops) for (const [type, content] of ops) this.dispatch(type, content)
+      else this.dispatch(data.type, data.content)
     }
   }
 

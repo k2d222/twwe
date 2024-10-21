@@ -3,8 +3,7 @@
   import { sync } from '../../server/util'
   import { server, map } from '../global'
 
-
-  $: syncInfo = sync($server, cloneInfo($map.info), { query: 'edit/info' }) 
+  $: syncInfo = sync($server, cloneInfo($map.info), { query: 'edit/info' })
 
   function cloneInfo(info: MapInfo): MapInfo {
     return { ...info }

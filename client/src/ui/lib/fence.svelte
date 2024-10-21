@@ -19,10 +19,5 @@
   <slot {result} />
 {:catch error}
   {showError(error) && ''}
-  <InlineNotification
-    kind="error"
-    hideCloseButton
-    title={errorText}
-    subtitle={error}
-  />
+  <InlineNotification kind="error" hideCloseButton title={errorText} subtitle={error} />
 {/await}

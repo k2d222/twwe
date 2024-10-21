@@ -501,7 +501,14 @@ function lintAutomapper(reader: FileReader): Lint[] {
       )
     else if (tok.content.word === 'NoLayerCopy') {
       if (indexRule)
-        errs.push(lintWarn('Misplaced "NoLayerCopy"', reader.state.line, tok.content.range, 'For readability, "NoLayerCopy" should be placed at the start of the run.'))
+        errs.push(
+          lintWarn(
+            'Misplaced "NoLayerCopy"',
+            reader.state.line,
+            tok.content.range,
+            'For readability, "NoLayerCopy" should be placed at the start of the run.'
+          )
+        )
       if (noLayerCopy)
         errs.push(lintWarn('Duplicate "NoLayerCopy"', reader.state.line, tok.content.range))
       else noLayerCopy = true
@@ -552,8 +559,7 @@ export function lint(content: string): Lint[] {
 export function lintToString(lint: Lint): string {
   const level = lint.level === LintLevel.Error ? 'error' : 'warning'
   let str = `[${level}] line ${lint.line + 1}, chars ${lint.range[0]}-${lint.range[1]}: ${lint.reason}.`
-  if (lint.note)
-    str += ` Note: ${lint.note}`
+  if (lint.note) str += ` Note: ${lint.note}`
   return str
 }
 
@@ -600,18 +606,12 @@ export function parse(content: string): Config[] | null {
     if ('header' in tok.content) {
       const name = tok.content.header
       newConfig(name)
-    }
-    
-    else if (!('word' in tok.content) || !automapper) {
+    } else if (!('word' in tok.content) || !automapper) {
       // invalid line, skip
       continue
-    }
-    
-    else if (tok.content.word === 'NewRun') {
+    } else if (tok.content.word === 'NewRun') {
       newRun()
-    }
-    
-    else if (tok.content.word === 'Index') {
+    } else if (tok.content.word === 'Index') {
       // id
       tok = reader.token()
       if (!tok.success || !('int' in tok.content)) return null
@@ -630,9 +630,7 @@ export function parse(content: string): Config[] | null {
 
       const tile: Info.Tile = { id, flags }
       newIndexRule(tile)
-    }
-    
-    else if (indexRule !== null && tok.content.word === 'Pos') {
+    } else if (indexRule !== null && tok.content.word === 'Pos') {
       // offset
       tok = reader.token()
       if (!tok.success || !('int' in tok.content)) return null
@@ -658,9 +656,7 @@ export function parse(content: string): Config[] | null {
         }
 
         indexRule.rules.push(rule)
-      }
-
-      else if (['INDEX', 'NOTINDEX'].includes(tok.content.word)) {
+      } else if (['INDEX', 'NOTINDEX'].includes(tok.content.word)) {
         const invert = tok.content.word === 'NOTINDEX'
 
         // id
@@ -705,22 +701,16 @@ export function parse(content: string): Config[] | null {
         const rule: PosRule = { offset, states, invert }
         indexRule.rules.push(rule)
       }
-    }
-    
-    else if (indexRule !== null && tok.content.word === 'Random') {
+    } else if (indexRule !== null && tok.content.word === 'Random') {
       tok = reader.token()
       let coef = 1.0
       if (tok.success && 'float' in tok.content) coef = tok.content.float
       else if (tok.success && 'int' in tok.content) coef = 1.0 / tok.content.int
       const rule: RandomRule = { coef }
       indexRule.rules.push(rule)
-    }
-    
-    else if (indexRule !== null && tok.content.word === 'NoDefaultRule') {
+    } else if (indexRule !== null && tok.content.word === 'NoDefaultRule') {
       defaultRule = false
-    }
-    
-    else if (run !== null && tok.content.word === 'NoLayerCopy') {
+    } else if (run !== null && tok.content.word === 'NoLayerCopy') {
       run.layerCopy = false
     }
 
@@ -794,9 +784,7 @@ function posRuleMatches(rule: PosRule, layer: TilesLayer, x: number, y: number) 
   const xx = x + rule.offset.x
   const yy = y + rule.offset.y
 
-  const tile = inBounds(xx, yy, layer.width, layer.height)
-    ? layer.getTile(xx, yy)
-    : outTile
+  const tile = inBounds(xx, yy, layer.width, layer.height) ? layer.getTile(xx, yy) : outTile
 
   return rule.invert
     ? rule.states.every(s => !tileMatches(tile, s))
@@ -822,8 +810,7 @@ export function automap(layer: TilesLayer, automapper: Config, seed: number) {
             } else {
               match = posRuleMatches(rule, srcLayer, x, y)
             }
-            if (!match)
-              break
+            if (!match) break
           }
 
           if (match) {

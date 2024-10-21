@@ -1,19 +1,18 @@
-
 <script lang="ts">
   import * as Editor from './editor'
   import { server, selected, anim, peers, rmap, map } from '../global'
-  import { AnyTilesLayer, GameLayer, TilesLayer } from "../../twmap/tilesLayer"
-  import { tweened, type Readable } from "svelte/motion"
-  import { type Coord, LayerType } from "../../twmap/types"
-  import { QuadsLayer } from "../../twmap/quadsLayer"
+  import { AnyTilesLayer, GameLayer, TilesLayer } from '../../twmap/tilesLayer'
+  import { tweened, type Readable } from 'svelte/motion'
+  import { type Coord, LayerType } from '../../twmap/types'
+  import { QuadsLayer } from '../../twmap/quadsLayer'
   import { Image } from '../../twmap/image'
-  import QuadsView from "./quadsView.svelte"
-  import { onDestroy, onMount } from "svelte"
-  import { RenderQuadsLayer } from "../../gl/renderQuadsLayer"
+  import QuadsView from './quadsView.svelte'
+  import { onDestroy, onMount } from 'svelte'
+  import { RenderQuadsLayer } from '../../gl/renderQuadsLayer'
   import TilePicker from './tilePicker.svelte'
   import BrushEditor from './editBrush.svelte'
   import Stats from './stats.svelte'
-  import { RenderAnyTilesLayer } from "../../gl/renderTilesLayer"
+  import { RenderAnyTilesLayer } from '../../gl/renderTilesLayer'
   import { viewport, renderer } from '../../gl/global'
   import { externalImageUrl, layerKind } from './util'
   import MapView from './mapView.svelte'
@@ -32,8 +31,7 @@
     if ($selected.length === 0) {
       g = -1
       l = -1
-    }
-    else {
+    } else {
       g = $selected[$selected.length - 1][0]
       l = $selected[$selected.length - 1][1]
     }
@@ -77,7 +75,7 @@
   // cursors
   let cursorInterval = 0
   let cursorDuration = 300
-  let cursors: { [k: string]: { x: number, y: number } } = {}
+  let cursors: { [k: string]: { x: number; y: number } } = {}
   let cursorAnim = tweened(cursors, { duration: cursorDuration })
   $: if ($peers === 1) {
     cursors = {}
@@ -102,8 +100,8 @@
   let brushRange = Editor.createRange() // start and end pos of copied buffer (if any)
   let brushBuffer: Editor.Brush | null = null
   $: onLayerSelectionChanged($selected)
-  $: if($rmap) $rmap.setBrush(brushBuffer)
-  $: if($rmap) $rmap.moveBrush(mouseRange.start)
+  $: if ($rmap) $rmap.setBrush(brushBuffer)
+  $: if ($rmap) $rmap.moveBrush(mouseRange.start)
 
   let destroyed = false
 
@@ -135,15 +133,16 @@
     $rmap.deleteGroup(dg)
     $selected = $selected
       .filter(([g, _]) => g !== dg)
-      .map(([g, l]) => g > dg ? [g -1, l] : [g, l])
+      .map(([g, l]) => (g > dg ? [g - 1, l] : [g, l]))
   }
   function onReorderGroup([src, tgt]: Recv['move/group']) {
     $rmap.reorderGroup(src, tgt)
     $selected.pop() // remove active
-    const active: [number, number] =
-       rlayer ? $rmap.map.layerIndex(rlayer.layer) :
-       rgroup ? [$rmap.map.groupIndex(rgroup.group), -1] :
-       $rmap.map.physicsLayerIndex(GameLayer)
+    const active: [number, number] = rlayer
+      ? $rmap.map.layerIndex(rlayer.layer)
+      : rgroup
+        ? [$rmap.map.groupIndex(rgroup.group), -1]
+        : $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
   function onCreateLayer([g, part]: Recv['create/layer']) {
@@ -159,20 +158,22 @@
   function onReorderLayer([src, tgt]: Recv['move/layer']) {
     $rmap.reorderLayer(src, tgt)
     $selected.pop() // remove active
-    const active: [number, number] =
-       rlayer ? $rmap.map.layerIndex(rlayer.layer) :
-       rgroup ? [$rmap.map.groupIndex(rgroup.group), -1] :
-       $rmap.map.physicsLayerIndex(GameLayer)
+    const active: [number, number] = rlayer
+      ? $rmap.map.layerIndex(rlayer.layer)
+      : rgroup
+        ? [$rmap.map.groupIndex(rgroup.group), -1]
+        : $rmap.map.physicsLayerIndex(GameLayer)
     $selected = [...$selected, active]
   }
   async function onCreateImage([name, img]: Recv['create/image']) {
-    if (typeof img === 'object') { // external image
+    if (typeof img === 'object') {
+      // external image
       const image = new Image()
       image.name = name
       $rmap.addImage(image)
       image.loadExternal(externalImageUrl(name))
-    }
-    else { // embedded image
+    } else {
+      // embedded image
       const image = new Image()
       image.name = name
       $rmap.addImage(image)
@@ -191,7 +192,7 @@
 
   onMount(() => {
     $rmap = mapView.getRenderMap()
-  
+
     // these event hooks have priority because they manage the state of the map.
     $server.on('create/quad', onCreateQuad, true)
     $server.on('edit/quad', onEditQuad, true)
@@ -242,8 +243,7 @@
   })
 
   function renderLoop(t: DOMHighResTimeStamp) {
-    if (destroyed)
-      return
+    if (destroyed) return
 
     if ($anim) {
       animTime += t - time
@@ -260,19 +260,19 @@
   }
 
   function onCursors(e: Resp['get/cursors']) {
-    cursors = Object.fromEntries(Object.entries(e).map(([k, v]) => {
-      if (0 <= v.g && v.g < $rmap.groups.length) {
-        const rgroup = $rmap.groups[v.g]
-        let [ offX, offY ] = rgroup.offset()
-        // const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
-        return [k, { x: v.x + offX, y: v.y + offY }]
-      }
-      else {
-        // const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
-        return [k, { x: v.x, y: v.y }]
-      }
-
-    }))
+    cursors = Object.fromEntries(
+      Object.entries(e).map(([k, v]) => {
+        if (0 <= v.g && v.g < $rmap.groups.length) {
+          const rgroup = $rmap.groups[v.g]
+          let [offX, offY] = rgroup.offset()
+          // const [ x, y ] = viewport.worldToCanvas(v.point.x + offX, v.point.y + offY)
+          return [k, { x: v.x + offX, y: v.y + offY }]
+        } else {
+          // const [ x, y ] = viewport.worldToCanvas(v.point.x, v.point.y)
+          return [k, { x: v.x, y: v.y }]
+        }
+      })
+    )
 
     const k1 = Object.keys($cursorAnim).sort()
     const k2 = Object.keys(cursors).sort()
@@ -280,8 +280,7 @@
 
     if (!eq) {
       cursorAnim = tweened(cursors, { duration: cursorDuration })
-    }
-    else {
+    } else {
       cursorAnim.set(cursors)
     }
   }
@@ -307,10 +306,9 @@
   }
 
   function onMouseDown(e: MouseEvent) {
-    if (e.target !== viewport.cont)
-      return
+    if (e.target !== viewport.cont) return
 
-    if (rlayer && rlayer.layer instanceof AnyTilesLayer || $selected.length > 1) {
+    if ((rlayer && rlayer.layer instanceof AnyTilesLayer) || $selected.length > 1) {
       updateMouseRange()
 
       if (e.buttons === 1 && !e.ctrlKey) {
@@ -332,11 +330,10 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    if (e.target !== viewport.cont)
-      return
+    if (e.target !== viewport.cont) return
 
     shiftKey = e.shiftKey
-    if (rlayer && rlayer.layer instanceof AnyTilesLayer || $selected.length > 1) {
+    if ((rlayer && rlayer.layer instanceof AnyTilesLayer) || $selected.length > 1) {
       const curPos = worldPosToTileCoord(viewport.mousePos)
 
       if (e.buttons === 1) {
@@ -425,10 +422,10 @@
         brushState === BrushState.Fill
           ? 'orange'
           : brushState === BrushState.Erase
-          ? 'red'
-          : brushState === BrushState.Select
-          ? 'blue'
-          : 'white'
+            ? 'red'
+            : brushState === BrushState.Select
+              ? 'blue'
+              : 'white'
 
       const range = Editor.normalizeRange(mouseRange)
       const [x, y] = viewport.worldToPixel(range.start.x, range.start.y)
@@ -467,10 +464,9 @@
   }
 
   async function updateCursors() {
-    if ($peers < 2 || rgroup === null)
-      return
+    if ($peers < 2 || rgroup === null) return
 
-    let [ offX, offY ] = rgroup.offset()
+    let [offX, offY] = rgroup.offset()
     await $server.query('cursor', {
       g,
       l,
@@ -497,11 +493,13 @@
   function onTilePick(e: CustomEvent<Info.AnyTile[][]>) {
     brushBuffer = {
       group: g,
-      layers: [{
-        layer: l,
-        kind: layerKind($map.groups[g].layers[l]),
-        tiles: e.detail,
-      }]
+      layers: [
+        {
+          layer: l,
+          kind: layerKind($map.groups[g].layers[l]),
+          tiles: e.detail,
+        },
+      ],
     }
     brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, g, selectedTileLayers)
 
@@ -535,27 +533,24 @@
       return
     }
 
-    if (selectedTileLayers.length === 0 || rlayer && rlayer.layer instanceof QuadsLayer) {
+    if (selectedTileLayers.length === 0 || (rlayer && rlayer.layer instanceof QuadsLayer)) {
       brushState = BrushState.Empty
       brushBuffer = null
-    }
-    else {
+    } else {
       brushBuffer = Editor.adaptBrushToLayers($rmap.map, brushBuffer, g, selectedTileLayers)
     }
-
   }
 </script>
 
-
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div id="map-editor"
+<div
+  id="map-editor"
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
   on:mousemove={onMouseMove}
   on:contextmenu={onContextMenu}
 >
   <MapView map={$map} bind:this={mapView}>
-
     <div id="clip-outline" style={clipOutlineStyle} />
     <div id="brush-outline" style={brushOutlineStyle} />
     <div id="layer-outline" style={layerOutlineStyle} />
@@ -566,28 +561,23 @@
 
     <div id="cursors">
       {#each Object.values($cursorAnim) as cur}
-        <img class="cursor" src="/assets/gui_cursor.png" alt=""
+        <img
+          class="cursor"
+          src="/assets/gui_cursor.png"
+          alt=""
           style:top={(cur.y - viewport.pos.y) * viewport.scale + 'px'}
           style:left={(cur.x - viewport.pos.x) * viewport.scale + 'px'}
         />
       {/each}
     </div>
-
   </MapView>
 
   {#if brushBuffer !== null}
-    <BrushEditor
-      brush={brushBuffer}
-      on:change={onBrushChange}
-    />
+    <BrushEditor brush={brushBuffer} on:change={onBrushChange} />
   {/if}
 
   {#if rlayer instanceof RenderAnyTilesLayer}
-    <TilePicker
-      image={$syncImg}
-      rlayer={rlayer}
-      on:select={onTilePick}
-    />
+    <TilePicker image={$syncImg} {rlayer} on:select={onTilePick} />
   {:else if rlayer && rlayer.layer instanceof QuadsLayer}
     <div class="controls">
       <Button
@@ -600,7 +590,6 @@
       />
     </div>
   {/if}
-
 </div>
 
 {#if import.meta.env.MODE === 'development'}

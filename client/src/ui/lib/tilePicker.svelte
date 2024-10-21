@@ -52,13 +52,34 @@
   $: normSelection = normalizeRange(selection)
 
   // this is a bit monolithic but hey typescript
-  let currentTile: { kind: MapDir.LayerKind.Tiles } & Tile = { kind: MapDir.LayerKind.Tiles, ...TilesLayer.defaultTile() }
-  let currentGame: { kind: MapDir.LayerKind.Game } & Tile = { kind: MapDir.LayerKind.Game, ...GameLayer.defaultTile() }
-  let currentFront: { kind: MapDir.LayerKind.Front } & Tile = { kind: MapDir.LayerKind.Front, ...FrontLayer.defaultTile() }
-  let currentTele: { kind: MapDir.LayerKind.Tele } & Tele = { kind: MapDir.LayerKind.Tele, ...TeleLayer.defaultTile() }
-  let currentSwitch: { kind: MapDir.LayerKind.Switch } & Switch = { kind: MapDir.LayerKind.Switch, ...SwitchLayer.defaultTile() }
-  let currentSpeedup: { kind: MapDir.LayerKind.Speedup } & Speedup = { kind: MapDir.LayerKind.Speedup, ...SpeedupLayer.defaultTile() }
-  let currentTune: { kind: MapDir.LayerKind.Tune } & Tune = { kind: MapDir.LayerKind.Tune, ...TuneLayer.defaultTile() }
+  let currentTile: { kind: MapDir.LayerKind.Tiles } & Tile = {
+    kind: MapDir.LayerKind.Tiles,
+    ...TilesLayer.defaultTile(),
+  }
+  let currentGame: { kind: MapDir.LayerKind.Game } & Tile = {
+    kind: MapDir.LayerKind.Game,
+    ...GameLayer.defaultTile(),
+  }
+  let currentFront: { kind: MapDir.LayerKind.Front } & Tile = {
+    kind: MapDir.LayerKind.Front,
+    ...FrontLayer.defaultTile(),
+  }
+  let currentTele: { kind: MapDir.LayerKind.Tele } & Tele = {
+    kind: MapDir.LayerKind.Tele,
+    ...TeleLayer.defaultTile(),
+  }
+  let currentSwitch: { kind: MapDir.LayerKind.Switch } & Switch = {
+    kind: MapDir.LayerKind.Switch,
+    ...SwitchLayer.defaultTile(),
+  }
+  let currentSpeedup: { kind: MapDir.LayerKind.Speedup } & Speedup = {
+    kind: MapDir.LayerKind.Speedup,
+    ...SpeedupLayer.defaultTile(),
+  }
+  let currentTune: { kind: MapDir.LayerKind.Tune } & Tune = {
+    kind: MapDir.LayerKind.Tune,
+    ...TuneLayer.defaultTile(),
+  }
 
   function onInputChanged() {
     currentTele.number = clamp(currentTele.number, 0, 255)
@@ -76,18 +97,18 @@
     rlayer.layer instanceof TilesLayer
       ? currentTile
       : rlayer.layer instanceof GameLayer
-      ? currentGame
-      : rlayer.layer instanceof FrontLayer
-      ? currentFront
-      : rlayer.layer instanceof TeleLayer
-      ? currentTele
-      : rlayer.layer instanceof SwitchLayer
-      ? currentSwitch
-      : rlayer.layer instanceof SpeedupLayer
-      ? currentSpeedup
-      : rlayer.layer instanceof TuneLayer
-      ? currentTune
-      : null
+        ? currentGame
+        : rlayer.layer instanceof FrontLayer
+          ? currentFront
+          : rlayer.layer instanceof TeleLayer
+            ? currentTele
+            : rlayer.layer instanceof SwitchLayer
+              ? currentSwitch
+              : rlayer.layer instanceof SpeedupLayer
+                ? currentSpeedup
+                : rlayer.layer instanceof TuneLayer
+                  ? currentTune
+                  : null
 
   let mounted = false
   onMount(() => {
@@ -109,8 +130,7 @@
 
   async function drawLayer(image: Image) {
     const img = await getCanvasImage(image)
-    if (!mounted)
-      return
+    if (!mounted) return
     canvas.width = img.width as number
     canvas.height = img.height as number
     ctx.globalCompositeOperation = 'copy'
@@ -129,7 +149,7 @@
     ctx.clearRect(0, 0, canvas.width / tileCount, canvas.height / tileCount)
   }
 
-  type ImageSource = CanvasImageSource & { width: number, height: number }
+  type ImageSource = CanvasImageSource & { width: number; height: number }
   async function getCanvasImage(image: Image): Promise<ImageSource> {
     if (image.data instanceof HTMLImageElement) {
       ctx.drawImage(image.data, 0, 0)
@@ -251,18 +271,28 @@
 </script>
 
 <div id="tile-picker">
-
   <div class="picker" class:hidden={!tilesVisible && !boxSelect}>
     <div class="content">
-
       <div class="header">
         {#if rlayer.layer instanceof TeleLayer}
           <label>
-            Teleport target <input type="number" min={0} max={255} bind:value={currentTele.number} on:change={onInputChanged} />
+            Teleport target <input
+              type="number"
+              min={0}
+              max={255}
+              bind:value={currentTele.number}
+              on:change={onInputChanged}
+            />
           </label>
         {:else if rlayer.layer instanceof SpeedupLayer}
           <label>
-            Speedup force <input type="number" min={0} max={255} bind:value={currentSpeedup.force} on:change={onInputChanged} />
+            Speedup force <input
+              type="number"
+              min={0}
+              max={255}
+              bind:value={currentSpeedup.force}
+              on:change={onInputChanged}
+            />
           </label>
           <label>
             Speedup max speed <input
@@ -274,18 +304,42 @@
             />
           </label>
           <label>
-            Speedup angle <input type="number" min={0} max={359} bind:value={currentSpeedup.angle} on:change={onInputChanged} />
+            Speedup angle <input
+              type="number"
+              min={0}
+              max={359}
+              bind:value={currentSpeedup.angle}
+              on:change={onInputChanged}
+            />
           </label>
         {:else if rlayer.layer instanceof SwitchLayer}
           <label>
-            Switch number <input type="number" min={0} max={255} bind:value={currentSwitch.number} on:change={onInputChanged} />
+            Switch number <input
+              type="number"
+              min={0}
+              max={255}
+              bind:value={currentSwitch.number}
+              on:change={onInputChanged}
+            />
           </label>
           <label>
-            Switch delay <input type="number" min={0} max={255} bind:value={currentSwitch.delay} on:change={onInputChanged} />
+            Switch delay <input
+              type="number"
+              min={0}
+              max={255}
+              bind:value={currentSwitch.delay}
+              on:change={onInputChanged}
+            />
           </label>
         {:else if rlayer.layer instanceof TuneLayer}
           <label>
-            Tune zone <input type="number" min={0} max={255} bind:value={currentTune.number} on:change={onInputChanged} />
+            Tune zone <input
+              type="number"
+              min={0}
+              max={255}
+              bind:value={currentTune.number}
+              on:change={onInputChanged}
+            />
           </label>
         {:else}
           Select tiles to place on the map.
@@ -302,7 +356,6 @@
 
         <div class="box-select" style={boxStyle} />
       </div>
-
     </div>
   </div>
 
@@ -316,5 +369,4 @@
       kind="secondary"
     />
   </div>
-
 </div>

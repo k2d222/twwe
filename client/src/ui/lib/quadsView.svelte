@@ -66,7 +66,7 @@
     $server.on('edit/quad', onSync)
     $server.on('create/quad', onSync)
     $server.on('delete/quad', onSync)
-  
+
     const updateForever = () => {
       viewBox = makeViewBox()
       circleRadius = 100 / viewport.scale
@@ -197,7 +197,8 @@
 
     // TODO: use defaults
     const create: Send['create/quad'] = [
-      g, l,
+      g,
+      l,
       {
         position: coordToJson({ x: mx, y: my }, 15),
         corners: [
@@ -222,7 +223,7 @@
         position_env_offset: 0,
         color_env: null,
         color_env_offset: 0,
-      }
+      },
     ]
 
     hideCM()
@@ -233,7 +234,7 @@
     const copy: Quad = {
       ...quad,
       points: quad.points.map(({ x, y }) => ({ x, y })),
-      colors: quad.colors.map(({ r, g, b, a}) => ({ r, g, b, a })),
+      colors: quad.colors.map(({ r, g, b, a }) => ({ r, g, b, a })),
       texCoords: quad.texCoords.map(({ x, y }) => ({ x, y })),
     }
 
@@ -247,7 +248,9 @@
     const colorEnv_ = $rmap.map.envelopes.indexOf(colorEnv)
 
     return [
-      g, l, q,
+      g,
+      l,
+      q,
       {
         position: coordToJson(points[4], 15),
         corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
@@ -257,7 +260,7 @@
         position_env_offset: posEnvOffset,
         color_env: colorEnv_ === -1 ? null : resIndexToString(colorEnv_, colorEnv.name),
         color_env_offset: colorEnvOffset,
-      }
+      },
     ]
   }
 
@@ -271,7 +274,8 @@
     })
 
     const change: Send['create/quad'] = [
-      g, l,
+      g,
+      l,
       {
         position: coordToJson(points[4], 15),
         corners: points.slice(0, 4).map(p => coordToJson(p, 15)),
@@ -281,7 +285,7 @@
         position_env_offset: posEnvOffset,
         color_env: colorEnv_ === -1 ? null : resIndexToString(colorEnv_, colorEnv.name),
         color_env_offset: colorEnvOffset,
-      }
+      },
     ]
 
     hideCM()
@@ -295,97 +299,97 @@
 </script>
 
 {#key sync_}
-<div id="quads-view">
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <svg
-    {viewBox}
-    xmlns="http://www.w3.org/2000/svg"
-    on:mousemove={onMouseMove}
-    on:mouseup={onMouseUp}
-  >
-    {#each quadPoints as _, q}
-      {@const points = quadPoints[q]}
-      <polygon
-        points={quadPointsStr(points)}
-        on:mousedown={e => onMouseDown(e, q, [0, 1, 2, 3, 4])}
-      />
-      <line
-        x1={points[0].x / 1024}
-        y1={points[0].y / 1024}
-        x2={points[1].x / 1024}
-        y2={points[1].y / 1024}
-        on:mousedown={e => onMouseDown(e, q, [0, 1])}
-      />
-      <line
-        x1={points[1].x / 1024}
-        y1={points[1].y / 1024}
-        x2={points[3].x / 1024}
-        y2={points[3].y / 1024}
-        on:mousedown={e => onMouseDown(e, q, [1, 3])}
-      />
-      <line
-        x1={points[3].x / 1024}
-        y1={points[3].y / 1024}
-        x2={points[2].x / 1024}
-        y2={points[2].y / 1024}
-        on:mousedown={e => onMouseDown(e, q, [3, 2])}
-      />
-      <line
-        x1={points[2].x / 1024}
-        y1={points[2].y / 1024}
-        x2={points[0].x / 1024}
-        y2={points[0].y / 1024}
-        on:mousedown={e => onMouseDown(e, q, [2, 0])}
-      />
-      <circle
-        cx={points[0].x / 1024}
-        cy={points[0].y / 1024}
-        r={circleRadius}
-        on:mousedown={e => onMouseDown(e, q, [0])}
-        on:contextmenu={e => showCM(e, q, 0)}
-      />
-      <circle
-        cx={points[1].x / 1024}
-        cy={points[1].y / 1024}
-        r={circleRadius}
-        on:mousedown={e => onMouseDown(e, q, [1])}
-        on:contextmenu={e => showCM(e, q, 1)}
-      />
-      <circle
-        cx={points[2].x / 1024}
-        cy={points[2].y / 1024}
-        r={circleRadius}
-        on:mousedown={e => onMouseDown(e, q, [2])}
-        on:contextmenu={e => showCM(e, q, 2)}
-      />
-      <circle
-        cx={points[3].x / 1024}
-        cy={points[3].y / 1024}
-        r={circleRadius}
-        on:mousedown={e => onMouseDown(e, q, [3])}
-        on:contextmenu={e => showCM(e, q, 3)}
-      />
-      <circle
-        cx={points[4].x / 1024}
-        cy={points[4].y / 1024}
-        r={circleRadius}
-        class="center"
-        on:mousedown={e => onMouseDown(e, q, [4])}
-        on:contextmenu={e => showCM(e, q, 4)}
-      />
-    {/each}
-  </svg>
-  {#if cm_q !== -1}
-    {@const quad = layer.quads[cm_q]}
-    <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-      <QuadEditor
-        {quad}
-        p={cm_p}
-        on:change={() => onChange(cm_q)}
-        on:delete={() => onDelete(cm_q)}
-        on:duplicate={() => onDuplicate(cm_q)}
-      />
-    </ContextMenu>
-  {/if}
-</div>
+  <div id="quads-view">
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <svg
+      {viewBox}
+      xmlns="http://www.w3.org/2000/svg"
+      on:mousemove={onMouseMove}
+      on:mouseup={onMouseUp}
+    >
+      {#each quadPoints as _, q}
+        {@const points = quadPoints[q]}
+        <polygon
+          points={quadPointsStr(points)}
+          on:mousedown={e => onMouseDown(e, q, [0, 1, 2, 3, 4])}
+        />
+        <line
+          x1={points[0].x / 1024}
+          y1={points[0].y / 1024}
+          x2={points[1].x / 1024}
+          y2={points[1].y / 1024}
+          on:mousedown={e => onMouseDown(e, q, [0, 1])}
+        />
+        <line
+          x1={points[1].x / 1024}
+          y1={points[1].y / 1024}
+          x2={points[3].x / 1024}
+          y2={points[3].y / 1024}
+          on:mousedown={e => onMouseDown(e, q, [1, 3])}
+        />
+        <line
+          x1={points[3].x / 1024}
+          y1={points[3].y / 1024}
+          x2={points[2].x / 1024}
+          y2={points[2].y / 1024}
+          on:mousedown={e => onMouseDown(e, q, [3, 2])}
+        />
+        <line
+          x1={points[2].x / 1024}
+          y1={points[2].y / 1024}
+          x2={points[0].x / 1024}
+          y2={points[0].y / 1024}
+          on:mousedown={e => onMouseDown(e, q, [2, 0])}
+        />
+        <circle
+          cx={points[0].x / 1024}
+          cy={points[0].y / 1024}
+          r={circleRadius}
+          on:mousedown={e => onMouseDown(e, q, [0])}
+          on:contextmenu={e => showCM(e, q, 0)}
+        />
+        <circle
+          cx={points[1].x / 1024}
+          cy={points[1].y / 1024}
+          r={circleRadius}
+          on:mousedown={e => onMouseDown(e, q, [1])}
+          on:contextmenu={e => showCM(e, q, 1)}
+        />
+        <circle
+          cx={points[2].x / 1024}
+          cy={points[2].y / 1024}
+          r={circleRadius}
+          on:mousedown={e => onMouseDown(e, q, [2])}
+          on:contextmenu={e => showCM(e, q, 2)}
+        />
+        <circle
+          cx={points[3].x / 1024}
+          cy={points[3].y / 1024}
+          r={circleRadius}
+          on:mousedown={e => onMouseDown(e, q, [3])}
+          on:contextmenu={e => showCM(e, q, 3)}
+        />
+        <circle
+          cx={points[4].x / 1024}
+          cy={points[4].y / 1024}
+          r={circleRadius}
+          class="center"
+          on:mousedown={e => onMouseDown(e, q, [4])}
+          on:contextmenu={e => showCM(e, q, 4)}
+        />
+      {/each}
+    </svg>
+    {#if cm_q !== -1}
+      {@const quad = layer.quads[cm_q]}
+      <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
+        <QuadEditor
+          {quad}
+          p={cm_p}
+          on:change={() => onChange(cm_q)}
+          on:delete={() => onDelete(cm_q)}
+          on:duplicate={() => onDuplicate(cm_q)}
+        />
+      </ContextMenu>
+    {/if}
+  </div>
 {/key}

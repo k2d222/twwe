@@ -15,7 +15,6 @@
     const serverCfgs = storage.load('servers')
     const serverId = storage.load('currentServer')
 
-
     $serverCfg = serverCfgs[serverId]
     console.log('joining server', $serverCfg)
     const wsUrl = serverWsUrl($serverCfg)
@@ -23,7 +22,9 @@
 
     const connected = new Promise((resolve, reject) => {
       $server.socket.addEventListener('open', resolve, { once: true })
-      $server.socket.addEventListener('error', () => reject("Failed to connect to the server"), { once: true })
+      $server.socket.addEventListener('error', () => reject('Failed to connect to the server'), {
+        once: true,
+      })
     })
     await connected
 
@@ -31,7 +32,7 @@
     console.log('joining map', config)
 
     if (config.password) {
-      return prompt("enter password")
+      return prompt('enter password')
     } else {
       return ''
     }
