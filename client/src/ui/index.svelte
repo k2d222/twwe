@@ -26,7 +26,9 @@
       $server.socket.addEventListener('error', () => reject("Failed to connect to the server"), { once: true })
     })
     await connected
+
     let config = await queryConfig(serverHttpUrl($serverCfg), params.mapName)
+    console.log('joining map', config)
 
     if (config.password) {
       return prompt("enter password")

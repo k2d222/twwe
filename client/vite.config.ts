@@ -10,6 +10,16 @@ import svg from '@poppanator/sveltekit-svg'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  css: {
+    preprocessorOptions: {
+      sass: {
+        api: 'modern-compiler',
+      },
+      scss: {
+        api: 'modern-compiler',
+      }
+    }
+  },
   plugins: [
     imagetools(),
     svelte({
