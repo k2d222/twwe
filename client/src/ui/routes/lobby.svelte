@@ -188,7 +188,6 @@
       try {
         let resp = await fetch(`${httpUrl}/maps/${mapName}`, {
           method: 'DELETE',
-          credentials: "include",
         })
         if (!resp.ok) {
           throw await resp.text()

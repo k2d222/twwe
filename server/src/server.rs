@@ -120,22 +120,13 @@ impl Server {
 
 impl Server {
     pub(crate) fn send(user: &User, id: Option<u32>, msg: Message) {
-        let packet = SendPacket {
-            timestamp: timestamp_now(),
-            id,
-            content: msg,
-        };
+        let packet = SendPacket::new(id, msg);
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         user.tx.unbounded_send(WebSocketMessage::Text(str)).ok(); // this is ok to fail (user logout)
     }
 
     pub(crate) fn broadcast_to_lobby(&self, msg: Message) {
-        let packet = SendPacket {
-            timestamp: timestamp_now(),
-            id: None,
-            content: msg,
-        };
-
+        let packet = SendPacket::new(None, msg);
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         let _msg = WebSocketMessage::Text(str);
 
@@ -143,12 +134,7 @@ impl Server {
     }
 
     pub(crate) fn broadcast_to_room(&self, room: &Room, content: Message) {
-        let packet = SendPacket {
-            timestamp: timestamp_now(),
-            id: None,
-            content,
-        };
-
+        let packet = SendPacket::new(None, content);
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         let msg = WebSocketMessage::Text(str);
 
@@ -158,12 +144,7 @@ impl Server {
     }
 
     pub(crate) fn broadcast_to_others(&self, user: &User, content: Message) {
-        let packet = SendPacket {
-            timestamp: timestamp_now(),
-            id: None,
-            content,
-        };
-
+        let packet = SendPacket::new(None, content);
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         let msg = WebSocketMessage::Text(str);
 
@@ -345,9 +326,9 @@ impl Server {
     pub(crate) fn handle_request(&self, user: Arc<User>, packet: RecvPacket) {
         let resp = self.do_request(Some(user.clone()), packet.content.clone());
         if resp.is_ok() {
-            self.do_broadcast(&*user, &packet);
+            self.do_broadcast(&user, &packet);
         }
-        Server::send(&*user, packet.id, Message::Response(resp));
+        Server::send(&user, packet.id, Message::Response(resp));
     }
 
     pub(crate) async fn handle_websocket(&self, token: String, socket: WebSocket) {
@@ -363,7 +344,7 @@ impl Server {
                 user_count + 1,
                 self.max_users
             );
-            if user_count as usize >= self.max_users {
+            if user_count >= self.max_users {
                 Server::send(&user, None, Message::Response(Err(Error::MaxUsers)));
                 fut_send.await.ok();
                 log::info!("kicked {}, too many connections", user.token);
@@ -1803,11 +1784,11 @@ impl Server {
         let pwd_hash = self.room(&join.name)?.config.password.clone();
         match (&join.password, &pwd_hash) {
             (Some(pwd), Some(hash)) => {
-                if !bcrypt::verify(pwd, &hash).map_err(|_| Error::Password)? {
+                if !bcrypt::verify(pwd, hash).map_err(|_| Error::Password)? {
                     return Err(Error::Password);
                 }
             }
-            (Some(pwd), None) if pwd == "" => (),
+            (Some(pwd), None) if pwd.is_empty() => (),
             (Some(_), None) | (None, Some(_)) => {
                 return Err(Error::Password);
             }

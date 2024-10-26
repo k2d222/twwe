@@ -113,7 +113,7 @@
       const url = externalImageUrl(e.detail)
       const embed = await showInfo('Do you wish to embed this image?', 'yesno')
       if (embed) {
-        const resp = await fetch(url, { credentials: 'include' })
+        const resp = await $server.fetch(url)
         const file = await resp.blob()
         const name = e.detail
         uploadImageAndPick(file, name)

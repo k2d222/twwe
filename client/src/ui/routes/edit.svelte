@@ -15,8 +15,7 @@
     reset()
 
     await $server.query('join', { name, password })
-    const httpUrl = $server.httpUrl
-    const map_ = await queryMap(httpUrl, name)
+    const map_ = await queryMap($server, name)
     const ams = await $server.query('get/automappers', undefined)
     $automappers = Object.fromEntries(ams.map(am => [am.name, am]))
     $map = map_

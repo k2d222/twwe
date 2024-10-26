@@ -9,7 +9,7 @@ use serde_with::{
 use twmap::{AutomapperConfig, EnvPoint, Position, Volume};
 use vek::{Extent2, Rect, Rgba, Uv, Vec2};
 
-use crate::{base64::Base64, error::Error};
+use crate::{base64::Base64, error::Error, util::timestamp_now};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -531,6 +531,16 @@ pub struct Packet<T> {
     pub id: Option<u32>, // same ID will be set by client request
     #[serde(flatten)]
     pub content: T,
+}
+
+impl<T> Packet<T> {
+    pub fn new(id: Option<u32>, content: T) -> Self {
+        Self {
+            timestamp: timestamp_now(),
+            id,
+            content,
+        }
+    }
 }
 
 pub type SendPacket = Packet<Message>;

@@ -23,10 +23,10 @@ export type Ctor<T> = new (...args: any[]) => T
 export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
-export async function download(file: string, name: string) {
+export async function download(path: string, name: string) {
   const id = showInfo(`Downloading '${name}'…`, 'none')
   try {
-    const resp = await fetch(file, { credentials: 'include' })
+    const resp = await fetch(path)
     const data = await resp.blob()
     const url = URL.createObjectURL(data)
 
@@ -43,34 +43,24 @@ export async function download(file: string, name: string) {
   }
 }
 
-export async function uploadMap(httpRoot: string, name: string, file: Blob) {
-  const resp = await fetch(`${httpRoot}/maps/${name}`, {
+export async function uploadMap(url: string, name: string, file: Blob) {
+  const resp = await fetch(`${url}/maps/${name}`, {
     method: 'PUT',
-    credentials: 'include',
     body: file,
   })
 
   if (!resp.ok) throw await resp.text()
 }
 
-export async function createMap(httpRoot: string, name: string, create: MapCreation) {
-  const resp = await fetch(`${httpRoot}/maps/${name}`, {
+export async function createMap(url: string, name: string, create: MapCreation) {
+  const resp = await fetch(`${url}/maps/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify(create),
   })
 
   if (!resp.ok) throw await resp.text()
 }
-
-// export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {
-//   await fetch(`${httpRoot}/maps/${mapName}/images/${imageName}`, {
-//     method: 'POST',
-//     credentials: 'include',
-//     body: file
-//   })
-// }
 
 export async function decodePng(file: Blob): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
@@ -97,7 +87,7 @@ export function externalImageUrl(name: string) {
   return '/mapres/' + name + '.png'
 }
 
-export async function queryMaps(httpRoot: string): Promise<MapDetail[]> {
+export async function queryMaps(url: string): Promise<MapDetail[]> {
   function sortMaps(maps: MapDetail[]): MapDetail[] {
     return maps.sort((a, b) => {
       if (a.users === b.users) return a.name.localeCompare(b.name)
@@ -105,20 +95,20 @@ export async function queryMaps(httpRoot: string): Promise<MapDetail[]> {
     })
   }
 
-  const resp = await fetch(`${httpRoot}/maps`, { credentials: 'include' })
+  const resp = await fetch(`${url}/maps`)
   const maps: MapDetail[] = await resp.json()
   sortMaps(maps)
   return maps
 }
 
-export async function queryConfig(httpRoot: string, mapName: string): Promise<Config> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}/config`, { credentials: 'include' })
+export async function queryConfig(server: WebSocketServer, mapName: string): Promise<Config> {
+  const resp = await server.fetch(`maps/${mapName}/config`)
   const config: Config = await resp.json()
   return config
 }
 
-export async function queryMap(httpRoot: string, mapName: string): Promise<Map> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}`, { credentials: 'include' })
+export async function queryMap(server: WebSocketServer, mapName: string): Promise<Map> {
+  const resp = await server.fetch(`maps/${mapName}`)
   const data = await resp.arrayBuffer()
   const map = new Map()
   map.load(mapName, data)
@@ -126,11 +116,11 @@ export async function queryMap(httpRoot: string, mapName: string): Promise<Map> 
 }
 
 export async function queryImageData(
-  httpRoot: string,
+  server: WebSocketServer,
   mapName: string,
   imageIndex: number
 ): Promise<ImageData> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}/images/${imageIndex}`, { credentials: 'include' })
+  const resp = await server.fetch(`maps/${mapName}/images/${imageIndex}`)
   const data = await resp.blob()
   const image = await decodePng(data)
   return image
@@ -138,11 +128,10 @@ export async function queryImageData(
 
 export async function queryImage(
   server: WebSocketServer,
-  httpRoot: string,
   mapName: string,
   imageIndex: number
 ): Promise<Image> {
-  const data = await queryImageData(httpRoot, mapName, imageIndex)
+  const data = await queryImageData(server, mapName, imageIndex)
   const img = new Image()
   const images = await server.query('get/images', undefined)
   img.loadEmbedded(data)

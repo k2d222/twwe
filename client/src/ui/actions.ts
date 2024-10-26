@@ -19,7 +19,6 @@ export async function saveMap() {
 export async function downloadMap() {
   const rmap_ = get(rmap)
   const server_ = get(server)
-
   const httpUrl = server_.httpUrl
   download(`${httpUrl}/maps/${rmap_.map.name}`, `${rmap_.map.name}.map`)
 }
