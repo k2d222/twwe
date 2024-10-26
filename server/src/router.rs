@@ -18,7 +18,6 @@ use axum_extra::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 
-use futures::{channel::mpsc::unbounded, StreamExt};
 use rand::Rng;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{
@@ -29,21 +28,6 @@ use vek::num_traits::clamp;
 
 use crate::{base64::Base64, error::Error, protocol::*, server::User, util::timestamp_now};
 use crate::{Cli, Server};
-
-lazy_static::lazy_static! {
-    static ref NAMELESS_TEE: Arc<User> = {
-        let name = "nameless tee".to_string();
-        let token = name.clone();
-        let (tx, rx) = unbounded();
-        tokio::spawn(async move {
-            rx.for_each(|v| {
-                log::debug!("message to nameless tee: {v:?}");
-                futures::future::ready(())
-            })
-        });
-        Arc::new(User::new(name, token, tx))
-    };
-}
 
 pub struct Router {
     addr: SocketAddr,
@@ -237,7 +221,8 @@ fn ensure_access_authorized(user: Option<&User>, map: &str, server: &Server) -> 
     if !authorized {
         log::debug!(
             "unauthorized: `{map}` for {}",
-            user.unwrap_or(&NAMELESS_TEE).token
+            user.map(|user| user.token.as_str())
+                .unwrap_or("nameless tee")
         );
     }
     authorized.then_some(()).ok_or(Error::Unauthorized)

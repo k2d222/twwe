@@ -42,7 +42,7 @@ pub(crate) async fn bridge_oneshot(
             .values_mut()
             .find(|v| v.key == key)
             .ok_or(Error::BridgeNotFound)?;
-        bridge.peers_tx.insert(addr, http_tx);
+        bridge.users_tx.insert(addr, http_tx);
     }
     {
         let bridges = server.remote_bridges.read().unwrap();

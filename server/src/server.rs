@@ -26,18 +26,18 @@ use crate::{
 };
 
 #[cfg(feature = "bridge")]
-use tokio::task::JoinHandle;
-
+use crate::bridge::Bridge;
+#[cfg(feature = "bridge")]
+use std::net::SocketAddr;
 #[cfg(feature = "bridge")]
 use std::sync::RwLock;
-
 #[cfg(feature = "bridge")]
-use crate::bridge::Bridge;
+use tokio::task::JoinHandle;
 
 type Tx = UnboundedSender<WebSocketMessage>;
 
 pub struct User {
-    pub name: String,
+    pub name: Option<String>,
     pub token: String,
     pub id: Uuid,
     pub room: Mutex<Option<Arc<Room>>>,
@@ -46,10 +46,9 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(name: String, token: String, tx: Tx) -> Self {
-        println!("new user {token}");
+    pub fn new(token: String, tx: Tx) -> Self {
         User {
-            name,
+            name: None,
             token,
             id: Uuid::new_v4(),
             room: Default::default(),
@@ -72,9 +71,9 @@ pub struct Server {
     pub max_maps: usize,
     pub max_map_size: usize, // in bytes
     pub max_users: usize,
-    #[cfg(feature = "bridge")]
+    #[cfg(feature = "bridge_out")]
     pub bridge: Mutex<Option<JoinHandle<()>>>,
-    #[cfg(feature = "bridge")]
+    #[cfg(feature = "bridge_in")]
     pub remote_bridges: RwLock<HashMap<SocketAddr, Bridge>>,
 }
 
@@ -356,7 +355,7 @@ impl Server {
         let (ws_send, rx) = unbounded();
         let fut_send = rx.map(Ok).forward(tx);
 
-        let user = Arc::new(User::new("nameless tee".into(), token.clone(), ws_send));
+        let user = Arc::new(User::new(token.clone(), ws_send));
         {
             let user_count = self.users().len();
             log::debug!(
