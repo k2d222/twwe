@@ -1,12 +1,6 @@
-const { VITE_SERVER_URLS } = import.meta.env
+import type { ServerConfig } from "./server/server"
 
-export interface ServerConfig {
-  name: string
-  host: string
-  port: number
-  encrypted: boolean
-  path?: string
-}
+const { VITE_SERVER_URLS } = import.meta.env
 
 interface StorageSpec {
   servers: ServerConfig[]

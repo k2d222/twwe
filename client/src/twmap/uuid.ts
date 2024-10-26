@@ -1,6 +1,6 @@
 // Implementation taken from ddnet client.
 
-import md5 from 'js-md5'
+import { md5 } from 'js-md5'
 
 export type UUID = Uint8Array // an uuid is 16 bytes.
 

@@ -6,7 +6,6 @@
   import storage from '../storage'
   import { WebSocketServer } from '../server/server'
   import { server, serverCfg } from './global'
-  import { serverHttpUrl, serverWsUrl } from '../server/util'
   import { queryConfig } from './lib/util'
 
   export let url = ''
@@ -17,8 +16,7 @@
 
     $serverCfg = serverCfgs[serverId]
     console.log('joining server', $serverCfg)
-    const wsUrl = serverWsUrl($serverCfg)
-    $server = new WebSocketServer(wsUrl)
+    $server = new WebSocketServer($serverCfg)
 
     const connected = new Promise((resolve, reject) => {
       $server.socket.addEventListener('open', resolve, { once: true })
@@ -28,7 +26,8 @@
     })
     await connected
 
-    let config = await queryConfig(serverHttpUrl($serverCfg), params.mapName)
+    // let config = await queryConfig($serverCfg, params.mapName)
+    let config = await $server.query('config', params.mapName)
     console.log('joining map', config)
 
     if (config.password) {

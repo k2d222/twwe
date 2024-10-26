@@ -3,7 +3,6 @@ import { server, serverCfg, rmap, peers } from './global'
 import { get } from 'svelte/store'
 import { navigate } from 'svelte-routing'
 import { download } from './lib/util'
-import { serverHttpUrl } from '../server/util'
 
 export async function saveMap() {
   const server_ = get(server)
@@ -20,9 +19,9 @@ export async function saveMap() {
 export async function downloadMap() {
   const serverConf_ = get(serverCfg)
   const rmap_ = get(rmap)
+  const server_ = get(server)
 
-  const httpUrl = serverHttpUrl(serverConf_)
-
+  const httpUrl = server_.httpUrl
   download(`${httpUrl}/maps/${rmap_.map.name}`, `${rmap_.map.name}.map`)
 }
 

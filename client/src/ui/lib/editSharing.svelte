@@ -3,8 +3,8 @@
   import storage from '../../storage'
   import { generate } from 'random-words'
   import { serverCfg, map } from '../global'
-  import { serverHttpUrl, serverWsUrl } from '../../server/util'
   import { showError } from './dialog'
+  import { serverHttpUrl, serverWsUrl, type ServerConfig } from '../../server/server'
 
   let serverId = storage.load('currentServer')
   let serverCfgs = storage.load('servers')
@@ -19,7 +19,6 @@
   async function startBridge(): Promise<void> {
     const httpUrl = serverHttpUrl($serverCfg) + '/bridge_open'
     const shareUrl = serverWsUrl(shareCfg) + '/bridge'
-    console.log(shareUrl)
     const json = {
       url: shareUrl,
       map: $map.name,

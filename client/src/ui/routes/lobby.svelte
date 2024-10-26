@@ -27,7 +27,7 @@
     RadioButton,
     ComboBox,
   } from 'carbon-components-svelte'
-  import storage, { type ServerConfig } from '../../storage'
+  import storage from '../../storage'
   import {
     Help as AboutIcon,
     LogoGithub as GitHubIcon,
@@ -37,10 +37,10 @@
     Password as KeyIcon,
   } from 'carbon-icons-svelte'
   import { createMap, download, queryMaps, uploadMap } from '../lib/util'
-  import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
+  import type { ComboBoxItem } from 'carbon-components-svelte/src/ComboBox/ComboBox.svelte'
   import type { MapDetail } from '../../server/protocol'
   import { onMount } from 'svelte'
-  import { serverHttpUrl } from '../../server/util'
+  import { serverHttpUrl, type ServerConfig } from '../../server/server'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'

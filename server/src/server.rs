@@ -1,16 +1,16 @@
 use std::{
     collections::HashMap,
-    net::SocketAddr,
     path::{Path, PathBuf},
-    sync::{
-        atomic::{self, AtomicIsize},
-        Arc, Mutex, MutexGuard,
-    },
+    sync::Arc,
 };
 
 use axum::extract::ws::{Message as WebSocketMessage, WebSocket};
-use futures::{channel::mpsc::unbounded, SinkExt, StreamExt, TryStreamExt};
+use futures::{
+    channel::mpsc::{unbounded, UnboundedSender},
+    StreamExt, TryStreamExt,
+};
 use image::ImageFormat;
+use parking_lot::{Mutex, MutexGuard};
 use regex::Regex;
 
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
     cli::Cli,
     error::Error,
     protocol::*,
-    room::{Peer, Room},
+    room::Room,
     twmap_map_checks::InternalMapChecking,
     util::{macros::apply_partial, *},
 };
@@ -33,15 +33,39 @@ use std::sync::RwLock;
 #[cfg(feature = "bridge")]
 use crate::bridge::Bridge;
 
+type Tx = UnboundedSender<WebSocketMessage>;
+
+pub struct User {
+    pub name: String,
+    pub token: String,
+    pub room: Mutex<Option<Arc<Room>>>,
+    pub tx: Tx,
+}
+
+impl User {
+    pub fn new(name: String, token: String, tx: Tx) -> Self {
+        User {
+            name,
+            token,
+            room: Default::default(),
+            tx,
+        }
+    }
+
+    pub fn room(&self) -> MutexGuard<Option<Arc<Room>>> {
+        self.room.lock()
+    }
+}
+
 pub struct Server {
     pub rooms: Mutex<HashMap<String, Arc<Room>>>,
+    pub users: Mutex<HashMap<String, Arc<User>>>,
     pub rpp_path: Option<PathBuf>,
     pub maps_dir: Option<PathBuf>,
     pub data_dir: Option<PathBuf>,
     pub max_maps: usize,
     pub max_map_size: usize, // in bytes
-    pub max_peers: usize,
-    pub peer_count: AtomicIsize,
+    pub max_users: usize,
     #[cfg(feature = "bridge")]
     pub bridge: Mutex<Option<JoinHandle<()>>>,
     #[cfg(feature = "bridge")]
@@ -51,14 +75,14 @@ pub struct Server {
 impl Server {
     pub fn new(cli: &Cli) -> Self {
         Server {
-            rooms: Mutex::new(HashMap::new()),
+            rooms: Default::default(),
+            users: Default::default(),
             rpp_path: cli.rpp_path.clone(),
             maps_dir: cli.maps_dirs.first().cloned(),
             data_dir: cli.data_dirs.first().cloned(),
             max_maps: cli.max_maps,
             max_map_size: cli.max_map_size * 1024,
-            max_peers: cli.max_connections,
-            peer_count: 0.into(),
+            max_users: cli.max_connections,
             #[cfg(feature = "bridge")]
             bridge: Default::default(),
             #[cfg(feature = "bridge")]
@@ -66,8 +90,19 @@ impl Server {
         }
     }
 
+    pub fn users(&self) -> MutexGuard<HashMap<String, Arc<User>>> {
+        self.users.lock()
+    }
+
+    pub fn user(&self, token: &str) -> Result<Arc<User>, Error> {
+        self.users()
+            .get(token)
+            .map(Arc::to_owned)
+            .ok_or(Error::Token)
+    }
+
     pub fn rooms(&self) -> MutexGuard<HashMap<String, Arc<Room>>> {
-        self.rooms.lock().expect("failed to lock rooms")
+        self.rooms.lock()
     }
 
     fn room(&self, name: &str) -> Result<Arc<Room>, Error> {
@@ -79,14 +114,14 @@ impl Server {
 }
 
 impl Server {
-    pub(crate) fn send(peer: &Peer, id: Option<u32>, msg: Message) {
+    pub(crate) fn send(user: &User, id: Option<u32>, msg: Message) {
         let packet = SendPacket {
             timestamp: timestamp_now(),
             id,
             content: msg,
         };
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
-        peer.tx.unbounded_send(WebSocketMessage::Text(str)).ok(); // this is ok to fail (peer logout)
+        user.tx.unbounded_send(WebSocketMessage::Text(str)).ok(); // this is ok to fail (user logout)
     }
 
     pub(crate) fn broadcast_to_lobby(&self, msg: Message) {
@@ -112,12 +147,12 @@ impl Server {
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         let msg = WebSocketMessage::Text(str);
 
-        for p in room.peers().values() {
+        for p in room.users().values() {
             p.tx.unbounded_send(msg.to_owned()).ok();
         }
     }
 
-    pub(crate) fn broadcast_to_others(&self, peer: &Peer, content: Message) {
+    pub(crate) fn broadcast_to_others(&self, user: &User, content: Message) {
         let packet = SendPacket {
             timestamp: timestamp_now(),
             id: None,
@@ -127,196 +162,205 @@ impl Server {
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         let msg = WebSocketMessage::Text(str);
 
-        if let Some(room) = peer.room.clone() {
-            for (addr, p) in room.peers().iter() {
-                if !addr.eq(&peer.addr) {
-                    p.tx.unbounded_send(msg.to_owned()).ok();
+        {
+            let room = user.room();
+            if let Some(room) = &*room {
+                for (addr, p) in room.users().iter() {
+                    if !addr.eq(&user.token) {
+                        p.tx.unbounded_send(msg.to_owned()).ok();
+                    }
                 }
             }
         }
     }
 
-    pub(crate) fn broadcast_users(&self, peer: &Peer) {
-        if let Some(room) = peer.room.clone() {
-            let users = room.peer_count();
+    pub(crate) fn broadcast_users(&self, user: &User) {
+        let room = user.room();
+        if let Some(room) = &*room {
+            let users = room.user_count();
             self.broadcast_to_room(&room, Message::Broadcast(Broadcast::Users(users)));
         }
     }
 
-    pub(crate) fn do_request(&self, peer: &mut Peer, req: Request) -> Result<Response, Error> {
-        let map_name = peer
-            .room
-            .as_deref()
-            .map(Room::name)
+    pub(crate) fn do_request(&self, user: &User, req: Request) -> Result<Response, Error> {
+        let map_name = user
+            .room()
+            .as_ref()
+            .map(|room| room.name().to_string())
             .ok_or(Error::MapNotFound);
 
         match req {
             Request::ListMaps => Ok(Response::Maps(self.get_maps())),
-            Request::JoinMap(map_name) => self.peer_join(peer, &map_name).map(|()| Response::Ok),
-            Request::LeaveMap(map_name) => self.peer_leave(peer, &map_name).map(|()| Response::Ok),
+            Request::Config(map_name) => self
+                .get_config(&map_name)
+                .map(|r| Response::Config(r.into())),
+            Request::JoinMap(map_name) => self.user_join(user, &map_name).map(|()| Response::Ok),
+            Request::LeaveMap(map_name) => self.user_leave(user, &map_name).map(|()| Response::Ok),
             Request::GetMap(map_name) => self.get_map(&map_name).map(|r| Response::Map(Base64(r))),
             Request::CreateMap(map_name, content) => {
                 self.create_map(&map_name, *content).map(|()| Response::Ok)
             }
             Request::DeleteMap(map_name) => self.delete_map(&map_name).map(|()| Response::Ok),
-            Request::Save => self.save_map(map_name?).map(|()| Response::Ok),
-            Request::Cursor(req) => self.set_cursor(peer, *req).map(|()| Response::Ok),
+            Request::Save => self.save_map(&map_name?).map(|()| Response::Ok),
+            Request::Cursor(req) => self.set_cursor(user, *req).map(|()| Response::Ok),
             Request::Get(req) => match req {
-                GetReq::Users => self.get_users(map_name?).map(Response::Users),
-                GetReq::Cursors => self.get_cursors(map_name?, peer).map(Response::Cursors),
-                GetReq::Map => self.get_map(map_name?).map(|r| Response::Map(Base64(r))),
+                GetReq::Users => self.get_users(&map_name?).map(Response::Users),
+                GetReq::Cursors => self.get_cursors(&map_name?, user).map(Response::Cursors),
+                GetReq::Map => self.get_map(&map_name?).map(|r| Response::Map(Base64(r))),
                 GetReq::Config => self
-                    .get_config(map_name?)
+                    .get_config(&map_name?)
                     .map(|r| Response::Config(Box::new(r))),
                 GetReq::Info => self
-                    .get_info(map_name?)
+                    .get_info(&map_name?)
                     .map(|r| Response::Info(Box::new(r))),
-                GetReq::Images => self.get_images(map_name?).map(Response::Images),
+                GetReq::Images => self.get_images(&map_name?).map(Response::Images),
                 GetReq::Image(i) => self
-                    .get_image(map_name?, i)
+                    .get_image(&map_name?, i)
                     .map(|r| Response::Image(Base64(r))),
-                GetReq::Envelopes => self.get_envelopes(map_name?).map(Response::Envelopes),
+                GetReq::Envelopes => self.get_envelopes(&map_name?).map(Response::Envelopes),
                 GetReq::Envelope(e) => self
-                    .get_envelope(map_name?, e)
+                    .get_envelope(&map_name?, e)
                     .map(|r| Response::Envelope(Box::new(r))),
-                GetReq::Groups => self.get_groups(map_name?).map(Response::Groups),
+                GetReq::Groups => self.get_groups(&map_name?).map(Response::Groups),
                 GetReq::Group(g) => self
-                    .get_group(map_name?, g)
+                    .get_group(&map_name?, g)
                     .map(|r| Response::Group(Box::new(r))),
-                GetReq::Layers(g) => self.get_layers(map_name?, g).map(Response::Layers),
+                GetReq::Layers(g) => self.get_layers(&map_name?, g).map(Response::Layers),
                 GetReq::Layer(g, l) => self
-                    .get_layer(map_name?, g, l)
+                    .get_layer(&map_name?, g, l)
                     .map(|r| Response::Layer(Box::new(r))),
                 GetReq::Tiles(g, l) => self
-                    .get_tiles(map_name?, g, l)
+                    .get_tiles(&map_name?, g, l)
                     .map(|r| Response::Tiles(Base64(r.into()))),
                 GetReq::Quad(g, l, q) => self
-                    .get_quad(map_name?, g, l, q)
+                    .get_quad(&map_name?, g, l, q)
                     .map(|r| Response::Quad(Box::new(r))),
-                GetReq::Automappers => self.get_automappers(map_name?).map(Response::Automappers),
+                GetReq::Automappers => self.get_automappers(&map_name?).map(Response::Automappers),
                 GetReq::Automapper(am) => self
-                    .get_automapper(map_name?, &am)
+                    .get_automapper(&map_name?, &am)
                     .map(Response::Automapper),
             },
             Request::Create(req) => match req {
                 CreateReq::Image(image_name, create) => {
-                    { self.put_image(map_name?, &image_name, create) }.map(|()| Response::Ok)
+                    { self.put_image(&map_name?, &image_name, create) }.map(|()| Response::Ok)
                 }
                 CreateReq::Envelope(req) => {
-                    self.put_envelope(map_name?, *req).map(|()| Response::Ok)
+                    self.put_envelope(&map_name?, *req).map(|()| Response::Ok)
                 }
-                CreateReq::Group(req) => self.put_group(map_name?, *req).map(|()| Response::Ok),
+                CreateReq::Group(req) => self.put_group(&map_name?, *req).map(|()| Response::Ok),
                 CreateReq::Layer(g, req) => {
-                    self.put_layer(map_name?, g, *req).map(|()| Response::Ok)
+                    self.put_layer(&map_name?, g, *req).map(|()| Response::Ok)
                 }
                 CreateReq::Quad(g, l, req) => {
-                    self.put_quad(map_name?, g, l, *req).map(|()| Response::Ok)
+                    self.put_quad(&map_name?, g, l, *req).map(|()| Response::Ok)
                 }
                 CreateReq::Automapper(am, file) => self
-                    .put_automapper(map_name?, &am, &file)
+                    .put_automapper(&map_name?, &am, &file)
                     .map(Response::AutomapperDiagnostics),
             },
             Request::Edit(req) => match req {
-                EditReq::Config(req) => self.edit_config(map_name?, *req),
-                EditReq::Info(req) => self.edit_info(map_name?, *req),
-                EditReq::Envelope(e, req) => self.edit_envelope(map_name?, e, *req),
-                EditReq::Group(g, req) => self.edit_group(map_name?, g, *req),
-                EditReq::Layer(g, l, req) => self.edit_layer(map_name?, g, l, *req),
-                EditReq::Tiles(g, l, req) => self.edit_tiles(map_name?, g, l, *req),
-                EditReq::Quad(g, l, q, req) => self.edit_quad(map_name?, g, l, q, *req),
-                EditReq::Automap(g, l) => self.apply_automapper(map_name?, g, l),
+                EditReq::Config(req) => self.edit_config(&map_name?, *req),
+                EditReq::Info(req) => self.edit_info(&map_name?, *req),
+                EditReq::Envelope(e, req) => self.edit_envelope(&map_name?, e, *req),
+                EditReq::Group(g, req) => self.edit_group(&map_name?, g, *req),
+                EditReq::Layer(g, l, req) => self.edit_layer(&map_name?, g, l, *req),
+                EditReq::Tiles(g, l, req) => self.edit_tiles(&map_name?, g, l, *req),
+                EditReq::Quad(g, l, q, req) => self.edit_quad(&map_name?, g, l, q, *req),
+                EditReq::Automap(g, l) => self.apply_automapper(&map_name?, g, l),
             }
             .map(|()| Response::Ok),
             Request::Delete(req) => match req {
-                DeleteReq::Image(i) => self.delete_image(map_name?, i),
-                DeleteReq::Envelope(e) => self.delete_envelope(map_name?, e),
-                DeleteReq::Group(g) => self.delete_group(map_name?, g),
-                DeleteReq::Layer(g, l) => self.delete_layer(map_name?, g, l),
-                DeleteReq::Quad(g, l, q) => self.delete_quad(map_name?, g, l, q),
-                DeleteReq::Automapper(am) => self.delete_automapper(map_name?, &am),
+                DeleteReq::Image(i) => self.delete_image(&map_name?, i),
+                DeleteReq::Envelope(e) => self.delete_envelope(&map_name?, e),
+                DeleteReq::Group(g) => self.delete_group(&map_name?, g),
+                DeleteReq::Layer(g, l) => self.delete_layer(&map_name?, g, l),
+                DeleteReq::Quad(g, l, q) => self.delete_quad(&map_name?, g, l, q),
+                DeleteReq::Automapper(am) => self.delete_automapper(&map_name?, &am),
             }
             .map(|()| Response::Ok),
             Request::Move(req) => match req {
-                MoveReq::Image(src, tgt) => self.move_image(map_name?, src, tgt),
-                MoveReq::Envelope(src, tgt) => self.move_envelope(map_name?, src, tgt),
-                MoveReq::Group(src, tgt) => self.move_group(map_name?, src, tgt),
-                MoveReq::Layer(src, tgt) => self.move_layer(map_name?, src, tgt),
-                MoveReq::Quad(src, tgt) => self.move_quad(map_name?, src, tgt),
+                MoveReq::Image(src, tgt) => self.move_image(&map_name?, src, tgt),
+                MoveReq::Envelope(src, tgt) => self.move_envelope(&map_name?, src, tgt),
+                MoveReq::Group(src, tgt) => self.move_group(&map_name?, src, tgt),
+                MoveReq::Layer(src, tgt) => self.move_layer(&map_name?, src, tgt),
+                MoveReq::Quad(src, tgt) => self.move_quad(&map_name?, src, tgt),
             }
             .map(|()| Response::Ok),
         }
     }
 
-    pub(crate) fn do_respond(
-        &self,
-        peer: &Peer,
-        packet: &RecvPacket,
-        resp: Result<Response, Error>,
-    ) {
-        Server::send(peer, packet.id, Message::Response(resp.clone()));
+    pub(crate) fn do_broadcast(&self, user: &User, packet: &RecvPacket) {
+        match &packet.content {
+            Request::LeaveMap(name) | Request::JoinMap(JoinReq { name, .. }) => self
+                .broadcast_to_others(
+                    user,
+                    Message::Broadcast(Broadcast::Users(self.get_users(name).unwrap_or(0))),
+                ),
+            Request::CreateMap(map_name, _) => {
+                self.broadcast_to_lobby(Message::Broadcast(Broadcast::MapCreated(
+                    map_name.clone(),
+                )));
+            }
+            Request::DeleteMap(map_name) => {
+                self.broadcast_to_lobby(Message::Broadcast(Broadcast::MapDeleted(
+                    map_name.clone(),
+                )));
+            }
+            Request::Save => self.broadcast_to_others(user, Message::Broadcast(Broadcast::Saved)),
+            Request::Create(_) | Request::Edit(_) | Request::Delete(_) | Request::Move(_) => {
+                self.broadcast_to_others(user, Message::Request(packet.content.clone()))
+            }
+            Request::Config(_)
+            | Request::ListMaps
+            | Request::GetMap(_)
+            | Request::Cursor(_)
+            | Request::Get(_) => (),
+        }
+    }
+
+    pub(crate) fn handle_request(&self, user: &User, packet: RecvPacket) {
+        let resp = self.do_request(user, packet.content.clone());
         if resp.is_ok() {
-            match &packet.content {
-                Request::LeaveMap(name) | Request::JoinMap(JoinReq { name, .. }) => self
-                    .broadcast_to_others(
-                        peer,
-                        Message::Broadcast(Broadcast::Users(self.get_users(name).unwrap_or(0))),
-                    ),
-                Request::CreateMap(map_name, _) => {
-                    self.broadcast_to_lobby(Message::Broadcast(Broadcast::MapCreated(
-                        map_name.clone(),
-                    )));
-                }
-                Request::DeleteMap(map_name) => {
-                    self.broadcast_to_lobby(Message::Broadcast(Broadcast::MapDeleted(
-                        map_name.clone(),
-                    )));
-                }
-                Request::Save => {
-                    self.broadcast_to_others(peer, Message::Broadcast(Broadcast::Saved))
-                }
-                Request::Create(_) | Request::Edit(_) | Request::Delete(_) | Request::Move(_) => {
-                    self.broadcast_to_others(peer, Message::Request(packet.content.clone()))
-                }
-                Request::ListMaps | Request::GetMap(_) | Request::Cursor(_) | Request::Get(_) => (),
+            self.do_broadcast(user, &packet);
+        }
+        Server::send(user, packet.id, Message::Response(resp));
+    }
+
+    pub(crate) async fn handle_websocket(&self, token: String, socket: WebSocket) {
+        let (tx, ws_recv) = socket.split();
+        let (ws_send, rx) = unbounded();
+        let fut_send = rx.map(Ok).forward(tx);
+
+        let user = Arc::new(User::new("nameless tee".into(), token.clone(), ws_send));
+        {
+            let user_count = self.users().len();
+            log::debug!("simultaneous connections: {user_count}/{}", self.max_users);
+            if user_count as usize >= self.max_users {
+                Server::send(&user, None, Message::Response(Err(Error::MaxUsers)));
+                fut_send.await.ok();
+                log::info!("kicked {}, too many connections", user.token);
+                return;
+            } else {
+                self.users().insert(token.clone(), user.clone());
+                Server::send(
+                    &user,
+                    None,
+                    Message::Response(Ok(Response::Token(token.clone()))),
+                );
             }
         }
-    }
-
-    pub(crate) fn handle_request(&self, peer: &mut Peer, packet: RecvPacket) {
-        let resp = self.do_request(peer, packet.content.clone());
-        self.do_respond(peer, &packet, resp);
-    }
-
-    pub(crate) async fn handle_websocket(&self, socket: WebSocket, addr: SocketAddr) {
-        let (mut tx, ws_recv) = socket.split();
-        let (ws_send, mut rx) = unbounded();
-
-        let mut peer = Peer::new(addr, ws_send);
-
-        let peers = self.peer_count.fetch_add(1, atomic::Ordering::Relaxed) + 1;
-        log::debug!("simultaneous connections: {peers}/{}", self.max_peers);
-        if peers as usize > self.max_peers {
-            self.peer_count.fetch_sub(1, atomic::Ordering::Relaxed);
-            Server::send(&peer, None, Message::Response(Err(Error::MaxPeers)));
-            let msg = rx.next().await.unwrap();
-            tx.send(msg).await.ok();
-            log::info!("kicked {}, too many connections", peer.addr);
-            return;
-        }
-
-        let fut_send = rx.map(Ok).forward(tx);
 
         let fut_recv = ws_recv.try_for_each(|msg| {
             if let WebSocketMessage::Text(msg) = msg {
                 // log::debug!("text message received from {}: {}", addr, text);
                 match serde_json::from_str(&msg) {
                     Ok(req) => {
-                        self.handle_request(&mut peer, req);
+                        self.handle_request(&user, req);
                     }
                     Err(e) => {
                         log::error!("failed to parse message: {e} in {msg}");
                         Server::send(
-                            &peer,
+                            &user,
                             None,
                             Message::Response(Err(Error::BadRequest(e.to_string()))),
                         )
@@ -330,16 +374,22 @@ impl Server {
         // wait for either sender or receiver to complete: this means the connection is closed.
         futures::future::select(fut_send, fut_recv).await;
 
-        if let Some(room) = &peer.room {
-            room.remove_peer(&peer);
+        {
+            let room = user.room();
+            if let Some(room) = &*room {
+                room.remove_user(&user);
+            }
         }
 
-        self.broadcast_users(&peer);
+        self.broadcast_users(&user);
 
-        log::info!("client {} disconnected", &addr);
+        self.users().retain(|t, u| t != &token && !u.tx.is_closed());
 
-        let peers = self.peer_count.fetch_sub(1, atomic::Ordering::Relaxed) - 1;
-        log::debug!("simultaneous connections: {peers}/{}", self.max_peers);
+        log::debug!(
+            "simultaneous connections: {}/{}",
+            self.users().len(),
+            self.max_users
+        );
     }
 }
 
@@ -350,7 +400,7 @@ impl Server {
             .filter(|(_, v)| v.config.public)
             .map(|(k, v)| MapDetail {
                 name: k.to_owned(),
-                users: v.peer_count(),
+                users: v.user_count(),
             })
             .collect()
     }
@@ -468,7 +518,7 @@ impl Server {
     pub fn delete_map(&self, map_name: &str) -> Result<(), Error> {
         let room = self.room(map_name)?;
 
-        if room.peers().len() != 0 {
+        if room.users().len() != 0 {
             return Err(Error::RoomNotEmpty);
         }
 
@@ -1679,35 +1729,36 @@ impl Server {
 
     pub fn get_users(&self, map_name: &str) -> Result<usize, Error> {
         let room = self.room(map_name)?;
-        Ok(room.peer_count())
+        Ok(room.user_count())
     }
 
     pub fn get_cursors(
         &self,
         map_name: &str,
-        peer: &Peer,
+        user: &User,
     ) -> Result<HashMap<String, Cursor>, Error> {
         let room = self.room(map_name)?;
 
-        let peer_id = room.peers().get(&peer.addr).ok_or(Error::NotJoined)?.id;
+        let user_id = room.users().get(&user.token).ok_or(Error::NotJoined)?.id;
 
         let cursors = room
-            .peers()
+            .users()
             .iter()
-            .filter(|(_, v)| v.id != peer_id)
+            .filter(|(_, v)| v.id != user_id)
             .filter_map(|(_, v)| v.cursor.as_ref().map(|c| (v.id.to_string(), c.clone())))
             .collect();
 
         Ok(cursors)
     }
 
-    pub fn set_cursor(&self, peer: &Peer, cursor: Cursor) -> Result<(), Error> {
-        let room = peer.room.clone().ok_or(Error::MapNotFound)?;
-        let mut peers = room.peers();
-        let room_peer = peers
-            .get_mut(&peer.addr)
+    pub fn set_cursor(&self, user: &User, cursor: Cursor) -> Result<(), Error> {
+        let room = user.room();
+        let room = room.as_ref().ok_or(Error::MapNotFound)?;
+        let mut users = room.users();
+        let room_user = users
+            .get_mut(&user.token)
             .ok_or(Error::Internal("server error".into()))?;
-        room_peer.cursor = Some(cursor);
+        room_user.cursor = Some(cursor);
 
         Ok(())
     }
@@ -1717,9 +1768,12 @@ impl Server {
         room.save_map(self.max_map_size)
     }
 
-    pub fn peer_join(&self, peer: &mut Peer, join: &JoinReq) -> Result<(), Error> {
-        if peer.room.is_some() {
-            return Err(Error::AlreadyJoined);
+    pub fn user_join(&self, user: &User, join: &JoinReq) -> Result<(), Error> {
+        {
+            let room = user.room();
+            if room.is_some() {
+                return Err(Error::AlreadyJoined);
+            }
         }
 
         // we clone the pwd hash because bcrypt::verify() is costly and we don't want to
@@ -1741,24 +1795,28 @@ impl Server {
         {
             let room = self.room(&join.name)?;
 
-            room.add_peer(peer);
-            peer.room = Some(room);
+            room.add_user(user);
+            *user.room() = Some(room);
         }
+
         Ok(())
     }
 
-    pub fn peer_leave(&self, peer: &mut Peer, map_name: &str) -> Result<(), Error> {
-        match &peer.room {
+    pub fn user_leave(&self, user: &User, map_name: &str) -> Result<(), Error> {
+        let mut room = user.room();
+        let room = &mut *room;
+        let res = match room {
             Some(room) => {
                 if room.name() == map_name {
-                    room.remove_peer(peer);
-                    peer.room = None;
+                    room.remove_user(user);
                     Ok(())
                 } else {
                     Err(Error::NotJoined)
                 }
             }
             None => Err(Error::NotJoined),
-        }
+        };
+        room.take();
+        res
     }
 }

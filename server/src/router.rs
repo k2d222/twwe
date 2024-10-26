@@ -8,9 +8,18 @@ use axum::{
     routing::{delete, get, post},
     Json,
 };
-use axum_extra::{headers::UserAgent, TypedHeader};
+use axum_extra::{
+    extract::{
+        cookie::{Cookie, Expiration},
+        CookieJar,
+    },
+    headers::UserAgent,
+    TypedHeader,
+};
 use axum_server::tls_rustls::RustlsConfig;
 
+use futures::{channel::mpsc::unbounded, StreamExt};
+use rand::Rng;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{
     cors,
@@ -18,8 +27,23 @@ use tower_http::{
 };
 use vek::num_traits::clamp;
 
-use crate::{base64::Base64, protocol::*};
+use crate::{base64::Base64, error::Error, protocol::*, server::User, util::timestamp_now};
 use crate::{Cli, Server};
+
+lazy_static::lazy_static! {
+    static ref NAMELESS_TEE: Arc<User> = {
+        let name = "nameless tee".to_string();
+        let token = name.clone();
+        let (tx, rx) = unbounded();
+        tokio::spawn(async move {
+            rx.for_each(|v| {
+                log::debug!("message to nameless tee: {v:?}");
+                futures::future::ready(())
+            })
+        });
+        Arc::new(User::new(name, token, tx))
+    };
+}
 
 pub struct Router {
     addr: SocketAddr,
@@ -37,6 +61,7 @@ impl Router {
             .allow_headers(cors::Any);
 
         let http_routes = axum::Router::new()
+            .route("/http", post(route_http))
             .route("/maps", get(route_get_maps))
             .route(
                 "/maps/:map",
@@ -160,8 +185,17 @@ impl Router {
     }
 }
 
+fn gen_token() -> String {
+    rand::thread_rng()
+        .sample_iter(&rand::distributions::Alphanumeric)
+        .take(20)
+        .map(char::from)
+        .collect()
+}
+
 async fn route_websocket(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -174,7 +208,51 @@ async fn route_websocket(
     log::info!("client {addr} connected");
     log::debug!("client user-agent: `{user_agent}`");
 
-    ws.on_upgrade(move |socket| async move { server.handle_websocket(socket, addr).await })
+    let token = gen_token();
+    let mut cookie = Cookie::new("session", token.clone());
+    cookie.set_expires(Expiration::Session);
+    let jar = jar.add(cookie);
+
+    (
+        jar,
+        ws.on_upgrade(move |socket| async move {
+            server.handle_websocket(token, socket).await;
+            log::info!("client {addr} disconnected");
+        }),
+    )
+}
+
+async fn route_http(
+    State(server): State<Arc<Server>>,
+    jar: CookieJar,
+    Json(req_packet): Json<RecvPacket>,
+) -> impl IntoResponse {
+    let user = jar.get("session").and_then(|cookie| {
+        let token = cookie.value();
+        server.user(token).ok()
+    });
+
+    let resp = if let Some(user) = user {
+        let resp = server.do_request(&user, req_packet.content.clone());
+        if resp.is_ok() {
+            server.do_broadcast(&user, &req_packet);
+        }
+        resp
+    } else {
+        match req_packet.content {
+            Request::ListMaps | Request::Config(_) => {
+                server.do_request(&NAMELESS_TEE, req_packet.content.clone())
+            }
+            _ => Err(Error::Token),
+        }
+    };
+
+    let resp_packet = SendPacket {
+        timestamp: timestamp_now(),
+        id: req_packet.id,
+        content: Message::Response(resp),
+    };
+    Json(resp_packet)
 }
 
 async fn route_get_maps(State(server): State<Arc<Server>>) -> impl IntoResponse {

@@ -39,6 +39,14 @@ pub struct Config {
     pub version: twmap::Version,
 }
 
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PartialConfig {
+    pub name: Option<String>,
+    pub public: Option<String>,
+    pub password: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapDetail {
     pub name: String,
@@ -124,14 +132,6 @@ pub struct Cursor {
     pub group: i32,
     #[serde(rename = "l")]
     pub layer: i32,
-}
-
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-#[serde(default)]
-pub struct PartialConfig {
-    pub name: Option<String>,
-    pub public: Option<String>,
-    pub password: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -438,6 +438,8 @@ pub enum MoveReq {
 pub enum Request {
     #[serde(rename = "list")]
     ListMaps,
+    #[serde(rename = "config")]
+    Config(String),
     #[serde(rename = "join")]
     JoinMap(JoinReq),
     #[serde(rename = "leave")]
@@ -469,6 +471,7 @@ pub enum Request {
 #[serde(untagged)]
 pub enum Response {
     Ok,
+    Token(String),
     Maps(Vec<MapDetail>),
     Map(Base64),
     Users(usize),

@@ -1,5 +1,4 @@
-import type { WebSocketServer } from '../server/server'
-import type { ServerConfig } from '../storage'
+import type { ServerConfig, WebSocketServer } from '../server/server'
 import type { Map } from '../twmap/map'
 import { writable, type Writable } from 'svelte/store'
 import { RenderMap } from '../gl/renderMap'

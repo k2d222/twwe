@@ -15,7 +15,7 @@ type Base64 = string
 export interface Config {
   name: string
   public: boolean
-  password: string
+  password: string | boolean
   version: 'ddnet06' | 'teeworlds07'
 }
 
@@ -103,6 +103,7 @@ export interface MapGetReq {
   users: undefined
   cursors: undefined
   map: undefined
+  info: undefined
   images: undefined
   image: number
   envelopes: undefined
@@ -121,6 +122,7 @@ export interface MapGetResp {
   users: number
   cursors: Cursors
   map: Base64
+  info: MapDir.Info
   images: string[]
   image: Base64
   envelopes: string[]
@@ -226,6 +228,7 @@ export interface Send {
   'get/users': MapGetReq['users']
   'get/cursors': MapGetReq['cursors']
   'get/map': MapGetReq['map']
+  'get/info': MapGetReq['info']
   'get/images': MapGetReq['images']
   'get/image': MapGetReq['image']
   'get/envelopes': MapGetReq['envelopes']
@@ -262,6 +265,7 @@ export interface Send {
   'delete/layer': MapDelReq['layer']
   'delete/quad': MapDelReq['quad']
   'delete/automapper': MapDelReq['automapper']
+  config: string
   cursor: Cursor
   save: undefined
   join: JoinReq
@@ -274,6 +278,7 @@ export interface Resp {
   'get/users': MapGetResp['users']
   'get/cursors': MapGetResp['cursors']
   'get/map': MapGetResp['map']
+  'get/info': MapGetResp['info']
   'get/images': MapGetResp['images']
   'get/image': MapGetResp['image']
   'get/envelopes': MapGetResp['envelopes']
@@ -310,9 +315,10 @@ export interface Resp {
   'delete/layer': undefined
   'delete/quad': undefined
   'delete/automapper': undefined
+  config: Config
   cursor: undefined
   save: undefined
-  join: undefined
+  join: string
   leave: undefined
   create: undefined
   delete: undefined
@@ -357,6 +363,7 @@ export type ReqKey = keyof Req
 export interface SendPacket<K extends SendKey> {
   timestamp: number
   id: number
+  token?: number
   type: K
   content: Send[K]
 }

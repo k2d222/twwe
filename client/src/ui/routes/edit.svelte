@@ -7,7 +7,6 @@
   import Fence from '../lib/fence.svelte'
   import { onDestroy, onMount } from 'svelte'
   import { showError } from '../lib/dialog'
-  import { serverHttpUrl } from '../../server/util'
 
   export let name: string
   export let password: string
@@ -16,7 +15,7 @@
     reset()
 
     await $server.query('join', { name, password })
-    const httpUrl = serverHttpUrl($serverCfg)
+    const httpUrl = $server.httpUrl
     const map_ = await queryMap(httpUrl, name)
     const ams = await $server.query('get/automappers', undefined)
     $automappers = Object.fromEntries(ams.map(am => [am.name, am]))

@@ -3,7 +3,6 @@ use std::{
     collections::HashMap,
     fs::File,
     io::Write,
-    net::SocketAddr,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -19,6 +18,7 @@ use crate::{
     error::Error,
     map_cfg::{read_map_config, MapConfig},
     protocol::*,
+    server::User,
 };
 
 type Tx = UnboundedSender<WebSocketMessage>;
@@ -34,8 +34,8 @@ fn load_map(path: &Path) -> Result<twmap::TwMap, twmap::Error> {
     Ok(map)
 }
 
-// We want the room to have the map loaded when at least 1 peer is connected, but unloaded
-// when the last peer disconnects. The LazyMap provides these capabilities.
+// We want the room to have the map loaded when at least 1 user is connected, but unloaded
+// when the last user disconnects. The LazyMap provides these capabilities.
 pub struct LazyMap {
     pub path: PathBuf,
     map: Arc<Mutex<Option<twmap::TwMap>>>,
@@ -68,25 +68,7 @@ impl LazyMap {
     }
 }
 
-pub struct Peer {
-    // name: String, // TODO add more information about users
-    pub addr: SocketAddr,
-    pub tx: Tx,
-    pub room: Option<Arc<Room>>,
-}
-
-impl Peer {
-    pub fn new(addr: SocketAddr, tx: Tx) -> Self {
-        Peer {
-            // name: "Unnamed user".to_owned(),
-            addr,
-            tx,
-            room: None,
-        }
-    }
-}
-
-pub struct RoomPeer {
+pub struct Roomuser {
     pub id: Uuid,
     pub tx: Tx,
     pub cursor: Option<Cursor>,
@@ -98,7 +80,7 @@ pub struct Room {
     cfg_path: Option<PathBuf>,
     am_path: Option<PathBuf>,
     pub config: MapConfig,
-    peers: Mutex<HashMap<SocketAddr, RoomPeer>>,
+    users: Mutex<HashMap<String, Roomuser>>,
     map: LazyMap,
     saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
 }
@@ -137,7 +119,7 @@ impl Room {
             cfg_path: Some(cfg_path),
             am_path: Some(am_path),
             config,
-            peers: Mutex::new(HashMap::new()),
+            users: Mutex::new(HashMap::new()),
             map,
             saving: Mutex::new(()),
         })
@@ -166,7 +148,7 @@ impl Room {
             cfg_path,
             am_path,
             config,
-            peers: Mutex::new(HashMap::new()),
+            users: Mutex::new(HashMap::new()),
             map,
             saving: Mutex::new(()),
         })
@@ -207,36 +189,36 @@ impl Room {
         self.am_path.as_deref()
     }
 
-    pub fn add_peer(&self, peer: &Peer) {
-        self.peers().insert(
-            peer.addr,
-            RoomPeer {
+    pub fn add_user(&self, user: &User) {
+        self.users().insert(
+            user.token.clone(),
+            Roomuser {
                 id: Uuid::new_v4(),
-                tx: peer.tx.clone(),
+                tx: user.tx.clone(),
                 cursor: None,
             },
         );
     }
 
-    pub fn peer_count(&self) -> usize {
-        self.peers().len()
+    pub fn user_count(&self) -> usize {
+        self.users().len()
     }
 
-    pub fn remove_peer(&self, peer: &Peer) {
-        self.peers().remove(&peer.addr);
-        if self.peers().is_empty() {
+    pub fn remove_user(&self, user: &User) {
+        self.users().remove(&user.token);
+        if self.users().is_empty() {
             self.map.unload()
         }
     }
 
-    pub fn peers(&self) -> MutexGuard<HashMap<SocketAddr, RoomPeer>> {
-        self.peers.lock()
+    pub fn users(&self) -> MutexGuard<HashMap<String, Roomuser>> {
+        self.users.lock()
     }
 
-    pub fn remove_closed_peers(&self) {
-        let mut peers = self.peers();
-        peers.retain(|_, p| !p.tx.is_closed());
-        if peers.is_empty() {
+    pub fn remove_closed_users(&self) {
+        let mut users = self.users();
+        users.retain(|_, p| !p.tx.is_closed());
+        if users.is_empty() {
             self.map.unload()
         }
     }
