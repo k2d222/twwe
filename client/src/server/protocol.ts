@@ -10,7 +10,7 @@ export type RecPartial<T> =
   T extends Array<any> ? T : T extends Object ? { [K in keyof T]?: RecPartial<T[K]> } : T
 export type Require<T, U extends keyof T> = Partial<T> & Pick<T, U>
 
-type Base64 = string
+type Base64<T> = string
 
 export interface Config {
   name: string
@@ -29,7 +29,7 @@ export interface Tiles {
   y: number
   w: number
   h: number
-  tiles: Base64
+  tiles: Base64<Info.AnyTile[]>
 }
 
 // TODO
@@ -90,7 +90,7 @@ export type MapCreation = {
       }
     }
   | {
-      upload: Base64
+      upload: Base64<Blob>
     }
 )
 
@@ -121,24 +121,24 @@ export interface MapGetReq {
 export interface MapGetResp {
   users: number
   cursors: Cursors
-  map: Base64
+  map: Base64<Blob>
   info: MapDir.Info
   images: string[]
-  image: Base64
+  image: Base64<Blob>
   envelopes: string[]
   envelope: MapDir.Envelope
   groups: string[]
   group: MapDir.Group
   layers: string[]
   layer: MapDir.Layer
-  tiles: Base64
+  tiles: Base64<Info.AnyTile[]>
   quad: MapDir.Quad
   automappers: AutomapperDetail[]
   automapper: string
 }
 
 export interface MapCreateReq {
-  image: [string, Base64 | MapDir.ExternalImage]
+  image: [string, Base64<Blob> | MapDir.ExternalImage]
   envelope: Require<MapDir.Envelope, 'type'>
   group: Partial<MapDir.Group>
   layer: [number, Require<MapDir.Layer, 'type'>]
@@ -189,7 +189,7 @@ export interface GetReq {
 }
 
 export interface GetResp {
-  map: Base64
+  map: Base64<Blob>
 }
 
 export interface EditReq {

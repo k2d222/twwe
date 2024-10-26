@@ -12,6 +12,7 @@ use futures::{
 use image::ImageFormat;
 use parking_lot::{Mutex, MutexGuard};
 use regex::Regex;
+use uuid::Uuid;
 
 use crate::{
     base64::Base64,
@@ -38,22 +39,27 @@ type Tx = UnboundedSender<WebSocketMessage>;
 pub struct User {
     pub name: String,
     pub token: String,
+    pub id: Uuid,
     pub room: Mutex<Option<Arc<Room>>>,
     pub tx: Tx,
+    pub cursor: Mutex<Option<Cursor>>,
 }
 
 impl User {
     pub fn new(name: String, token: String, tx: Tx) -> Self {
+        println!("new user {token}");
         User {
             name,
             token,
+            id: Uuid::new_v4(),
             room: Default::default(),
             tx,
+            cursor: Default::default(),
         }
     }
 
-    pub fn room(&self) -> MutexGuard<Option<Arc<Room>>> {
-        self.room.lock()
+    pub fn room(&self) -> Option<Arc<Room>> {
+        self.room.lock().clone()
     }
 }
 
@@ -98,14 +104,14 @@ impl Server {
         self.users()
             .get(token)
             .map(Arc::to_owned)
-            .ok_or(Error::Token)
+            .ok_or(Error::Unauthorized)
     }
 
     pub fn rooms(&self) -> MutexGuard<HashMap<String, Arc<Room>>> {
         self.rooms.lock()
     }
 
-    fn room(&self, name: &str) -> Result<Arc<Room>, Error> {
+    pub fn room(&self, name: &str) -> Result<Arc<Room>, Error> {
         self.rooms()
             .get(name)
             .map(Arc::to_owned)
@@ -162,50 +168,69 @@ impl Server {
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         let msg = WebSocketMessage::Text(str);
 
-        {
-            let room = user.room();
-            if let Some(room) = &*room {
-                for (addr, p) in room.users().iter() {
-                    if !addr.eq(&user.token) {
-                        p.tx.unbounded_send(msg.to_owned()).ok();
-                    }
+        if let Some(room) = user.room() {
+            for (addr, p) in room.users().iter() {
+                if !addr.eq(&user.token) {
+                    p.tx.unbounded_send(msg.to_owned()).ok();
                 }
             }
         }
     }
 
     pub(crate) fn broadcast_users(&self, user: &User) {
-        let room = user.room();
-        if let Some(room) = &*room {
+        if let Some(room) = user.room() {
             let users = room.user_count();
             self.broadcast_to_room(&room, Message::Broadcast(Broadcast::Users(users)));
         }
     }
 
-    pub(crate) fn do_request(&self, user: &User, req: Request) -> Result<Response, Error> {
+    fn ensure_authorized(&self, user: &User, map_name: &str) -> Result<(), Error> {
+        let room = self.room(map_name)?;
+        let authorized = room.config.password.is_none() || user.room().is_some_and(|r| r == room);
+        if !authorized {
+            log::debug!("unauthorized: `{map_name}` for {}", user.token);
+        }
+        authorized.then_some(()).ok_or(Error::Unauthorized)
+    }
+
+    pub(crate) fn do_request(
+        &self,
+        user: Option<Arc<User>>,
+        req: Request,
+    ) -> Result<Response, Error> {
         let map_name = user
-            .room()
             .as_ref()
+            .and_then(|user| user.room())
             .map(|room| room.name().to_string())
             .ok_or(Error::MapNotFound);
+
+        let user = user.ok_or(Error::Unauthorized);
 
         match req {
             Request::ListMaps => Ok(Response::Maps(self.get_maps())),
             Request::Config(map_name) => self
                 .get_config(&map_name)
                 .map(|r| Response::Config(r.into())),
-            Request::JoinMap(map_name) => self.user_join(user, &map_name).map(|()| Response::Ok),
-            Request::LeaveMap(map_name) => self.user_leave(user, &map_name).map(|()| Response::Ok),
-            Request::GetMap(map_name) => self.get_map(&map_name).map(|r| Response::Map(Base64(r))),
+            Request::JoinMap(join) => self.user_join(user?, &join).map(|()| Response::Ok),
+            Request::LeaveMap(map_name) => {
+                self.user_leave(&*user?, &map_name).map(|()| Response::Ok)
+            }
+            Request::GetMap(map_name) => {
+                self.ensure_authorized(&*user?, &map_name)?;
+                self.get_map(&map_name).map(|r| Response::Map(Base64(r)))
+            }
             Request::CreateMap(map_name, content) => {
                 self.create_map(&map_name, *content).map(|()| Response::Ok)
             }
-            Request::DeleteMap(map_name) => self.delete_map(&map_name).map(|()| Response::Ok),
+            Request::DeleteMap(map_name) => {
+                self.ensure_authorized(&*user?, &map_name)?;
+                self.delete_map(&map_name).map(|()| Response::Ok)
+            }
             Request::Save => self.save_map(&map_name?).map(|()| Response::Ok),
-            Request::Cursor(req) => self.set_cursor(user, *req).map(|()| Response::Ok),
+            Request::Cursor(req) => self.set_cursor(&*user?, *req).map(|()| Response::Ok),
             Request::Get(req) => match req {
                 GetReq::Users => self.get_users(&map_name?).map(Response::Users),
-                GetReq::Cursors => self.get_cursors(&map_name?, user).map(Response::Cursors),
+                GetReq::Cursors => self.get_cursors(&map_name?, &*user?).map(Response::Cursors),
                 GetReq::Map => self.get_map(&map_name?).map(|r| Response::Map(Base64(r))),
                 GetReq::Config => self
                     .get_config(&map_name?)
@@ -318,12 +343,12 @@ impl Server {
         }
     }
 
-    pub(crate) fn handle_request(&self, user: &User, packet: RecvPacket) {
-        let resp = self.do_request(user, packet.content.clone());
+    pub(crate) fn handle_request(&self, user: Arc<User>, packet: RecvPacket) {
+        let resp = self.do_request(Some(user.clone()), packet.content.clone());
         if resp.is_ok() {
-            self.do_broadcast(user, &packet);
+            self.do_broadcast(&*user, &packet);
         }
-        Server::send(user, packet.id, Message::Response(resp));
+        Server::send(&*user, packet.id, Message::Response(resp));
     }
 
     pub(crate) async fn handle_websocket(&self, token: String, socket: WebSocket) {
@@ -334,7 +359,11 @@ impl Server {
         let user = Arc::new(User::new("nameless tee".into(), token.clone(), ws_send));
         {
             let user_count = self.users().len();
-            log::debug!("simultaneous connections: {user_count}/{}", self.max_users);
+            log::debug!(
+                "simultaneous connections: {}/{}",
+                user_count + 1,
+                self.max_users
+            );
             if user_count as usize >= self.max_users {
                 Server::send(&user, None, Message::Response(Err(Error::MaxUsers)));
                 fut_send.await.ok();
@@ -355,7 +384,7 @@ impl Server {
                 // log::debug!("text message received from {}: {}", addr, text);
                 match serde_json::from_str(&msg) {
                     Ok(req) => {
-                        self.handle_request(&user, req);
+                        self.handle_request(user.clone(), req);
                     }
                     Err(e) => {
                         log::error!("failed to parse message: {e} in {msg}");
@@ -374,11 +403,8 @@ impl Server {
         // wait for either sender or receiver to complete: this means the connection is closed.
         futures::future::select(fut_send, fut_recv).await;
 
-        {
-            let room = user.room();
-            if let Some(room) = &*room {
-                room.remove_user(&user);
-            }
+        if let Some(room) = user.room() {
+            room.remove_user(&user);
         }
 
         self.broadcast_users(&user);
@@ -518,12 +544,7 @@ impl Server {
     pub fn delete_map(&self, map_name: &str) -> Result<(), Error> {
         let room = self.room(map_name)?;
 
-        if room.users().len() != 0 {
-            return Err(Error::RoomNotEmpty);
-        }
-
         self.rooms().remove(map_name);
-
         room.delete();
 
         log::info!("map deleted `{}`", room.name());
@@ -1745,7 +1766,12 @@ impl Server {
             .users()
             .iter()
             .filter(|(_, v)| v.id != user_id)
-            .filter_map(|(_, v)| v.cursor.as_ref().map(|c| (v.id.to_string(), c.clone())))
+            .filter_map(|(_, v)| {
+                v.cursor
+                    .lock()
+                    .as_ref()
+                    .map(|c| (v.id.to_string(), c.clone()))
+            })
             .collect();
 
         Ok(cursors)
@@ -1758,7 +1784,7 @@ impl Server {
         let room_user = users
             .get_mut(&user.token)
             .ok_or(Error::Internal("server error".into()))?;
-        room_user.cursor = Some(cursor);
+        *room_user.cursor.lock() = Some(cursor);
 
         Ok(())
     }
@@ -1768,12 +1794,9 @@ impl Server {
         room.save_map(self.max_map_size)
     }
 
-    pub fn user_join(&self, user: &User, join: &JoinReq) -> Result<(), Error> {
-        {
-            let room = user.room();
-            if room.is_some() {
-                return Err(Error::AlreadyJoined);
-            }
+    pub fn user_join(&self, user: Arc<User>, join: &JoinReq) -> Result<(), Error> {
+        if user.room().is_some() {
+            return Err(Error::AlreadyJoined);
         }
 
         // we clone the pwd hash because bcrypt::verify() is costly and we don't want to
@@ -1792,20 +1815,17 @@ impl Server {
             (None, None) => (),
         };
 
-        {
-            let room = self.room(&join.name)?;
+        let room = self.room(&join.name)?;
+        room.add_user(user.clone());
+        *user.room.lock() = Some(room);
 
-            room.add_user(user);
-            *user.room() = Some(room);
-        }
+        log::info!("{} joined `{}`", user.token, join.name);
 
         Ok(())
     }
 
     pub fn user_leave(&self, user: &User, map_name: &str) -> Result<(), Error> {
-        let mut room = user.room();
-        let room = &mut *room;
-        let res = match room {
+        let res = match user.room() {
             Some(room) => {
                 if room.name() == map_name {
                     room.remove_user(user);
@@ -1816,7 +1836,8 @@ impl Server {
             }
             None => Err(Error::NotJoined),
         };
-        room.take();
+        user.room.lock().take();
+        log::info!("{} left `{}`", user.token, map_name);
         res
     }
 }

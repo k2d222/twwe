@@ -26,7 +26,7 @@ export type FormInputEvent = FormEvent<HTMLInputElement>
 export async function download(file: string, name: string) {
   const id = showInfo(`Downloading '${name}'…`, 'none')
   try {
-    const resp = await fetch(file)
+    const resp = await fetch(file, { credentials: 'include' })
     const data = await resp.blob()
     const url = URL.createObjectURL(data)
 
@@ -46,6 +46,7 @@ export async function download(file: string, name: string) {
 export async function uploadMap(httpRoot: string, name: string, file: Blob) {
   const resp = await fetch(`${httpRoot}/maps/${name}`, {
     method: 'PUT',
+    credentials: 'include',
     body: file,
   })
 
@@ -56,6 +57,7 @@ export async function createMap(httpRoot: string, name: string, create: MapCreat
   const resp = await fetch(`${httpRoot}/maps/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(create),
   })
 
@@ -65,6 +67,7 @@ export async function createMap(httpRoot: string, name: string, create: MapCreat
 // export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {
 //   await fetch(`${httpRoot}/maps/${mapName}/images/${imageName}`, {
 //     method: 'POST',
+//     credentials: 'include',
 //     body: file
 //   })
 // }
@@ -102,20 +105,20 @@ export async function queryMaps(httpRoot: string): Promise<MapDetail[]> {
     })
   }
 
-  const resp = await fetch(`${httpRoot}/maps`)
+  const resp = await fetch(`${httpRoot}/maps`, { credentials: 'include' })
   const maps: MapDetail[] = await resp.json()
   sortMaps(maps)
   return maps
 }
 
 export async function queryConfig(httpRoot: string, mapName: string): Promise<Config> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}/config`)
+  const resp = await fetch(`${httpRoot}/maps/${mapName}/config`, { credentials: 'include' })
   const config: Config = await resp.json()
   return config
 }
 
 export async function queryMap(httpRoot: string, mapName: string): Promise<Map> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}`)
+  const resp = await fetch(`${httpRoot}/maps/${mapName}`, { credentials: 'include' })
   const data = await resp.arrayBuffer()
   const map = new Map()
   map.load(mapName, data)
@@ -127,7 +130,7 @@ export async function queryImageData(
   mapName: string,
   imageIndex: number
 ): Promise<ImageData> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}/images/${imageIndex}`)
+  const resp = await fetch(`${httpRoot}/maps/${mapName}/images/${imageIndex}`, { credentials: 'include' })
   const data = await resp.blob()
   const image = await decodePng(data)
   return image

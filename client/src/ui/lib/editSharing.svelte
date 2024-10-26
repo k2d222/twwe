@@ -28,6 +28,7 @@
       let resp = await fetch(httpUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
         body: JSON.stringify(json),
       })
       if (!resp.ok) throw await resp.text()
@@ -39,7 +40,7 @@
 
   async function stopBridge(): Promise<void> {
     const httpUrl = serverHttpUrl($serverCfg) + '/bridge_close'
-    await fetch(httpUrl)
+    await fetch(httpUrl, { credentials: 'include' })
   }
 
   function onToggleSharing() {

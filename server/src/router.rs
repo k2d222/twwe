@@ -3,7 +3,7 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::{
     body::Bytes,
     extract::{ConnectInfo, DefaultBodyLimit, Path, State, WebSocketUpgrade},
-    http::Method,
+    http::{header::CONTENT_TYPE, Method},
     response::IntoResponse,
     routing::{delete, get, post},
     Json,
@@ -55,10 +55,10 @@ impl Router {
         let addr: SocketAddr = args.addr.parse().expect("not a valid server address");
 
         let cors = cors::CorsLayer::new()
-            .allow_methods(vec![Method::GET, Method::PUT, Method::POST, Method::DELETE])
-            .allow_origin(cors::Any)
-            .allow_credentials(false)
-            .allow_headers(cors::Any);
+            .allow_methods([Method::GET, Method::PUT, Method::POST, Method::DELETE])
+            .allow_headers([CONTENT_TYPE])
+            .allow_origin(cors::AllowOrigin::mirror_request())
+            .allow_credentials(true);
 
         let http_routes = axum::Router::new()
             .route("/http", post(route_http))
@@ -205,13 +205,14 @@ async fn route_websocket(
     } else {
         String::from("Unknown browser")
     };
-    log::info!("client {addr} connected");
-    log::debug!("client user-agent: `{user_agent}`");
 
     let token = gen_token();
-    let mut cookie = Cookie::new("session", token.clone());
+    let mut cookie = Cookie::new("twwe_session", token.clone());
     cookie.set_expires(Expiration::Session);
     let jar = jar.add(cookie);
+
+    log::info!("client {addr} connected as {token}");
+    log::debug!("client user-agent: `{user_agent}`");
 
     (
         jar,
@@ -222,30 +223,40 @@ async fn route_websocket(
     )
 }
 
+fn user(jar: &CookieJar, server: &Server) -> Option<Arc<User>> {
+    jar.get("twwe_session").and_then(|cookie| {
+        let token = cookie.value();
+        server.user(token).ok()
+    })
+}
+
+fn ensure_access_authorized(user: Option<&User>, map: &str, server: &Server) -> Result<(), Error> {
+    let room = server.room(map)?;
+    let authorized = room.config.password.is_none()
+        || user.and_then(|user| user.room()).is_some_and(|r| r == room);
+    if !authorized {
+        log::debug!(
+            "unauthorized: `{map}` for {}",
+            user.unwrap_or(&NAMELESS_TEE).token
+        );
+    }
+    authorized.then_some(()).ok_or(Error::Unauthorized)
+}
+
 async fn route_http(
     State(server): State<Arc<Server>>,
     jar: CookieJar,
     Json(req_packet): Json<RecvPacket>,
 ) -> impl IntoResponse {
-    let user = jar.get("session").and_then(|cookie| {
-        let token = cookie.value();
-        server.user(token).ok()
-    });
+    let user = user(&jar, &server);
 
-    let resp = if let Some(user) = user {
-        let resp = server.do_request(&user, req_packet.content.clone());
+    let resp = server.do_request(user.clone(), req_packet.content.clone());
+
+    if let Some(user) = &user {
         if resp.is_ok() {
-            server.do_broadcast(&user, &req_packet);
+            server.do_broadcast(user, &req_packet);
         }
-        resp
-    } else {
-        match req_packet.content {
-            Request::ListMaps | Request::Config(_) => {
-                server.do_request(&NAMELESS_TEE, req_packet.content.clone())
-            }
-            _ => Err(Error::Token),
-        }
-    };
+    }
 
     let resp_packet = SendPacket {
         timestamp: timestamp_now(),
@@ -261,8 +272,10 @@ async fn route_get_maps(State(server): State<Arc<Server>>) -> impl IntoResponse 
 
 async fn route_get_map(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_map(&map)
 }
 
@@ -290,22 +303,28 @@ async fn route_post_map(
 
 async fn route_delete_map(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.delete_map(&map)
 }
 
 async fn route_get_images(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_images(&map).map(Json)
 }
 
 async fn route_get_image(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, image)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_image(&map, image)
 }
 
@@ -318,112 +337,142 @@ async fn route_get_config(
 
 async fn route_post_config(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
     Json(part_config): Json<PartialConfig>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.edit_config(&map, part_config)
 }
 
 async fn route_get_info(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_info(&map).map(Json)
 }
 
 async fn route_post_info(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
     Json(part_info): Json<PartialInfo>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.edit_info(&map, part_info)
 }
 
 async fn route_get_envelopes(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_envelopes(&map).map(Json)
 }
 
 async fn route_put_envelope(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
     Json(part_env): Json<PartialEnvelope>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.put_envelope(&map, part_env)
 }
 
 async fn route_get_envelope(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, env)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_envelope(&map, env).map(Json)
 }
 
 async fn route_post_envelope(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, env)): Path<(String, u16)>,
     Json(part_env): Json<PartialEnvelope>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.edit_envelope(&map, env, part_env)
 }
 
 async fn route_delete_envelope(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, env)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.delete_envelope(&map, env)
 }
 
 async fn route_get_groups(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_groups(&map).map(Json)
 }
 
 async fn route_post_group(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, group)): Path<(String, u16)>,
     Json(part_group): Json<PartialGroup>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.edit_group(&map, group, part_group)
 }
 
 async fn route_put_group(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path(map): Path<String>,
     Json(part_group): Json<PartialGroup>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.put_group(&map, part_group)
 }
 
 async fn route_delete_group(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, group)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.delete_group(&map, group)
 }
 
 async fn route_get_layers(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, group)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.get_layers(&map, group).map(Json)
 }
 
 async fn route_put_layer(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, group)): Path<(String, u16)>,
     Json(part_layer): Json<PartialLayer>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.put_layer(&map, group, part_layer)
 }
 
 async fn route_delete_layer(
     State(server): State<Arc<Server>>,
+    jar: CookieJar,
     Path((map, group, layer)): Path<(String, u16, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(user(&jar, &server).as_deref(), &map, &server)?;
     server.delete_layer(&map, group, layer)
 }

@@ -164,8 +164,9 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
     if (http) {
       fetch(this.httpUrl + '/http', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
         body: message,
-        headers: { 'Content-Type': 'application/json' }
       })
       .then(async (resp) => {
         const data = await resp.json() as RespPacket<SendKey>

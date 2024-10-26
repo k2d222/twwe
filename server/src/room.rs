@@ -7,21 +7,13 @@ use std::{
     sync::Arc,
 };
 
-use axum::extract::ws::Message as WebSocketMessage;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
-
-use futures::channel::mpsc::UnboundedSender;
-
-use uuid::Uuid;
 
 use crate::{
     error::Error,
     map_cfg::{read_map_config, MapConfig},
-    protocol::*,
     server::User,
 };
-
-type Tx = UnboundedSender<WebSocketMessage>;
 
 fn server_error<E: std::fmt::Display>(err: E) -> Error {
     log::error!("{}", err);
@@ -68,21 +60,21 @@ impl LazyMap {
     }
 }
 
-pub struct Roomuser {
-    pub id: Uuid,
-    pub tx: Tx,
-    pub cursor: Option<Cursor>,
-}
-
 pub struct Room {
     dir_path: Option<PathBuf>,
     map_path: PathBuf,
     cfg_path: Option<PathBuf>,
     am_path: Option<PathBuf>,
     pub config: MapConfig,
-    users: Mutex<HashMap<String, Roomuser>>,
+    users: Mutex<HashMap<String, Arc<User>>>,
     map: LazyMap,
     saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
+}
+
+impl PartialEq for Room {
+    fn eq(&self, other: &Self) -> bool {
+        self.map_path == other.map_path
+    }
 }
 
 const MAP_FILE_NAME: &str = "map.map";
@@ -189,15 +181,8 @@ impl Room {
         self.am_path.as_deref()
     }
 
-    pub fn add_user(&self, user: &User) {
-        self.users().insert(
-            user.token.clone(),
-            Roomuser {
-                id: Uuid::new_v4(),
-                tx: user.tx.clone(),
-                cursor: None,
-            },
-        );
+    pub fn add_user(&self, user: Arc<User>) {
+        self.users().insert(user.token.clone(), user);
     }
 
     pub fn user_count(&self) -> usize {
@@ -211,7 +196,7 @@ impl Room {
         }
     }
 
-    pub fn users(&self) -> MutexGuard<HashMap<String, Roomuser>> {
+    pub fn users(&self) -> MutexGuard<HashMap<String, Arc<User>>> {
         self.users.lock()
     }
 

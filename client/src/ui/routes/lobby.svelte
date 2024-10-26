@@ -186,11 +186,16 @@
     modalConfirmDelete.open = true
     modalConfirmDelete.onConfirm = async () => {
       try {
-        await fetch(`${httpUrl}/maps/${mapName}`, {
+        let resp = await fetch(`${httpUrl}/maps/${mapName}`, {
           method: 'DELETE',
+          credentials: "include",
         })
+        if (!resp.ok) {
+          throw await resp.text()
+        }
       } catch (e) {
         showError('Map deletion failed: ' + e)
+        console.error(e)
       }
       modalConfirmDelete.open = false
       selectServer(serverId)
