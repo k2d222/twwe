@@ -130,7 +130,6 @@
 
   async function drawLayer(image: Image) {
     const img = await getCanvasImage(image)
-    console.log(image, img, img.width, img.height)
     if (!mounted) return
     canvas.width = img.width as number
     canvas.height = img.height as number
