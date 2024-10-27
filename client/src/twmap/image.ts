@@ -10,6 +10,7 @@ export class Image {
   height: number
   data: ImageSource | null
   external: boolean
+  private loadingImg: HTMLImageElement | null
 
   constructor() {
     this.name = ''
@@ -17,18 +18,22 @@ export class Image {
     this.height = 0
     this.data = null
     this.external = false
+    this.loadingImg = null
   }
 
   loadExternal(url: string) {
-    this.data = document.createElement('img')
-    this.data.onerror = () => console.warn('failed to load image:', url)
-    this.data.onload = () => {
-      if (this.data) {
+    const img = document.createElement('img')
+    this.loadingImg = img
+    img.onerror = () => console.warn('failed to load image:', url)
+    img.onload = () => {
+      if (this.loadingImg === img) {
+        this.loadingImg = null
+        this.data = img
         this.width = this.data.width
         this.height = this.data.height
       }
     }
-    this.data.src = url
+    img.src = url
     this.external = true
   }
 

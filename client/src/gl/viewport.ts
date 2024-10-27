@@ -20,6 +20,7 @@ export class Viewport {
 
   clickTimeout: number // millis between press and release to be considered click
 
+  drag: boolean
   dragTimestamp: number
   touchDistance: number
 
@@ -39,6 +40,7 @@ export class Viewport {
 
     this.clickTimeout = 100
 
+    this.drag = false
     this.dragTimestamp = 0
     this.touchDistance = 0
 
@@ -105,7 +107,9 @@ export class Viewport {
   private onmousedown(e: MouseEvent) {
     const [canvasX, canvasY] = this.pixelToCanvas(e.clientX, e.clientY)
 
-    this.onDragStart(canvasX, canvasY)
+    // wheel button or ctrl + left click
+    if (e.buttons === 4 || (e.ctrlKey && e.buttons === 1))
+      this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
@@ -114,12 +118,17 @@ export class Viewport {
     this.mousePos.x = worldX
     this.mousePos.y = worldY
 
-    if (e.buttons === 4 || (e.ctrlKey && e.buttons === 1))
-      // wheel button or ctrl + left click
-      this.onDrag(canvasX, canvasY)
+    if (this.drag) {
+      if (e.buttons === 4 || (e.ctrlKey && e.buttons === 1))
+        this.onDrag(canvasX, canvasY)
+      else
+        this.drag = false
+    }
   }
 
-  private onmouseup(_e: MouseEvent) {}
+  private onmouseup(_e: MouseEvent) {
+    this.drag = false
+  }
 
   private onwheel(e: WheelEvent) {
     const direction = e.deltaY < 0 ? 1 : -1
@@ -188,6 +197,7 @@ export class Viewport {
     this.posDragLast.x = this.posDragStart.x
     this.posDragLast.y = this.posDragStart.y
     this.dragTimestamp = Date.now()
+    this.drag = true
   }
 
   private onDrag(x: number, y: number) {

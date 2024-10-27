@@ -313,7 +313,7 @@
       updateMouseRange()
 
       if (e.buttons === 1 && !e.ctrlKey) {
-        // left clickft
+        // left click
         if (brushState === BrushState.Empty) {
           // start a selection
           mouseRange.start = mouseRange.end
