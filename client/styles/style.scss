@@ -1,9 +1,7 @@
 // carbon design stylesheets
 
 @use '@carbon/themes/scss/themes' as *;
-@use '@carbon/themes' with (
-  $theme: $white
-);
+@use '@carbon/themes' with ($theme: $white);
 
 @import './carbon-style-compiled.css';
 
@@ -33,7 +31,7 @@
   // make scrollbars fit nicely with page viewport size
   // carbon's stickyheader property on datatables is shit
   // this is quite complicated, idk of better ways
-  .bx--row > * {
+  .bx--row>* {
     display: flex;
     flex-direction: column;
 
@@ -69,6 +67,7 @@
 }
 
 #edit {
+
   input[type='number'],
   input[type='text'],
   input[type='button'],
@@ -156,13 +155,13 @@ $header-h: 3rem;
     }
   }
 
-  .splitpanes--vertical > .splitpanes__splitter,
-  &.splitpanes--vertical > .splitpanes__splitter {
+  .splitpanes--vertical>.splitpanes__splitter,
+  &.splitpanes--vertical>.splitpanes__splitter {
     width: 4px;
   }
 
-  .splitpanes--horizontal > .splitpanes__splitter,
-  &.splitpanes--horizontal > .splitpanes__splitter {
+  .splitpanes--horizontal>.splitpanes__splitter,
+  &.splitpanes--horizontal>.splitpanes__splitter {
     height: 4px;
   }
 
@@ -202,14 +201,14 @@ $header-h: 3rem;
     box-shadow: inset 0 0 20px -10px black;
   }
 
-  > canvas {
+  >canvas {
     height: 100%;
     width: 100%;
   }
 }
 
-.map-view > canvas,
-.tiles > canvas {
+.map-view>canvas,
+.tiles>canvas {
   background-image: url('/editor/checker.png');
   background-repeat: repeat;
 }
@@ -223,9 +222,9 @@ $header-h: 3rem;
   background: #161616;
   color: white;
 
-  > .left,
-  > .right,
-  > .middle {
+  >.left,
+  >.right,
+  >.middle {
     display: flex;
     align-items: center;
     flex-direction: row;
@@ -289,11 +288,11 @@ $header-h: 3rem;
     margin: 0;
     padding: 0;
 
-    > svg {
+    >svg {
       fill: white;
     }
 
-    &[disabled] > svg {
+    &[disabled]>svg {
       fill: grey;
     }
 
@@ -366,7 +365,7 @@ $header-h: 3rem;
       background: themes.$focus;
     }
 
-    > .label {
+    >.label {
       text-overflow: ellipsis;
       overflow: hidden;
       white-space: nowrap;
@@ -386,11 +385,11 @@ $header-h: 3rem;
     display: flex;
     flex-direction: column;
 
-    &.folded > ul {
+    &.folded>ul {
       display: none;
     }
 
-    &.folded > .node > .toggle > svg {
+    &.folded>.node>.toggle>svg {
       transform: rotate(-90deg);
     }
   }
@@ -406,11 +405,11 @@ $header-h: 3rem;
     cursor: pointer;
   }
 
-  li.visible:not(:hover) > .node > .eye {
+  li.visible:not(:hover)>.node>.eye {
     display: none;
   }
 
-  .toggle > svg {
+  .toggle>svg {
     transition: transform 0.2s;
   }
 
@@ -439,11 +438,10 @@ $header-h: 3rem;
 }
 
 #tile-picker {
-  > .picker {
+  >.picker {
     position: absolute;
-    inset: 0;
+    bottom: 0;
     width: 100%;
-    height: 100%;
     padding-top: 6rem;
     padding-left: 1rem;
     padding-right: 1rem;
@@ -451,7 +449,7 @@ $header-h: 3rem;
     display: flex;
     justify-content: center;
 
-    > .content {
+    >.content {
       position: relative;
       z-index: 1;
       background: white;
@@ -524,7 +522,7 @@ $header-h: 3rem;
         width: 2rem;
         height: 2rem;
 
-        > img {
+        >img {
           width: 100%;
           height: 100%;
         }
@@ -574,7 +572,7 @@ $header-h: 3rem;
       width: 2rem;
       height: 2rem;
 
-      > svg {
+      >svg {
         width: 100%;
         height: 100%;
       }
@@ -638,7 +636,7 @@ nav.hidden .context {
   width: 100%;
   height: 100%;
 
-  > .map-view > canvas {
+  >.map-view>canvas {
     position: fixed;
     inset: 0;
     z-index: -1;
@@ -682,7 +680,7 @@ nav.hidden .context {
 
   $img-size: 10rem;
 
-  > .footer {
+  >.footer {
     // background: white;
     // border: 1px solid black;
     // border-top: none;
@@ -693,7 +691,7 @@ nav.hidden .context {
     justify-content: space-between;
   }
 
-  > .images {
+  >.images {
     overflow: auto;
 
     .list {
@@ -711,7 +709,7 @@ nav.hidden .context {
         overflow: hidden;
         padding: 0;
 
-        &:hover > button {
+        &:hover>button {
           position: absolute;
           top: 0;
           right: 0;
@@ -759,9 +757,7 @@ nav.hidden .context {
           width: 100%;
           height: 100%;
           object-fit: contain;
-          filter: drop-shadow(1px 0px 0px rgba(0, 0, 0, 0.4))
-            drop-shadow(0px 1px 0px rgba(0, 0, 0, 0.4)) drop-shadow(-1px 0px 0px rgba(0, 0, 0, 0.4))
-            drop-shadow(0px -1px 0px rgba(0, 0, 0, 0.4));
+          filter: drop-shadow(1px 0px 0px rgba(0, 0, 0, 0.4)) drop-shadow(0px 1px 0px rgba(0, 0, 0, 0.4)) drop-shadow(-1px 0px 0px rgba(0, 0, 0, 0.4)) drop-shadow(0px -1px 0px rgba(0, 0, 0, 0.4));
         }
       }
     }
@@ -772,10 +768,10 @@ nav.hidden .context {
   position: absolute;
   inset: 0;
 
-  > svg {
+  >svg {
     position: absolute;
 
-    > * {
+    >* {
       pointer-events: auto;
       vector-effect: non-scaling-stroke;
     }
@@ -830,7 +826,7 @@ nav.hidden .context {
     flex-direction: row;
     gap: 1rem;
 
-    > .channels {
+    >.channels {
       flex-grow: 1;
     }
 
@@ -907,22 +903,22 @@ nav.hidden .context {
         color: orange;
       }
 
-      &.red input:checked ~ span {
+      &.red input:checked~span {
         background-color: red;
         color: white;
       }
 
-      &.green input:checked ~ span {
+      &.green input:checked~span {
         background-color: green;
         color: white;
       }
 
-      &.blue input:checked ~ span {
+      &.blue input:checked~span {
         background-color: blue;
         color: white;
       }
 
-      &.orange input:checked ~ span {
+      &.orange input:checked~span {
         background-color: orange;
         color: white;
       }
@@ -962,6 +958,7 @@ nav.hidden .context {
 }
 
 #edit-automapper {
+
   .left,
   .middle,
   .right {
@@ -973,7 +970,7 @@ nav.hidden .context {
       display: flex;
       flex-direction: column;
 
-      > input[type='text'] {
+      >input[type='text'] {
         margin-top: 0.5rem;
       }
     }
@@ -1018,7 +1015,7 @@ nav.hidden .context {
         background: themes.$focus;
       }
 
-      > .label {
+      >.label {
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
@@ -1028,12 +1025,12 @@ nav.hidden .context {
         align-items: center;
       }
 
-      > .icon > svg {
+      >.icon>svg {
         width: 1rem;
         height: 1rem;
       }
 
-      > button {
+      >button {
         color: inherit;
         background: none;
         width: 2rem;
@@ -1045,11 +1042,11 @@ nav.hidden .context {
         cursor: pointer;
       }
 
-      &:not(:hover) > button {
+      &:not(:hover)>button {
         display: none;
       }
 
-      > button:hover svg {
+      >button:hover svg {
         color: #da1e28;
       }
     }
@@ -1104,12 +1101,12 @@ textarea.diagnostics {
     width: 100vw;
     height: 100vh;
 
-    > .content > .text {
+    >.content>.text {
       margin-top: 10rem;
     }
   }
 
-  > .content > .text {
+  >.content>.text {
     z-index: 7000;
     margin: 1rem;
   }
