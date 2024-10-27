@@ -49,7 +49,10 @@ export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {
   }
 
   getTile(x: number, y: number) {
-    return this.tiles[y * this.width + x]
+    if ((0 <= x && x < this.width) && (0 <= y && y < this.height))
+      return this.tiles[y * this.width + x]
+    else
+      return this.defaultTile()
   }
 
   setTile(x: number, y: number, tile: Tile) {
