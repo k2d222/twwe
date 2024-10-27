@@ -21,8 +21,8 @@ impl Default for MapConfig {
     fn default() -> Self {
         Self {
             name: Default::default(),
-            public: Default::default(),
-            password: Default::default(),
+            public: true,
+            password: None,
             version: twmap::Version::DDNet06,
         }
     }
