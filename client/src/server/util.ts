@@ -121,9 +121,7 @@ export function sync<Q extends SendKey & RecvKey, T>(
   opt: SyncOpt<Q, T>
 ): Syncable<T> {
   if (!opt.match) opt.match = pick
-
   if (!opt.apply) opt.apply = (v: any) => v
-
   if (!opt.send) opt.send = (v: T) => v as any
 
   const cb = (e: Recv[Q]) => {

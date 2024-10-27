@@ -93,17 +93,17 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
 
   token: string | null = null
 
-  constructor(cfg:ServerConfig) {
+  constructor(cfg: ServerConfig) {
     super()
 
     const wsUrl = serverWsUrl(cfg)
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
-    this.socket.onmessage = e => this.handleWsMessage(e)
+    this.socket.onmessage = this.handleWsMessage.bind(this)
 
     this.httpUrl = serverHttpUrl(cfg)
 
-    this.errorListener = () => {}
+    this.errorListener = () => { }
     this.queryListeners = {}
 
     this.history = new History()
@@ -161,6 +161,8 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
     })
 
     // we predict an ok response from the server and dispatch right away.
+    // if the server replies with err(), or if the requests are out of order,
+    // the history will take care of resyncing.
     this.dispatch(type as any, content, promise.then())
 
     this.socket.send(message)
@@ -175,10 +177,7 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
     }
 
     const data = JSON.parse(e.data) as RespPacket<SendKey> | RecvPacket<RecvKey>
-    this.handleMessage(data)
-  }
 
-  private handleMessage(data: RespPacket<SendKey> | RecvPacket<RecvKey>) {
     if ('token' in data) {
       this.token = data['token'] as string
     } else if ('id' in data) {

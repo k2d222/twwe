@@ -309,7 +309,7 @@ function isRequest(pkt: SendPacket<any> | RecvPacket<any>): pkt is SendPacket<Re
 type Op = [ReqKey, Req[ReqKey]]
 
 interface Operation {
-  id?: number
+  id: number
   forward: Op
   reverse: Op
 }
@@ -345,6 +345,7 @@ export class History {
       const pending: Operation = {
         forward: [pkt.type, pkt.content],
         reverse: rev,
+        id: pkt.id,
       }
       this.pending.push(pending)
 
