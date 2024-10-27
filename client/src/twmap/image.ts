@@ -9,35 +9,34 @@ export class Image {
   width: number
   height: number
   data: ImageSource | null
-  img: HTMLImageElement | null
+  external: boolean
 
   constructor() {
     this.name = ''
     this.width = 0
     this.height = 0
     this.data = null
-    this.img = null
+    this.external = false
   }
 
   loadExternal(url: string) {
-    this.data = null
-    this.img = document.createElement('img')
-    this.img.onerror = () => console.warn('failed to load image:', url)
-    this.img.onload = () => {
-      if (this.img) {
-        this.data = this.img
-        this.width = this.img.width
-        this.height = this.img.height
+    this.data = document.createElement('img')
+    this.data.onerror = () => console.warn('failed to load image:', url)
+    this.data.onload = () => {
+      if (this.data) {
+        this.width = this.data.width
+        this.height = this.data.height
       }
     }
-    this.img.src = url
+    this.data.src = url
+    this.external = true
   }
 
   loadEmbedded(data: ImageData) {
     this.data = data
     this.width = data.width
     this.height = data.height
-    this.img = null
+    this.external = false
   }
 
   load(df: DataFile, info: Info.Image) {
@@ -48,9 +47,11 @@ export class Image {
     if (info.external) {
       const url = '/mapres/' + this.name + '.png'
       this.loadExternal(url)
+      this.external = true
     } else {
       const buf = new Uint8ClampedArray(df.getData(info.data))
       this.data = new ImageData(buf, this.width, this.height)
+      this.external = false
     }
   }
 }

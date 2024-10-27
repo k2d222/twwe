@@ -179,6 +179,7 @@
       $rmap.addImage(image)
       const bytes = base64ToBytes(img)
       image.loadExternal(URL.createObjectURL(new Blob([bytes])))
+      image.external = false
     }
   }
   function onDeleteImage(e: Recv['delete/image']) {

@@ -21,6 +21,7 @@
   import { pick, read, sync, _ } from '../../server/util'
   import type { Readable, Writable } from 'svelte/store'
   import type * as Info from '../../twmap/types'
+  import type * as MapDir from '../../twmap/mapdir'
   import Number from './number.svelte'
 
   export let g: number, l: number
@@ -85,7 +86,9 @@
   let imagePickerOpen = false
   let automapperOpen = false
 
-  async function onImagePick(e: Event & { detail: File | Image | string | null }) {
+  async function onImagePick(
+    e: Event & { detail: File | Image | [string, MapDir.ExternalImage] | null }
+  ) {
     if (!layer) return
     imagePickerOpen = false
 
@@ -109,18 +112,17 @@
     }
     // new image from gallery
     else {
-      const name = e.detail
-      const url = externalImageUrl(e.detail)
+      const [name, size] = e.detail
+      const url = externalImageUrl(name)
       const embed = await showInfo('Do you wish to embed this image?', 'yesno')
       if (embed) {
-        const resp = await $server.fetch(url)
+        const resp = await fetch(url)
         const file = await resp.blob()
-        const name = e.detail
         uploadImageAndPick(file, name)
       } else {
         try {
           showInfo('Creating image...', 'none')
-          await $server.query('create/image', [name, { size: { w: 1024, h: 1024 } }])
+          await $server.query('create/image', e.detail)
           const index = $rmap.map.images.length - 1
           await $server.query('edit/layer', [
             g,
@@ -129,6 +131,7 @@
           ])
           clearDialog()
         } catch (e) {
+          clearDialog()
           showError('Failed to create external image: ' + e)
         }
       }

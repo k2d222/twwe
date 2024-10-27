@@ -438,10 +438,10 @@ $header-h: 3rem;
 }
 
 #tile-picker {
+
   >.picker {
     position: absolute;
-    bottom: 0;
-    width: 100%;
+    inset: 0;
     padding-top: 6rem;
     padding-left: 1rem;
     padding-right: 1rem;
@@ -450,14 +450,16 @@ $header-h: 3rem;
     justify-content: center;
 
     >.content {
-      position: relative;
-      z-index: 1;
-      background: white;
-      outline: 3px solid black;
+      aspect-ratio: 1/1;
+      display: flex;
+      align-items: flex-end;
 
-      aspect-ratio: 1 / 1;
-      max-width: 100%;
-      max-height: 100%;
+      >.tiles {
+        position: relative;
+        flex-grow: 1;
+        z-index: 1;
+        outline: 3px solid black;
+      }
     }
 
     &.hidden {

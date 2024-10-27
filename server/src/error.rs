@@ -102,7 +102,10 @@ impl Display for Error {
             Error::FieldTooLong(x) => write!(f, "field '{x}' is too long"),
             Error::WrongEnvelopeType => write!(f, "wrong envelope type"),
             Error::WrongLayerType => write!(f, "wrong layer type"),
-            Error::WrongTilesImage => write!(f, "wrong tiles type"),
+            Error::WrongTilesImage => write!(
+                f,
+                "invalid image for tile layer (dimensions must be divisible by 16)"
+            ),
             Error::ImageInUse => write!(f, "image in use"),
             Error::EnvelopeInUse => write!(f, "envelope in use"),
             Error::MapNameTaken => write!(f, "map name already taken"),

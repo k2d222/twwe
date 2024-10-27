@@ -130,6 +130,7 @@
 
   async function drawLayer(image: Image) {
     const img = await getCanvasImage(image)
+    console.log(image, img, img.width, img.height)
     if (!mounted) return
     canvas.width = img.width as number
     canvas.height = img.height as number
@@ -152,12 +153,16 @@
   type ImageSource = CanvasImageSource & { width: number; height: number }
   async function getCanvasImage(image: Image): Promise<ImageSource> {
     if (image.data instanceof HTMLImageElement) {
-      ctx.drawImage(image.data, 0, 0)
-      return image.data
+      if (image.data.complete) {
+        return image.data
+      } else {
+        return new Promise<ImageSource>(resolve => {
+          const img = image.data as HTMLImageElement
+          img.addEventListener('load', () => resolve(img))
+        })
+      }
     } else if (image.data instanceof ImageData) {
       return createImageBitmap(image.data)
-    } else if (image.img) {
-      return image.img
     } else {
       return Promise.reject('image has no source')
     }
@@ -273,80 +278,80 @@
 <div id="tile-picker">
   <div class="picker" class:hidden={!tilesVisible && !boxSelect}>
     <div class="content">
-      <div class="header">
-        {#if rlayer.layer instanceof TeleLayer}
-          <label>
-            Teleport target <input
-              type="number"
-              min={0}
-              max={255}
-              bind:value={currentTele.number}
-              on:change={onInputChanged}
-            />
-          </label>
-        {:else if rlayer.layer instanceof SpeedupLayer}
-          <label>
-            Speedup force <input
-              type="number"
-              min={0}
-              max={255}
-              bind:value={currentSpeedup.force}
-              on:change={onInputChanged}
-            />
-          </label>
-          <label>
-            Speedup max speed <input
-              type="number"
-              min={0}
-              max={255}
-              bind:value={currentSpeedup.maxSpeed}
-              on:change={onInputChanged}
-            />
-          </label>
-          <label>
-            Speedup angle <input
-              type="number"
-              min={0}
-              max={359}
-              bind:value={currentSpeedup.angle}
-              on:change={onInputChanged}
-            />
-          </label>
-        {:else if rlayer.layer instanceof SwitchLayer}
-          <label>
-            Switch number <input
-              type="number"
-              min={0}
-              max={255}
-              bind:value={currentSwitch.number}
-              on:change={onInputChanged}
-            />
-          </label>
-          <label>
-            Switch delay <input
-              type="number"
-              min={0}
-              max={255}
-              bind:value={currentSwitch.delay}
-              on:change={onInputChanged}
-            />
-          </label>
-        {:else if rlayer.layer instanceof TuneLayer}
-          <label>
-            Tune zone <input
-              type="number"
-              min={0}
-              max={255}
-              bind:value={currentTune.number}
-              on:change={onInputChanged}
-            />
-          </label>
-        {:else}
-          Select tiles to place on the map.
-        {/if}
-      </div>
-
       <div class="tiles">
+        <div class="header">
+          {#if rlayer.layer instanceof TeleLayer}
+            <label>
+              Teleport target <input
+                type="number"
+                min={0}
+                max={255}
+                bind:value={currentTele.number}
+                on:change={onInputChanged}
+              />
+            </label>
+          {:else if rlayer.layer instanceof SpeedupLayer}
+            <label>
+              Speedup force <input
+                type="number"
+                min={0}
+                max={255}
+                bind:value={currentSpeedup.force}
+                on:change={onInputChanged}
+              />
+            </label>
+            <label>
+              Speedup max speed <input
+                type="number"
+                min={0}
+                max={255}
+                bind:value={currentSpeedup.maxSpeed}
+                on:change={onInputChanged}
+              />
+            </label>
+            <label>
+              Speedup angle <input
+                type="number"
+                min={0}
+                max={359}
+                bind:value={currentSpeedup.angle}
+                on:change={onInputChanged}
+              />
+            </label>
+          {:else if rlayer.layer instanceof SwitchLayer}
+            <label>
+              Switch number <input
+                type="number"
+                min={0}
+                max={255}
+                bind:value={currentSwitch.number}
+                on:change={onInputChanged}
+              />
+            </label>
+            <label>
+              Switch delay <input
+                type="number"
+                min={0}
+                max={255}
+                bind:value={currentSwitch.delay}
+                on:change={onInputChanged}
+              />
+            </label>
+          {:else if rlayer.layer instanceof TuneLayer}
+            <label>
+              Tune zone <input
+                type="number"
+                min={0}
+                max={255}
+                bind:value={currentTune.number}
+                on:change={onInputChanged}
+              />
+            </label>
+          {:else}
+            Select tiles to place on the map.
+          {/if}
+        </div>
+
         <canvas
           bind:this={canvas}
           on:mousedown={onMouseDown}
