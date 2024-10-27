@@ -363,7 +363,8 @@
             min={0}
             max={359}
             value={tilesProperty(layer.tiles, 'angle')}
-            on:change={e => onSetProperty('angle', clamp(parseInt(e.currentTarget.value), 0, 255))}
+            on:change={e =>
+              onSetProperty('angle', ((parseInt(e.currentTarget.value) % 360) + 360) % 360)}
           />
         </label>
       {:else if layer.kind === LayerKind.Switch}
