@@ -124,6 +124,19 @@ export class Map {
     )
   }
 
+  envelopeInUse(envelope: number | Envelope) {
+    if (typeof envelope === 'number') envelope = this.envelopes[envelope]
+
+    return (
+      this.groups.findIndex(
+        g =>
+          g.layers.findIndex(
+            l => (l instanceof TilesLayer && l.colorEnv === envelope) || (l instanceof QuadsLayer && l.quads.findIndex(q => q.colorEnv === envelope || q.posEnv === envelope) !== -1)
+          ) !== -1
+      ) !== -1
+    )
+  }
+
   private loadInfo(df: DataFile) {
     const info: MapInfo = {
       author: '',

@@ -389,6 +389,11 @@
 
   async function onDelete() {
     if (!envelope) return
+    if ($rmap.map.envelopeInUse(envelope)) {
+      showError('cannot delete envelope in use')
+      return
+    }
+
     const index = $rmap.map.envelopes.indexOf(envelope)
     try {
       await $server.query('delete/envelope', index)
