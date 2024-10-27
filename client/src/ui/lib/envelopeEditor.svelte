@@ -96,10 +96,10 @@
   }
 
   let setChannelVal: { [k in Chan]: (x: EnvPoint<any>, val: number) => void } = {
-    color_r: (x: EnvPoint<any>, val: number) => (x.content.r = val),
-    color_g: (x: EnvPoint<any>, val: number) => (x.content.g = val),
-    color_b: (x: EnvPoint<any>, val: number) => (x.content.b = val),
-    color_a: (x: EnvPoint<any>, val: number) => (x.content.a = val),
+    color_r: (x: EnvPoint<any>, val: number) => (x.content.r = clamp(val, 0, 1024)),
+    color_g: (x: EnvPoint<any>, val: number) => (x.content.g = clamp(val, 0, 1024)),
+    color_b: (x: EnvPoint<any>, val: number) => (x.content.b = clamp(val, 0, 1024)),
+    color_a: (x: EnvPoint<any>, val: number) => (x.content.a = clamp(val, 0, 1024)),
     pos_x: (x: EnvPoint<any>, val: number) => (x.content.x = val),
     pos_y: (x: EnvPoint<any>, val: number) => (x.content.y = val),
     pos_r: (x: EnvPoint<any>, val: number) => (x.content.rotation = val),
@@ -218,28 +218,23 @@
     else throw 'unknown envelope type'
   }
 
-  const viewBoxMargin = 0.01 // additional space, relative to the viewbox
+  const viewBoxMargin = 0.1 // additional space, relative to the viewbox
 
   function makeViewBox(env: Envelope | null): ViewBox {
     if (env === null || env.points.length === 0) {
-      const xMargin = viewBoxMargin * 1000
-      return { x: -xMargin, y: -1024, w: 1000 + 2 * xMargin, h: 2048 }
+      return { x: 0, y: -1024, w: 1000, h: 2048 }
     }
 
     const allPoints = envChannels(env)
       .map(c => env.points.map((p: EnvPoint<any>) => channelVal[c](p)))
       .flat()
 
-    let minX = -viewBoxMargin
+    let minX = 0
     let maxX = Math.max(1000, env.points[env.points.length - 1].time)
-    let maxY = Math.max.apply(
-      null,
-      allPoints.map(p => Math.abs(p))
-    )
-    let minY = -maxY
+    let maxY = -Math.min.apply(null, allPoints)
+    let minY = -Math.max.apply(null, allPoints)
 
     if (maxY === 0) {
-      // no point
       minY = -1024
       maxY = 1024
     }
@@ -247,6 +242,9 @@
     const xMargin = viewBoxMargin * (maxX - minX)
     minX -= xMargin
     maxX += xMargin
+    const yMargin = viewBoxMargin * (maxY - minY)
+    minY -= yMargin
+    maxY += yMargin
 
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
   }
@@ -432,8 +430,8 @@
       let [px, py] = pixelToSvg(e.clientX, e.clientY)
 
       px = Math.max(0, px) // env times must be >= 0
-      px = Math.min(Math.max(viewBox.x, px), viewBox.x + viewBox.w)
-      py = Math.min(Math.max(viewBox.y, py), viewBox.y + viewBox.h)
+      px = clamp(px, viewBox.x, viewBox.x + viewBox.w)
+      py = clamp(py, viewBox.y, viewBox.y + viewBox.h)
 
       if (point !== next) px = Math.min(px, next.time)
       if (point !== prev) px = Math.max(px, prev.time)
@@ -662,9 +660,14 @@
             />
           {/each}
         {/each}
-        <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis" />
         <!-- the y=0 line -->
+        <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis" />
+        {#if envelope instanceof ColorEnvelope}
+          <!-- the y=1 line -->
+          <line x1={viewBox.x} y1={-1024} x2={viewBox.x + viewBox.w} y2={-1024} class="axis" />
+        {/if}
         {#each Array.from({ length: Math.ceil(viewBox.w / 1000) }) as _, i}
+          <!-- the x=i line -->
           <line
             x1={i * 1000}
             y1={viewBox.y}
@@ -672,7 +675,6 @@
             y2={viewBox.y + viewBox.h}
             class="axis"
           />
-          <!-- the x=i line -->
         {/each}
       </svg>
     </div>
