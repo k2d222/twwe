@@ -112,10 +112,16 @@ export class Map {
   }
 
   imageInUse(image: number | Image) {
-    if (typeof image === 'number')
-      image = this.images[image]
+    if (typeof image === 'number') image = this.images[image]
 
-    return this.groups.findIndex(g => g.layers.findIndex(l => (l instanceof TilesLayer || l instanceof QuadsLayer) && l.image === image) !== -1) !== -1
+    return (
+      this.groups.findIndex(
+        g =>
+          g.layers.findIndex(
+            l => (l instanceof TilesLayer || l instanceof QuadsLayer) && l.image === image
+          ) !== -1
+      ) !== -1
+    )
   }
 
   private loadInfo(df: DataFile) {

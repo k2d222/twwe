@@ -90,32 +90,32 @@ export function colorFromJson(coord: MapDir.Color<string>, floating: number): In
 
 // see https://developer.mozilla.org/en-US/docs/Glossary/Base64
 export function base64ToBytes(base64: string): Uint8Array {
-  const binString = window.atob(base64);
-  return Uint8Array.from(binString, (m) => m.codePointAt(0));
+  const binString = window.atob(base64)
+  return Uint8Array.from(binString, m => m.codePointAt(0))
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
-  const binString = Array.from(bytes, (x) => String.fromCodePoint(x)).join("");
-  return window.btoa(binString);
+  const binString = Array.from(bytes, x => String.fromCodePoint(x)).join('')
+  return window.btoa(binString)
 }
 
 export function tilesToData(tiles: Info.AnyTile[]): string {
   let arr = []
 
   for (const tile of tiles) {
-    if ('force' in tile) { // speedup
+    if ('force' in tile) {
+      // speedup
       arr.push(tile.force, tile.maxSpeed, tile.id, 0, tile.angle & 0xff, (tile.angle >> 8) & 0xff) // little endian for angle
-    }
-    else if ('delay' in tile) { // switch
+    } else if ('delay' in tile) {
+      // switch
       arr.push(tile.number, tile.id, tile.flags, tile.delay)
-    }
-    else if ('flags' in tile) { // tiles | game | front
+    } else if ('flags' in tile) {
+      // tiles | game | front
       arr.push(tile.id, tile.flags, 0, 0)
-    }
-    else if ('number' in tile) { // tele | tune
+    } else if ('number' in tile) {
+      // tele | tune
       arr.push(tile.number, tile.id)
-    }
-    else {
+    } else {
       throw 'unsupported tile type'
     }
   }
@@ -132,20 +132,15 @@ export function dataToTiles(data: string, kind: MapDir.LayerKind): Info.AnyTile[
 
   if (kind === 'tiles' || kind === 'game' || kind === 'front') {
     return Parser.parseTiles(arr, arr.byteLength / 4)
-  }
-  else if (kind === 'tele') {
+  } else if (kind === 'tele') {
     return Parser.parseTeleTiles(arr, arr.byteLength / 2)
-  }
-  else if (kind === 'speedup') {
+  } else if (kind === 'speedup') {
     return Parser.parseSpeedupTiles(arr, arr.byteLength / 6)
-  }
-  else if (kind === 'switch') {
+  } else if (kind === 'switch') {
     return Parser.parseSwitchTiles(arr, arr.byteLength / 4)
-  }
-  else if (kind === 'tune') {
+  } else if (kind === 'tune') {
     return Parser.parseTuneTiles(arr, arr.byteLength / 2)
-  }
-  else {
+  } else {
     throw 'unsupported tile type ' + kind
   }
 }
@@ -169,7 +164,7 @@ export function layerKindToTilesLayerFlags(kind: MapDir.LayerKind) {
   else if (kind === MapDir.LayerKind.Tele) return Info.TilesLayerFlags.TELE
   else if (kind === MapDir.LayerKind.Tiles) return Info.TilesLayerFlags.TILES
   else if (kind === MapDir.LayerKind.Tune) return Info.TilesLayerFlags.TUNE
-  else throw "not a tile layer"
+  else throw 'not a tile layer'
 }
 
 export function resIndexToString(index: number, _name?: string): string {

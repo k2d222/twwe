@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte"
-  import type { FormInputEvent } from "./util"
-
+  import { createEventDispatcher } from 'svelte'
+  import type { FormInputEvent } from './util'
 
   export let label: string = ''
   export let min: number = -2_147_483_648 // default: I32 min
@@ -20,25 +19,15 @@
   function onChange(e: FormInputEvent) {
     let val = integer ? parseInt(e.currentTarget.value) : parseFloat(e.currentTarget.value)
 
-    if (isNaN(val))
-      return
+    if (isNaN(val)) return
 
     val = clamp(val, min, max)
     value = val
     dispatch('change', value)
   }
-
 </script>
 
 <label>
-<span>{label}</span>
-<input
-  type="number"
-  {min}
-  {max}
-  {step}
-  {value}
-  {disabled}
-  on:change={onChange}
-/>
+  <span>{label}</span>
+  <input type="number" {min} {max} {step} {value} {disabled} on:change={onChange} />
 </label>

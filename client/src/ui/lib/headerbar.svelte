@@ -55,13 +55,13 @@
   }
 
   function onRenameMap() {
-    alert("TODO renaming maps is not implemented yet.")
+    alert('TODO renaming maps is not implemented yet.')
   }
 
   function onDownloadMap() {
     Actions.downloadMap()
   }
-  
+
   async function onLeaveMap() {
     Actions.goToLobby()
   }
@@ -77,7 +77,12 @@
 
 <div id="header">
   <div class="left">
-    <button class="header-btn" class:selected={$view === View.Layers} id="nav-toggle" on:click={onToggleLayers}>
+    <button
+      class="header-btn"
+      class:selected={$view === View.Layers}
+      id="nav-toggle"
+      on:click={onToggleLayers}
+    >
       <LayersIcon size={20} title="Layers" />
     </button>
     <!--
@@ -85,13 +90,24 @@
       <EnvelopesIcon size={20} title="Envelopes" />
     </button>
     -->
-    <button class="header-btn" class:selected={$view === View.Images} id="images-toggle" on:click={onToggleImages} disabled>
+    <button
+      class="header-btn"
+      class:selected={$view === View.Images}
+      id="images-toggle"
+      on:click={onToggleImages}
+      disabled
+    >
       <ImagesIcon size={20} title="Images (TODO)" />
     </button>
     <button class="header-btn" class:selected={$view === View.Sounds} id="sounds-toggle" disabled>
       <SoundsIcon size={20} title="Sounds (TODO)" />
     </button>
-    <button class="header-btn" class:selected={$view === View.Automappers} id="automappers-toggle" on:click={onToggleAutomappers}>
+    <button
+      class="header-btn"
+      class:selected={$view === View.Automappers}
+      id="automappers-toggle"
+      on:click={onToggleAutomappers}
+    >
       <AutomapperIcon size={20} title="Automappers" />
     </button>
 
@@ -120,7 +136,8 @@
   </div>
   <div class="right">
     <div id="users">
-      <TeesIcon /> <span>{$peers}</span>
+      <TeesIcon />
+      <span>{$peers}</span>
     </div>
     {#if '__TAURI__' in window || import.meta.env.MODE === 'development'}
       <button class="header-btn" id="share-btn" on:click={onShareMap}>
@@ -131,7 +148,7 @@
 
   <ComposedModal
     open={infoEditorVisible}
-    on:close={() => infoEditorVisible = false}
+    on:close={() => (infoEditorVisible = false)}
     selectorPrimaryFocus=".bx--modal-close"
   >
     <ModalHeader title="Map Properties" />
@@ -143,13 +160,12 @@
   <ComposedModal
     size="sm"
     open={shareVisible}
-    on:close={() => shareVisible = false}
+    on:close={() => (shareVisible = false)}
     selectorPrimaryFocus=".bx--modal-close"
   >
     <ModalHeader title="Sharing options" />
     <ModalBody hasForm>
-      <SharingEditor/>
+      <SharingEditor />
     </ModalBody>
   </ComposedModal>
-
 </div>

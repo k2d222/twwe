@@ -27,7 +27,7 @@
     RadioButton,
     ComboBox,
   } from 'carbon-components-svelte'
-  import storage, { type ServerConfig } from '../../storage'
+  import storage from '../../storage'
   import {
     Help as AboutIcon,
     LogoGithub as GitHubIcon,
@@ -37,10 +37,10 @@
     Password as KeyIcon,
   } from 'carbon-icons-svelte'
   import { createMap, download, queryMaps, uploadMap } from '../lib/util'
-  import type { ComboBoxItem } from 'carbon-components-svelte/types/ComboBox/ComboBox.svelte'
+  import type { ComboBoxItem } from 'carbon-components-svelte/src/ComboBox/ComboBox.svelte'
   import type { MapDetail } from '../../server/protocol'
   import { onMount } from 'svelte'
-  import { serverHttpUrl } from '../../server/util'
+  import { serverHttpUrl, type ServerConfig } from '../../server/server'
 
   type SpinnerStatus = 'active' | 'inactive' | 'finished' | 'error'
   type ServerStatus = 'unknown' | 'connecting' | 'connected' | 'error' | 'online'
@@ -70,6 +70,7 @@
     open: boolean
     name: string
     public: boolean
+    password: string
     method: 'upload' | 'blank' | 'clone'
     clone: number | undefined
     cloneItems: { id: number; text: string }[]
@@ -82,6 +83,7 @@
     open: false,
     name: 'My Map',
     public: true,
+    password: '',
     method: 'upload',
     clone: undefined,
     cloneItems: [],
@@ -109,7 +111,7 @@
     online: ['finished', 'Online'],
   }
 
-  $: serverStatuses = serverCfgs.map<ServerStatus>(_ =>  'unknown')
+  $: serverStatuses = serverCfgs.map<ServerStatus>(_ => 'unknown')
   $: serverCfg = serverCfgs[serverId]
   $: httpUrl = serverHttpUrl(serverCfg)
 
@@ -134,8 +136,7 @@
     serverId = id
     maps = []
 
-    if (serverId >= serverCfgs.length)
-      serverId = 0
+    if (serverId >= serverCfgs.length) serverId = 0
 
     setServerStatus(id, 'connecting')
 
@@ -166,7 +167,7 @@
     const cfg: ServerConfig = {
       ...serverCfg,
       name: 'remote: ' + key,
-      path: (serverCfg.path ?? '') + '/bridge/' + key
+      path: (serverCfg.path ?? '') + '/bridge/' + key,
     }
     serverCfgs.push(cfg)
 
@@ -185,11 +186,15 @@
     modalConfirmDelete.open = true
     modalConfirmDelete.onConfirm = async () => {
       try {
-        await fetch(`${httpUrl}/maps/${mapName}`, {
-          method: 'DELETE'
+        let resp = await fetch(`${httpUrl}/maps/${mapName}`, {
+          method: 'DELETE',
         })
+        if (!resp.ok) {
+          throw await resp.text()
+        }
       } catch (e) {
         showError('Map deletion failed: ' + e)
+        console.error(e)
       }
       modalConfirmDelete.open = false
       selectServer(serverId)
@@ -231,39 +236,41 @@
 
   async function onCreateMap() {
     const { name, method } = modalCreateMap
-    const access = modalCreateMap.public ? 'public' : 'unlisted'
 
     const id = showInfo('Querying the server…', 'none')
 
     try {
       if (method === 'upload' && modalCreateMap.uploadFile !== null) {
         await uploadMap(httpUrl, name, modalCreateMap.uploadFile)
-      }
-      else if (method === 'blank') {
+      } else if (method === 'blank') {
         await createMap(httpUrl, name, {
           version: 'ddnet06', // TODO
-          access,
+          public: modalCreateMap.public,
+          password: modalCreateMap.password,
           blank: {
             w: modalCreateMap.blankWidth,
             h: modalCreateMap.blankHeight,
-          }
+          },
         })
-      }
-      else if (method === 'clone' && modalCreateMap.clone !== undefined) {
+      } else if (method === 'clone' && modalCreateMap.clone !== undefined) {
         await createMap(httpUrl, name, {
           version: 'ddnet06',
-          access,
-          clone: maps[modalCreateMap.clone].name
+          public: modalCreateMap.public,
+          password: modalCreateMap.password,
+          clone: maps[modalCreateMap.clone].name,
         })
       }
 
       clearDialog(id)
-      if (access === 'unlisted') {
-        showWarning("You created a map that won't be publicly listed. To access it in the future, use the access key '" + name + "'.")
+      if (!modalCreateMap.public) {
+        showWarning(
+          "You created a map that won't be publicly listed. To access it in the future, use the access key '" +
+            name +
+            "'."
+        )
       }
       navigate('/edit/' + name)
-    }
-    catch (e) {
+    } catch (e) {
       clearDialog(id)
       showError('Map creation failed: ' + e)
     }
@@ -274,6 +281,10 @@
     return item.text.toLowerCase().includes(value.toLowerCase())
   }
 </script>
+
+<svelte:head>
+  <title>DDNet Map Editor</title>
+</svelte:head>
 
 <div id="header">
   <div class="left" />
@@ -306,7 +317,9 @@
         <p>
           The project is currently in beta, expect some bugs and missing features. Please report
           your bugs and make suggestions on the
-          <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/issues">GitHub issues page</a>
+          <a target="_blank" rel="noreferrer" href="https://github.com/k2d222/twwe/issues">
+            GitHub issues page
+          </a>
           . Have fun!
         </p>
       </Tile>
@@ -377,7 +390,9 @@
           <Toolbar>
             <ToolbarContent>
               <ToolbarSearch persistent value="" shouldFilterRows />
-              <Button kind="ghost" icon={KeyIcon} on:click={() => modalAccessKey.open = true}>Access key</Button>
+              <Button kind="ghost" icon={KeyIcon} on:click={() => (modalAccessKey.open = true)}>
+                Access key
+              </Button>
             </ToolbarContent>
           </Toolbar>
           <svelte:fragment slot="cell" let:cell>
@@ -476,7 +491,8 @@
           <FileUploaderDropContainer
             accept={['.map']}
             labelText="Click to upload"
-            on:change={(e) => modalCreateMap.uploadFile = e.detail.length === 1 ? e.detail[0] : null}
+            on:change={e =>
+              (modalCreateMap.uploadFile = e.detail.length === 1 ? e.detail[0] : null)}
           />
         {:else}
           <FileUploaderItem
@@ -484,7 +500,7 @@
             errorBody="Please select another file."
             size="field"
             status="edit"
-            on:delete={() => modalCreateMap.uploadFile = null}
+            on:delete={() => (modalCreateMap.uploadFile = null)}
             name={modalCreateMap.uploadFile.name}
           />
         {/if}
@@ -509,6 +525,10 @@
       labelA="unlisted"
       labelB="public"
       bind:toggled={modalCreateMap.public}
+    />
+    <TextInput
+      labelText="Password (leave blank for public maps)"
+      bind:value={modalCreateMap.password}
     />
   </div>
 </Modal>
@@ -541,12 +561,7 @@
   primaryButtonDisabled={modalAccessKey.name === ''}
 >
   <br />
-  <TextInput
-    required
-    bind:value={modalAccessKey.name}
-    id="access-key"
-    labelText="Access key"
-  />
+  <TextInput required bind:value={modalAccessKey.name} id="access-key" labelText="Access key" />
 </Modal>
 
 <style>

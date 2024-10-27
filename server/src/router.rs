@@ -2,15 +2,22 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     body::Bytes,
-    extract::{ConnectInfo, DefaultBodyLimit, Path, State, WebSocketUpgrade},
-    http::Method,
+    extract::{ws, ConnectInfo, DefaultBodyLimit, Path, State, WebSocketUpgrade},
+    http::{
+        header::{AUTHORIZATION, CONTENT_TYPE},
+        Method,
+    },
     response::IntoResponse,
     routing::{delete, get, post},
     Json,
 };
-use axum_extra::{headers::UserAgent, TypedHeader};
+use axum_extra::{
+    headers::{authorization::Bearer, Authorization, UserAgent},
+    TypedHeader,
+};
 use axum_server::tls_rustls::RustlsConfig;
 
+use rand::Rng;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{
     cors,
@@ -18,7 +25,7 @@ use tower_http::{
 };
 use vek::num_traits::clamp;
 
-use crate::{base64::Base64, protocol::*};
+use crate::{base64::Base64, error::Error, protocol::*};
 use crate::{Cli, Server};
 
 pub struct Router {
@@ -31,12 +38,12 @@ impl Router {
         let addr: SocketAddr = args.addr.parse().expect("not a valid server address");
 
         let cors = cors::CorsLayer::new()
-            .allow_methods(vec![Method::GET, Method::PUT, Method::POST, Method::DELETE])
-            .allow_origin(cors::Any)
-            .allow_credentials(false)
-            .allow_headers(cors::Any);
+            .allow_methods([Method::GET, Method::PUT, Method::POST, Method::DELETE])
+            .allow_headers([CONTENT_TYPE, AUTHORIZATION])
+            .allow_origin(cors::AllowOrigin::mirror_request());
 
         let http_routes = axum::Router::new()
+            .route("/http", post(route_http))
             .route("/maps", get(route_get_maps))
             .route(
                 "/maps/:map",
@@ -45,36 +52,37 @@ impl Router {
                     .post(route_post_map)
                     .delete(route_delete_map),
             )
-            .route("/maps/:map/map/images", get(route_get_images))
-            .route("/maps/:map/map/images/:image", get(route_get_image))
             .route(
-                "/maps/:map/map/info",
-                get(route_get_info).post(route_post_info),
+                "/maps/:map/config",
+                get(route_get_config).post(route_post_config),
             )
+            .route("/maps/:map/info", get(route_get_info).post(route_post_info))
+            .route("/maps/:map/images", get(route_get_images))
+            .route("/maps/:map/images/:image", get(route_get_image))
             .route(
-                "/maps/:map/map/envelopes",
+                "/maps/:map/envelopes",
                 get(route_get_envelopes).put(route_put_envelope),
             )
             .route(
-                "/maps/:map/map/envelopes/:envelope",
+                "/maps/:map/envelopes/:envelope",
                 get(route_get_envelope)
                     .post(route_post_envelope)
                     .delete(route_delete_envelope),
             )
             .route(
-                "/maps/:map/map/groups",
+                "/maps/:map/groups",
                 get(route_get_groups).put(route_put_group),
             )
             .route(
-                "/maps/:map/map/groups/:group",
+                "/maps/:map/groups/:group",
                 post(route_post_group).delete(route_delete_group),
             )
             .route(
-                "/maps/:map/map/groups/:group/layers",
+                "/maps/:map/groups/:group/layers",
                 get(route_get_layers).put(route_put_layer),
             )
             .route(
-                "/maps/:map/map/groups/:group/layers/:layer",
+                "/maps/:map/groups/:group/layers/:layer",
                 delete(route_delete_layer),
             );
         // .route(
@@ -114,7 +122,7 @@ impl Router {
                 ),
             })
             .layer(DefaultBodyLimit::max(
-                clamp(args.max_map_size, 1 * 1024, 50 * 1024) * 1024,
+                clamp(args.max_map_size, 1024, 50 * 1024) * 1024,
             )) // allows uploading maps between 1MiB-50MiB
             .layer(cors)
             .with_state(server);
@@ -159,6 +167,14 @@ impl Router {
     }
 }
 
+fn gen_token() -> String {
+    rand::thread_rng()
+        .sample_iter(&rand::distributions::Alphanumeric)
+        .take(20)
+        .map(char::from)
+        .collect()
+}
+
 async fn route_websocket(
     State(server): State<Arc<Server>>,
     ws: WebSocketUpgrade,
@@ -170,10 +186,64 @@ async fn route_websocket(
     } else {
         String::from("Unknown browser")
     };
-    log::info!("client {addr} connected");
+
+    let token = gen_token();
+
+    log::info!("client {addr} connected as {token}");
     log::debug!("client user-agent: `{user_agent}`");
 
-    ws.on_upgrade(move |socket| async move { server.handle_websocket(socket, addr).await })
+    ws.on_upgrade(move |mut socket| async move {
+        socket
+            .send(ws::Message::Text(format!("{{\"token\":\"{token}\"}}")))
+            .await
+            .ok();
+        server.handle_websocket(token, socket).await;
+        log::info!("client {addr} disconnected");
+    })
+}
+
+fn ensure_access_authorized(
+    auth: &Option<TypedHeader<Authorization<Bearer>>>,
+    map: &str,
+    server: &Server,
+) -> Result<(), Error> {
+    let room = server.room(map)?;
+    let token = auth.as_ref().map(|auth| auth.token());
+    let user = token.and_then(|token| server.user(token).ok());
+    let authorized = room.config.password.is_none()
+        || user
+            .as_ref()
+            .and_then(|user| user.room())
+            .is_some_and(|r| r == room);
+    if !authorized {
+        log::debug!(
+            "unauthorized: `{map}` for {}",
+            token.unwrap_or("nameless tee")
+        );
+    }
+    authorized.then_some(()).ok_or(Error::Unauthorized)
+}
+
+async fn route_http(
+    State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
+    Json(req_packet): Json<RecvPacket>,
+) -> impl IntoResponse {
+    let user = auth
+        .as_ref()
+        .map(|auth| auth.token())
+        .and_then(|token| server.user(token).ok());
+
+    let resp = server.do_request(user.clone(), req_packet.content.clone());
+
+    if let Some(user) = &user {
+        if resp.is_ok() {
+            server.do_broadcast(user, &req_packet);
+        }
+    }
+
+    let resp_packet = SendPacket::new(req_packet.id, Message::Response(resp));
+    Json(resp_packet)
 }
 
 async fn route_get_maps(State(server): State<Arc<Server>>) -> impl IntoResponse {
@@ -182,8 +252,10 @@ async fn route_get_maps(State(server): State<Arc<Server>>) -> impl IntoResponse 
 
 async fn route_get_map(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_map(&map)
 }
 
@@ -194,7 +266,8 @@ async fn route_put_map(
 ) -> impl IntoResponse {
     let content = MapCreation {
         version: Default::default(),
-        access: Default::default(),
+        public: Default::default(),
+        password: Default::default(),
         method: CreationMethod::Upload(Base64(file.to_vec())),
     };
     server.create_map(&map, content)
@@ -210,125 +283,176 @@ async fn route_post_map(
 
 async fn route_delete_map(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.delete_map(&map)
 }
 
 async fn route_get_images(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_images(&map).map(Json)
 }
 
 async fn route_get_image(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, image)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_image(&map, image)
+}
+
+async fn route_get_config(
+    State(server): State<Arc<Server>>,
+    Path(map): Path<String>,
+) -> impl IntoResponse {
+    server.get_config(&map).map(Json)
+}
+
+async fn route_post_config(
+    State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
+    Path(map): Path<String>,
+    Json(part_config): Json<PartialConfig>,
+) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
+    server.edit_config(&map, part_config)
 }
 
 async fn route_get_info(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_info(&map).map(Json)
 }
 
 async fn route_post_info(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
     Json(part_info): Json<PartialInfo>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.edit_info(&map, part_info)
 }
 
 async fn route_get_envelopes(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_envelopes(&map).map(Json)
 }
 
 async fn route_put_envelope(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
     Json(part_env): Json<PartialEnvelope>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.put_envelope(&map, part_env)
 }
 
 async fn route_get_envelope(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, env)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_envelope(&map, env).map(Json)
 }
 
 async fn route_post_envelope(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, env)): Path<(String, u16)>,
     Json(part_env): Json<PartialEnvelope>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.edit_envelope(&map, env, part_env)
 }
 
 async fn route_delete_envelope(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, env)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.delete_envelope(&map, env)
 }
 
 async fn route_get_groups(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_groups(&map).map(Json)
 }
 
 async fn route_post_group(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, group)): Path<(String, u16)>,
     Json(part_group): Json<PartialGroup>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.edit_group(&map, group, part_group)
 }
 
 async fn route_put_group(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path(map): Path<String>,
     Json(part_group): Json<PartialGroup>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.put_group(&map, part_group)
 }
 
 async fn route_delete_group(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, group)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.delete_group(&map, group)
 }
 
 async fn route_get_layers(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, group)): Path<(String, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.get_layers(&map, group).map(Json)
 }
 
 async fn route_put_layer(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, group)): Path<(String, u16)>,
     Json(part_layer): Json<PartialLayer>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.put_layer(&map, group, part_layer)
 }
 
 async fn route_delete_layer(
     State(server): State<Arc<Server>>,
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
     Path((map, group, layer)): Path<(String, u16, u16)>,
 ) -> impl IntoResponse {
+    ensure_access_authorized(&auth, &map, &server)?;
     server.delete_layer(&map, group, layer)
 }

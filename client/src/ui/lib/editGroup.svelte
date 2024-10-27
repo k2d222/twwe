@@ -69,25 +69,65 @@
       query: 'edit/group',
       match: [g, { clip: { x: pick } }],
       apply: s => fromFixedNum(s, 5),
-      send: s => [g, { clip: { x: toFixedNum(s, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
+      send: s => [
+        g,
+        {
+          clip: {
+            x: toFixedNum(s, 5),
+            y: toFixedNum($syncClipY, 5),
+            w: toFixedNum($syncClipW, 5),
+            h: toFixedNum($syncClipH, 5),
+          },
+        },
+      ],
     })
     syncClipY = sync($server, group.clipY, {
       query: 'edit/group',
       match: [g, { clip: { y: pick } }],
       apply: s => fromFixedNum(s, 5),
-      send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum(s, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum($syncClipH, 5) } }],
+      send: s => [
+        g,
+        {
+          clip: {
+            x: toFixedNum($syncClipX, 5),
+            y: toFixedNum(s, 5),
+            w: toFixedNum($syncClipW, 5),
+            h: toFixedNum($syncClipH, 5),
+          },
+        },
+      ],
     })
     syncClipW = sync($server, group.clipW, {
       query: 'edit/group',
       match: [g, { clip: { w: pick } }],
       apply: s => fromFixedNum(s, 5),
-      send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum(s, 5), h: toFixedNum($syncClipH, 5) } }],
+      send: s => [
+        g,
+        {
+          clip: {
+            x: toFixedNum($syncClipX, 5),
+            y: toFixedNum($syncClipY, 5),
+            w: toFixedNum(s, 5),
+            h: toFixedNum($syncClipH, 5),
+          },
+        },
+      ],
     })
     syncClipH = sync($server, group.clipH, {
       query: 'edit/group',
       match: [g, { clip: { h: pick } }],
       apply: s => fromFixedNum(s, 5),
-      send: s => [g, { clip: { x: toFixedNum($syncClipX, 5), y: toFixedNum($syncClipY, 5), w: toFixedNum($syncClipW, 5), h: toFixedNum(s, 5) } }],
+      send: s => [
+        g,
+        {
+          clip: {
+            x: toFixedNum($syncClipX, 5),
+            y: toFixedNum($syncClipY, 5),
+            w: toFixedNum($syncClipW, 5),
+            h: toFixedNum(s, 5),
+          },
+        },
+      ],
     })
   }
 
@@ -115,66 +155,70 @@
   function onDeleteGroup() {
     $server.query('delete/group', g)
   }
-
 </script>
 
 {#key sync_}
-<div class="edit-group">
-  <h3 class="bx--modal-header__heading">Group #{g} {$syncName}</h3>
-  <Number label="Order" integer min={0} max={$map.groups.length - 1} bind:value={$syncOrder} />
-  {#if group !== $map.physicsGroup()}
-    <Number label="Pos X" integer bind:value={$syncOffX} />
-    <Number label="Pos Y" integer bind:value={$syncOffY} />
-    <Number label="Para X" integer bind:value={$syncParaX} />
-    <Number label="Para Y" integer bind:value={$syncParaY} />
-    <label>
-      <span>Use Clipping</span>
-      <input type="checkbox" bind:checked={$syncClipping} />
-    </label>
-    <Number label="X" integer disabled={!$syncClipping} bind:value={$syncClipX} />
-    <Number label="Y" integer disabled={!$syncClipping} bind:value={$syncClipY} />
-    <Number label="Width" integer disabled={!$syncClipping} bind:value={$syncClipW} />
-    <Number label="Height" integer disabled={!$syncClipping} bind:value={$syncClipH} />
-    <label>
-      <span>Name</span>
-      <input type="text" value={$syncName} maxlength={11} on:change={e => $syncName = e.currentTarget.value} />
-    </label>
-  {/if}
-  <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tiles, '')}>
-    Add tile layer
-  </button>
-  <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Quads, '')}>
-    Add quad layer
-  </button>
-  {#if group === $map.physicsGroup()}
-    {#if !$map.physicsLayer(SwitchLayer)}
-      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Switch, 'Switch')} >
-        Add switch layer
-      </button>
+  <div class="edit-group">
+    <h3 class="bx--modal-header__heading">Group #{g} {$syncName}</h3>
+    <Number label="Order" integer min={0} max={$map.groups.length - 1} bind:value={$syncOrder} />
+    {#if group !== $map.physicsGroup()}
+      <Number label="Pos X" integer bind:value={$syncOffX} />
+      <Number label="Pos Y" integer bind:value={$syncOffY} />
+      <Number label="Para X" integer bind:value={$syncParaX} />
+      <Number label="Para Y" integer bind:value={$syncParaY} />
+      <label>
+        <span>Use Clipping</span>
+        <input type="checkbox" bind:checked={$syncClipping} />
+      </label>
+      <Number label="X" integer disabled={!$syncClipping} bind:value={$syncClipX} />
+      <Number label="Y" integer disabled={!$syncClipping} bind:value={$syncClipY} />
+      <Number label="Width" integer disabled={!$syncClipping} bind:value={$syncClipW} />
+      <Number label="Height" integer disabled={!$syncClipping} bind:value={$syncClipH} />
+      <label>
+        <span>Name</span>
+        <input
+          type="text"
+          value={$syncName}
+          maxlength={11}
+          on:change={e => ($syncName = e.currentTarget.value)}
+        />
+      </label>
     {/if}
-    {#if !$map.physicsLayer(FrontLayer)}
-      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Front, 'Front')} >
-        Add front layer
-      </button>
+    <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tiles, '')}>
+      Add tile layer
+    </button>
+    <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Quads, '')}>
+      Add quad layer
+    </button>
+    {#if group === $map.physicsGroup()}
+      {#if !$map.physicsLayer(SwitchLayer)}
+        <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Switch, 'Switch')}>
+          Add switch layer
+        </button>
+      {/if}
+      {#if !$map.physicsLayer(FrontLayer)}
+        <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Front, 'Front')}>
+          Add front layer
+        </button>
+      {/if}
+      {#if !$map.physicsLayer(TuneLayer)}
+        <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tune, 'Tune')}>
+          Add tune layer
+        </button>
+      {/if}
+      {#if !$map.physicsLayer(SpeedupLayer)}
+        <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Speedup, 'Speedup')}>
+          Add speedup layer
+        </button>
+      {/if}
+      {#if !$map.physicsLayer(TeleLayer)}
+        <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tele, 'Tele')}>
+          Add tele layer
+        </button>
+      {/if}
     {/if}
-    {#if !$map.physicsLayer(TuneLayer)}
-      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tune, 'Tune')} >
-        Add tune layer
-      </button>
+    {#if $map.groups[g] !== $map.physicsGroup()}
+      <button class="danger large" on:click={onDeleteGroup}>Delete group</button>
     {/if}
-    {#if !$map.physicsLayer(SpeedupLayer)}
-      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Speedup, 'Speedup')} >
-        Add speedup layer
-      </button>
-    {/if}
-    {#if !$map.physicsLayer(TeleLayer)}
-      <button class="default" on:click={onCreateLayer(MapDir.LayerKind.Tele, 'Tele')} >
-        Add tele layer
-      </button>
-    {/if}
-  {/if}
-  {#if $map.groups[g] !== $map.physicsGroup()}
-    <button class="danger large" on:click={onDeleteGroup}>Delete group</button>
-  {/if}
-</div>
+  </div>
 {/key}

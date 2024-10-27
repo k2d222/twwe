@@ -16,7 +16,7 @@ import { Image } from '../twmap/image'
 import { Texture } from './texture'
 
 export class RenderAnyTilesLayer<
-  T extends AnyTilesLayer<{ id: number; flags?: number }>
+  T extends AnyTilesLayer<{ id: number; flags?: number }>,
 > extends RenderLayer {
   layer: T
   texture: Texture
@@ -202,8 +202,7 @@ export class RenderAnyTilesLayer<
 
   private initBuffers() {
     for (let y = 0; y < this.buffers.length; y++)
-      for (let x = 0; x < this.buffers[0].length; x++)
-        this.initChunkBuffer(x, y)
+      for (let x = 0; x < this.buffers[0].length; x++) this.initChunkBuffer(x, y)
   }
 }
 
@@ -474,7 +473,8 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
           // skip tiles with id 0
           continue
 
-        { // force
+        {
+          // force
           const split = splitNumber(tile.force)
           const vertices = makeNumberVertices(x, y, split)
           vertexArr.set(vertices, t * 12 * 3)
@@ -484,7 +484,8 @@ export class RenderSpeedupLayer extends RenderAnyTilesLayer<SpeedupLayer> {
 
           t++
         }
-        { // max speed
+        {
+          // max speed
           const split = splitNumber(tile.maxSpeed)
           const vertices = makeNumberVertices(x, y, split, true)
           vertexArr.set(vertices, t * 12 * 3)
@@ -584,7 +585,8 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
           // skip tiles with id 0
           continue
 
-        { // number
+        {
+          // number
           const split = splitNumber(tile.number)
           const vertices = makeNumberVertices(x, y, split)
           vertexArr.set(vertices, t * 12 * 3)
@@ -594,7 +596,8 @@ export class RenderSwitchLayer extends RenderAnyTilesLayer<SwitchLayer> {
 
           t++
         }
-        { // delay
+        {
+          // delay
           const split = splitNumber(tile.delay)
           const vertices = makeNumberVertices(x, y, split, true)
           vertexArr.set(vertices, t * 12 * 3)
@@ -731,10 +734,10 @@ function makeTexCoords(tile: { id: number; flags?: number }, atlasSize: number) 
 }
 
 function makeArrowTexCoords(tile: { angle: number }) {
-  const cos = Math.cos(tile.angle / 180 * Math.PI)
-  const sin = -Math.sin(tile.angle / 180 * Math.PI)
-  const x = (cos - sin) / Math.sqrt(2) * 0.5
-  const y = (sin + cos) / Math.sqrt(2) * 0.5
+  const cos = Math.cos((tile.angle / 180) * Math.PI)
+  const sin = -Math.sin((tile.angle / 180) * Math.PI)
+  const x = ((cos - sin) / Math.sqrt(2)) * 0.5
+  const y = ((sin + cos) / Math.sqrt(2)) * 0.5
 
   let p1x = -x + 0.5
   let p1y = -y + 0.5
@@ -757,14 +760,19 @@ function splitNumber(num: number): [number, number, number] {
   ]
 }
 
-function makeNumberVertices(x: number, y: number, digits: [number, number, number], bottom = false) {
+function makeNumberVertices(
+  x: number,
+  y: number,
+  digits: [number, number, number],
+  bottom = false
+) {
   // tweaking the font appearance
   const w = 0.7
   const spacing = -0.4 // distance beetween numbers
   y -= 0.05
   x -= 0.17
 
-  if(bottom) {
+  if (bottom) {
     y += 0.5 - 0.05
   }
 
@@ -791,7 +799,8 @@ function makeNumberTexCoords(digits: [number, number, number]) {
 
   for (let i = 0; i < digits.length; i++) {
     const digit = digits[i]
-    let tx = 0, ty = 0
+    let tx = 0,
+      ty = 0
 
     // avoid drawing leading zeros
     if (digit !== 0 || !leadingZero || i === digits.length - 1) {

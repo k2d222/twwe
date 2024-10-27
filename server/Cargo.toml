@@ -26,7 +26,7 @@ clap = { version = "4.5", features = ["derive"] }
 regex = "1.6"
 axum = { version = "0.7", features = ["tokio", "multipart", "ws"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
-axum-extra = { version = "0.9.4", features = ["typed-header"] }
+axum-extra = { version = "0.9.4", features = ["cookie", "typed-header"] }
 tower-http = { version = "0.6.1", features = ["fs", "cors", "limit"] }
 fixed = "1.19"
 image = "0.24.5"
@@ -42,6 +42,8 @@ either = "1.9.0"
 itertools = "0.11.0"
 tower_governor = { version = "0.4.3", features = ["axum"] }
 tokio-tungstenite = { version = "0.24.0", features = ["rustls-tls-webpki-roots"] }
+bcrypt = "0.15.1"
+lazy_static = "1.5.0"
 
 
 [lib]

@@ -28,7 +28,7 @@
   $: rgroup = g === -1 ? null : $rmap.groups[g]
   $: rlayer = l === -1 ? null : rgroup.layers[l]
   $: group = rgroup === null ? null : rgroup.group
-  $: layer = rlayer === null ? null : rlayer.layer as TilesLayer | QuadsLayer
+  $: layer = rlayer === null ? null : (rlayer.layer as TilesLayer | QuadsLayer)
 
   function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
@@ -86,8 +86,7 @@
   let automapperOpen = false
 
   async function onImagePick(e: Event & { detail: File | Image | string | null }) {
-    if (!layer)
-      return
+    if (!layer) return
     imagePickerOpen = false
 
     // no image used
@@ -97,7 +96,11 @@
     // use existing image
     else if (e.detail instanceof Image) {
       const index = $rmap.map.images.indexOf(e.detail)
-      await $server.query('edit/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, e.detail.name) }])
+      await $server.query('edit/layer', [
+        g,
+        l,
+        { type: layerKind(layer), image: resIndexToString(index, e.detail.name) },
+      ])
     }
     // new uploaded image
     else if (e.detail instanceof File) {
@@ -110,17 +113,20 @@
       const url = externalImageUrl(e.detail)
       const embed = await showInfo('Do you wish to embed this image?', 'yesno')
       if (embed) {
-        const resp = await fetch(url)
+        const resp = await $server.fetch(url)
         const file = await resp.blob()
         const name = e.detail
         uploadImageAndPick(file, name)
-      }
-      else {
+      } else {
         try {
           showInfo('Creating image...', 'none')
           await $server.query('create/image', [name, { size: { w: 1024, h: 1024 } }])
           const index = $rmap.map.images.length - 1
-          await $server.query('edit/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
+          await $server.query('edit/layer', [
+            g,
+            l,
+            { type: layerKind(layer), image: resIndexToString(index, name) },
+          ])
           clearDialog()
         } catch (e) {
           showError('Failed to create external image: ' + e)
@@ -130,14 +136,17 @@
   }
 
   async function uploadImageAndPick(file: Blob, name: string) {
-    if (!layer)
-      return
+    if (!layer) return
     try {
       // await uploadImage($serverCfg.httpUrl, $rmap.map.name, name, file) // TODO return index
       const buf = new Uint8Array(await file.arrayBuffer())
       await $server.query('create/image', [name, bytesToBase64(buf)])
       const index = $rmap.map.images.length - 1
-      await $server.query('edit/layer', [g, l, { type: layerKind(layer), image: resIndexToString(index, name) }])
+      await $server.query('edit/layer', [
+        g,
+        l,
+        { type: layerKind(layer), image: resIndexToString(index, name) },
+      ])
     } catch (e) {
       showError('Failed to upload image: ' + e)
     }
@@ -168,13 +177,25 @@
 
   $: syncGroup = sync($server, g, {
     query: 'move/layer',
-    match: [[g, l], [pick, _]],
-    send: s => [[g, l], [s, 0]],
+    match: [
+      [g, l],
+      [pick, _],
+    ],
+    send: s => [
+      [g, l],
+      [s, 0],
+    ],
   })
   $: syncOrder = sync($server, l, {
     query: 'move/layer',
-    match: [[g, l], [_, pick]],
-    send: s => [[g, l], [g, s]],
+    match: [
+      [g, l],
+      [_, pick],
+    ],
+    send: s => [
+      [g, l],
+      [g, s],
+    ],
   })
   $: if (layer) {
     syncName = sync($server, layer.name, {
@@ -215,8 +236,15 @@
     syncColorEnv = sync($server, $rmap.map.envelopes.indexOf(layer.colorEnv), {
       query: 'edit/layer',
       match: [g, l, { color_env: pick }],
-      apply: s => s === null ? -1 : stringToResIndex(s)[0],
-      send: s => [g, l, { type: layerKind(layer), color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name) }],
+      apply: s => (s === null ? -1 : stringToResIndex(s)[0]),
+      send: s => [
+        g,
+        l,
+        {
+          type: layerKind(layer),
+          color_env: s === -1 ? null : resIndexToString(s, $rmap.map.envelopes[s].name),
+        },
+      ],
     })
   }
   $: if (layer && layer instanceof AnyTilesLayer) {
@@ -226,22 +254,25 @@
       send: s => [g, l, { type: layerKind(layer), color_env_offset: s }],
     })
   }
-  $: if (layer && layer instanceof TilesLayer || layer instanceof QuadsLayer) {
+  $: if ((layer && layer instanceof TilesLayer) || layer instanceof QuadsLayer) {
     syncImg = read($server, layer.image, {
       query: 'edit/layer',
       match: [g, l, { image: pick }],
       apply: () => layer.image,
     })
   }
-  $: syncImgs = read($server, $rmap.map.images, [{
-    query: 'create/image',
-    match: pick,
-    apply: () => $rmap.map.images,
-  }, {
-    query: 'delete/image',
-    match: pick,
-    apply: () => $rmap.map.images,
-  }])
+  $: syncImgs = read($server, $rmap.map.images, [
+    {
+      query: 'create/image',
+      match: pick,
+      apply: () => $rmap.map.images,
+    },
+    {
+      query: 'delete/image',
+      match: pick,
+      apply: () => $rmap.map.images,
+    },
+  ])
   $: if (layer && layer instanceof TilesLayer) {
     syncAmCfg = read($server, layer.automapper.config === -1 ? null : layer.automapper.config, {
       query: 'edit/layer',
@@ -249,19 +280,27 @@
     })
   }
   $: if (layer && layer instanceof TilesLayer) {
-    syncColEnvs = read($server, $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope), [{
-    query: 'create/envelope',
-    match: pick,
-    apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
-  }, {
-    query: 'delete/envelope',
-    match: pick,
-    apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
-  }, {
-    query: 'edit/envelope',
-    match: pick,
-    apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
-  }])
+    syncColEnvs = read(
+      $server,
+      $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
+      [
+        {
+          query: 'create/envelope',
+          match: pick,
+          apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
+        },
+        {
+          query: 'delete/envelope',
+          match: pick,
+          apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
+        },
+        {
+          query: 'edit/envelope',
+          match: pick,
+          apply: () => $rmap.map.envelopes.filter(e => e instanceof ColorEnvelope),
+        },
+      ]
+    )
   }
 
   function onEditColor(e: FormInputEvent) {
@@ -286,14 +325,18 @@
   async function onAutomapperChange() {
     if (!layer) return
     const automapper = (layer as TilesLayer).automapper
-    await $server.query('edit/layer', [g, l, {
-      type: layerKind(layer),
-      automapper_config: {
-        config: automapper.config === -1 ? null : automapper.config,
-        seed: automapper.seed,
-        automatic: automapper.automatic,
-      }
-    }])
+    await $server.query('edit/layer', [
+      g,
+      l,
+      {
+        type: layerKind(layer),
+        automapper_config: {
+          config: automapper.config === -1 ? null : automapper.config,
+          seed: automapper.seed,
+          automatic: automapper.automatic,
+        },
+      },
+    ])
   }
 </script>
 
@@ -317,7 +360,11 @@
       </label>
       <label>
         <span>Image</span>
-        <input type="button" value={$syncImg?.name ?? '(none)'} on:click={() => (imagePickerOpen = true)} />
+        <input
+          type="button"
+          value={$syncImg?.name ?? '(none)'}
+          on:click={() => (imagePickerOpen = true)}
+        />
       </label>
     {/if}
     {#if layer instanceof TilesLayer}
@@ -335,7 +382,7 @@
           <option value={-1}>None</option>
           {#each $syncColEnvs as env}
             {@const i = $rmap.map.envelopes.indexOf(env)}
-            <option value={i}> {'#' + i + ' ' + (env.name || '(unnamed)')} </option>
+            <option value={i}>{'#' + i + ' ' + (env.name || '(unnamed)')}</option>
           {/each}
         </select>
       </label>
@@ -343,27 +390,45 @@
       <label>
         <span>
           {#if $syncAmCfg !== null && $automappers[$syncImg?.name + '.rules'] === undefined}
-            <TooltipIcon tooltipText="The rules file is missing. Upload or create one." icon={WarningAlt} direction="bottom" align="start" />
+            <TooltipIcon
+              tooltipText="The rules file is missing. Upload or create one."
+              icon={WarningAlt}
+              direction="bottom"
+              align="start"
+            />
           {/if}
           Automapper
         </span>
-        <input type="button" value={amCfgName($syncImg?.name, $syncAmCfg)} disabled={$syncImg === null} on:click={() => automapperOpen = true} />
+        <input
+          type="button"
+          value={amCfgName($syncImg?.name, $syncAmCfg)}
+          disabled={$syncImg === null}
+          on:click={() => (automapperOpen = true)}
+        />
       </label>
       <ComposedModal bind:open={automapperOpen} size="sm" selectorPrimaryFocus=".bx--modal-close">
         <ModalHeader title="Automapper" />
         <ModalBody hasForm>
-          <AutomapperPicker
-            {layer}
-            on:change={onAutomapperChange}
-          />
+          <AutomapperPicker {layer} on:change={onAutomapperChange} />
         </ModalBody>
       </ComposedModal>
-      <button class="default" disabled={$syncAmCfg === null || $syncImg === null} on:click={onAutomap}>Apply Automapper</button>
+      <button
+        class="default"
+        disabled={$syncAmCfg === null || $syncImg === null}
+        on:click={onAutomap}
+      >
+        Apply Automapper
+      </button>
     {/if}
     {#if layer instanceof TilesLayer || layer instanceof QuadsLayer}
       <label>
         <span>Name</span>
-        <input type="text" value={$syncName} maxlength={11} on:change={e => $syncName = e.currentTarget.value} />
+        <input
+          type="text"
+          value={$syncName}
+          maxlength={11}
+          on:change={e => ($syncName = e.currentTarget.value)}
+        />
       </label>
     {/if}
     {#if !(layer instanceof GameLayer)}
@@ -384,4 +449,3 @@
     />
   </ModalBody>
 </ComposedModal>
-

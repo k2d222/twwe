@@ -1,9 +1,8 @@
-import { clearDialog, showDialog, showError, showInfo } from "./lib/dialog"
-import { server, serverCfg, rmap, peers } from "./global"
-import { get } from "svelte/store"
+import { clearDialog, showDialog, showError, showInfo } from './lib/dialog'
+import { server, rmap, peers } from './global'
+import { get } from 'svelte/store'
 import { navigate } from 'svelte-routing'
-import { download } from "./lib/util"
-import { serverHttpUrl } from "../server/util"
+import { download } from './lib/util'
 
 export async function saveMap() {
   const server_ = get(server)
@@ -18,11 +17,9 @@ export async function saveMap() {
 }
 
 export async function downloadMap() {
-  const serverConf_ = get(serverCfg)
   const rmap_ = get(rmap)
-
-  const httpUrl = serverHttpUrl(serverConf_)
-
+  const server_ = get(server)
+  const httpUrl = server_.httpUrl
   download(`${httpUrl}/maps/${rmap_.map.name}`, `${rmap_.map.name}.map`)
 }
 
@@ -40,8 +37,8 @@ export async function deleteMap() {
 
   if (res) {
     try {
-      await server_.query('leave', rmap_.map.name)
       await server_.query('delete', rmap_.map.name)
+      await server_.query('leave', rmap_.map.name)
       navigate('/')
     } catch (e) {
       showError('Map deletion failed: ' + e)

@@ -9,7 +9,7 @@ use serde_with::{
 use twmap::{AutomapperConfig, EnvPoint, Position, Volume};
 use vek::{Extent2, Rect, Rgba, Uv, Vec2};
 
-use crate::{base64::Base64, error::Error, map_cfg::MapAccess};
+use crate::{base64::Base64, error::Error, util::timestamp_now};
 
 // Some documentation about the communication between clients and the server:
 // ----------
@@ -32,10 +32,19 @@ use crate::{base64::Base64, error::Error, map_cfg::MapAccess};
 // system similar to how databases handle concurrent modifications.
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MapConfig {
+pub struct Config {
     pub name: String,
-    pub access: MapAccess,
-    pub version: Option<twmap::Version>,
+    pub public: bool,
+    pub password: bool,
+    pub version: twmap::Version,
+}
+
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PartialConfig {
+    pub name: Option<String>,
+    pub public: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -125,13 +134,6 @@ pub struct Cursor {
     pub layer: i32,
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-#[serde(default)]
-pub struct PartialConfig {
-    pub name: Option<String>,
-    pub access: Option<MapAccess>,
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CreationMethod {
@@ -152,7 +154,9 @@ pub struct MapCreation {
     #[serde(default)]
     pub version: Option<Version>,
     #[serde(default)]
-    pub access: Option<MapAccess>,
+    pub public: Option<bool>,
+    #[serde(default)]
+    pub password: Option<String>,
     #[serde(flatten)]
     pub method: CreationMethod,
 }
@@ -304,6 +308,12 @@ pub struct HttpReq {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct JoinReq {
+    pub name: String,
+    pub password: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum GetReq {
     #[serde(rename = "get/map")]
@@ -312,6 +322,10 @@ pub enum GetReq {
     Users,
     #[serde(rename = "get/cursors")]
     Cursors,
+    #[serde(rename = "get/config")]
+    Config,
+    #[serde(rename = "get/info")]
+    Info,
     #[serde(rename = "get/images")]
     Images,
     #[serde(rename = "get/image")]
@@ -424,8 +438,10 @@ pub enum MoveReq {
 pub enum Request {
     #[serde(rename = "list")]
     ListMaps,
+    #[serde(rename = "config")]
+    Config(String),
     #[serde(rename = "join")]
-    JoinMap(String),
+    JoinMap(JoinReq),
     #[serde(rename = "leave")]
     LeaveMap(String),
     #[serde(rename = "get")]
@@ -455,8 +471,13 @@ pub enum Request {
 #[serde(untagged)]
 pub enum Response {
     Ok,
+    Token(String),
     Maps(Vec<MapDetail>),
     Map(Base64),
+    Users(usize),
+    Cursors(HashMap<String, Cursor>),
+    Config(Box<Config>),
+    Info(Box<twmap::Info>),
     Images(Vec<String>),
     Image(Base64),
     Envelopes(Vec<String>),
@@ -470,8 +491,6 @@ pub enum Response {
     Automappers(Vec<AutomapperDetail>),
     AutomapperDiagnostics(Vec<AutomapperDiagnostic>),
     Automapper(String),
-    Users(usize),
-    Cursors(HashMap<String, Cursor>),
 }
 
 // Messages that are sent unrequested from the client.
@@ -512,6 +531,16 @@ pub struct Packet<T> {
     pub id: Option<u32>, // same ID will be set by client request
     #[serde(flatten)]
     pub content: T,
+}
+
+impl<T> Packet<T> {
+    pub fn new(id: Option<u32>, content: T) -> Self {
+        Self {
+            timestamp: timestamp_now(),
+            id,
+            content,
+        }
+    }
 }
 
 pub type SendPacket = Packet<Message>;

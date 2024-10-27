@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { InlineNotification, Toggle } from "carbon-components-svelte"
-  import storage from "../../storage"
+  import { InlineNotification, Toggle } from 'carbon-components-svelte'
+  import storage from '../../storage'
   import { generate } from 'random-words'
-  import { serverCfg, map } from "../global"
-  import { serverHttpUrl, serverWsUrl } from "../../server/util"
-  import { showError } from "./dialog"
+  import { serverCfg, map } from '../global'
+  import { showError } from './dialog'
+  import { serverHttpUrl, serverWsUrl, type ServerConfig } from '../../server/server'
 
   let serverId = storage.load('currentServer')
   let serverCfgs = storage.load('servers')
@@ -19,7 +19,6 @@
   async function startBridge(): Promise<void> {
     const httpUrl = serverHttpUrl($serverCfg) + '/bridge_open'
     const shareUrl = serverWsUrl(shareCfg) + '/bridge'
-    console.log(shareUrl)
     const json = {
       url: shareUrl,
       map: $map.name,
@@ -29,10 +28,9 @@
       let resp = await fetch(httpUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(json)
+        body: JSON.stringify(json),
       })
-      if (!resp.ok)
-        throw await resp.text()
+      if (!resp.ok) throw await resp.text()
     } catch (e) {
       showError(e)
       shareEnabled = false
@@ -51,12 +49,13 @@
       stopBridge()
     }
   }
-
 </script>
 
-
 <div class="edit-sharing">
-  <p>In this dialog you can open access to your map on the internet, so other tees can connect and edit with you.</p>
+  <p>
+    In this dialog you can open access to your map on the internet, so other tees can connect and
+    edit with you.
+  </p>
   <InlineNotification
     lowContrast
     hideCloseButton
@@ -83,7 +82,11 @@
       title="How can others connect?"
       subtitle="From the start screen, add a server with address {shareCfg.host} and port {shareCfg.port}. Then, join the map with the Access key 🔑 '{shareName}'."
     />
-    <Toggle on:toggle={onToggleSharing} bind:toggled={shareEnabled} labelA="Sharing disabled" labelB="Sharing enabled" />
+    <Toggle
+      on:toggle={onToggleSharing}
+      bind:toggled={shareEnabled}
+      labelA="Sharing disabled"
+      labelB="Sharing enabled"
+    />
   {/if}
 </div>
-

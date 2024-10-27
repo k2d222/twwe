@@ -1,12 +1,6 @@
-const { VITE_SERVER_URLS } = import.meta.env
+import type { ServerConfig } from "./server/server"
 
-export interface ServerConfig {
-  name: string
-  host: string
-  port: number
-  encrypted: boolean
-  path?: string
-}
+const { VITE_SERVER_URLS } = import.meta.env
 
 interface StorageSpec {
   servers: ServerConfig[]
@@ -22,22 +16,29 @@ interface StorageEntry<T> {
 type StorageEntries = { [K in keyof StorageSpec]: StorageEntry<StorageSpec[K]> }
 
 function isServerConfig(entry: any): entry is ServerConfig {
-  return typeof entry === 'object' && ['name', 'host', 'port', 'encrypted'].every(k => entry.hasOwnProperty(k))
+  return (
+    typeof entry === 'object' &&
+    ['name', 'host', 'port', 'encrypted'].every(k => entry.hasOwnProperty(k))
+  )
 }
 
 const entries: StorageEntries = {
   servers: {
     clone: (confs: ServerConfig[]) => confs.map(c => ({ ...c })),
-    default: VITE_SERVER_URLS
-      .split(',')
+    default: VITE_SERVER_URLS.split(',')
       .map(url => url.split(':'))
-      .map(([name, host, port, ssl]) => ({ name, host, port: parseInt(port), encrypted: ssl === '1' })),
-    sanitize: (entry: any) =>  Array.isArray(entry) && entry.every(e => isServerConfig(e))
+      .map(([name, host, port, ssl]) => ({
+        name,
+        host,
+        port: parseInt(port),
+        encrypted: ssl === '1',
+      })),
+    sanitize: (entry: any) => Array.isArray(entry) && entry.every(e => isServerConfig(e)),
   },
   currentServer: {
     clone: x => x,
     default: 0,
-    sanitize: (entry: any) => typeof entry === 'number' && entry < storage.load('servers').length
+    sanitize: (entry: any) => typeof entry === 'number' && entry < storage.load('servers').length,
   },
 }
 
@@ -63,24 +64,25 @@ const storage = {
       const res = JSON.parse(item)
       if (entries[key].sanitize(res)) {
         return res
-      }
-      else {
+      } else {
         throw 'sanitization failed'
       }
-    }
-    catch (e) {
+    } catch (e) {
       console.error('localstorage failure:', e)
       storage.reset()
       return storage.load(key)
     }
   },
 
-  save: function <K extends keyof StorageSpec>(key: K, val: StorageSpec[K], { persistent } = { persistent: true }) {
+  save: function <K extends keyof StorageSpec>(
+    key: K,
+    val: StorageSpec[K],
+    { persistent } = { persistent: true }
+  ) {
     if (persistent) {
       localStorage.setItem(key, JSON.stringify(val))
       sessionStorage.removeItem(key)
-    }
-    else {
+    } else {
       sessionStorage.setItem(key, JSON.stringify(val))
     }
   },

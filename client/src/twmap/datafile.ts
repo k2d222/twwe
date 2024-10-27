@@ -92,7 +92,6 @@ export class DataFile {
 
     // calculate checksum
     this.crc = crc32(new Uint8Array(this.data))
-    console.info('map crc', this.crc.toString(16))
 
     // we only support datafile version 4
     if (this.version != 4) {

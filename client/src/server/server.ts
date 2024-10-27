@@ -1,8 +1,22 @@
-import type { SendPacket, Result, SendKey, RecvKey, Recv, Send, Resp, RecvPacket, RespPacket } from './protocol'
+import type {
+  SendPacket,
+  Result,
+  SendKey,
+  RecvKey,
+  Recv,
+  Send,
+  Resp,
+  RecvPacket,
+  RespPacket,
+} from './protocol'
 import { History } from './history'
 
 type QueryFn<K extends SendKey> = (resp: Result<Resp[K]>) => unknown
 type ListenFn<K extends RecvKey> = (resp: Recv[K]) => unknown
+
+export interface Options {
+  timeout?: number
+}
 
 export interface Server {
   // subscribe to a server event with a callback function
@@ -12,10 +26,10 @@ export interface Server {
   off<K extends RecvKey>(type: K, fn: ListenFn<K>): void
 
   // send a request to the server
-  send<K extends SendKey>(type: K, content?: Send[K]): void
+  send<K extends SendKey>(type: K, content?: Send[K], options?: Partial<Options>): void
 
   // send a request to the server and capture the reply
-  query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]>
+  query<K extends SendKey>(type: K, content: Send[K], options?: Partial<Options>): Promise<Resp[K]>
 }
 
 type Listener<E> = (evt: E, promise: Promise<void>) => unknown
@@ -28,24 +42,18 @@ export class EventDispatcher<E extends Record<string, any>> {
   }
 
   on<K extends keyof E>(type: K, fn: Listener<E[K]>, priority: boolean = false) {
-    if (this.listeners[type] === undefined)
-      this.listeners[type] = []
+    if (this.listeners[type] === undefined) this.listeners[type] = []
 
-    if (priority)
-      this.listeners[type].unshift(fn)
-    else
-      this.listeners[type].push(fn)
+    if (priority) this.listeners[type].unshift(fn)
+    else this.listeners[type].push(fn)
   }
 
   off<K extends keyof E>(type: K, fn: Listener<E[K]>) {
-    if (this.listeners[type] === undefined)
-      console.error('server.off(): could not find listener')
+    if (this.listeners[type] === undefined) console.error('server.off(): could not find listener')
 
     const index = this.listeners[type].indexOf(fn)
-    if (index !== -1)
-      this.listeners[type].splice(index, 1)
-    else
-      console.error('server.off(): could not find listener')
+    if (index !== -1) this.listeners[type].splice(index, 1)
+    else console.error('server.off(): could not find listener')
   }
 
   dispatch<K extends keyof E>(type: K, evt: E[K], promise: Promise<void> = Promise.resolve()) {
@@ -57,50 +65,48 @@ export class EventDispatcher<E extends Record<string, any>> {
   }
 }
 
+export interface ServerConfig {
+  name: string
+  host: string
+  port: number
+  encrypted: boolean
+  path?: string
+}
+
+export function serverHttpUrl(conf: ServerConfig) {
+  return `http${conf.encrypted ? 's' : ''}://${conf.host}:${conf.port}${conf.path ?? ''}`
+}
+
+export function serverWsUrl(conf: ServerConfig) {
+  return `ws${conf.encrypted ? 's' : ''}://${conf.host}:${conf.port}${conf.path ?? ''}/ws`
+}
+
 // a server using a websocket
 export class WebSocketServer extends EventDispatcher<Recv> implements Server {
   socket: WebSocket
+  httpUrl: string
 
   errorListener: (e: string) => unknown
   queryListeners: { [key: number]: QueryFn<any> }
 
   history: History
 
-  private socketSend: (data: any) => void
-  private deferredData: any[]
+  token: string | null = null
 
-  constructor(wsUrl: string | URL) {
+  constructor(cfg:ServerConfig) {
     super()
 
+    const wsUrl = serverWsUrl(cfg)
     this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
-    this.socket.onmessage = e => this.handleMessage(e)
+    this.socket.onmessage = e => this.handleWsMessage(e)
+
+    this.httpUrl = serverHttpUrl(cfg)
 
     this.errorListener = () => {}
     this.queryListeners = {}
 
     this.history = new History()
-
-    this.deferredData = []
-    this.makeDeferred()
-  }
-
-  private makeDeferred() {
-    // while the server is connecting, put all requests in a cache.
-    this.socketSend = this.socketDeferredSend.bind(this)
-    this.socket.addEventListener('open', this.makeDirect.bind(this), { once: true })
-  }
-
-  private makeDirect() {
-    for (const data of this.deferredData) {
-      this.socket.send(data)
-    }
-    // this.socketSend = (x) => setTimeout(() => this.socket.send(x), 1000)
-    this.socketSend = this.socket.send.bind(this.socket)
-  }
-
-  private socketDeferredSend(data: any) {
-    this.deferredData.push(data)
   }
 
   private generateID() {
@@ -111,7 +117,15 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
     this.errorListener = fn
   }
 
-  query<K extends SendKey>(type: K, content: Send[K], timeout?: number): Promise<Resp[K]> {
+  fetch(path: string, init: RequestInit = {}) {
+    init.headers = {
+      ...init.headers,
+      ...(this.token && { 'Authorization': 'Bearer ' + this.token })
+    }
+    return fetch(`${this.httpUrl}/${path}`, init)
+  }
+
+  query<K extends SendKey>(type: K, content: Send[K], options: Partial<Options> = {}): Promise<Resp[K]> {
     let timeoutID = -1
     let id = this.generateID()
 
@@ -122,9 +136,11 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
       content,
     }
 
+    const message = JSON.stringify(packet)
+
     this.history.send(packet)
 
-    const promise: Promise<Resp[K]> = new Promise((resolve, reject) => {
+    let promise: Promise<Resp[K]> = new Promise((resolve, reject) => {
       const listener: QueryFn<K> = (x: Result<Resp[K]>) => {
         window.clearTimeout(timeoutID)
         delete this.queryListeners[id]
@@ -136,21 +152,46 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
 
       this.queryListeners[id] = listener
 
-      if (timeout) {
+      if (options.timeout) {
         timeoutID = window.setTimeout(() => {
           delete this.queryListeners[id]
           reject('timeout reached')
-        }, timeout)
+        }, options.timeout)
       }
     })
 
     // we predict an ok response from the server and dispatch right away.
     this.dispatch(type as any, content, promise.then())
 
-    const message = JSON.stringify(packet)
-    this.socketSend.call(undefined, message)
+    this.socket.send(message)
 
     return promise
+  }
+
+  private handleWsMessage(e: MessageEvent) {
+    if (e.data instanceof ArrayBuffer) {
+      console.warn('received binary data from the ws server, is the server outdated?')
+      return
+    }
+
+    const data = JSON.parse(e.data) as RespPacket<SendKey> | RecvPacket<RecvKey>
+    this.handleMessage(data)
+  }
+
+  private handleMessage(data: RespPacket<SendKey> | RecvPacket<RecvKey>) {
+    if ('token' in data) {
+      this.token = data['token'] as string
+    } else if ('id' in data) {
+      const ops = this.history.resp(data)
+      if (ops) for (const [type, content] of ops) this.dispatch(type, content)
+      this.handleResp(data)
+    } else if ('err' in data) {
+      this.errorListener.call(undefined, data.err)
+    } else {
+      const ops = this.history.recv(data)
+      if (ops) for (const [type, content] of ops) this.dispatch(type, content)
+      else this.dispatch(data.type, data.content)
+    }
   }
 
   private handleResp(resp: RespPacket<SendKey>) {
@@ -161,43 +202,14 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
       if ('err' in resp) {
         this.errorListener.call(undefined, resp.err)
       }
-    }
-    else {
+    } else {
       console.error('query response with no listener', resp)
     }
   }
 
-  private handleMessage(e: MessageEvent) {
-    if (e.data instanceof ArrayBuffer) {
-      console.warn('received binary data from the ws server, is the server outdated?')
-      return
-    }
 
-    const data = JSON.parse(e.data) as RespPacket<SendKey> | RecvPacket<RecvKey>
-    
-    if ('id' in data) {
-      const ops = this.history.resp(data)
-      if (ops)
-        for (const [type, content] of ops)
-          this.dispatch(type, content)
-
-      this.handleResp(data)
-    }
-    else if ('err' in data) {
-      this.errorListener.call(undefined, data.err)
-    }
-    else {
-      const ops = this.history.recv(data)
-      if (ops)
-        for (const [type, content] of ops)
-          this.dispatch(type, content)
-      else
-        this.dispatch(data.type, data.content)
-    }
-  }
-
-  send<K extends SendKey>(type: K, content: Send[K]) {
-    this.query(type, content)
+  send<K extends SendKey>(type: K, content: Send[K], options: Partial<Options> = {}) {
+    this.query(type, content, options)
   }
 
   undo() {

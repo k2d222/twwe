@@ -1,3 +1,5 @@
+<svelte:options accessors />
+
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { Modal, ToastNotification } from 'carbon-components-svelte'
@@ -30,35 +32,34 @@
   }
 </script>
 
-<svelte:options accessors/>
-
 <div id="dialog">
   {#each messages as { type, controls, message, id } (id)}
-    <div class="notification"
+    <div
+      class="notification"
       transition:fly|global={{ delay: 0, duration: 400, x: 200 }}
-      animate:flip = {{ duration: 200 }}
+      animate:flip={{ duration: 200 }}
     >
       {#if controls === 'yesno'}
-          <Modal
-            open
-            modalHeading={message}
-            primaryButtonText="Yes"
-            secondaryButtonText="No"
-            preventCloseOnClickOutside
-            on:close={() => onNo(id)}
-            on:submit={() => onYes(id)}
-            on:click:button--secondary={() => onNo(id)}
-          />
+        <Modal
+          open
+          modalHeading={message}
+          primaryButtonText="Yes"
+          secondaryButtonText="No"
+          preventCloseOnClickOutside
+          on:close={() => onNo(id)}
+          on:submit={() => onYes(id)}
+          on:click:button--secondary={() => onNo(id)}
+        />
       {:else}
-          <ToastNotification
-            kind={type}
-            title={title(type)}
-            subtitle={message}
-            on:close={() => onClose(id)}
-            hideCloseButton={controls !== 'closable'}
-          >
-            <slot slot="caption"></slot>
-          </ToastNotification>
+        <ToastNotification
+          kind={type}
+          title={title(type)}
+          subtitle={message}
+          on:close={() => onClose(id)}
+          hideCloseButton={controls !== 'closable'}
+        >
+          <slot slot="caption"></slot>
+        </ToastNotification>
       {/if}
     </div>
   {/each}

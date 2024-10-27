@@ -6,14 +6,17 @@ import type * as MapDir from '../twmap/mapdir'
 
 // MAPS
 
-export type RecPartial<T> = T extends Array<any> ? T : T extends Object ? { [K in keyof T]?: RecPartial<T[K]> } : T
+export type RecPartial<T> =
+  T extends Array<any> ? T : T extends Object ? { [K in keyof T]?: RecPartial<T[K]> } : T
 export type Require<T, U extends keyof T> = Partial<T> & Pick<T, U>
 
-type Base64 = string
+type Base64<T> = string
 
 export interface Config {
   name: string
-  access: 'public' | 'unlisted'
+  public: boolean
+  password: string | boolean
+  version: 'ddnet06' | 'teeworlds07'
 }
 
 export interface MapDetail {
@@ -26,7 +29,7 @@ export interface Tiles {
   y: number
   w: number
   h: number
-  tiles: Base64
+  tiles: Base64<Info.AnyTile[]>
 }
 
 // TODO
@@ -74,22 +77,33 @@ export interface AutomapperDiagnostic {
 
 export type MapCreation = {
   version: 'ddnet06' | 'teeworlds07'
-  access: 'public' | 'unlisted'
-} & ({
-  clone: string
-} | {
-  blank: {
-    w: number,
-    h: number
-  } 
-} | {
-  upload: Base64
-})
+  public: boolean
+  password: string
+} & (
+  | {
+      clone: string
+    }
+  | {
+      blank: {
+        w: number
+        h: number
+      }
+    }
+  | {
+      upload: Base64<Blob>
+    }
+)
+
+export interface JoinReq {
+  name: string
+  password: string
+}
 
 export interface MapGetReq {
   users: undefined
   cursors: undefined
   map: undefined
+  info: undefined
   images: undefined
   image: number
   envelopes: undefined
@@ -107,26 +121,27 @@ export interface MapGetReq {
 export interface MapGetResp {
   users: number
   cursors: Cursors
-  map: Base64
+  map: Base64<Blob>
+  info: MapDir.Info
   images: string[]
-  image: Base64
+  image: Base64<Blob>
   envelopes: string[]
   envelope: MapDir.Envelope
   groups: string[]
   group: MapDir.Group
   layers: string[]
   layer: MapDir.Layer
-  tiles: Base64
+  tiles: Base64<Info.AnyTile[]>
   quad: MapDir.Quad
   automappers: AutomapperDetail[]
   automapper: string
 }
 
 export interface MapCreateReq {
-  image: [string, Base64 | MapDir.ExternalImage]
-  envelope: Require<MapDir.Envelope, "type">
+  image: [string, Base64<Blob> | MapDir.ExternalImage]
+  envelope: Require<MapDir.Envelope, 'type'>
   group: Partial<MapDir.Group>
-  layer: [number, Require<MapDir.Layer, "type">]
+  layer: [number, Require<MapDir.Layer, 'type'>]
   quad: [number, number, MapDir.Quad]
   automapper: [string, string]
 }
@@ -134,9 +149,9 @@ export interface MapCreateReq {
 export interface MapEditReq {
   config: Partial<Config>
   info: Partial<MapDir.Info>
-  envelope: [number, Require<MapDir.Envelope, "type">]
+  envelope: [number, Require<MapDir.Envelope, 'type'>]
   group: [number, Partial<MapDir.Group>]
-  layer: [number, number, Require<MapDir.Layer, "type">]
+  layer: [number, number, Require<MapDir.Layer, 'type'>]
   tiles: [number, number, Tiles]
   quad: [number, number, number, MapDir.Quad]
   automap: [number, number]
@@ -174,7 +189,7 @@ export interface GetReq {
 }
 
 export interface GetResp {
-  map: Base64
+  map: Base64<Blob>
 }
 
 export interface EditReq {
@@ -201,136 +216,142 @@ export interface Broadcast {
   saved: undefined
 }
 
-export type Result<T> = {
-  ok: T
-} | {
-  err: string
-}
+export type Result<T> =
+  | {
+      ok: T
+    }
+  | {
+      err: string
+    }
 
 export interface Send {
-  "get/users": MapGetReq['users']
-  "get/cursors": MapGetReq['cursors']
-  "get/map": MapGetReq['map']
-  "get/images": MapGetReq['images']
-  "get/image": MapGetReq['image']
-  "get/envelopes": MapGetReq['envelopes']
-  "get/envelope": MapGetReq['envelope']
-  "get/groups": MapGetReq['groups']
-  "get/group": MapGetReq['group']
-  "get/layers": MapGetReq['layers']
-  "get/layer": MapGetReq['layer']
-  "get/tiles": MapGetReq['tiles']
-  "get/quad": MapGetReq['quad']
-  "get/automappers": MapGetReq['automappers']
-  "get/automapper": MapGetReq['automapper']
-  "create/image": MapCreateReq['image']
-  "create/envelope": MapCreateReq['envelope']
-  "create/group": MapCreateReq['group']
-  "create/layer": MapCreateReq['layer']
-  "create/quad": MapCreateReq['quad']
-  "create/automapper": MapCreateReq['automapper']
-  "edit/config": MapEditReq['config']
-  "edit/info": MapEditReq['info']
-  "edit/envelope": MapEditReq['envelope']
-  "edit/group": MapEditReq['group']
-  "edit/layer": MapEditReq['layer']
-  "edit/tiles": MapEditReq['tiles']
-  "edit/quad": MapEditReq['quad']
-  "edit/automap": MapEditReq['automap']
-  "move/envelope": MapReorderReq['envelope']
-  "move/group": MapReorderReq['group']
-  "move/layer": MapReorderReq['layer']
-  "move/quad": MapReorderReq['quad']
-  "delete/image": MapDelReq['image']
-  "delete/envelope": MapDelReq['envelope']
-  "delete/group": MapDelReq['group']
-  "delete/layer": MapDelReq['layer']
-  "delete/quad": MapDelReq['quad']
-  "delete/automapper": MapDelReq['automapper']
-  "cursor": Cursor
-  "save": undefined
-  "join": string
-  "leave": string
-  "create": EditReq['map']
-  "delete": DeleteReq['map']
+  'get/users': MapGetReq['users']
+  'get/cursors': MapGetReq['cursors']
+  'get/map': MapGetReq['map']
+  'get/info': MapGetReq['info']
+  'get/images': MapGetReq['images']
+  'get/image': MapGetReq['image']
+  'get/envelopes': MapGetReq['envelopes']
+  'get/envelope': MapGetReq['envelope']
+  'get/groups': MapGetReq['groups']
+  'get/group': MapGetReq['group']
+  'get/layers': MapGetReq['layers']
+  'get/layer': MapGetReq['layer']
+  'get/tiles': MapGetReq['tiles']
+  'get/quad': MapGetReq['quad']
+  'get/automappers': MapGetReq['automappers']
+  'get/automapper': MapGetReq['automapper']
+  'create/image': MapCreateReq['image']
+  'create/envelope': MapCreateReq['envelope']
+  'create/group': MapCreateReq['group']
+  'create/layer': MapCreateReq['layer']
+  'create/quad': MapCreateReq['quad']
+  'create/automapper': MapCreateReq['automapper']
+  'edit/config': MapEditReq['config']
+  'edit/info': MapEditReq['info']
+  'edit/envelope': MapEditReq['envelope']
+  'edit/group': MapEditReq['group']
+  'edit/layer': MapEditReq['layer']
+  'edit/tiles': MapEditReq['tiles']
+  'edit/quad': MapEditReq['quad']
+  'edit/automap': MapEditReq['automap']
+  'move/envelope': MapReorderReq['envelope']
+  'move/group': MapReorderReq['group']
+  'move/layer': MapReorderReq['layer']
+  'move/quad': MapReorderReq['quad']
+  'delete/image': MapDelReq['image']
+  'delete/envelope': MapDelReq['envelope']
+  'delete/group': MapDelReq['group']
+  'delete/layer': MapDelReq['layer']
+  'delete/quad': MapDelReq['quad']
+  'delete/automapper': MapDelReq['automapper']
+  config: string
+  cursor: Cursor
+  save: undefined
+  join: JoinReq
+  leave: string
+  create: EditReq['map']
+  delete: DeleteReq['map']
 }
 
 export interface Resp {
-  "get/users": MapGetResp['users']
-  "get/cursors": MapGetResp['cursors']
-  "get/map": MapGetResp['map']
-  "get/images": MapGetResp['images']
-  "get/image": MapGetResp['image']
-  "get/envelopes": MapGetResp['envelopes']
-  "get/envelope": MapGetResp['envelope']
-  "get/groups": MapGetResp['groups']
-  "get/group": MapGetResp['group']
-  "get/layers": MapGetResp['layers']
-  "get/layer": MapGetResp['layer']
-  "get/tiles": MapGetResp['tiles']
-  "get/quad": MapGetResp['quad']
-  "get/automappers": MapGetResp['automappers']
-  "get/automapper": MapGetResp['automapper']
-  "create/image": undefined
-  "create/envelope": undefined
-  "create/group": undefined
-  "create/layer": undefined
-  "create/quad": undefined
-  "create/automapper": AutomapperDiagnostic[]
-  "edit/config": undefined
-  "edit/info": undefined
-  "edit/envelope": undefined
-  "edit/group": undefined
-  "edit/layer": undefined
-  "edit/tiles": undefined
-  "edit/quad": undefined
-  "edit/automap": undefined
-  "move/envelope": undefined
-  "move/group": undefined
-  "move/layer": undefined
-  "move/quad": undefined
-  "delete/image": undefined
-  "delete/envelope": undefined
-  "delete/group": undefined
-  "delete/layer": undefined
-  "delete/quad": undefined
-  "delete/automapper": undefined
-  "cursor": undefined
-  "save": undefined
-  "join": undefined
-  "leave": undefined
-  "create": undefined
-  "delete": undefined
+  'get/users': MapGetResp['users']
+  'get/cursors': MapGetResp['cursors']
+  'get/map': MapGetResp['map']
+  'get/info': MapGetResp['info']
+  'get/images': MapGetResp['images']
+  'get/image': MapGetResp['image']
+  'get/envelopes': MapGetResp['envelopes']
+  'get/envelope': MapGetResp['envelope']
+  'get/groups': MapGetResp['groups']
+  'get/group': MapGetResp['group']
+  'get/layers': MapGetResp['layers']
+  'get/layer': MapGetResp['layer']
+  'get/tiles': MapGetResp['tiles']
+  'get/quad': MapGetResp['quad']
+  'get/automappers': MapGetResp['automappers']
+  'get/automapper': MapGetResp['automapper']
+  'create/image': undefined
+  'create/envelope': undefined
+  'create/group': undefined
+  'create/layer': undefined
+  'create/quad': undefined
+  'create/automapper': AutomapperDiagnostic[]
+  'edit/config': undefined
+  'edit/info': undefined
+  'edit/envelope': undefined
+  'edit/group': undefined
+  'edit/layer': undefined
+  'edit/tiles': undefined
+  'edit/quad': undefined
+  'edit/automap': undefined
+  'move/envelope': undefined
+  'move/group': undefined
+  'move/layer': undefined
+  'move/quad': undefined
+  'delete/image': undefined
+  'delete/envelope': undefined
+  'delete/group': undefined
+  'delete/layer': undefined
+  'delete/quad': undefined
+  'delete/automapper': undefined
+  config: Config
+  cursor: undefined
+  save: undefined
+  join: string
+  leave: undefined
+  create: undefined
+  delete: undefined
 }
 
 export interface Recv {
-  "create/image": MapCreateReq['image']
-  "create/envelope": MapCreateReq['envelope']
-  "create/group": MapCreateReq['group']
-  "create/layer": MapCreateReq['layer']
-  "create/quad": MapCreateReq['quad']
-  "create/automapper": MapCreateReq['automapper']
-  "edit/config": MapEditReq['config']
-  "edit/info": MapEditReq['info']
-  "edit/envelope": MapEditReq['envelope']
-  "edit/group": MapEditReq['group']
-  "edit/layer": MapEditReq['layer']
-  "edit/tiles": MapEditReq['tiles']
-  "edit/quad": MapEditReq['quad']
-  "edit/automap": MapEditReq['automap']
-  "move/envelope": MapReorderReq['envelope']
-  "move/group": MapReorderReq['group']
-  "move/layer": MapReorderReq['layer']
-  "delete/image": MapDelReq['image']
-  "delete/envelope": MapDelReq['envelope']
-  "delete/group": MapDelReq['group']
-  "delete/layer": MapDelReq['layer']
-  "delete/quad": MapDelReq['quad']
-  "delete/automapper": MapDelReq['automapper']
-  "map_created": string
-  "map_deleted": string
-  "users": number
-  "saved": undefined
+  'create/image': MapCreateReq['image']
+  'create/envelope': MapCreateReq['envelope']
+  'create/group': MapCreateReq['group']
+  'create/layer': MapCreateReq['layer']
+  'create/quad': MapCreateReq['quad']
+  'create/automapper': MapCreateReq['automapper']
+  'edit/config': MapEditReq['config']
+  'edit/info': MapEditReq['info']
+  'edit/envelope': MapEditReq['envelope']
+  'edit/group': MapEditReq['group']
+  'edit/layer': MapEditReq['layer']
+  'edit/tiles': MapEditReq['tiles']
+  'edit/quad': MapEditReq['quad']
+  'edit/automap': MapEditReq['automap']
+  'move/envelope': MapReorderReq['envelope']
+  'move/group': MapReorderReq['group']
+  'move/layer': MapReorderReq['layer']
+  'delete/image': MapDelReq['image']
+  'delete/envelope': MapDelReq['envelope']
+  'delete/group': MapDelReq['group']
+  'delete/layer': MapDelReq['layer']
+  'delete/quad': MapDelReq['quad']
+  'delete/automapper': MapDelReq['automapper']
+  map_created: string
+  map_deleted: string
+  users: number
+  saved: undefined
 }
 
 export type Req = Send | Recv
@@ -342,6 +363,7 @@ export type ReqKey = keyof Req
 export interface SendPacket<K extends SendKey> {
   timestamp: number
   id: number
+  token?: number
   type: K
   content: Send[K]
 }
@@ -349,7 +371,7 @@ export interface SendPacket<K extends SendKey> {
 export type RespPacket<K extends SendKey> = {
   timestamp: number
   id: number
-} & Result<Resp[K]> 
+} & Result<Resp[K]>
 
 export interface RecvPacket<K extends RecvKey> {
   timestamp: number

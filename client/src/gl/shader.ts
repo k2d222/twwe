@@ -10,8 +10,8 @@ export const UniformLocations = [
 ] as const
 
 type ProgLocations = {
-  attrs: { [k in typeof AttributeLocations[number]]: number }
-  unifs: { [k in typeof UniformLocations[number]]: WebGLUniformLocation | null }
+  attrs: { [k in (typeof AttributeLocations)[number]]: number }
+  unifs: { [k in (typeof UniformLocations)[number]]: WebGLUniformLocation | null }
 }
 
 type WebGLCtx = WebGL2RenderingContext | WebGLRenderingContext

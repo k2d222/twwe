@@ -7,16 +7,15 @@
   import Fence from '../lib/fence.svelte'
   import { onDestroy, onMount } from 'svelte'
   import { showError } from '../lib/dialog'
-  import { serverHttpUrl } from '../../server/util'
 
   export let name: string
+  export let password: string
 
   let loadingSignal = (async () => {
     reset()
 
-    await $server.query('join', name)
-    const httpUrl = serverHttpUrl($serverCfg)
-    const map_ = await queryMap(httpUrl, name)
+    await $server.query('join', { name, password })
+    const map_ = await queryMap($server, name)
     const ams = await $server.query('get/automappers', undefined)
     $automappers = Object.fromEntries(ams.map(am => [am.name, am]))
     $map = map_
@@ -34,16 +33,13 @@
     $server.onError(() => {})
     $server.query('leave', name)
   })
-
 </script>
 
 <svelte:head>
   <title>{name} - DDNet Map Editor</title>
 </svelte:head>
 
-
 <div id="edit">
-
   <Fence fullscreen signal={loadingSignal} loadText="Downloading map…">
     <Headerbar />
 
@@ -53,5 +49,4 @@
       <Editor />
     {/if}
   </Fence>
-
 </div>

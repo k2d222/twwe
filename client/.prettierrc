@@ -6,7 +6,13 @@
   "printWidth": 100,
   "arrowParens": "avoid",
   "plugins": ["prettier-plugin-svelte"],
-  "pluginSearchDirs": ["."],
-  "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }],
+  "overrides": [
+    {
+      "files": "*.svelte",
+      "options": {
+        "parser": "svelte"
+      }
+    }
+  ],
   "htmlWhitespaceSensitivity": "ignore"
 }

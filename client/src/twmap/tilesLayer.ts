@@ -13,22 +13,14 @@ import {
 } from './parser'
 
 export function createLayer(flags: Info.TilesLayerFlags) {
-    if (flags === Info.TilesLayerFlags.TILES)
-      return new TilesLayer()
-    else if (flags === Info.TilesLayerFlags.GAME)
-      return new GameLayer()
-    else if (flags === Info.TilesLayerFlags.FRONT)
-      return new FrontLayer()
-    else if (flags === Info.TilesLayerFlags.TELE)
-      return new TeleLayer()
-    else if (flags === Info.TilesLayerFlags.SPEEDUP)
-      return new SpeedupLayer()
-    else if (flags === Info.TilesLayerFlags.SWITCH)
-      return new SwitchLayer()
-    else if (flags === Info.TilesLayerFlags.TUNE)
-      return new TuneLayer()
-    else
-      throw 'unknown layer type: ' + flags
+  if (flags === Info.TilesLayerFlags.TILES) return new TilesLayer()
+  else if (flags === Info.TilesLayerFlags.GAME) return new GameLayer()
+  else if (flags === Info.TilesLayerFlags.FRONT) return new FrontLayer()
+  else if (flags === Info.TilesLayerFlags.TELE) return new TeleLayer()
+  else if (flags === Info.TilesLayerFlags.SPEEDUP) return new SpeedupLayer()
+  else if (flags === Info.TilesLayerFlags.SWITCH) return new SwitchLayer()
+  else if (flags === Info.TilesLayerFlags.TUNE) return new TuneLayer()
+  else throw 'unknown layer type: ' + flags
 }
 
 export abstract class AnyTilesLayer<Tile extends { id: number }> extends Layer {

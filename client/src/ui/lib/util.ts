@@ -1,10 +1,19 @@
 import type { Layer } from '../../twmap/layer'
 import { Map, type PhysicsLayer } from '../../twmap/map'
 import { Image } from '../../twmap/image'
-import { AnyTilesLayer, FrontLayer, GameLayer, SpeedupLayer, SwitchLayer, TeleLayer, TilesLayer, TuneLayer } from '../../twmap/tilesLayer'
+import {
+  AnyTilesLayer,
+  FrontLayer,
+  GameLayer,
+  SpeedupLayer,
+  SwitchLayer,
+  TeleLayer,
+  TilesLayer,
+  TuneLayer,
+} from '../../twmap/tilesLayer'
 import { TilesLayerFlags } from '../../twmap/types'
 import type { WebSocketServer } from '../../server/server'
-import type { MapCreation, MapDetail } from '../../server/protocol'
+import type { Config, MapCreation, MapDetail } from '../../server/protocol'
 import * as MapDir from '../../twmap/mapdir'
 import { QuadsLayer } from '../../twmap/quadsLayer'
 import { clearDialog, showInfo } from './dialog'
@@ -14,10 +23,10 @@ export type Ctor<T> = new (...args: any[]) => T
 export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
-export async function download(file: string, name: string) {
+export async function download(path: string, name: string) {
   const id = showInfo(`Downloading '${name}'…`, 'none')
   try {
-    const resp = await fetch(file)
+    const resp = await fetch(path)
     const data = await resp.blob()
     const url = URL.createObjectURL(data)
 
@@ -29,39 +38,29 @@ export async function download(file: string, name: string) {
     link.click()
     link.remove()
     showInfo(`Downloaded '${name}'.`)
-  }
-  finally {
+  } finally {
     clearDialog(id)
   }
 }
 
-export async function uploadMap(httpRoot: string, name: string, file: Blob) {
-  const resp = await fetch(`${httpRoot}/maps/${name}`, {
+export async function uploadMap(url: string, name: string, file: Blob) {
+  const resp = await fetch(`${url}/maps/${name}`, {
     method: 'PUT',
-    body: file
+    body: file,
   })
 
-  if (!resp.ok)
-    throw await resp.text()
+  if (!resp.ok) throw await resp.text()
 }
 
-export async function createMap(httpRoot: string, name: string, create: MapCreation) {
-  const resp = await fetch(`${httpRoot}/maps/${name}`, {
+export async function createMap(url: string, name: string, create: MapCreation) {
+  const resp = await fetch(`${url}/maps/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(create)
+    body: JSON.stringify(create),
   })
 
-  if (!resp.ok)
-    throw await resp.text()
+  if (!resp.ok) throw await resp.text()
 }
-
-// export async function uploadImage(httpRoot: string, mapName: string, imageName: string, file: Blob) {
-//   await fetch(`${httpRoot}/maps/${mapName}/map/images/${imageName}`, {
-//     method: 'POST',
-//     body: file
-//   })
-// }
 
 export async function decodePng(file: Blob): Promise<ImageData> {
   return new Promise<ImageData>((resolve, reject) => {
@@ -88,7 +87,7 @@ export function externalImageUrl(name: string) {
   return '/mapres/' + name + '.png'
 }
 
-export async function queryMaps(httpRoot: string): Promise<MapDetail[]> {
+export async function queryMaps(url: string): Promise<MapDetail[]> {
   function sortMaps(maps: MapDetail[]): MapDetail[] {
     return maps.sort((a, b) => {
       if (a.users === b.users) return a.name.localeCompare(b.name)
@@ -96,29 +95,43 @@ export async function queryMaps(httpRoot: string): Promise<MapDetail[]> {
     })
   }
 
-  const resp = await fetch(`${httpRoot}/maps`)
+  const resp = await fetch(`${url}/maps`)
   const maps: MapDetail[] = await resp.json()
   sortMaps(maps)
   return maps
 }
 
-export async function queryMap(httpRoot: string, mapName: string): Promise<Map> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}`)
+export async function queryConfig(server: WebSocketServer, mapName: string): Promise<Config> {
+  const resp = await server.fetch(`maps/${mapName}/config`)
+  const config: Config = await resp.json()
+  return config
+}
+
+export async function queryMap(server: WebSocketServer, mapName: string): Promise<Map> {
+  const resp = await server.fetch(`maps/${mapName}`)
   const data = await resp.arrayBuffer()
   const map = new Map()
   map.load(mapName, data)
   return map
 }
 
-export async function queryImageData(httpRoot: string, mapName: string, imageIndex: number): Promise<ImageData> {
-  const resp = await fetch(`${httpRoot}/maps/${mapName}/images/${imageIndex}`)
+export async function queryImageData(
+  server: WebSocketServer,
+  mapName: string,
+  imageIndex: number
+): Promise<ImageData> {
+  const resp = await server.fetch(`maps/${mapName}/images/${imageIndex}`)
   const data = await resp.blob()
   const image = await decodePng(data)
   return image
 }
 
-export async function queryImage(server: WebSocketServer, httpRoot: string, mapName: string, imageIndex: number): Promise<Image> {
-  const data = await queryImageData(httpRoot, mapName, imageIndex)
+export async function queryImage(
+  server: WebSocketServer,
+  mapName: string,
+  imageIndex: number
+): Promise<Image> {
+  const data = await queryImageData(server, mapName, imageIndex)
   const img = new Image()
   const images = await server.query('get/images', undefined)
   img.loadEmbedded(data)

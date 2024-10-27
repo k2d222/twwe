@@ -9,12 +9,11 @@
     frames++
 
     if (time >= startTime + 1000) {
-      fps = Math.round(frames * 1000 / (time - startTime))
+      fps = Math.round((frames * 1000) / (time - startTime))
       startTime = time
       frames = 0
     }
   }
-
 </script>
 
 <div id="stats">

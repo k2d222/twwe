@@ -22,4 +22,3 @@ export function setContext(ctx: Context) {
 export function getContext(): Context {
   return { renderer, viewport }
 }
-

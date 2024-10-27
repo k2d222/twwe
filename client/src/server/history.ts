@@ -4,11 +4,29 @@ import { AnyTilesLayer, TilesLayer } from '../twmap/tilesLayer'
 import * as MapDir from '../twmap/mapdir'
 import type * as Info from '../twmap/types'
 import type { Map } from '../twmap/map'
-import { colorToJson, coordToJson, curveTypeToString, resIndexToString, tilesToData, toFixedNum, uvToJson } from './convert'
-import type { Recv, RecvKey, RecvPacket, Req, ReqKey, RespPacket, Send, SendKey, SendPacket, Tiles } from './protocol'
+import {
+  colorToJson,
+  coordToJson,
+  curveTypeToString,
+  resIndexToString,
+  tilesToData,
+  toFixedNum,
+  uvToJson,
+} from './convert'
+import type {
+  Recv,
+  RecvKey,
+  RecvPacket,
+  Req,
+  ReqKey,
+  RespPacket,
+  Send,
+  SendKey,
+  SendPacket,
+  Tiles,
+} from './protocol'
 import { map } from '../ui/global'
 import { get } from 'svelte/store'
-
 
 function rev_edit_envelope(map: Map, ...[e, part]: Recv['edit/envelope']): Send['edit/envelope'] {
   const env = map.envelopes[e]
@@ -23,8 +41,7 @@ function rev_edit_envelope(map: Map, ...[e, part]: Recv['edit/envelope']): Send[
         content: colorToJson(p.content, 10),
         type: curveTypeToString(p.type),
       }))
-    }
-    else if (env instanceof PositionEnvelope) {
+    } else if (env instanceof PositionEnvelope) {
       rev_part.points = env.points.map(p => ({
         time: p.time,
         content: {
@@ -34,12 +51,11 @@ function rev_edit_envelope(map: Map, ...[e, part]: Recv['edit/envelope']): Send[
         },
         type: curveTypeToString(p.type),
       }))
-    }
-    else if (env instanceof SoundEnvelope) {
+    } else if (env instanceof SoundEnvelope) {
       rev_part.points = env.points.map(p => ({
         time: p.time,
         content: toFixedNum(p.content, 10),
-        type: curveTypeToString(p.type)
+        type: curveTypeToString(p.type),
       }))
     }
   }
@@ -63,8 +79,7 @@ function rev_edit_group(map: Map, ...[g, part]: Recv['edit/group']): Send['edit/
       y: group.paraY,
     }
   }
-  if ('clipping' in part)
-    rev_part.clipping = group.clipping
+  if ('clipping' in part) rev_part.clipping = group.clipping
   if ('clip' in part) {
     rev_part.clip = {
       x: toFixedNum(group.clipX, 5),
@@ -73,8 +88,7 @@ function rev_edit_group(map: Map, ...[g, part]: Recv['edit/group']): Send['edit/
       h: toFixedNum(group.clipH, 5),
     }
   }
-  if ('name' in part)
-    rev_part.name = group.name
+  if ('name' in part) rev_part.name = group.name
 
   return [g, rev_part]
 }
@@ -83,24 +97,24 @@ function rev_edit_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['ed
   const layer = map.groups[g].layers[l]
   const rev_part: typeof part = { type: part.type }
 
-  if ('detail' in part)
-    rev_part.detail = layer.detail
-  if ('name' in part)
-    rev_part.name = layer.name
+  if ('detail' in part) rev_part.detail = layer.detail
+  if ('name' in part) rev_part.name = layer.name
 
   if (layer instanceof TilesLayer && rev_part.type === MapDir.LayerKind.Tiles) {
-    if ('color' in part)
-      rev_part.color = layer.color
-    if ('width' in part)
-      rev_part.width = layer.width
-    if ('height' in part)
-      rev_part.height = layer.height
+    if ('color' in part) rev_part.color = layer.color
+    if ('width' in part) rev_part.width = layer.width
+    if ('height' in part) rev_part.height = layer.height
     if ('color_env' in part)
-      rev_part.color_env = layer.colorEnv === null ? null : resIndexToString(map.envelopes.indexOf(layer.colorEnv), layer.colorEnv.name)
-    if ('color_env_offset' in part)
-      rev_part.color_env_offset = layer.colorEnvOffset
+      rev_part.color_env =
+        layer.colorEnv === null
+          ? null
+          : resIndexToString(map.envelopes.indexOf(layer.colorEnv), layer.colorEnv.name)
+    if ('color_env_offset' in part) rev_part.color_env_offset = layer.colorEnvOffset
     if ('image' in part)
-      rev_part.image = layer.image === null ? null : resIndexToString(map.images.indexOf(layer.image), layer.image.name)
+      rev_part.image =
+        layer.image === null
+          ? null
+          : resIndexToString(map.images.indexOf(layer.image), layer.image.name)
     if ('automapper_config' in part) {
       rev_part.automapper_config = {
         config: layer.automapper.config === -1 ? null : layer.automapper.config,
@@ -108,10 +122,12 @@ function rev_edit_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['ed
         automatic: layer.automapper.automatic,
       }
     }
-  }
-  else if (layer instanceof QuadsLayer && rev_part.type === MapDir.LayerKind.Quads) {
+  } else if (layer instanceof QuadsLayer && rev_part.type === MapDir.LayerKind.Quads) {
     if ('image' in part)
-      rev_part.image = layer.image === null ? null : resIndexToString(map.images.indexOf(layer.image), layer.image.name)
+      rev_part.image =
+        layer.image === null
+          ? null
+          : resIndexToString(map.images.indexOf(layer.image), layer.image.name)
   }
 
   return [g, l, rev_part]
@@ -120,14 +136,20 @@ function rev_edit_layer(map: Map, ...[g, l, part]: Recv['edit/layer']): Send['ed
 function rev_edit_quad(map: Map, ...[g, l, q, part]: Recv['edit/quad']): Send['edit/quad'] {
   const quad = (map.groups[g].layers[l] as QuadsLayer).quads[q]
   const rev_part: typeof part = {
-      corners: quad.points.slice(0, 4).map(p => coordToJson(p, 15)),
-      position: coordToJson(quad.points[4], 15),
-      colors: quad.colors,
-      texture_coords: quad.texCoords.map(p => uvToJson(p, 10)),
-      position_env: quad.posEnv === null ? null : resIndexToString(map.envelopes.indexOf(quad.posEnv), quad.posEnv.name),
-      position_env_offset: quad.posEnvOffset,
-      color_env: quad.colorEnv === null ? null : resIndexToString(map.envelopes.indexOf(quad.colorEnv), quad.colorEnv.name),
-      color_env_offset: quad.colorEnvOffset
+    corners: quad.points.slice(0, 4).map(p => coordToJson(p, 15)),
+    position: coordToJson(quad.points[4], 15),
+    colors: quad.colors,
+    texture_coords: quad.texCoords.map(p => uvToJson(p, 10)),
+    position_env:
+      quad.posEnv === null
+        ? null
+        : resIndexToString(map.envelopes.indexOf(quad.posEnv), quad.posEnv.name),
+    position_env_offset: quad.posEnvOffset,
+    color_env:
+      quad.colorEnv === null
+        ? null
+        : resIndexToString(map.envelopes.indexOf(quad.colorEnv), quad.colorEnv.name),
+    color_env_offset: quad.colorEnvOffset,
   }
 
   return [g, l, q, rev_part]
@@ -177,134 +199,107 @@ export function reverse(map: Map, pkt: SendPacket<ReqKey>): [ReqKey, Req[ReqKey]
   if (pkt.type === 'create/image') {
     const i = map.images.length
     return ['delete/image', i]
-  }
-  else if (pkt.type === 'create/envelope') {
+  } else if (pkt.type === 'create/envelope') {
     const e = map.envelopes.length
     return ['delete/envelope', e]
-  }
-  else if (pkt.type === 'create/group') {
+  } else if (pkt.type === 'create/group') {
     const g = map.groups.length
     return ['delete/group', g]
-  }
-  else if (pkt.type === 'create/layer') {
-    const [g, ] = pkt.content as Send['create/layer']
+  } else if (pkt.type === 'create/layer') {
+    const [g] = pkt.content as Send['create/layer']
     const l = map.groups[g].layers.length
     return ['delete/layer', [g, l]]
-  }
-  else if (pkt.type === 'create/quad') {
-    const [g, l, ] = pkt.content as Send['create/quad']
+  } else if (pkt.type === 'create/quad') {
+    const [g, l] = pkt.content as Send['create/quad']
     const q = (map.groups[g].layers[l] as QuadsLayer).quads.length
     return ['delete/quad', [g, l, q]]
-  }
-  else if (pkt.type === 'create/automapper') {
+  } else if (pkt.type === 'create/automapper') {
     return null // this is handled by codemirror
   }
   // TODO
   else if (pkt.type === 'edit/config') {
     return null
-  }
-  else if (pkt.type === 'edit/info') {
+  } else if (pkt.type === 'edit/info') {
     const part = pkt.content as Send['edit/info']
-    const rev_part = Object.fromEntries(Object.keys(part).map(k => 
-      [k, map.info[k]]
-    ))
+    const rev_part = Object.fromEntries(Object.keys(part).map(k => [k, map.info[k]]))
     return ['edit/info', rev_part]
-  }
-  else if (pkt.type === 'edit/envelope') {
+  } else if (pkt.type === 'edit/envelope') {
     const [e, part] = pkt.content as Send['edit/envelope']
     return ['edit/envelope', rev_edit_envelope(map, e, part)]
-  }
-  else if (pkt.type === 'edit/group') {
+  } else if (pkt.type === 'edit/group') {
     const [g, part] = pkt.content as Send['edit/group']
     return ['edit/group', rev_edit_group(map, g, part)]
-  }
-  else if (pkt.type === 'edit/layer') {
+  } else if (pkt.type === 'edit/layer') {
     const [g, l, part] = pkt.content as Send['edit/layer']
     return ['edit/layer', rev_edit_layer(map, g, l, part)]
-  }
-  else if (pkt.type === 'edit/tiles') {
+  } else if (pkt.type === 'edit/tiles') {
     const [g, l, tiles] = pkt.content as Send['edit/tiles']
     return ['edit/tiles', rev_edit_tiles(map, g, l, tiles)]
-  }
-  else if (pkt.type === 'edit/quad') {
+  } else if (pkt.type === 'edit/quad') {
     const [g, l, q, part] = pkt.content as Send['edit/quad']
     return ['edit/quad', rev_edit_quad(map, g, l, q, part)]
-  }
-  else if (pkt.type === 'edit/automap') {
+  } else if (pkt.type === 'edit/automap') {
     const [g, l] = pkt.content as Send['edit/automap']
     return ['edit/tiles', rev_automap(map, g, l)]
-  }
-  else if (pkt.type === 'move/envelope') {
+  } else if (pkt.type === 'move/envelope') {
     const [src, tgt] = pkt.content as Send['move/envelope']
     return ['move/envelope', [tgt, src]]
-  }
-  else if (pkt.type === 'move/group') {
+  } else if (pkt.type === 'move/group') {
     const [src, tgt] = pkt.content as Send['move/group']
     return ['move/group', [tgt, src]]
-  }
-  else if (pkt.type === 'move/layer') {
+  } else if (pkt.type === 'move/layer') {
     const [src, tgt] = pkt.content as Send['move/layer']
     return ['move/layer', [tgt, src]]
-  }
-  else if (pkt.type === 'delete/image') {
+  } else if (pkt.type === 'delete/image') {
     return null
-  }
-  else if (pkt.type === 'delete/envelope') {
+  } else if (pkt.type === 'delete/envelope') {
     return null
-  }
-  else if (pkt.type === 'delete/group') {
+  } else if (pkt.type === 'delete/group') {
     return null
-  }
-  else if (pkt.type === 'delete/layer') {
+  } else if (pkt.type === 'delete/layer') {
     return null
-  }
-  else if (pkt.type === 'delete/quad') {
+  } else if (pkt.type === 'delete/quad') {
     return null
-  }
-  else if (pkt.type === 'delete/automapper') {
+  } else if (pkt.type === 'delete/automapper') {
     return null
-  }
-  else if (pkt.type === 'edit/map') {
+  } else if (pkt.type === 'edit/map') {
     return null
-  }
-  else if (pkt.type === 'delete/map') {
+  } else if (pkt.type === 'delete/map') {
     return null
-  }
-
-  else {
+  } else {
     const _exhaustive: never = pkt.type // typescript: ensure exhaustive check
     return _exhaustive
   }
 }
 
 const recvKeys: RecvKey[] = [
-  "create/image",
-  "create/envelope",
-  "create/group",
-  "create/layer",
-  "create/quad",
-  "create/automapper",
-  "edit/config",
-  "edit/info",
-  "edit/envelope",
-  "edit/group",
-  "edit/layer",
-  "edit/tiles",
-  "edit/quad",
-  "edit/automap",
-  "move/envelope",
-  "move/group",
-  "move/layer",
-  "delete/image",
-  "delete/envelope",
-  "delete/group",
-  "delete/layer",
-  "delete/quad",
-  "delete/automapper",
-  "map_created",
-  "map_deleted",
-  "users",
-  "saved",
+  'create/image',
+  'create/envelope',
+  'create/group',
+  'create/layer',
+  'create/quad',
+  'create/automapper',
+  'edit/config',
+  'edit/info',
+  'edit/envelope',
+  'edit/group',
+  'edit/layer',
+  'edit/tiles',
+  'edit/quad',
+  'edit/automap',
+  'move/envelope',
+  'move/group',
+  'move/layer',
+  'delete/image',
+  'delete/envelope',
+  'delete/group',
+  'delete/layer',
+  'delete/quad',
+  'delete/automapper',
+  'map_created',
+  'map_deleted',
+  'users',
+  'saved',
 ]
 
 function isRequest(pkt: SendPacket<any> | RecvPacket<any>): pkt is SendPacket<ReqKey> {
@@ -337,7 +332,7 @@ export class History {
     this.skip = 0
   }
 
-  clear () {
+  clear() {
     this.history = []
     this.index = 0
   }
@@ -345,8 +340,7 @@ export class History {
   send(pkt: SendPacket<SendKey>) {
     if (isRequest(pkt)) {
       const rev = reverse(get(map), pkt)
-      if (rev === null)
-        return
+      if (rev === null) return
 
       const pending: Operation = {
         forward: [pkt.type, pkt.content],
@@ -357,13 +351,11 @@ export class History {
       if (this.skip) {
         // skip push to history
         this.skip--
-      }
-      else if (this.index !== this.history.length) {
+      } else if (this.index !== this.history.length) {
         // discard forward history and push pending
         this.history.splice(this.index, this.history.length, pending)
         this.index = this.history.length
-      }
-      else {
+      } else {
         this.history.push(pending)
         if (this.history.length > this.maxLen) {
           this.history.shift()
@@ -375,8 +367,7 @@ export class History {
 
   resp(pkt: RespPacket<SendKey>): Op[] | null {
     const index = this.pending.findIndex(p => p.id === pkt.id)
-    if (index === -1)
-      return null
+    if (index === -1) return null
 
     // note: because websocket is ordered, response must be for the 1st pending request.
     if (index !== 0) {
@@ -400,8 +391,7 @@ export class History {
 
       this.skip += rev.length + redo.length
       return [...rev, ...redo]
-    }
-    else {
+    } else {
       this.pending.shift()
     }
 
@@ -431,8 +421,7 @@ export class History {
 
   undo(): Op | null {
     const pkt = this.history[this.index - 1]
-    if (!pkt)
-      return null
+    if (!pkt) return null
 
     this.index -= 1
     this.skip++ // mark to skip the next send
@@ -441,8 +430,7 @@ export class History {
 
   redo(): Op | null {
     const pkt = this.history[this.index]
-    if (!pkt)
-      return null
+    if (!pkt) return null
 
     this.index += 1
     this.skip++ // mark to skip the next send

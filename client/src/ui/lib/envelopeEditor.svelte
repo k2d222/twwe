@@ -1,9 +1,23 @@
 <script lang="ts">
   import type { Envelope } from '../../twmap/map'
-  import { colorFromJson, colorToJson, curveTypeFromString, curveTypeToString, envTypeToString, fromFixedNum, toFixedNum } from '../../server/convert'
+  import {
+    colorFromJson,
+    colorToJson,
+    curveTypeFromString,
+    curveTypeToString,
+    envTypeToString,
+    fromFixedNum,
+    toFixedNum,
+  } from '../../server/convert'
   import { server } from '../global'
   import * as Info from '../../twmap/types'
-  import { ColorEnvelope, PositionEnvelope, SoundEnvelope, type EnvPoint, type EnvPos } from '../../twmap/envelope'
+  import {
+    ColorEnvelope,
+    PositionEnvelope,
+    SoundEnvelope,
+    type EnvPoint,
+    type EnvPos,
+  } from '../../twmap/envelope'
   import ContextMenu from './contextMenu.svelte'
   import { onDestroy, onMount } from 'svelte'
   import { showError } from './dialog'
@@ -105,39 +119,39 @@
   }
 
   $: viewBox = envelope ? makeViewBox(envelope) : { x: 0, y: 0, w: 0, h: 0 }
-  $: sync_, channelEnabled, paths = envelope ? makePaths(envelope, $syncPoints) : []
-  $: sync_, channelEnabled, colors = envelope ? makeColors(envelope): []
+  $: sync_, channelEnabled, (paths = envelope ? makePaths(envelope, $syncPoints) : [])
+  $: sync_, channelEnabled, (colors = envelope ? makeColors(envelope) : [])
 
   function clonePoints(points: AnyEnvPoints): AnyEnvPoints {
     return points.map((p: EnvPoint<any>) => ({
-        ...p,
-        content: typeof p.content === 'object' ? { ...p.content } : p.content
+      ...p,
+      content: typeof p.content === 'object' ? { ...p.content } : p.content,
     }))
   }
 
   function envPointsFromJson(points: MapDir.EnvelopePoint<any>[]): EnvPoint<any>[] {
     if (envelope instanceof ColorEnvelope) {
       return points.map((p: MapDir.ColorEnvelope['points'][0]) => ({
-          time: p.time,
-          content: colorFromJson(p.content, 10),
-          type: curveTypeFromString(p.type),
-        }))
+        time: p.time,
+        content: colorFromJson(p.content, 10),
+        type: curveTypeFromString(p.type),
+      }))
     } else if (envelope instanceof PositionEnvelope) {
       return points.map((p: MapDir.PositionEnvelope['points'][0]) => ({
-          time: p.time,
-          content: {
-            x: fromFixedNum(p.content.x, 15),
-            y: fromFixedNum(p.content.y, 15),
-            rotation: fromFixedNum(p.content.rotation, 10),
-          },
-          type: curveTypeFromString(p.type),
-        }))
+        time: p.time,
+        content: {
+          x: fromFixedNum(p.content.x, 15),
+          y: fromFixedNum(p.content.y, 15),
+          rotation: fromFixedNum(p.content.rotation, 10),
+        },
+        type: curveTypeFromString(p.type),
+      }))
     } else if (envelope instanceof SoundEnvelope) {
-      return  points.map((p: MapDir.SoundEnvelope['points'][0]) => ({
-          time: p.time,
-          content: fromFixedNum(p.content, 10),
-          type: curveTypeFromString(p.type),
-        }))
+      return points.map((p: MapDir.SoundEnvelope['points'][0]) => ({
+        time: p.time,
+        content: fromFixedNum(p.content, 10),
+        type: curveTypeFromString(p.type),
+      }))
     } else {
       throw 'unknown envelope type'
     }
@@ -145,36 +159,45 @@
 
   function makeEnvPointEdit(points: EnvPoint<any>[]): Send['edit/envelope'] {
     if (envelope instanceof ColorEnvelope) {
-      return [e, {
-        type: MapDir.EnvelopeType.Color,
-        points: points.map(p => ({
-          time: p.time,
-          content: colorToJson(p.content, 10),
-          type: curveTypeToString(p.type),
-        })),
-      }]
+      return [
+        e,
+        {
+          type: MapDir.EnvelopeType.Color,
+          points: points.map(p => ({
+            time: p.time,
+            content: colorToJson(p.content, 10),
+            type: curveTypeToString(p.type),
+          })),
+        },
+      ]
     } else if (envelope instanceof PositionEnvelope) {
-      return [e, {
-        type: MapDir.EnvelopeType.Position,
-        points: points.map(p => ({
-          time: p.time,
-          content: {
-            x: toFixedNum(p.content.x, 15),
-            y: toFixedNum(p.content.y, 15),
-            rotation: toFixedNum(p.content.rotation, 10),
-          },
-          type: curveTypeToString(p.type),
-        })),
-      }]
+      return [
+        e,
+        {
+          type: MapDir.EnvelopeType.Position,
+          points: points.map(p => ({
+            time: p.time,
+            content: {
+              x: toFixedNum(p.content.x, 15),
+              y: toFixedNum(p.content.y, 15),
+              rotation: toFixedNum(p.content.rotation, 10),
+            },
+            type: curveTypeToString(p.type),
+          })),
+        },
+      ]
     } else if (envelope instanceof SoundEnvelope) {
-      return [e, {
-        type: MapDir.EnvelopeType.Sound,
-        points:  points.map(p => ({
-          time: p.time,
-          content: toFixedNum(p.content, 10),
-          type: curveTypeToString(p.type),
-        })),
-      }]
+      return [
+        e,
+        {
+          type: MapDir.EnvelopeType.Sound,
+          points: points.map(p => ({
+            time: p.time,
+            content: toFixedNum(p.content, 10),
+            type: curveTypeToString(p.type),
+          })),
+        },
+      ]
     } else {
       throw 'unknown envelope type'
     }
@@ -259,9 +282,7 @@
     const channels = envChannels(env)
     const res = []
 
-    for (const i in channels)
-      if (channelEnabled[channels[i]])
-        res.push(colors[i])
+    for (const i in channels) if (channelEnabled[channels[i]]) res.push(colors[i])
 
     return res
   }
@@ -317,12 +338,10 @@
 
   let sync_ = 0
   function onSync() {
-    if (envelope && $rmap.map.envelopes.length === 0)
-      e = -1
+    if (envelope && $rmap.map.envelopes.length === 0) e = -1
     else if (envelope && $rmap.map.envelopes.indexOf(envelope) === -1)
       e = $rmap.map.envelopes.length - 1
-    else if (envelope === null && $rmap.map.envelopes.length !== 0)
-      e = 0
+    else if (envelope === null && $rmap.map.envelopes.length !== 0) e = 0
     sync_++
   }
 
@@ -340,12 +359,14 @@
   })
 
   async function onRename(e: InputEvent) {
-    if (!envelope)
-      return
-    const change: Send['edit/envelope'] = [$rmap.map.envelopes.indexOf(envelope), {
-      type: envTypeToString(envelope.type),
-      name: e.currentTarget.value,
-    }]
+    if (!envelope) return
+    const change: Send['edit/envelope'] = [
+      $rmap.map.envelopes.indexOf(envelope),
+      {
+        type: envTypeToString(envelope.type),
+        name: e.currentTarget.value,
+      },
+    ]
     try {
       await $server.query('edit/envelope', change)
     } catch (e) {
@@ -369,8 +390,7 @@
   }
 
   async function onDelete() {
-    if (!envelope)
-      return
+    if (!envelope) return
     const index = $rmap.map.envelopes.indexOf(envelope)
     try {
       await $server.query('delete/envelope', index)
@@ -403,8 +423,7 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    if (!envelope)
-      return
+    if (!envelope) return
     if (activePath !== -1 && activePoint !== -1) {
       const chan = envChannels(envelope)[activePath]
       const point = $syncPoints[activePoint]
@@ -453,8 +472,7 @@
   }
 
   function onEditValue(e: InputEvent) {
-    if (!envelope)
-      return
+    if (!envelope) return
     const point = $syncPoints[cm_j]
     const chan = envChannels(envelope)[cm_i]
     const val = clampI32(Math.floor(parseFloat(e.currentTarget.value) * 1024))
@@ -467,8 +485,7 @@
   }
 
   function onEditTime(e: InputEvent) {
-    if (!envelope)
-      return
+    if (!envelope) return
     const point = $syncPoints[cm_j]
     const prev = $syncPoints[Math.max(0, cm_j - 1)]
     const next = $syncPoints[Math.min($syncPoints.length - 1, cm_j + 1)]
@@ -487,8 +504,7 @@
   }
 
   function onDeletePoint() {
-    if (!envelope)
-      return
+    if (!envelope) return
     $syncPoints.splice(cm_j, 1)
     cm_j = -1
 
@@ -496,8 +512,7 @@
   }
 
   function onEditCurve(e: FormEvent<HTMLSelectElement>) {
-    if (!envelope)
-      return
+    if (!envelope) return
     const point = $syncPoints[cm_k]
     const val: Info.CurveType = clampI32(parseInt(e.currentTarget.value))
     point.type = val
@@ -515,8 +530,7 @@
   }
 
   function addPoint(e: MouseEvent) {
-    if (!envelope)
-      return
+    if (!envelope) return
     if (!(e.target instanceof SVGSVGElement) || e.button !== 0) return
 
     let [px, _] = pixelToSvg(e.clientX, e.clientY)
@@ -551,138 +565,144 @@
 <svelte:window on:resize={onResize} on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
 {#key sync_}
-<div id="envelope-editor">
-  <div class="header">
-    {#if envelope}
-      <select bind:value={e}>
-        {#each $rmap.map.envelopes as env, i}
-          <option value={i}>
-            {`#${i} ${env.name || ''} (${envTypeToString(env.type)})`}
-          </option>
-        {/each}
-      </select>
-      <label>
-        <input type="text" value={envelope.name} placeholder="(unnamed)" on:change={onRename} />
-      </label>
-      <div class="channels">
-        {#if envelope instanceof ColorEnvelope}
-          <label class="red">
-            <input type="checkbox" bind:checked={channelEnabled.color_r} />
-            <span>R</span>
-          </label>
-          <label class="green">
-            <input type="checkbox" bind:checked={channelEnabled.color_g} />
-            <span>G</span>
-          </label>
-          <label class="blue">
-            <input type="checkbox" bind:checked={channelEnabled.color_b} />
-            <span>B</span>
-          </label>
-          <label class="orange">
-            <input type="checkbox" bind:checked={channelEnabled.color_a} />
-            <span>A</span>
-          </label>
-        {:else if envelope instanceof PositionEnvelope}
-          <label class="red">
-            <input type="checkbox" bind:checked={channelEnabled.pos_x} />
-            <span>X</span>
-          </label>
-          <label class="green">
-            <input type="checkbox" bind:checked={channelEnabled.pos_y} />
-            <span>Y</span>
-          </label>
-          <label class="blue">
-            <input type="checkbox" bind:checked={channelEnabled.pos_r} />
-            <span>R</span>
-          </label>
-        {:else if envelope instanceof SoundEnvelope}
-          <label class="red">
-            <input type="checkbox" bind:checked={channelEnabled.sound_v} />
-            <span>V</span>
-          </label>
-        {/if}
-      </div>
-      <button class="default" on:click={onRescale}>Rescale</button>
-    {/if}
-    <div class="buttons">
-      <select on:change={onNewEnv}>
-        <option selected disabled>New envelope…</option>
-        <option value="color">Color</option>
-        <option value="position">Position</option>
-        <option value="sound">Sound</option>
-      </select>
+  <div id="envelope-editor">
+    <div class="header">
       {#if envelope}
-        <button class="danger" on:click={onDelete} disabled={envelope === null}>Delete</button>
-      {/if}
-    </div>
-  </div>
-
-  <div class="graph" on:wheel={onMouseWheel}>
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <svg
-      viewBox={viewBoxStr(viewBox)}
-      preserveAspectRatio="none"
-      bind:this={svg}
-      on:mousedown={addPoint}
-    >
-      {#each paths as path, i}
-        {@const col = colors[i]}
-        {#each path as p, k}
-          {#if k !== 0}
-            {@const p2 = path[k - 1]}
-            <path
-              d={curveStr(p2, p)}
-              style:stroke={col}
-              on:contextmenu={e => showCM(e, i, -1, k - 1)}
-            />
-          {/if}
-        {/each}
-        {#each path as p, j}
-          <!-- not using the circle becausePointthe path stroke can be screen-space sized but not the circle fill. -->
-          <path
-            class="point"
-            d={pointStr(p.x, p.y)}
-            style:stroke={col}
-            on:mousedown={e => onMouseDown(e, i, j)}
-            on:contextmenu={e => showCM(e, i, j, -1)}
-          />
-        {/each}
-      {/each}
-      <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis" />
-      <!-- the y=0 line -->
-      {#each Array.from({ length: Math.ceil(viewBox.w / 1000) }) as _, i}
-        <line x1={i * 1000} y1={viewBox.y} x2={i * 1000} y2={viewBox.y + viewBox.h} class="axis" />
-        <!-- the x=i line -->
-      {/each}
-    </svg>
-  </div>
-</div>
-
-{#if cm_i !== -1 && cm_j !== -1}
-  {@const p = paths[cm_i][cm_j]}
-  <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-    <div class="edit-env-point">
-      <label>
-        Time <input type="number" min={0} value={p.x / 1000} on:change={onEditTime} />
-      </label>
-      <label>
-        Value <input type="number" value={-p.y / 1024} on:change={onEditValue} />
-      </label>
-      <button class="danger" on:click={onDeletePoint}>Delete</button>
-    </div>
-  </ContextMenu>
-{:else if cm_i !== -1 && cm_k !== -1}
-  {@const p = paths[cm_i][cm_k]}
-  <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
-    <div class="edit-env-point">
-      <label>
-        Curve <select on:change={onEditCurve}>
-          {#each curves as c, i}
-            <option value={i} selected={i === p.curve}>{c}</option>
+        <select bind:value={e}>
+          {#each $rmap.map.envelopes as env, i}
+            <option value={i}>
+              {`#${i} ${env.name || ''} (${envTypeToString(env.type)})`}
+            </option>
           {/each}
         </select>
-      </label>
+        <label>
+          <input type="text" value={envelope.name} placeholder="(unnamed)" on:change={onRename} />
+        </label>
+        <div class="channels">
+          {#if envelope instanceof ColorEnvelope}
+            <label class="red">
+              <input type="checkbox" bind:checked={channelEnabled.color_r} />
+              <span>R</span>
+            </label>
+            <label class="green">
+              <input type="checkbox" bind:checked={channelEnabled.color_g} />
+              <span>G</span>
+            </label>
+            <label class="blue">
+              <input type="checkbox" bind:checked={channelEnabled.color_b} />
+              <span>B</span>
+            </label>
+            <label class="orange">
+              <input type="checkbox" bind:checked={channelEnabled.color_a} />
+              <span>A</span>
+            </label>
+          {:else if envelope instanceof PositionEnvelope}
+            <label class="red">
+              <input type="checkbox" bind:checked={channelEnabled.pos_x} />
+              <span>X</span>
+            </label>
+            <label class="green">
+              <input type="checkbox" bind:checked={channelEnabled.pos_y} />
+              <span>Y</span>
+            </label>
+            <label class="blue">
+              <input type="checkbox" bind:checked={channelEnabled.pos_r} />
+              <span>R</span>
+            </label>
+          {:else if envelope instanceof SoundEnvelope}
+            <label class="red">
+              <input type="checkbox" bind:checked={channelEnabled.sound_v} />
+              <span>V</span>
+            </label>
+          {/if}
+        </div>
+        <button class="default" on:click={onRescale}>Rescale</button>
+      {/if}
+      <div class="buttons">
+        <select on:change={onNewEnv}>
+          <option selected disabled>New envelope…</option>
+          <option value="color">Color</option>
+          <option value="position">Position</option>
+          <option value="sound">Sound</option>
+        </select>
+        {#if envelope}
+          <button class="danger" on:click={onDelete} disabled={envelope === null}>Delete</button>
+        {/if}
+      </div>
     </div>
-  </ContextMenu>
-{/if}
+
+    <div class="graph" on:wheel={onMouseWheel}>
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <svg
+        viewBox={viewBoxStr(viewBox)}
+        preserveAspectRatio="none"
+        bind:this={svg}
+        on:mousedown={addPoint}
+      >
+        {#each paths as path, i}
+          {@const col = colors[i]}
+          {#each path as p, k}
+            {#if k !== 0}
+              {@const p2 = path[k - 1]}
+              <path
+                d={curveStr(p2, p)}
+                style:stroke={col}
+                on:contextmenu={e => showCM(e, i, -1, k - 1)}
+              />
+            {/if}
+          {/each}
+          {#each path as p, j}
+            <!-- not using the circle becausePointthe path stroke can be screen-space sized but not the circle fill. -->
+            <path
+              class="point"
+              d={pointStr(p.x, p.y)}
+              style:stroke={col}
+              on:mousedown={e => onMouseDown(e, i, j)}
+              on:contextmenu={e => showCM(e, i, j, -1)}
+            />
+          {/each}
+        {/each}
+        <line x1={viewBox.x} y1={0} x2={viewBox.x + viewBox.w} y2={0} class="axis" />
+        <!-- the y=0 line -->
+        {#each Array.from({ length: Math.ceil(viewBox.w / 1000) }) as _, i}
+          <line
+            x1={i * 1000}
+            y1={viewBox.y}
+            x2={i * 1000}
+            y2={viewBox.y + viewBox.h}
+            class="axis"
+          />
+          <!-- the x=i line -->
+        {/each}
+      </svg>
+    </div>
+  </div>
+
+  {#if cm_i !== -1 && cm_j !== -1}
+    {@const p = paths[cm_i][cm_j]}
+    <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
+      <div class="edit-env-point">
+        <label>
+          Time <input type="number" min={0} value={p.x / 1000} on:change={onEditTime} />
+        </label>
+        <label>
+          Value <input type="number" value={-p.y / 1024} on:change={onEditValue} />
+        </label>
+        <button class="danger" on:click={onDeletePoint}>Delete</button>
+      </div>
+    </ContextMenu>
+  {:else if cm_i !== -1 && cm_k !== -1}
+    {@const p = paths[cm_i][cm_k]}
+    <ContextMenu x={cm_x} y={cm_y} on:close={hideCM}>
+      <div class="edit-env-point">
+        <label>
+          Curve <select on:change={onEditCurve}>
+            {#each curves as c, i}
+              <option value={i} selected={i === p.curve}>{c}</option>
+            {/each}
+          </select>
+        </label>
+      </div>
+    </ContextMenu>
+  {/if}
 {/key}
