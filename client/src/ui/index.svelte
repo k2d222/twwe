@@ -6,7 +6,6 @@
   import storage from '../storage'
   import { WebSocketServer } from '../server/server'
   import { server, serverCfg } from './global'
-  import { queryConfig } from './lib/util'
 
   export let url = ''
 
@@ -26,7 +25,6 @@
     })
     await connected
 
-    // let config = await queryConfig($serverCfg, params.mapName)
     let config = await $server.query('config', params.mapName)
     console.log('joining map', config)
 

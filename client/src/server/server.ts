@@ -117,12 +117,14 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
     this.errorListener = fn
   }
 
-  fetch(path: string, init: RequestInit = {}) {
+  async fetch(path: string, init: RequestInit = {}) {
     init.headers = {
       ...init.headers,
       ...(this.token && { 'Authorization': 'Bearer ' + this.token })
     }
-    return fetch(`${this.httpUrl}/${path}`, init)
+    const resp = await fetch(`${this.httpUrl}/${path}`, init)
+    if (!resp.ok) throw await resp.text()
+    return resp
   }
 
   query<K extends SendKey>(type: K, content: Send[K], options: Partial<Options> = {}): Promise<Resp[K]> {

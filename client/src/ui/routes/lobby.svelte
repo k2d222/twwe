@@ -1,6 +1,6 @@
 <script lang="ts">
   import { navigate } from 'svelte-routing'
-  import { showInfo, showWarning, showError, clearDialog } from '../lib/dialog'
+  import { showInfo, showWarning, showError, clearDialog, showDialog } from '../lib/dialog'
   import {
     Column,
     Row,
@@ -36,7 +36,7 @@
     TrashCan as DeleteIcon,
     Password as KeyIcon,
   } from 'carbon-icons-svelte'
-  import { createMap, download, queryMaps, uploadMap } from '../lib/util'
+  import { createMap, download, queryConfig, queryMaps, uploadMap } from '../lib/util'
   import type { ComboBoxItem } from 'carbon-components-svelte/src/ComboBox/ComboBox.svelte'
   import type { MapDetail } from '../../server/protocol'
   import { onMount } from 'svelte'
@@ -163,22 +163,36 @@
 
   async function onJoinBridge(key: string) {
     modalAccessKey.open = false
+    let id = showInfo(`joining ${key}…`, 'none')
 
-    const cfg: ServerConfig = {
-      ...serverCfg,
-      name: 'remote: ' + key,
-      path: (serverCfg.path ?? '') + '/bridge/' + key,
+    try {
+      // first, see if the key points at an unlisted map.
+      const httpUrl = serverHttpUrl(serverCfg)
+      const config = await queryConfig(httpUrl, key)
+      onJoinMap(config.name)
+    } catch (_) {
+      // second, if it's not a unlisted map, it's a bridge map
+      try {
+        const cfg: ServerConfig = {
+          ...serverCfg,
+          name: 'remote: ' + key,
+          path: (serverCfg.path ?? '') + '/bridge/' + key,
+        }
+        serverCfgs.push(cfg)
+
+        const httpUrl = serverHttpUrl(cfg)
+        let maps = await queryMaps(httpUrl)
+        let name = maps[0].name
+
+        storage.save('servers', serverCfgs, { persistent: false })
+        storage.save('currentServer', serverCfgs.length - 1, { persistent: false })
+        navigate('/edit/' + name)
+      } catch (e) {
+        showError(e)
+      }
+    } finally {
+      clearDialog(id)
     }
-    serverCfgs.push(cfg)
-
-    const httpUrl = serverHttpUrl(cfg)
-    let maps = await queryMaps(httpUrl)
-    let name = maps[0].name
-
-    storage.save('servers', serverCfgs, { persistent: false })
-    storage.save('currentServer', serverCfgs.length - 1, { persistent: false })
-
-    navigate('/edit/' + name)
   }
 
   function onDeleteMap(mapName: string) {

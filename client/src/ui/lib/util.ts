@@ -27,6 +27,7 @@ export async function download(path: string, name: string) {
   const id = showInfo(`Downloading '${name}'…`, 'none')
   try {
     const resp = await fetch(path)
+    if (!resp.ok) throw await resp.text()
     const data = await resp.blob()
     const url = URL.createObjectURL(data)
 
@@ -48,7 +49,6 @@ export async function uploadMap(url: string, name: string, file: Blob) {
     method: 'PUT',
     body: file,
   })
-
   if (!resp.ok) throw await resp.text()
 }
 
@@ -58,7 +58,6 @@ export async function createMap(url: string, name: string, create: MapCreation) 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(create),
   })
-
   if (!resp.ok) throw await resp.text()
 }
 
@@ -96,13 +95,15 @@ export async function queryMaps(url: string): Promise<MapDetail[]> {
   }
 
   const resp = await fetch(`${url}/maps`)
+  if (!resp.ok) throw await resp.text()
+
   const maps: MapDetail[] = await resp.json()
   sortMaps(maps)
   return maps
 }
 
-export async function queryConfig(server: WebSocketServer, mapName: string): Promise<Config> {
-  const resp = await server.fetch(`maps/${mapName}/config`)
+export async function queryConfig(url: string, mapName: string): Promise<Config> {
+  const resp = await fetch(`${url}/maps/${mapName}/config`)
   const config: Config = await resp.json()
   return config
 }
