@@ -1,7 +1,8 @@
-use std::sync::Arc;
+use platform_dirs::AppDirs;
+use std::{collections::BTreeSet, path::PathBuf, sync::Arc};
 
 use cli::Cli;
-
+use room::Room;
 use server::Server;
 
 mod base64;
@@ -17,12 +18,48 @@ mod twmap_map_checks;
 mod twmap_map_edit;
 mod util;
 
-#[cfg(feature = "bridge")]
-mod bridge;
-#[cfg(feature = "bridge")]
+#[cfg(feature = "bridge_in")]
+mod bridge_in;
+#[cfg(feature = "bridge_out")]
+mod bridge_out;
+#[cfg(feature = "bridge_in")]
 mod bridge_router;
 
-use room::Room;
+pub fn find_data_dirs() -> Vec<PathBuf> {
+    // like ddnet's storage.cfg, the last path has the highest priority.
+    let mut data_dirs = BTreeSet::new();
+
+    // ddnet's $USERDIR
+    if let Some(dirs) = AppDirs::new(Some("ddnet"), false) {
+        data_dirs.insert(dirs.config_dir);
+        data_dirs.insert(dirs.data_dir);
+    }
+    // ddnet's $DATADIR
+    let known_ddnets = [
+        "/usr/share/ddnet/data",
+        "/usr/share/games/ddnet/data",
+        "/usr/local/share/ddnet/data",
+        "/usr/local/share/games/ddnet/data",
+        "/usr/pkg/share/ddnet/data",
+        "/usr/pkg/share/games/ddnet/data",
+        "/opt/ddnet/data",
+    ];
+    known_ddnets.iter().for_each(|str| {
+        let path = PathBuf::from(str);
+        data_dirs.insert(path);
+    });
+    // ddnet's $CURRENTDIR
+    if let Ok(dir) = std::env::current_dir() {
+        data_dirs.insert(dir.join("data"));
+        data_dirs.insert(dir);
+    }
+
+    let maps_dirs = data_dirs
+        .into_iter()
+        .filter(|path| path.join("maps").is_dir())
+        .collect();
+    maps_dirs
+}
 
 pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
     let server = Server::new(cli);
@@ -75,6 +112,7 @@ pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
         }
     }
     let rooms = server.rooms().len();
+    log::debug!("server config: {cli:#?}");
     log::info!("found {rooms} maps");
     if rooms > server.max_maps {
         log::warn!("there are more maps than is allowed by --max-maps");

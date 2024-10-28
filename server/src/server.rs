@@ -25,13 +25,13 @@ use crate::{
     util::{macros::apply_partial, *},
 };
 
-#[cfg(feature = "bridge")]
-use crate::bridge::Bridge;
-#[cfg(feature = "bridge")]
+#[cfg(feature = "bridge_in")]
+use crate::bridge_in::Bridge;
+#[cfg(feature = "bridge_in")]
 use std::net::SocketAddr;
-#[cfg(feature = "bridge")]
+#[cfg(feature = "bridge_in")]
 use std::sync::RwLock;
-#[cfg(feature = "bridge")]
+#[cfg(feature = "bridge_out")]
 use tokio::task::JoinHandle;
 
 type Tx = UnboundedSender<WebSocketMessage>;
@@ -88,9 +88,9 @@ impl Server {
             max_maps: cli.max_maps,
             max_map_size: cli.max_map_size * 1024,
             max_users: cli.max_connections,
-            #[cfg(feature = "bridge")]
+            #[cfg(feature = "bridge_out")]
             bridge: Default::default(),
-            #[cfg(feature = "bridge")]
+            #[cfg(feature = "bridge_in")]
             remote_bridges: Default::default(),
         }
     }

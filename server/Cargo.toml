@@ -22,7 +22,7 @@ twmap = "0.12"
 env_logger = "0.11"
 log = "0.4"
 parking_lot = "0.12"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5", features = ["derive", "wrap_help"] }
 regex = "1.6"
 axum = { version = "0.7", features = ["tokio", "multipart", "ws"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
@@ -44,12 +44,12 @@ tower_governor = { version = "0.4.3", features = ["axum"] }
 tokio-tungstenite = { version = "0.24.0", features = ["rustls-tls-webpki-roots"] }
 bcrypt = "0.15.1"
 lazy_static = "1.5.0"
+platform-dirs = "0.3.0"
 
 
 [lib]
 
 [features]
-default = []
-bridge = []
-bridge_out = ["bridge"]
-bridge_in = ["bridge"]
+default = ["bridge_in"]
+bridge_out = []
+bridge_in = []

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 #[clap(name = "TWWE Server")]
 #[clap(author = "Mathis Brossier <mathis.brossier@gmail.com>")]
 #[clap(version = "0.1")]
@@ -28,6 +28,10 @@ pub struct Cli {
     /// Map will be read in the maps sub-directory, automappers in editor/automap, map
     /// config is volatile for now. Automappers will be shared between all maps in the
     /// same data directory.
+    ///
+    /// New maps will be created in the first directory provided.
+    ///
+    /// If both `--maps` and `--data` are unset, the server will look for the default DDNet data directories.
     #[arg(name = "data", long)]
     pub data_dirs: Vec<PathBuf>,
 

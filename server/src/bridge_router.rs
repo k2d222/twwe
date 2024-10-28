@@ -15,7 +15,6 @@ use futures_util::StreamExt;
 
 use crate::Server;
 use crate::{
-    bridge::BridgeConfig,
     error::Error,
     protocol::{self, *},
     util::timestamp_now,
@@ -97,17 +96,6 @@ pub(crate) async fn route_bridge_list_maps(
     } else {
         Err(Error::BridgeFailure)
     }
-}
-
-pub(crate) async fn route_open_bridge(
-    State(server): State<Arc<Server>>,
-    Json(cfg): Json<BridgeConfig>,
-) -> impl IntoResponse {
-    Server::open_bridge(server, cfg).await
-}
-
-pub(crate) async fn route_close_bridge(State(server): State<Arc<Server>>) -> impl IntoResponse {
-    server.close_bridge();
 }
 
 pub(crate) async fn route_server_bridge(
