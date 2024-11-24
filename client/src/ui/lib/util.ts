@@ -192,8 +192,8 @@ export function rem2px(rem: number) {
   return parseFloat(window.getComputedStyle(document.documentElement).fontSize) * rem
 }
 export function px2vw(px: number) {
-  return (px / window.screen.width) * 100
+  return (px / window.innerWidth) * 100
 }
 export function px2vh(px: number) {
-  return (px / window.screen.height) * 100
+  return (px / window.innerHeight) * 100
 }

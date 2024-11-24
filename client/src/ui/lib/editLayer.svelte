@@ -4,6 +4,7 @@
   import type { Envelope } from '../../twmap/map'
   import { type FormInputEvent, layerKind } from './util'
   import { TilesLayerFlags } from '../../twmap/types'
+  import type { Group } from '../../twmap/group'
   import { AnyTilesLayer, TilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { QuadsLayer } from '../../twmap/quadsLayer'
   import { showInfo, showError, clearDialog } from '../lib/dialog'
@@ -23,13 +24,27 @@
   import type * as Info from '../../twmap/types'
   import type * as MapDir from '../../twmap/mapdir'
   import Number from './number.svelte'
+  import type { RenderLayer } from '../../gl/renderLayer'
+  import type { RenderGroup } from '../../gl/renderGroup'
 
   export let g: number, l: number
+
+  let rlayer: RenderLayer | null
+  let rgroup: RenderGroup | null
+  let layer: (TilesLayer | QuadsLayer) | null
+  let group: Group | null
 
   $: rgroup = g === -1 ? null : $rmap.groups[g]
   $: rlayer = l === -1 ? null : rgroup.layers[l]
   $: group = rgroup === null ? null : rgroup.group
   $: layer = rlayer === null ? null : (rlayer.layer as TilesLayer | QuadsLayer)
+
+  let amCfgs: string[]
+  $: if (syncImg && $syncImg !== null) {
+    amCfgs = $automappers[$syncImg.name + '.rules']?.configs ?? []
+  } else {
+    amCfgs = []
+  }
 
   function clamp(cur: number, min: number, max: number) {
     return Math.min(Math.max(min, cur), max)
@@ -75,11 +90,11 @@
     }
   }
 
-  function amCfgName(img: string, cfg: number | null): string {
-    if (cfg === null) {
+  function amCfgName(cfgs: string[], cfg: number | null): string {
+    if (cfg === null || cfg === -1) {
       return 'None'
     } else {
-      return $automappers[img + '.rules']?.configs?.at(cfg) ?? `#${cfg} (missing)`
+      return cfgs.at(cfg) ?? `#${cfg} (missing)`
     }
   }
 
@@ -112,7 +127,7 @@
     }
     // new image from gallery
     else {
-      const [name, size] = e.detail
+      const [name, _size] = e.detail
       const url = externalImageUrl(name)
       const embed = await showInfo('Do you wish to embed this image?', 'yesno')
       if (embed) {
@@ -175,7 +190,7 @@
   let syncColorEnvOff: Writable<number>
   let syncImgs: Readable<Image[]>
   let syncImg: Readable<Image | null>
-  let syncAmCfg: Readable<number | null>
+  let syncAmCfg: Readable<MapDir.AutomapperConfig>
   let syncColEnvs: Readable<Envelope[]>
 
   $: syncGroup = sync($server, g, {
@@ -277,9 +292,9 @@
     },
   ])
   $: if (layer && layer instanceof TilesLayer) {
-    syncAmCfg = read($server, layer.automapper.config === -1 ? null : layer.automapper.config, {
+    syncAmCfg = read($server, layer.automapper, {
       query: 'edit/layer',
-      match: [g, l, { automapper_config: { config: pick } }],
+      match: [g, l, { automapper_config: pick }],
     })
   }
   $: if (layer && layer instanceof TilesLayer) {
@@ -325,18 +340,17 @@
     //   $rmap.automapLayer(g, l, conf, tlayer.automapper.seed)
     // }, 5000)
   }
-  async function onAutomapperChange() {
+  async function onAutomapperChange(cfg: MapDir.AutomapperConfig) {
     if (!layer) return
-    const automapper = (layer as TilesLayer).automapper
     await $server.query('edit/layer', [
       g,
       l,
       {
         type: layerKind(layer),
         automapper_config: {
-          config: automapper.config === -1 ? null : automapper.config,
-          seed: automapper.seed,
-          automatic: automapper.automatic,
+          config: cfg.config,
+          seed: cfg.seed,
+          automatic: cfg.automatic,
         },
       },
     ])
@@ -404,7 +418,7 @@
         </span>
         <input
           type="button"
-          value={amCfgName($syncImg?.name, $syncAmCfg)}
+          value={amCfgName(amCfgs, $syncAmCfg.config)}
           disabled={$syncImg === null}
           on:click={() => (automapperOpen = true)}
         />
@@ -412,7 +426,11 @@
       <ComposedModal bind:open={automapperOpen} size="sm" selectorPrimaryFocus=".bx--modal-close">
         <ModalHeader title="Automapper" />
         <ModalBody hasForm>
-          <AutomapperPicker {layer} on:change={onAutomapperChange} />
+          <AutomapperPicker
+            automapper={$syncAmCfg}
+            configs={amCfgs}
+            on:change={e => onAutomapperChange(e.detail)}
+          />
         </ModalBody>
       </ComposedModal>
       <button

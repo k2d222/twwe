@@ -84,7 +84,7 @@ pub(crate) fn set_layer_height<T: twmap::TilemapLayer>(
     Ok(())
 }
 
-pub(crate) fn is_automapper(path: &Path) -> Option<AutomapperKind> {
+pub(crate) fn automapper_kind(path: &Path) -> Option<AutomapperKind> {
     let extensions = &[
         ("rules", AutomapperKind::DDNet),
         ("rpp", AutomapperKind::RulesPP),

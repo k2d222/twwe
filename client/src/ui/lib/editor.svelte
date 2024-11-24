@@ -2,32 +2,30 @@
   import { LayerType } from '../../twmap/types'
   import { AnyTilesLayer, GameLayer } from '../../twmap/tilesLayer'
   import { onMount, onDestroy } from 'svelte'
-  import { server, rmap, selected, automappers, anim, peers } from '../global'
+  import { server, rmap, selected, anim, peers } from '../global'
   import TreeView from './treeView.svelte'
-  import { showError } from './dialog'
   import EnvelopeEditor from './envelopeEditor.svelte'
   import * as Editor from './editor'
-  import { px2vw, rem2px } from './util'
+  import { px2vh, px2vw, rem2px } from './util'
   import { Pane, Splitpanes } from 'svelte-splitpanes'
   import LayerEditor from './editLayer.svelte'
   import GroupEditor from './editGroup.svelte'
   import MapEditor from './mapEditor.svelte'
   import { Add as CreateGroupIcon } from 'carbon-icons-svelte'
   import { Button } from 'carbon-components-svelte'
-  import { navigate } from 'svelte-routing'
   import { dataToTiles, tilesLayerFlagsToLayerKind } from '../../server/convert'
   import * as Actions from '../actions'
   import { viewport } from '../../gl/global'
   import Fence from './fence.svelte'
-  import type { AutomapperKind, Recv, Tiles } from '../../server/protocol'
+  import type { Recv, Tiles } from '../../server/protocol'
 
   // split panes
-  let layerPaneSize = px2vw(rem2px(10))
-  let propsPaneSize = px2vw(rem2px(10))
-  let envPaneSize = px2vw(rem2px(10))
+  let layerPaneSize = Math.min(33, px2vw(rem2px(15)))
+  let propsPaneSize = Math.min(33, px2vw(rem2px(15)))
+  let envPaneSize = Math.min(33, px2vh(rem2px(10)))
   let lastLayerPaneSize = layerPaneSize
   let lastPropsPaneSize = propsPaneSize
-  let lastEnvPaneSize = 20
+  let lastEnvPaneSize = envPaneSize
   let closedPaneThreshold = px2vw(rem2px(2))
 
   // computed (readonly)
@@ -83,26 +81,6 @@
       $rmap.editTile({ g, l, x, y, ...tile })
     }
   }
-  function serverOnDeleteAutomapper(e: Recv['delete/automapper']) {
-    delete $automappers[e]
-    $automappers = $automappers
-  }
-  function serverOnUploadAutomapper([name, file]: Recv['create/automapper']) {
-    const kind = name.slice(name.lastIndexOf('.') + 1) as AutomapperKind
-    const image = name.slice(0, name.lastIndexOf('.'))
-    $automappers[name] = {
-      name,
-      image,
-      file,
-      kind,
-    }
-    $automappers = $automappers
-  }
-  async function onServerClosed() {
-    await showError('You have been disconnected from the server.')
-    navigate('/')
-  }
-
   let signalLoaded: () => void
   let loadSignal: Promise<void> = new Promise(resolve => {
     signalLoaded = resolve
@@ -110,12 +88,9 @@
 
   onMount(() => {
     $selected = [$rmap.map.physicsLayerIndex(GameLayer)]
-    $server.socket.addEventListener('close', onServerClosed, { once: true })
     $server.on('users', serverOnUsers)
     $server.on('edit/tiles', serverOnEditTiles)
     $server.on('edit/automap', serverOnApplyAutomapper)
-    $server.on('delete/automapper', serverOnDeleteAutomapper)
-    $server.on('create/automapper', serverOnUploadAutomapper)
     $server.query('get/users', undefined).then(u => ($peers = u))
 
     viewport.canvas.addEventListener('mouseenter', onHoverCanvas)
@@ -124,12 +99,9 @@
   })
 
   onDestroy(() => {
-    $server.socket.removeEventListener('error', onServerClosed)
     $server.off('users', serverOnUsers)
     $server.off('edit/tiles', serverOnEditTiles)
     $server.off('edit/automap', serverOnApplyAutomapper)
-    $server.off('delete/automapper', serverOnDeleteAutomapper)
-    $server.off('create/automapper', serverOnUploadAutomapper)
 
     viewport.canvas.removeEventListener('mouseenter', onHoverCanvas)
   })

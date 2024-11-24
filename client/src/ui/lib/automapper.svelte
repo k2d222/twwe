@@ -1,22 +1,19 @@
 <script lang="ts">
-  import type { TilesLayer } from '../../twmap/tilesLayer'
-  import { lint as lintAutomapper, LintLevel, lintToString } from '../../twmap/automap'
+  import type { AutomapperConfig } from '../../twmap/mapdir'
+  import { lint as lintAutomapper, LintLevel } from '../../twmap/automap'
   import { showError, showInfo, showWarning } from './dialog'
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { server, automappers } from '../global'
-  import type { Recv } from 'src/server/protocol'
+  import { createEventDispatcher } from 'svelte'
+  import { server } from '../global'
 
-  export let layer: TilesLayer
+  export let automapper: AutomapperConfig | null
+  export let configs: string[]
 
-  let dispatch = createEventDispatcher<{ change: number }>()
-
-  $: configs = $automappers[layer.image?.name + '.rules']?.configs ?? []
+  let dispatch = createEventDispatcher<{ change: AutomapperConfig }>()
 
   async function onFileChange(e: Event) {
     const input = e.target as HTMLInputElement
     if (input.files === null || input.files.length === 0) return
     const file = input.files[0]
-    const name = file.name.replace(/.rules$/, '')
     const str = await file.text()
 
     // const newRules = parseAutomapper(str) ?? []
@@ -32,57 +29,54 @@
     }
 
     try {
-      await $server.query('create/automapper', [file.name, str])
+      const res = await $server.query('create/automapper', [file.name, str])
+      if (res.length !== 0) {
+        showWarning(
+          `Automapper has ${res.length} issues(s). Check the autommapper tab for more details.`
+        )
+      }
     } catch (e) {
       showError('Saving failed: ' + e)
       return
     }
 
-    showInfo(`Uploaded '${name}'.`, 'closable')
+    showInfo(`Uploaded '${file.name}'.`)
   }
 
   async function onConfig() {
-    dispatch('change', layer.automapper.config)
+    dispatch('change', automapper)
   }
-
-  function onSync([_g, _l, e]: Recv['edit/layer']) {
-    if ('automapper_config' in e || 'image' in e) layer = layer
-  }
-
-  onMount(() => {
-    $server.on('edit/layer', onSync)
-  })
-
-  onDestroy(() => {
-    $server.off('edit/layer', onSync)
-  })
 </script>
 
 <div class="edit-automapper">
   <label>
     Upload rules
-    <input type="file" placeholder="upload rules…" accept=".rules" on:change={onFileChange} />
+    <input type="file" placeholder="upload rules…" accept=".rules,.rpp" on:change={onFileChange} />
   </label>
 
   <label>
     Config
-    <select bind:value={layer.automapper.config} on:change={onConfig}>
-      <option value={-1}>None</option>
+    <select bind:value={automapper.config} on:change={onConfig}>
+      <option value={-1} selected={automapper.config === -1 || automapper.config === null}>
+        None
+      </option>
       {#each configs as conf, i}
-        <option value={i}>#{i} {conf}</option>
+        <option value={i} selected={automapper.config === i}>#{i} {conf}</option>
       {/each}
-      {#if layer.automapper.config >= configs.length}
-        <option value={layer.automapper.config}>#{layer.automapper.config} (missing)</option>
+      {#if automapper.config >= configs.length}
+        <option value={automapper.config} selected>
+          #{automapper.config} (missing)
+        </option>
       {/if}
     </select>
   </label>
 
   <label>
     Seed
-    <input type="number" bind:value={layer.automapper.seed} on:change={onConfig} />
+    <input type="number" bind:value={automapper.seed} on:change={onConfig} />
   </label>
   <label>
     Automatic
-    <input type="checkbox" bind:checked={layer.automapper.automatic} on:change={onConfig} />
+    <input type="checkbox" bind:checked={automapper.automatic} on:change={onConfig} />
   </label>
 </div>

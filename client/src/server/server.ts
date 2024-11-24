@@ -164,7 +164,7 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
 
     // we predict an ok response from the server and dispatch right away.
     // if the server replies with err(), or if the requests are out of order,
-    // the history will take care of resyncing.
+    // the history will take care of resyncing by undoing dirty predictions.
     this.dispatch(type as any, content, promise.then())
 
     this.socket.send(message)
