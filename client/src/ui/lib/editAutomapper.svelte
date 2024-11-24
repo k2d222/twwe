@@ -17,7 +17,7 @@
   import { basicSetup } from 'codemirror'
   import { EditorState } from '@codemirror/state'
   import { EditorView, tooltips, keymap } from '@codemirror/view'
-  import { linter, setDiagnostics } from '@codemirror/lint'
+  import { setDiagnostics } from '@codemirror/lint'
   import { DDNetRules } from './lang-ddnet_rules/index'
   import { DDNetRulesLinter } from './lang-ddnet_rules/lint'
   import { Rpp } from './lang-rpp/index'

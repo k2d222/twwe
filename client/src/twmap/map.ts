@@ -131,7 +131,10 @@ export class Map {
       this.groups.findIndex(
         g =>
           g.layers.findIndex(
-            l => (l instanceof TilesLayer && l.colorEnv === envelope) || (l instanceof QuadsLayer && l.quads.findIndex(q => q.colorEnv === envelope || q.posEnv === envelope) !== -1)
+            l =>
+              (l instanceof TilesLayer && l.colorEnv === envelope) ||
+              (l instanceof QuadsLayer &&
+                l.quads.findIndex(q => q.colorEnv === envelope || q.posEnv === envelope) !== -1)
           ) !== -1
       ) !== -1
     )

@@ -1,4 +1,4 @@
-import type { ServerConfig } from "./server/server"
+import type { ServerConfig } from './server/server'
 
 const { VITE_SERVER_URLS } = import.meta.env
 

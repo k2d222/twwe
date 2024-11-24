@@ -103,7 +103,7 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
 
     this.httpUrl = serverHttpUrl(cfg)
 
-    this.errorListener = () => { }
+    this.errorListener = () => {}
     this.queryListeners = {}
 
     this.history = new History()
@@ -120,14 +120,18 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
   async fetch(path: string, init: RequestInit = {}) {
     init.headers = {
       ...init.headers,
-      ...(this.token && { 'Authorization': 'Bearer ' + this.token })
+      ...(this.token && { Authorization: 'Bearer ' + this.token }),
     }
     const resp = await fetch(`${this.httpUrl}/${path}`, init)
     if (!resp.ok) throw await resp.text()
     return resp
   }
 
-  query<K extends SendKey>(type: K, content: Send[K], options: Partial<Options> = {}): Promise<Resp[K]> {
+  query<K extends SendKey>(
+    type: K,
+    content: Send[K],
+    options: Partial<Options> = {}
+  ): Promise<Resp[K]> {
     let timeoutID = -1
     let id = this.generateID()
 
@@ -207,7 +211,6 @@ export class WebSocketServer extends EventDispatcher<Recv> implements Server {
       console.error('query response with no listener', resp)
     }
   }
-
 
   send<K extends SendKey>(type: K, content: Send[K], options: Partial<Options> = {}) {
     this.query(type, content, options)

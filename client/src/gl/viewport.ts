@@ -108,8 +108,7 @@ export class Viewport {
     const [canvasX, canvasY] = this.pixelToCanvas(e.clientX, e.clientY)
 
     // wheel button or ctrl + left click
-    if (e.buttons === 4 || (e.ctrlKey && e.buttons === 1))
-      this.onDragStart(canvasX, canvasY)
+    if (e.buttons === 4 || (e.ctrlKey && e.buttons === 1)) this.onDragStart(canvasX, canvasY)
   }
 
   private onmousemove(e: MouseEvent) {
@@ -119,10 +118,8 @@ export class Viewport {
     this.mousePos.y = worldY
 
     if (this.drag) {
-      if (e.buttons === 4 || (e.ctrlKey && e.buttons === 1))
-        this.onDrag(canvasX, canvasY)
-      else
-        this.drag = false
+      if (e.buttons === 4 || (e.ctrlKey && e.buttons === 1)) this.onDrag(canvasX, canvasY)
+      else this.drag = false
     }
   }
 
