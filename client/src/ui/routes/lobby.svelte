@@ -12,6 +12,7 @@
     Button,
     Modal,
     TextInput,
+    PasswordInput,
     NumberInput,
     Toggle,
     DataTable,
@@ -544,8 +545,9 @@
       labelB="public"
       bind:toggled={modalCreateMap.public}
     />
-    <TextInput
+    <PasswordInput
       labelText="Password (leave blank for public maps)"
+      tooltipPosition="left"
       bind:value={modalCreateMap.password}
     />
   </div>

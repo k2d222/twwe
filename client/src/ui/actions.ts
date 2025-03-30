@@ -29,7 +29,7 @@ export async function deleteMap() {
   const rmap_ = get(rmap)
 
   if (peers_ !== 1) {
-    showError('Cannot delete map: other users are connected')
+    showError('Cannot delete map while other users are connected')
     return
   }
 
@@ -42,6 +42,27 @@ export async function deleteMap() {
       navigate('/')
     } catch (e) {
       showError('Map deletion failed: ' + e)
+    }
+  }
+}
+
+export async function renameMap() {
+  const peers_ = get(peers)
+  const server_ = get(server)
+  const rmap_ = get(rmap)
+
+  if (peers_ !== 1) {
+    showError('Cannot rename map while other users are connected')
+    return
+  }
+
+  const name = prompt(`Rename map ${rmap_.map.name}`)
+
+  if (name) {
+    try {
+      await server_.query('edit/config', { name })
+    } catch (e) {
+      showError('Failed to rename map: ' + e)
     }
   }
 }
