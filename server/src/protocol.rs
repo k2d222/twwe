@@ -43,7 +43,7 @@ pub struct Config {
 #[serde(default)]
 pub struct PartialConfig {
     pub name: Option<String>,
-    pub public: Option<String>,
+    pub public: Option<bool>,
     pub password: Option<String>,
 }
 

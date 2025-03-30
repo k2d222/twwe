@@ -197,9 +197,11 @@ impl Server {
 
         match req {
             Request::ListMaps => Ok(Response::Maps(self.get_maps())),
-            Request::Config(map_name) => self
-                .get_config(&map_name)
-                .map(|r| Response::Config(r.into())),
+            Request::Config(map_name) => {
+                self.ensure_authorized(&*user?, &map_name)?;
+                self.get_config(&map_name)
+                    .map(|r| Response::Config(r.into()))
+            }
             Request::JoinMap(join) => self.user_join(user?, &join).map(|()| Response::Ok),
             Request::LeaveMap(map_name) => {
                 self.user_leave(&*user?, &map_name).map(|()| Response::Ok)
@@ -568,15 +570,18 @@ impl Server {
         let room = self.room(map_name)?.clone();
         let mut room = room.write();
 
+        apply_partial!(part_conf => room.config, name, public);
+
         if let Some(pwd) = &part_conf.password {
             if !pwd.is_empty() {
                 room.config.password =
                     Some(bcrypt::hash(pwd, bcrypt::DEFAULT_COST).map_err(|_| Error::Password)?);
+            } else {
+                room.config.password = None;
             }
         }
-        // apply_partial!(part_conf => room.config, name, access);
-        // Ok(())
-        Err(Error::ToDo)
+
+        Ok(())
     }
 
     pub fn get_images(&self, map_name: &str) -> Result<Vec<String>, Error> {
