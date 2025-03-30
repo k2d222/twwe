@@ -55,11 +55,10 @@ pub fn find_data_dirs() -> Vec<PathBuf> {
         data_dirs.insert(dir);
     }
 
-    let maps_dirs = data_dirs
+    data_dirs
         .into_iter()
         .filter(|path| path.join("maps").is_dir())
-        .collect();
-    maps_dirs
+        .collect()
 }
 
 pub fn create_server(cli: &Cli) -> std::io::Result<Server> {

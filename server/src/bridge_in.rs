@@ -48,7 +48,7 @@ impl Server {
                 .ok_or(Error::BridgeNotFound)?;
 
             bridge.users_tx.insert(addr, ws_send);
-            bridge_addr.clone()
+            *bridge_addr
         };
 
         log::info!("client {addr} connected to remote server {bridge_addr}");
@@ -152,14 +152,15 @@ impl Server {
                 };
                 let res = move || -> Option<()> {
                     let user_addr: SocketAddr = serde_json::from_str(&addr_msg).ok()?;
-                    self.remote_bridges
+                    if let Some(tx) = self
+                        .remote_bridges
                         .read()
                         .get(&addr)?
                         .users_tx
                         .get(&user_addr)
-                        .map(|tx| {
-                            tx.unbounded_send(WebSocketMessage::Text(payload_msg)).ok();
-                        });
+                    {
+                        tx.unbounded_send(WebSocketMessage::Text(payload_msg)).ok();
+                    }
                     Some(())
                 }();
                 futures::future::ready(res.ok_or(Error::BridgeFailure))

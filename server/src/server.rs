@@ -661,7 +661,7 @@ impl Server {
         };
 
         image
-            .check(&room.map(), &mut ())
+            .check(room.map(), &mut ())
             .map_err(|e| Error::Map(e.to_string()))?;
 
         room.map().images.push(image);
@@ -737,7 +737,7 @@ impl Server {
         };
 
         // check
-        env.check(&room.map(), &mut ())
+        env.check(room.map(), &mut ())
             .map_err(|e| Error::Map(e.to_string()))?;
 
         room.map().envelopes.push(env);
@@ -753,7 +753,7 @@ impl Server {
         part_env.check_self()?;
         let room = self.room(map_name)?;
         let mut room = room.write();
-        part_env.check_map(&room.map())?;
+        part_env.check_map(room.map())?;
 
         // edit
         {
@@ -960,7 +960,7 @@ impl Server {
         part_layer.check_self()?;
         let room = self.room(map_name)?;
         let mut room = room.write();
-        part_layer.check_map(&room.map())?;
+        part_layer.check_map(room.map())?;
 
         let map = room.map();
 
@@ -1036,7 +1036,7 @@ impl Server {
         part_layer.check_self()?;
         let room = self.room(map_name)?;
         let mut room = room.write();
-        part_layer.check_map(&room.map())?;
+        part_layer.check_map(room.map())?;
 
         // edit
         {
@@ -1287,7 +1287,7 @@ impl Server {
         let room = self.room(map_name)?;
         let mut room = room.write();
         let map = room.map();
-        quad.check_map(&map)?;
+        quad.check_map(map)?;
         let layer = map
             .groups
             .get_mut(group_index as usize)
@@ -1321,7 +1321,7 @@ impl Server {
         let room = self.room(map_name)?;
         let mut room = room.write();
         let map = room.map();
-        quad.check_map(&map)?;
+        quad.check_map(map)?;
         let layer = map
             .groups
             .get_mut(group_index as usize)
