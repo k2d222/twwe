@@ -1,3 +1,4 @@
+use parking_lot::RwLock;
 use platform_dirs::AppDirs;
 use std::{collections::BTreeSet, path::PathBuf, sync::Arc};
 
@@ -77,11 +78,11 @@ pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
                     } else {
                         None
                     }?;
-                    Some(Arc::new(room))
+                    Some(Arc::new(RwLock::new(room)))
                 });
 
             for r in rooms {
-                let mut key = r.name().to_owned();
+                let mut key = r.read().name().to_owned();
                 while server_rooms.contains_key(&key) {
                     key.push('-');
                 }
@@ -99,11 +100,11 @@ pub fn create_server(cli: &Cli) -> std::io::Result<Server> {
                     } else {
                         None
                     }?;
-                    Some(Arc::new(room))
+                    Some(Arc::new(RwLock::new(room)))
                 });
 
             for r in rooms {
-                let mut key = r.name().to_owned();
+                let mut key = r.read().name().to_owned();
                 while server_rooms.contains_key(&key) {
                     key.push('-');
                 }

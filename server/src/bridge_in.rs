@@ -41,7 +41,7 @@ impl Server {
         let fut_send = rx.map(Ok).forward(tx);
 
         let bridge_addr = {
-            let mut bridges = self.remote_bridges.write().unwrap();
+            let mut bridges = self.remote_bridges.write();
             let (bridge_addr, bridge) = bridges
                 .iter_mut()
                 .find(|(_, v)| v.key == key)
@@ -61,7 +61,7 @@ impl Server {
                 match msg {
                     WebSocketMessage::Text(msg) => {
                         let res = || -> Option<()> {
-                            let bridges = self.remote_bridges.read().unwrap();
+                            let bridges = self.remote_bridges.read();
                             let bridge = bridges.get(&bridge_addr)?;
 
                             // forward client requests to the remote with the client addr.
@@ -91,7 +91,7 @@ impl Server {
 
         // remove the user, send logout
         || -> Option<()> {
-            let mut bridges = self.remote_bridges.write().unwrap();
+            let mut bridges = self.remote_bridges.write();
             let bridge = bridges.get_mut(&bridge_addr)?;
 
             let packet = SendPacket {
@@ -137,7 +137,7 @@ impl Server {
             users_tx: Default::default(),
         };
 
-        self.remote_bridges.write().unwrap().insert(addr, bridge);
+        self.remote_bridges.write().insert(addr, bridge);
 
         log::info!("remote server {addr} started bridging");
 
@@ -154,7 +154,6 @@ impl Server {
                     let user_addr: SocketAddr = serde_json::from_str(&addr_msg).ok()?;
                     self.remote_bridges
                         .read()
-                        .unwrap()
                         .get(&addr)?
                         .users_tx
                         .get(&user_addr)
@@ -173,7 +172,7 @@ impl Server {
             Either::Right((res, _)) => res,
         };
 
-        self.remote_bridges.write().unwrap().remove(&addr);
+        self.remote_bridges.write().remove(&addr);
 
         res
     }

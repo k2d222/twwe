@@ -7,8 +7,6 @@ use std::{
     sync::Arc,
 };
 
-use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
-
 use crate::{
     error::Error,
     map_cfg::{read_map_config, MapConfig},
@@ -26,55 +24,14 @@ fn load_map(path: &Path) -> Result<twmap::TwMap, twmap::Error> {
     Ok(map)
 }
 
-// We want the room to have the map loaded when at least 1 user is connected, but unloaded
-// when the last user disconnects. The LazyMap provides these capabilities.
-pub struct LazyMap {
-    pub path: PathBuf,
-    map: Arc<Mutex<Option<twmap::TwMap>>>,
-}
-
-impl LazyMap {
-    fn new(path: PathBuf) -> Self {
-        LazyMap {
-            path,
-            map: Arc::new(Mutex::new(None)),
-        }
-    }
-
-    fn unload(&self) {
-        *self.map.lock() = None;
-        log::debug!("map `{}` unloaded", self.path.display());
-    }
-
-    pub fn get(&self) -> MappedMutexGuard<twmap::TwMap> {
-        // lazy-load map if not loaded
-        let mut map = self.map.lock();
-        if map.is_none() {
-            *map = load_map(&self.path).ok();
-            log::debug!("map `{}` loaded", self.path.display());
-        }
-        match *map {
-            Some(_) => MutexGuard::map(map, |m| m.as_mut().unwrap()),
-            None => panic!("failed to load map `{}`", self.path.display()),
-        }
-    }
-}
-
 pub struct Room {
     dir_path: Option<PathBuf>,
     map_path: PathBuf,
     cfg_path: Option<PathBuf>,
     am_path: Option<PathBuf>,
     pub config: MapConfig,
-    users: Mutex<HashMap<String, Arc<User>>>,
-    map: LazyMap,
-    saving: Mutex<()>, // this mutex prevents multiple users from saving at the same time
-}
-
-impl PartialEq for Room {
-    fn eq(&self, other: &Self) -> bool {
-        self.map_path == other.map_path
-    }
+    users: HashMap<String, Arc<User>>,
+    map: Option<twmap::TwMap>,
 }
 
 const MAP_FILE_NAME: &str = "map.map";
@@ -103,17 +60,14 @@ impl Room {
             ..Default::default()
         });
 
-        let map = LazyMap::new(map_path.clone());
-
-        Some(Room {
+        Some(Self {
             dir_path: Some(dir_path),
             map_path,
             cfg_path: Some(cfg_path),
             am_path: Some(am_path),
             config,
-            users: Mutex::new(HashMap::new()),
-            map,
-            saving: Mutex::new(()),
+            users: HashMap::new(),
+            map: None,
         })
     }
 
@@ -132,17 +86,14 @@ impl Room {
                 ..Default::default()
             });
 
-        let map = LazyMap::new(map_path.clone());
-
-        Some(Room {
+        Some(Self {
             dir_path: None,
             map_path,
             cfg_path,
             am_path,
             config,
-            users: Mutex::new(HashMap::new()),
-            map,
-            saving: Mutex::new(()),
+            users: HashMap::new(),
+            map: None,
         })
     }
 
@@ -157,8 +108,14 @@ impl Room {
         }
     }
 
-    pub fn map(&self) -> MappedMutexGuard<twmap::TwMap> {
-        self.map.get()
+    pub fn map(&mut self) -> &mut twmap::TwMap {
+        if self.map.is_none() {
+            self.map = load_map(&self.map_path).ok();
+            log::debug!("map loaded `{}`", self.map_path.display());
+        }
+        self.map
+            .as_mut()
+            .unwrap_or_else(|| panic!("failed to load map `{}`", self.map_path.display()))
     }
 
     pub fn name(&self) -> &str {
@@ -181,34 +138,41 @@ impl Room {
         self.am_path.as_deref()
     }
 
-    pub fn add_user(&self, user: Arc<User>) {
-        self.users().insert(user.token.clone(), user);
+    pub fn add_user(&mut self, user: Arc<User>) {
+        self.users.insert(user.token.clone(), user);
     }
 
     pub fn user_count(&self) -> usize {
-        self.users().len()
+        self.users.len()
     }
 
-    pub fn remove_user(&self, user: &User) {
-        self.users().remove(&user.token);
-        if self.users().is_empty() {
-            self.map.unload()
+    pub fn remove_user(&mut self, user: &User) {
+        self.users.remove(&user.token);
+        if self.users.is_empty() {
+            self.map = None;
+            log::debug!("map unloaded `{}`", self.map_path.display());
         }
     }
 
-    pub fn users(&self) -> MutexGuard<HashMap<String, Arc<User>>> {
-        self.users.lock()
+    pub fn users(&self) -> impl Iterator<Item = (&str, Arc<User>)> {
+        self.users
+            .iter()
+            .map(|(addr, user)| (addr.as_str(), user.clone()))
     }
 
-    pub fn remove_closed_users(&self) {
-        let mut users = self.users();
-        users.retain(|_, p| !p.tx.is_closed());
-        if users.is_empty() {
-            self.map.unload()
+    pub fn user(&self, user: &str) -> Option<Arc<User>> {
+        self.users.get(user).cloned()
+    }
+
+    pub fn remove_closed_users(&mut self) {
+        self.users.retain(|_, p| !p.tx.is_closed());
+        if self.users.is_empty() {
+            self.map = None;
+            log::debug!("map unloaded `{}`", self.map_path.display());
         }
     }
 
-    pub fn save_config(&self) -> Result<(), Error> {
+    pub fn save_config(&mut self) -> Result<(), Error> {
         if let Some(cfg_path) = &self.cfg_path {
             let file = File::create(cfg_path).map_err(server_error)?;
             serde_json::to_writer(file, &self.config).map_err(server_error)?;
@@ -216,32 +180,24 @@ impl Room {
         Ok(())
     }
 
-    pub fn save_map(&self, max_size: usize) -> Result<(), Error> {
-        // clone the map to release the lock as soon as possible
-        let mut tmp_path = self.map.path.clone();
+    pub fn save_map(&mut self, max_size: usize) -> Result<(), Error> {
+        let mut tmp_path = self.map_path.clone();
         tmp_path.set_extension("map.tmp");
 
         (|| -> Result<(), Error> {
-            // Avoid concurrent saves
-            let _lck = self.saving.lock();
-
             let mut buf = Vec::with_capacity(min(max_size, 1024 * 1024));
-            self.map
-                .get()
-                .clone()
-                .save(&mut buf)
-                .map_err(server_error)?;
+            self.map().save(&mut buf).map_err(server_error)?;
 
             if buf.len() > max_size {
                 return Err(Error::MapTooBig);
             }
 
-            let mut file = File::create(&self.map.path).map_err(server_error)?;
+            let mut file = File::create(&self.map_path).map_err(server_error)?;
             file.write_all(&buf).map_err(server_error)?;
             Ok(())
         })()?;
 
-        log::debug!("map `{}` saved", self.map.path.display());
+        log::debug!("map saved `{}`", self.map_path.display());
         Ok(())
     }
 }

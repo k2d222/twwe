@@ -10,7 +10,7 @@ use futures::{
     StreamExt, TryStreamExt,
 };
 use image::ImageFormat;
-use parking_lot::{Mutex, MutexGuard};
+use parking_lot::{ArcRwLockReadGuard, ArcRwLockWriteGuard, Mutex, MutexGuard, RawRwLock, RwLock};
 use regex::Regex;
 use uuid::Uuid;
 
@@ -29,41 +29,56 @@ use crate::{
 use crate::bridge_in::Bridge;
 #[cfg(feature = "bridge_in")]
 use std::net::SocketAddr;
-#[cfg(feature = "bridge_in")]
-use std::sync::RwLock;
 #[cfg(feature = "bridge_out")]
 use tokio::task::JoinHandle;
 
 type Tx = UnboundedSender<WebSocketMessage>;
 
-pub struct User {
+/// the mutable properties of a user are stored with a RwLock
+pub struct UserInner {
     pub name: Option<String>,
+    pub room: Option<Arc<RwLock<Room>>>,
+    pub cursor: Option<Cursor>,
+}
+
+pub struct User {
     pub token: String,
     pub id: Uuid,
-    pub room: Mutex<Option<Arc<Room>>>,
     pub tx: Tx,
-    pub cursor: Mutex<Option<Cursor>>,
+    pub inner: RwLock<UserInner>,
 }
 
 impl User {
     pub fn new(token: String, tx: Tx) -> Self {
         User {
-            name: None,
             token,
             id: Uuid::new_v4(),
-            room: Default::default(),
             tx,
-            cursor: Default::default(),
+            inner: RwLock::new(UserInner {
+                name: None,
+                room: Default::default(),
+                cursor: Default::default(),
+            }),
         }
     }
 
-    pub fn room(&self) -> Option<Arc<Room>> {
-        self.room.lock().clone()
+    pub fn room(&self) -> Option<ArcRwLockReadGuard<RawRwLock, Room>> {
+        self.inner.read().room.clone().map(|room| room.read_arc())
+    }
+
+    pub fn room_mut(&self) -> Option<ArcRwLockWriteGuard<RawRwLock, Room>> {
+        self.inner.read().room.clone().map(|room| room.write_arc())
+    }
+
+    pub(crate) fn send(&self, id: Option<u32>, msg: Message) {
+        let packet = SendPacket::new(id, msg);
+        let str = serde_json::to_string(&packet).unwrap(); // this must not fail
+        self.tx.unbounded_send(WebSocketMessage::Text(str)).ok(); // this is ok to fail (user logout)
     }
 }
 
 pub struct Server {
-    pub rooms: Mutex<HashMap<String, Arc<Room>>>,
+    pub rooms: Mutex<HashMap<String, Arc<RwLock<Room>>>>,
     pub users: Mutex<HashMap<String, Arc<User>>>,
     pub rpp_path: Option<PathBuf>,
     pub maps_dir: Option<PathBuf>,
@@ -100,31 +115,19 @@ impl Server {
     }
 
     pub fn user(&self, token: &str) -> Result<Arc<User>, Error> {
-        self.users()
-            .get(token)
-            .map(Arc::to_owned)
-            .ok_or(Error::Unauthorized)
+        self.users().get(token).cloned().ok_or(Error::Unauthorized)
     }
 
-    pub fn rooms(&self) -> MutexGuard<HashMap<String, Arc<Room>>> {
+    pub fn rooms(&self) -> MutexGuard<HashMap<String, Arc<RwLock<Room>>>> {
         self.rooms.lock()
     }
 
-    pub fn room(&self, name: &str) -> Result<Arc<Room>, Error> {
-        self.rooms()
-            .get(name)
-            .map(Arc::to_owned)
-            .ok_or(Error::MapNotFound)
+    pub fn room(&self, name: &str) -> Result<Arc<RwLock<Room>>, Error> {
+        self.rooms().get(name).cloned().ok_or(Error::MapNotFound)
     }
 }
 
 impl Server {
-    pub(crate) fn send(user: &User, id: Option<u32>, msg: Message) {
-        let packet = SendPacket::new(id, msg);
-        let str = serde_json::to_string(&packet).unwrap(); // this must not fail
-        user.tx.unbounded_send(WebSocketMessage::Text(str)).ok(); // this is ok to fail (user logout)
-    }
-
     pub(crate) fn broadcast_to_lobby(&self, msg: Message) {
         let packet = SendPacket::new(None, msg);
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
@@ -138,7 +141,7 @@ impl Server {
         let str = serde_json::to_string(&packet).unwrap(); // this must not fail
         let msg = WebSocketMessage::Text(str);
 
-        for p in room.users().values() {
+        for (_addr, p) in room.users() {
             p.tx.unbounded_send(msg.to_owned()).ok();
         }
     }
@@ -149,7 +152,7 @@ impl Server {
         let msg = WebSocketMessage::Text(str);
 
         if let Some(room) = user.room() {
-            for (addr, p) in room.users().iter() {
+            for (addr, p) in room.users() {
                 if !addr.eq(&user.token) {
                     p.tx.unbounded_send(msg.to_owned()).ok();
                 }
@@ -166,7 +169,13 @@ impl Server {
 
     fn ensure_authorized(&self, user: &User, map_name: &str) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let authorized = room.config.password.is_none() || user.room().is_some_and(|r| r == room);
+        let authorized = room.read().config.password.is_none()
+            || user
+                .inner
+                .read()
+                .room
+                .as_ref()
+                .is_some_and(|r| Arc::ptr_eq(r, &room));
         if !authorized {
             log::debug!("unauthorized: `{map_name}` for {}", user.token);
         }
@@ -328,7 +337,7 @@ impl Server {
         if resp.is_ok() {
             self.do_broadcast(&user, &packet);
         }
-        Server::send(&user, packet.id, Message::Response(resp));
+        user.send(packet.id, Message::Response(resp));
     }
 
     pub(crate) async fn handle_websocket(&self, token: String, socket: WebSocket) {
@@ -345,17 +354,13 @@ impl Server {
                 self.max_users
             );
             if user_count >= self.max_users {
-                Server::send(&user, None, Message::Response(Err(Error::MaxUsers)));
+                user.send(None, Message::Response(Err(Error::MaxUsers)));
                 fut_send.await.ok();
                 log::info!("kicked {}, too many connections", user.token);
                 return;
             } else {
+                user.send(None, Message::Response(Ok(Response::Token(token.clone()))));
                 self.users().insert(token.clone(), user.clone());
-                Server::send(
-                    &user,
-                    None,
-                    Message::Response(Ok(Response::Token(token.clone()))),
-                );
             }
         }
 
@@ -368,8 +373,7 @@ impl Server {
                     }
                     Err(e) => {
                         log::error!("failed to parse message: {e} in {msg}");
-                        Server::send(
-                            &user,
+                        user.send(
                             None,
                             Message::Response(Err(Error::BadRequest(e.to_string()))),
                         )
@@ -383,7 +387,7 @@ impl Server {
         // wait for either sender or receiver to complete: this means the connection is closed.
         futures::future::select(fut_send, fut_recv).await;
 
-        if let Some(room) = user.room() {
+        if let Some(mut room) = user.room_mut() {
             room.remove_user(&user);
         }
 
@@ -403,20 +407,21 @@ impl Server {
     pub fn get_maps(&self) -> Vec<MapDetail> {
         self.rooms()
             .iter()
-            .filter(|(_, v)| v.config.public)
+            .filter(|(_, v)| v.read().config.public)
             .map(|(k, v)| MapDetail {
                 name: k.to_owned(),
-                users: v.user_count(),
+                users: v.read().user_count(),
             })
             .collect()
     }
 
     pub fn get_map(&self, map_name: &str) -> Result<Vec<u8>, Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
 
         let mut buf = Vec::new();
-        let mut map = room.map().clone(); // cloned to avoid blocking
-        map.save(&mut buf)
+        room.map()
+            .save(&mut buf)
             .map_err(|e| Error::Internal(e.to_string().into()))?;
 
         Ok(buf)
@@ -444,6 +449,7 @@ impl Server {
             }
             CreationMethod::Clone(clone_name) => {
                 let room = self.room(&clone_name)?;
+                let mut room = room.write();
                 let map = room.map().clone();
                 map
             }
@@ -514,7 +520,7 @@ impl Server {
             if rooms.contains_key(map_name) {
                 return Err(Error::MapNameTaken);
             } else {
-                rooms.insert(map_name.to_owned(), Arc::new(room));
+                rooms.insert(map_name.to_owned(), Arc::new(RwLock::new(room)));
             }
         }
         log::info!("map created `{}`", map_name);
@@ -523,6 +529,7 @@ impl Server {
 
     pub fn delete_map(&self, map_name: &str) -> Result<(), Error> {
         let room = self.room(map_name)?;
+        let room = room.read();
 
         self.rooms().remove(map_name);
         room.delete();
@@ -533,22 +540,22 @@ impl Server {
     }
 
     pub fn get_info(&self, map_name: &str) -> Result<twmap::Info, Error> {
-        Ok(self.room(map_name)?.map().info.clone())
+        Ok(self.room(map_name)?.write().map().info.clone())
     }
 
     pub fn edit_info(&self, map_name: &str, part_info: PartialInfo) -> Result<(), Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
 
         part_info.check_self()?;
 
-        let mut map = room.map();
-        apply_partial!(part_info => map.info, author, version, credits, license, settings);
+        apply_partial!(part_info => room.map().info, author, version, credits, license, settings);
 
         Ok(())
     }
 
     pub fn get_config(&self, map_name: &str) -> Result<Config, Error> {
-        let map_cfg = self.room(map_name)?.config.clone();
+        let map_cfg = self.room(map_name)?.write().config.clone();
         Ok(Config {
             name: map_cfg.name,
             public: map_cfg.public,
@@ -557,8 +564,16 @@ impl Server {
         })
     }
 
-    pub fn edit_config(&self, _map_name: &str, _part_conf: PartialConfig) -> Result<(), Error> {
-        // let room = self.room(map_name)?.clone();
+    pub fn edit_config(&self, map_name: &str, part_conf: PartialConfig) -> Result<(), Error> {
+        let room = self.room(map_name)?.clone();
+        let mut room = room.write();
+
+        if let Some(pwd) = &part_conf.password {
+            if !pwd.is_empty() {
+                room.config.password =
+                    Some(bcrypt::hash(pwd, bcrypt::DEFAULT_COST).map_err(|_| Error::Password)?);
+            }
+        }
         // apply_partial!(part_conf => room.config, name, access);
         // Ok(())
         Err(Error::ToDo)
@@ -567,6 +582,7 @@ impl Server {
     pub fn get_images(&self, map_name: &str) -> Result<Vec<String>, Error> {
         Ok(self
             .room(map_name)?
+            .write()
             .map()
             .images
             .iter()
@@ -576,6 +592,7 @@ impl Server {
 
     pub fn get_image(&self, map_name: &str, image_index: u16) -> Result<Vec<u8>, Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
 
         let mut buf = Vec::new();
 
@@ -602,6 +619,7 @@ impl Server {
 
     pub fn put_image(&self, map_name: &str, image_name: &str, create: Image) -> Result<(), Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
 
         if image_name.len() > twmap::Image::MAX_NAME_LENGTH {
             return Err(Error::InvalidFileName);
@@ -642,7 +660,8 @@ impl Server {
 
     pub fn delete_image(&self, map_name: &str, image_index: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         if image_index as usize >= map.images.len() {
             return Err(Error::ImageNotFound);
@@ -661,6 +680,7 @@ impl Server {
     pub fn get_envelopes(&self, map_name: &str) -> Result<Vec<String>, Error> {
         Ok(self
             .room(map_name)?
+            .write()
             .map()
             .envelopes
             .iter()
@@ -671,6 +691,7 @@ impl Server {
     pub fn get_envelope(&self, map_name: &str, env_index: u16) -> Result<twmap::Envelope, Error> {
         Ok(self
             .room(map_name)?
+            .write()
             .map()
             .envelopes
             .get(env_index as usize)
@@ -680,6 +701,7 @@ impl Server {
 
     pub fn put_envelope(&self, map_name: &str, part_env: PartialEnvelope) -> Result<(), Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
 
         if room.map().envelopes.len() == u16::MAX as usize {
             return Err(Error::MaxEnvelopes);
@@ -720,11 +742,12 @@ impl Server {
     ) -> Result<(), Error> {
         part_env.check_self()?;
         let room = self.room(map_name)?;
+        let mut room = room.write();
         part_env.check_map(&room.map())?;
 
         // edit
         {
-            let mut map = room.map();
+            let map = room.map();
             let env = map
                 .envelopes
                 .get_mut(env_index as usize)
@@ -749,7 +772,8 @@ impl Server {
 
     pub fn delete_envelope(&self, map_name: &str, env_index: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         if env_index as usize >= map.envelopes.len() {
             return Err(Error::EnvelopeNotFound);
@@ -768,6 +792,7 @@ impl Server {
     pub fn get_groups(&self, map_name: &str) -> Result<Vec<String>, Error> {
         Ok(self
             .room(map_name)?
+            .write()
             .map()
             .groups
             .iter()
@@ -777,6 +802,7 @@ impl Server {
 
     pub fn get_group(&self, map_name: &str, group_index: u16) -> Result<twmap::Group, Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
         let map = room.map();
         let group = map
             .groups
@@ -797,7 +823,8 @@ impl Server {
     pub fn put_group(&self, map_name: &str, part_group: PartialGroup) -> Result<(), Error> {
         part_group.check_self()?;
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         if map.groups.len() == u16::MAX as usize {
             return Err(Error::MaxGroups);
@@ -818,7 +845,8 @@ impl Server {
     ) -> Result<(), Error> {
         part_group.check_self()?;
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
         let group = map
             .groups
             .get_mut(group_index as usize)
@@ -834,7 +862,8 @@ impl Server {
 
     pub fn delete_group(&self, map_name: &str, group_index: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
         let group = map
             .groups
             .get_mut(group_index as usize)
@@ -852,6 +881,7 @@ impl Server {
     pub fn get_layers(&self, map_name: &str, group_index: u16) -> Result<Vec<String>, Error> {
         Ok(self
             .room(map_name)?
+            .write()
             .map()
             .groups
             .get(group_index as usize)
@@ -869,6 +899,7 @@ impl Server {
         layer_index: u16,
     ) -> Result<twmap::Layer, Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
         let map = room.map();
         let layer = map
             .groups
@@ -918,9 +949,10 @@ impl Server {
     ) -> Result<(), Error> {
         part_layer.check_self()?;
         let room = self.room(map_name)?;
+        let mut room = room.write();
         part_layer.check_map(&room.map())?;
 
-        let mut map = room.map();
+        let map = room.map();
 
         let layers_count = map.groups.iter().flat_map(|g| g.layers.iter()).count();
 
@@ -993,11 +1025,12 @@ impl Server {
     ) -> Result<(), Error> {
         part_layer.check_self()?;
         let room = self.room(map_name)?;
+        let mut room = room.write();
         part_layer.check_map(&room.map())?;
 
         // edit
         {
-            let mut map = room.map();
+            let map = room.map();
             let group = map
                 .groups
                 .get_mut(group_index as usize)
@@ -1075,7 +1108,8 @@ impl Server {
         layer_index: u16,
     ) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         let group = map
             .groups
@@ -1102,6 +1136,7 @@ impl Server {
         layer_index: u16,
     ) -> Result<Box<[u8]>, Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
         let map = room.map();
 
         let layer = map
@@ -1147,7 +1182,8 @@ impl Server {
         part_tiles: Tiles,
     ) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
         let layer = map
             .groups
             .get_mut(group_index as usize)
@@ -1209,6 +1245,7 @@ impl Server {
         quad_index: u16,
     ) -> Result<twmap::Quad, Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
         let map = room.map();
         let layer = map
             .groups
@@ -1238,7 +1275,8 @@ impl Server {
     ) -> Result<(), Error> {
         quad.check_self()?;
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
         quad.check_map(&map)?;
         let layer = map
             .groups
@@ -1271,7 +1309,8 @@ impl Server {
     ) -> Result<(), Error> {
         quad.check_self()?;
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
         quad.check_map(&map)?;
         let layer = map
             .groups
@@ -1301,7 +1340,8 @@ impl Server {
         quad_index: u16,
     ) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
         let layer = map
             .groups
             .get_mut(group_index as usize)
@@ -1324,6 +1364,7 @@ impl Server {
 
     pub fn get_automappers(&self, map_name: &str) -> Result<Vec<AutomapperDetail>, Error> {
         let room = self.room(map_name)?;
+        let room = room.read();
         let path = room.automapper_path();
 
         if let Some(path) = path {
@@ -1373,6 +1414,7 @@ impl Server {
 
         let path = self
             .room(map_name)?
+            .read()
             .automapper_path()
             .ok_or(Error::AutomapperNotFound)?
             .join(am);
@@ -1455,6 +1497,7 @@ impl Server {
         }
 
         let room = self.room(map_name)?;
+        let room = room.read();
 
         let path = room
             .automapper_path()
@@ -1517,6 +1560,7 @@ impl Server {
 
         let path = self
             .room(map_name)?
+            .read()
             .automapper_path()
             .ok_or(Error::AutomapperNotFound)?
             .join(am);
@@ -1537,9 +1581,10 @@ impl Server {
         layer_index: u16,
     ) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
 
         let image_name = {
+            let map = room.map();
             let layer = map
                 .groups
                 .get(group_index as usize)
@@ -1559,8 +1604,13 @@ impl Server {
                 return Err(Error::WrongLayerType);
             }
         };
+        let am_path = room
+            .automapper_path()
+            .ok_or(Error::AutomapperNotFound)?
+            .join(format!("{image_name}.rules"));
 
-        let layer = map
+        let layer = room
+            .map()
             .groups
             .get_mut(group_index as usize)
             .ok_or(Error::GroupNotFound)?
@@ -1569,10 +1619,6 @@ impl Server {
             .ok_or(Error::LayerNotFound)?;
 
         if let twmap::Layer::Tiles(layer) = layer {
-            let am_path = room
-                .automapper_path()
-                .ok_or(Error::AutomapperNotFound)?
-                .join(format!("{image_name}.rules"));
             let file = std::fs::read_to_string(am_path).map_err(|_| Error::AutomapperNotFound)?;
             let automapper = twmap::automapper::Automapper::parse(image_name, &file)
                 .map_err(|e| Error::Automapper(e.to_string()))?;
@@ -1587,7 +1633,8 @@ impl Server {
 
     pub fn move_image(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         if src as usize > map.images.len() {
             return Err(Error::ImageNotFound);
@@ -1617,7 +1664,8 @@ impl Server {
 
     pub fn move_envelope(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         if src as usize > map.envelopes.len() {
             return Err(Error::EnvelopeNotFound);
@@ -1647,7 +1695,8 @@ impl Server {
 
     pub fn move_group(&self, map_name: &str, src: u16, tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         if src as usize > map.groups.len() {
             return Err(Error::GroupNotFound);
@@ -1670,7 +1719,8 @@ impl Server {
         tgt: (u16, u16),
     ) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         // checks
         {
@@ -1703,7 +1753,8 @@ impl Server {
 
     pub fn move_quad(&self, map_name: &str, src: (u16, u16, u16), tgt: u16) -> Result<(), Error> {
         let room = self.room(map_name)?;
-        let mut map = room.map();
+        let mut room = room.write();
+        let map = room.map();
 
         let layer = map
             .groups
@@ -1728,6 +1779,7 @@ impl Server {
 
     pub fn get_users(&self, map_name: &str) -> Result<usize, Error> {
         let room = self.room(map_name)?;
+        let room = room.read();
         Ok(room.user_count())
     }
 
@@ -1737,16 +1789,17 @@ impl Server {
         user: &User,
     ) -> Result<HashMap<String, Cursor>, Error> {
         let room = self.room(map_name)?;
+        let room = room.read();
 
-        let user_id = room.users().get(&user.token).ok_or(Error::NotJoined)?.id;
+        let user_id = room.user(&user.token).ok_or(Error::NotJoined)?.id;
 
         let cursors = room
             .users()
-            .iter()
             .filter(|(_, v)| v.id != user_id)
             .filter_map(|(_, v)| {
-                v.cursor
-                    .lock()
+                v.inner
+                    .read()
+                    .cursor
                     .as_ref()
                     .map(|c| (v.id.to_string(), c.clone()))
             })
@@ -1756,19 +1809,18 @@ impl Server {
     }
 
     pub fn set_cursor(&self, user: &User, cursor: Cursor) -> Result<(), Error> {
-        let room = user.room();
-        let room = room.as_ref().ok_or(Error::MapNotFound)?;
-        let mut users = room.users();
-        let room_user = users
-            .get_mut(&user.token)
+        let room = user.room().ok_or(Error::MapNotFound)?;
+        let room_user = room
+            .user(&user.token)
             .ok_or(Error::Internal("server error".into()))?;
-        *room_user.cursor.lock() = Some(cursor);
+        room_user.inner.write().cursor = Some(cursor);
 
         Ok(())
     }
 
     pub fn save_map(&self, map_name: &str) -> Result<(), Error> {
         let room = self.room(map_name)?;
+        let mut room = room.write();
         room.save_map(self.max_map_size)
     }
 
@@ -1779,7 +1831,7 @@ impl Server {
 
         // we clone the pwd hash because bcrypt::verify() is costly and we don't want to
         // lock the room mutex.
-        let pwd_hash = self.room(&join.name)?.config.password.clone();
+        let pwd_hash = self.room(&join.name)?.read().config.password.clone();
         match (&join.password, &pwd_hash) {
             (Some(pwd), Some(hash)) => {
                 if !bcrypt::verify(pwd, hash).map_err(|_| Error::Password)? {
@@ -1794,8 +1846,8 @@ impl Server {
         };
 
         let room = self.room(&join.name)?;
-        room.add_user(user.clone());
-        *user.room.lock() = Some(room);
+        room.write().add_user(user.clone());
+        user.inner.write().room = Some(room);
 
         log::info!("{} joined `{}`", user.token, join.name);
 
@@ -1803,8 +1855,8 @@ impl Server {
     }
 
     pub fn user_leave(&self, user: &User, map_name: &str) -> Result<(), Error> {
-        let res = match user.room() {
-            Some(room) => {
+        let res = match user.room_mut() {
+            Some(mut room) => {
                 if room.name() == map_name {
                     room.remove_user(user);
                     Ok(())
@@ -1814,7 +1866,7 @@ impl Server {
             }
             None => Err(Error::NotJoined),
         };
-        user.room.lock().take();
+        user.inner.write().room.take();
         log::info!("{} left `{}`", user.token, map_name);
         res
     }

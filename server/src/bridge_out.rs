@@ -102,11 +102,7 @@ impl Server {
                                 if join.name == cfg.map {
                                     server.handle_request(user, pkt);
                                 } else {
-                                    Server::send(
-                                        &user,
-                                        pkt.id,
-                                        Message::Response(Err(Error::MapNotFound)),
-                                    );
+                                    user.send(pkt.id, Message::Response(Err(Error::MapNotFound)));
                                 }
                             }
                             Request::ListMaps => {
@@ -118,8 +114,7 @@ impl Server {
                         },
                         Err(e) => {
                             log::error!("failed to parse message: {e} in {payload_msg}");
-                            Server::send(
-                                &user,
+                            user.send(
                                 None,
                                 Message::Response(Err(Error::BadRequest(e.to_string()))),
                             )

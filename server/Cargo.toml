@@ -21,7 +21,7 @@ ndarray =  { version = "0.15", features = ["serde"] }
 twmap = "0.12"
 env_logger = "0.11"
 log = "0.4"
-parking_lot = "0.12"
+parking_lot = { version = "0.12", features = ["arc_lock"] }
 clap = { version = "4.5", features = ["derive", "wrap_help"] }
 regex = "1.6"
 axum = { version = "0.7", features = ["tokio", "multipart", "ws"] }

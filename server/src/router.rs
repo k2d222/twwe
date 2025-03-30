@@ -210,11 +210,14 @@ fn ensure_access_authorized(
     let room = server.room(map)?;
     let token = auth.as_ref().map(|auth| auth.token());
     let user = token.and_then(|token| server.user(token).ok());
-    let authorized = room.config.password.is_none()
-        || user
-            .as_ref()
-            .and_then(|user| user.room())
-            .is_some_and(|r| r == room);
+    let authorized = room.read().config.password.is_none()
+        || user.is_some_and(|user| {
+            user.inner
+                .read()
+                .room
+                .as_ref()
+                .is_some_and(|r| Arc::ptr_eq(r, &room))
+        });
     if !authorized {
         log::debug!(
             "unauthorized: `{map}` for {}",

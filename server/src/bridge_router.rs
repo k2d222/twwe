@@ -36,7 +36,7 @@ pub(crate) async fn bridge_oneshot(
     let (http_tx, mut http_rx) = unbounded();
 
     {
-        let mut bridges = server.remote_bridges.write().unwrap();
+        let mut bridges = server.remote_bridges.write();
         let bridge = bridges
             .values_mut()
             .find(|v| v.key == key)
@@ -44,7 +44,7 @@ pub(crate) async fn bridge_oneshot(
         bridge.users_tx.insert(addr, http_tx);
     }
     {
-        let bridges = server.remote_bridges.read().unwrap();
+        let bridges = server.remote_bridges.read();
         let bridge = bridges
             .values()
             .find(|v| v.key == key)
