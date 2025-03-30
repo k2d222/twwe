@@ -255,7 +255,11 @@
 
     try {
       if (method === 'upload' && modalCreateMap.uploadFile !== null) {
-        await uploadMap(httpUrl, name, modalCreateMap.uploadFile)
+        await uploadMap(httpUrl, name, modalCreateMap.uploadFile, {
+          version: 'ddnet06', // TODO
+          public: modalCreateMap.public,
+          password: modalCreateMap.password,
+        })
       } else if (method === 'blank') {
         await createMap(httpUrl, name, {
           version: 'ddnet06', // TODO

@@ -44,12 +44,22 @@ export async function download(path: string, name: string) {
   }
 }
 
-export async function uploadMap(url: string, name: string, file: Blob) {
-  const resp = await fetch(`${url}/maps/${name}`, {
+export async function uploadMap(url: string, name: string, file: Blob, config: Partial<Config>) {
+  let resp = await fetch(`${url}/maps/${name}`, {
     method: 'PUT',
     body: file,
   })
   if (!resp.ok) throw await resp.text()
+
+  resp = await fetch(`${url}/maps/${name}/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  if (!resp.ok) {
+    await fetch(`${url}/maps/${name}`, { method: 'DELETE' })
+    throw await resp.text()
+  }
 }
 
 export async function createMap(url: string, name: string, create: MapCreation) {

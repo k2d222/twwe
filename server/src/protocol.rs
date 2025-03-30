@@ -31,20 +31,49 @@ use crate::{base64::Base64, error::Error, util::timestamp_now};
 // This could be fixed in the future by implementing a history and versionning
 // system similar to how databases handle concurrent modifications.
 
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[serde(remote = "twmap::Version", rename_all = "lowercase")]
+pub enum SerdeVersion {
+    DDNet06,
+    Teeworlds07,
+}
+
+impl SerializeAs<twmap::Version> for SerdeVersion {
+    fn serialize_as<S>(value: &twmap::Version, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        SerdeVersion::serialize(value, serializer)
+    }
+}
+
+impl<'de> DeserializeAs<'de, twmap::Version> for SerdeVersion {
+    fn deserialize_as<D>(deserializer: D) -> Result<twmap::Version, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        SerdeVersion::deserialize(deserializer)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub name: String,
     pub public: bool,
     pub password: bool,
+    #[serde(with = "SerdeVersion")]
     pub version: twmap::Version,
 }
 
+#[serde_as]
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PartialConfig {
     pub name: Option<String>,
     pub public: Option<bool>,
     pub password: Option<String>,
+    #[serde_as(as = "Option<SerdeVersion>")]
+    pub version: Option<twmap::Version>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -142,17 +171,11 @@ pub enum CreationMethod {
     Blank { w: u32, h: u32 },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Version {
-    DDNet06,
-    Teeworlds07,
-}
-
+#[serde_as]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MapCreation {
-    #[serde(default)]
-    pub version: Option<Version>,
+    #[serde_as(as = "Option<SerdeVersion>")]
+    pub version: Option<twmap::Version>,
     #[serde(default)]
     pub public: Option<bool>,
     #[serde(default)]

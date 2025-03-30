@@ -197,11 +197,9 @@ impl Server {
 
         match req {
             Request::ListMaps => Ok(Response::Maps(self.get_maps())),
-            Request::Config(map_name) => {
-                self.ensure_authorized(&*user?, &map_name)?;
-                self.get_config(&map_name)
-                    .map(|r| Response::Config(r.into()))
-            }
+            Request::Config(map_name) => self
+                .get_config(&map_name)
+                .map(|r| Response::Config(r.into())),
             Request::JoinMap(join) => self.user_join(user?, &join).map(|()| Response::Ok),
             Request::LeaveMap(map_name) => {
                 self.user_leave(&*user?, &map_name).map(|()| Response::Ok)
@@ -457,7 +455,7 @@ impl Server {
             }
             CreationMethod::Blank { w, h } => {
                 if let Some(version) = creation.version {
-                    if version != Version::DDNet06 {
+                    if version != twmap::Version::DDNet06 {
                         return Err(Error::UnsupportedMapType);
                     }
                 }
@@ -557,7 +555,7 @@ impl Server {
     }
 
     pub fn get_config(&self, map_name: &str) -> Result<Config, Error> {
-        let map_cfg = self.room(map_name)?.write().config.clone();
+        let map_cfg = self.room(map_name)?.read().config.clone();
         Ok(Config {
             name: map_cfg.name,
             public: map_cfg.public,
@@ -581,6 +579,13 @@ impl Server {
             }
         }
 
+        if let Some(version) = part_conf.version {
+            if version != room.map().version {
+                return Err(Error::UnsupportedMapType);
+            }
+        }
+
+        room.save_config()?;
         Ok(())
     }
 
