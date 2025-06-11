@@ -19,8 +19,19 @@ export async function saveMap() {
 export async function downloadMap() {
   const rmap_ = get(rmap)
   const server_ = get(server)
-  const httpUrl = server_.httpUrl
-  download(`${httpUrl}/maps/${rmap_.map.name}`, `${rmap_.map.name}.map`)
+  const name = rmap_.map.name
+
+  const id = showInfo(`Downloading '${name}'…`, 'none')
+  try {
+    const resp = await server_.fetch('maps/' + name)
+    const data = await resp.blob()
+    download(data, name + '.map')
+    showInfo(`Downloaded '${name}'.`)
+  } catch (e) {
+    showError(`Failed to download ${name}: ${e}`)
+  } finally {
+    clearDialog(id)
+  }
 }
 
 export async function deleteMap() {

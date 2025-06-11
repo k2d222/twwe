@@ -16,32 +16,22 @@ import type { WebSocketServer } from '../../server/server'
 import type { Config, MapCreation, MapDetail } from '../../server/protocol'
 import * as MapDir from '../../twmap/mapdir'
 import { QuadsLayer } from '../../twmap/quadsLayer'
-import { clearDialog, showInfo } from './dialog'
 
 export type Ctor<T> = new (...args: any[]) => T
 
 export type FormEvent<T> = Event & { currentTarget: EventTarget & T }
 export type FormInputEvent = FormEvent<HTMLInputElement>
 
-export async function download(path: string, name: string) {
-  const id = showInfo(`Downloading '${name}'…`, 'none')
-  try {
-    const resp = await fetch(path)
-    if (!resp.ok) throw await resp.text()
-    const data = await resp.blob()
+export function download(data: Blob, name: string) {
     const url = URL.createObjectURL(data)
 
     const link = document.createElement('a')
     link.href = url
-    link.download = name
+    link.download = name + '.map'
 
     document.body.append(link)
     link.click()
     link.remove()
-    showInfo(`Downloaded '${name}'.`)
-  } finally {
-    clearDialog(id)
-  }
 }
 
 export async function uploadMap(url: string, name: string, file: Blob, config: Partial<Config>) {

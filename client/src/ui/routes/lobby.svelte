@@ -220,8 +220,19 @@
     alert('TODO renaming maps is not yet implemented.')
   }
 
-  function onDownloadMap(name: string) {
-    download(`${httpUrl}/maps/${name}`, `${name}.map`)
+  async function onDownloadMap(name: string) {
+    const id = showInfo(`Downloading '${name}'…`, 'none')
+    try {
+      const resp = await fetch(`${httpUrl}/maps/${name}`)
+      if (!resp.ok) throw await resp.text()
+      const data = await resp.blob()
+      download(data, name + '.map')
+      showInfo(`Downloaded '${name}'.`)
+    } catch (e) {
+      showError(`Failed to download ${name}: ${e}`)
+    } finally {
+      clearDialog(id)
+    }
   }
 
   function onAddServer() {
