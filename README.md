@@ -4,14 +4,13 @@
 
 Teeworlds / DDraceNetwork map editor. Online and collaborative, just like the game.
 
-A demo server is hosted at [tw.thissma.fr](https://tw.thissma.fr). A DDNet server is hosted with the name `twwe -- tw.thissma.fr` (ip: `82.64.235.33:8303`).
+The editor is available at [tw.thissma.fr](https://tw.thissma.fr). ~~A DDNet server is hosted with the name `twwe -- tw.thissma.fr` to test the maps on that website with auto-reload~~ (currently unavailable).
 
+Alternatively, download TWWE desktop app from the [releases page](https://github.com/k2d222/twwe/releases).
 
-## Development Status (Oct. 2023)
+## Development Status (Feb. 2025)
 
-The app is now mostly compatible with ddnet editor.
-Bugs are expected. It is advised to save regularly and if a bug happens, log out and back in to roll back to the previous save.
-Maps corruptions are unlikely to happen though thanks to @patiga's [twmap library](https://gitlab.com/Patiga/twmap).
+**2025 update**: The app is now mostly compatible with ddnet editor. Developpment has now stopped, but the software is close to complete and stable. I will keep maintaining the website and fix bugs. Most likely no new features will be added.
 
 ### DDNet Compatibility
 
@@ -43,10 +42,10 @@ The table below shows the feature parity with ddnet's in-game map editor.
  - [x] Desktop client
  - [x] Server bridging
  - [ ] sync with ddnet server / reload-on-save (#21)
- - [ ] Map passwords and permissions
+ - [x] Map passwords and permissions
  - [x] Undo / Redo history (#31)
  - [ ] More tools: Proof, Quad tools
- - [ ] Bug squashing
+ - [x] Bug squashing
 
 ## Usage
 
@@ -68,7 +67,7 @@ Download the precompiled binaries and the static files from the [release page](h
 
 Run the server with `twwe-server --static <path_to_static_folder>`. By default, it will serve the maps present in your ddnet data folder (the same maps as the in-game editor).
 
-Open http://localhost:16800 to access the editor.
+Open <http://localhost:16800> to access the editor.
 
 ### Key/Mouse bindings
 
@@ -113,7 +112,7 @@ Use the `--rpp <path>` argument to enable Rules++ support (experimental). `<path
 
 #### Limits
 
-The HTTP server is rate-limited per IP. It allows bursts of 100 requests and then 500ms between requests. It can be configured with `--max-http-bursts <amount>` and `http-ratelimit-delay <ms>`.
+The HTTP server is rate-limited per IP. It allows bursts of 100 requests and then 500ms between requests. It can be configured with `--max-http-bursts <amount>` and `--http-ratelimit-delay <ms>`.
 
 The `--max-maps <amount>` argument limits the number of maps created by users. The `--max-map-size <MiB>` argument limits the size of each map file.
 
