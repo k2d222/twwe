@@ -1,6 +1,6 @@
 {
   "name": "twwe-client",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Teeworlds Web Editor Client",
   "type": "module",
   "scripts": {
@@ -31,6 +31,7 @@
     "@tsconfig/svelte": "^5.0.4",
     "@types/js-md5": "^0.7.2",
     "@types/pako": "^2.0.3",
+    "buffer": "^6.0.3",
     "carbon-components-svelte": "^0.85.2",
     "carbon-icons-svelte": "^12.12.0",
     "carbon-preprocess-svelte": "^0.11.7",
